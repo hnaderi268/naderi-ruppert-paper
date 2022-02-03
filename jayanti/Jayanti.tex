@@ -1,0 +1,78 @@
+\documentclass[11pt]{article}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\definecolor{light-gray}{gray}{0.95}
+\usepackage{listings}
+\lstset{
+    numbers=left,
+    breaklines=true,
+    backgroundcolor=\color{light-gray},
+    tabsize=2,
+    basicstyle=\ttfamily,
+}
+\usepackage{setspace}
+\renewcommand{\baselinestretch}{1.3} 
+\usepackage{graphicx}
+\usepackage[export]{adjustbox}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{fancyhdr}
+\renewcommand{\baselinestretch}{1.34} 
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage[]{algorithm2e}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt plus 1pt}
+\setlength{\headheight}{13.6pt}
+\newcommand\question[1]{\vspace{1.2em}\hrule\textbf{ #1}\vspace{.5em}\hrule}
+\renewcommand\part[1]{\vspace{.10in}\textbf{#1)} \enspace}
+\pagestyle{fancyplain}
+\fancyhf{}
+\renewcommand{\headrulewidth}{1.4pt}
+\lhead{\textbf{\ANDREWID }}
+\cfoot{\textbf{Project } - \thepage   }
+\rhead{\rule[-1ex]{0pt}{3.5ex} Hossein Naderi }
+\newcommand\ANDREWID{Linearizability correctness of Jayanti MESD queue} 
+\newcommand\HWNUM{1}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\begin{document}
+
+\begin{definition}[v-visioner]
+  A propagate procedure reading timestamp v (Line 17) in one of its refresh procedures is called v-visioner.
+\end{definition}
+
+\begin{theorem}
+Proposed queue is linearizable. linearization point of each enqueue(p,v) is right after first v-visioner propagation is completed (Line 10). And dequeue(p) operation is linearized just after reading root's value (Line 11).
+\end{theorem}
+\begin{proof}
+We proposed an ordering for the linearization of operations. We claim that if operations are completed in the order, we mentioned then the results of operations are the same, which means the queue is consistent. It is trivial to see that if $op_1$ is finished before $op_2$ the linearization point of $op_1$ is before $op_2$ (real-time ordering  property of linearization). We break the rest of the proof according to the possible conflicting cases.
+
+
+\begin{itemize}
+\item Enqueue(p,v) \& Dequeue(q) have conflicts
+\begin{itemize}
+\item Enqueue is linearized before the Dequeue\\
+This means the value v is propagated before reading the root. So whether or not if v is the smallest value, then we can consider its operation is completed because the dequeue is going to see the result of top of the tree after the propagation of v.
+\item Dequeue is linearized before the Enqueue\\
+This means the dequeue has read the root element, so whether or not finishes or nor the dequee is going to return the soot element, so it has taken effect before enqueue operation.
+\end{itemize}
+\item Two Enqueue operations Conflicting \\
+In this case, one of the enqueue operations' inserted value has propagated before the other one and has linearized before. After the linearization point of the earlier operation, the root value is updated, so we can interpret it has finished before the other.
+\end{itemize}
+\end{proof}
+
+\begin{definition}[invariant]
+The root element in the tree is the value with the smallest timestamp in the tree.
+\end{definition}
+I think the invariant needed is for the correctness of the algorithm and not the linearizability in order to show the dequeue is returning the smallest timestamp. I don't think it holds for the whole tree because maybe after propagating some element, another small element is still propagating.
+
+\end{document}

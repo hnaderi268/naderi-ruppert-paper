@@ -1,0 +1,220 @@
+\documentclass[10pt]{article}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\definecolor{light-gray}{gray}{0.95}
+\usepackage{listings}
+\lstset{
+    numbers=left,
+    breaklines=true,
+    backgroundcolor=\color{light-gray},
+    tabsize=2,
+    basicstyle=\ttfamily,
+}
+\usepackage{setspace}
+\renewcommand{\baselinestretch}{1.3} 
+\usepackage{graphicx}
+\usepackage[export]{adjustbox}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{fancyhdr}
+\renewcommand{\baselinestretch}{1.34} 
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{algorithm}% http://ctan.org/pkg/algorithms
+\usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
+\usepackage{multicol}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt plus 1pt}
+\setlength{\headheight}{13.6pt}
+\newcommand\question[1]{\vspace{1.2em}\hrule\textbf{ #1}\vspace{.5em}\hrule}
+\renewcommand\part[1]{\vspace{.10in}\textbf{#1)} \enspace}
+\pagestyle{fancyplain}
+\fancyhf{}
+\renewcommand{\headrulewidth}{1.4pt}
+\lhead{\textbf{\ANDREWID }}
+\cfoot{\textbf{Third Attempt } - \thepage   }
+\rhead{\rule[-1ex]{0pt}{3.5ex} Hossein Naderi }
+\newcommand\ANDREWID{Universal Construction using Jayanti Approach} 
+\newcommand\HWNUM{1}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+
+\begin{document}
+
+%\textit{In this paper we're trying to use Tournament trees in order to create a faster Universal Construction using CAS objects.}
+
+%
+%\question{What we need to satisfy in our design}
+%We have given a sequential object with some type of queries. We need to make a middle ware which gets  queries by different processes and in a nonblocking way finishes operations. Each process add an operation to be done on the sequential object some times. We're going to create a consensus order on all operations among processes. Each operation is done on the sequential object when it is added to final list.
+%
+%Since our problem is a lot like maintaining a queue, my first idea is to take advantage of Jayanti FIFO queue. Since it can handle concurrent enqueue queries and single dequeues. Whenever a process wants to do some operation it enqueues it and increases a shared counter value. An Idle process is always looking at counter value and it it is greater than 0 dequeues from queue and does the job.
+%
+%
+%
+%\begin{minipage}{.5\textwidth}
+%Shared Objects:
+%\begin{itemize}
+%  \item \textit{shared} Q: a MESD FIFO Queue
+%\item \textit{shared} counter
+%\item O: given sequential object
+%\end{itemize}
+%\begin{algorithmic}[1]
+%\Function{$do_{client}$}{operation op} 
+%\State $enqueue(op)$
+%\State $inc(counter)$
+%\EndFunction
+%\end{algorithmic}
+%
+%\end{minipage}
+%\begin{minipage}{0.5\textwidth}
+%\begin{algorithmic}[1]
+%\Function{$do_{master}$}{} 
+%\Loop
+%\If{$counter>0$}{ $dec(counter)$}
+%\State $op=dequeue(T)$
+%\State $dec(counter)$
+%\State $\delta(O,op)$
+%\EndIf
+%\EndLoop
+%\EndFunction
+%\end{algorithmic}
+%
+%    \end{minipage}
+%
+%\pagebreak
+%\question{Correctness and Analysis}
+%Our goal is to maintain a list that keeps linearization ordering of operations among all processes. We have to show its linearizable and prove progress property. It is non blocking since counter and queue are wait free so client operations do not lock each other and since there is only one dequeue it is deadlock free too.
+%
+%But there are problems with crashes: What happens if in an $d0_{client}$ an op is enqueued but the counter is not incremented? Since $do_{master}$ is only running by one process and it's not terminating then we don't have to set linearization point to it. $do_{client}$ is after line 3 when counter is 0 and line 2 when counter is $>0$. Nonconcurent operations are trivial so Let's talk about concurrent ones.
+%
+%Cilent operations took $O(log\; n)$ and the Master is constantly dequeuing the queue.
+%\begin{proof}
+%\begin{itemize}
+%  \item $do_{client} 1$ is linearized before $do_{client} 2$\\ \textit{TODO}
+%
+%\end{itemize}
+%\end{proof}
+%
+%\question{Negative points of algorithm}
+%The main problem with this design is its single point failure. When master dies then no operations will be done on the given sequential object.
+%
+%There is another inherent problem with universal constructions that I don't get. I mean since our final object is sequential and only one operation is running at a time so the only improvement here is that there is a consensus among processors on which one to do it's operation. So if we create a consensus object that gives permissions to processes to do their operation it will be enough. It's not wait free since a process may halt but I guess it's nonblocking. It's very similar to task scheduling in operating system.
+%
+%\pagebreak
+%\question{Our Meeting Idea}
+%Instead of maintaining a single object shared among processes, let's give a sequential object to each process and only share history among them. Our design is a tournament tree which its leaves are assigned to processes and they are a queue of jobs.
+\question{Design \& Notation}
+A tournament tree in which each process is assigned to one of its leaves. Each node of the tree stores a string of form $"<operation, process>^*"$ and has a regex parser for reading its words. Each process has a local copy of the history of the given sequential object and a local copy o.
+
+We show set subtraction with notation "-" in the algorithm. And "." for concatenation on two strings. 
+In the rest of the paper, when we say node $n$ we mean $n.value$. Unless we explicitly call tree related attributes like $n.children$ or $n.parent$.
+
+\begin{algorithm}
+\caption{}\label{alg}
+\begin{algorithmic}[1]
+\begin{multicols}{2}
+
+\Statex Shared Objects
+\Statex \hspace{\algorithmicindent}tree T
+\Statex Local Objects
+\Statex \hspace{\algorithmicindent}Sequential Object o
+\Statex \hspace{\algorithmicindent}List snapshot
+\Statex
+
+\Function{Do}{operation op} 
+\State l= p's assigned leaf in tree
+\State l.$<op, p>$
+\State \Call{Propagate}{l}
+\State history= \Call{Read}{root}
+\State changeset= histroy-snapshot
+\State snapshot= history
+\ForAll{$<op^\prime, p^\prime>$: changeset}
+\If{p$^\prime$=p}
+\State res=o.op$^\prime$
+\Else
+\State o.op$^\prime$
+\EndIf
+\EndFor
+\State \Return res
+\EndFunction
+
+\Statex
+
+\Function{Propagate}{node n}
+\If{n==root} \Return
+\ElsIf{!\Call{Refresh}{n.parent}}
+\State \Call{Refresh}{n.parent} \EndIf
+\State \Call{Propagate}{n.parent}
+\EndFunction
+
+\Statex
+
+\Function{Refresh}{node n}
+\State old= \Call{Read}{n}
+\ForAll{child: n.children}
+\State posted.(child-n)
+\Statex \Comment ops that child contains but n doesn't
+\EndFor
+\State new+= old.posted
+\State res=\Call{CAS$_n$}{old, new}
+\State \Return res
+\Statex\Comment{\texttt{true}: Success, \texttt{false}: Failure}
+\EndFunction
+\end{multicols}
+\end{algorithmic}
+\end{algorithm}
+
+
+\question{Correctness}
+We're going to show our design satisfies correctness and progress.
+\textsc{Do(\textnormal{op})} finishes in finite steps, so our design is wait-free. It remains to show Algorithm \ref{alg} is linearizable.  
+
+
+%\begin{lemma}
+%  For every failed \textsc{Refresh(n)} instance $refresh_i$, there is at exactly one successful concurrent $refresh$ that has changed $n$ before $refresh_i$.
+%\end{lemma}
+%\begin{proof}
+%   It is trivial to see that there are some successful \textsc{Refresh(n)} operations which have read same value as $refresh_i$. Because CAS operations which only concats strings and properties of \textsc{CAS$_n$()} then there is exactly one.
+%\end{proof}
+
+\begin{lemma}
+  If $op$ is in node $n$ and then a process calls a successful \textsc{Refresh(}\textnormal{n.parent}\textsc{)} or 2 consecutive \textsc{Refresh(}\textnormal{n.parent}\textsc{)}s, $op$ will be in $n.parent$ after those procedures terminates.
+\end{lemma}
+\begin{proof}
+In case of one successful \textsc{Refresh()}, the \textsc{CAS}$_n$ has added $op$ to $n.parent$.
+Consider 2 consecutive failed $refresh_1$, $refresh_2$ on node $n$. For each failed \textsc{Refresh()} $r$ there is at least a \textsc{Refresh()} $w$ which has succeeded to do \textsc{CAS} with the same old vale read as $r$.
+From Lemma 1 let the successful \textsc{Refresh()}es corresponding to $refresh_1$ and $refresh_2$ be $refresh_3$ and $refresh_4$ respectively.
+If $refresh_3$ has read $op$ then $op$ will be in $n.parent$ after $refresh_3$. Otherwise $refresh_4$'s \textsc{Read} cannot be before \textsc{CAS} of $refresh_3$.
+And since the \textsc{CAS} of $refresh_3$ is after concatenating $op$ to $n$ then $refresh_4$ has read $op$ and stores it in $n.parent$.
+\end{proof}
+
+\begin{lemma}
+  Consider an instance of \textsc{Propagate(}\textnormal{n}\textsc{)}. When it terminates all operations that were in $n$ before \textsc{Propagate(}\textnormal{n}\textsc{)} will be in the root.
+\end{lemma}
+\begin{proof}
+  We prove this by induction on depth of node n. From Lemma 1, all operations in $n$ will be in $n.parent$ after one recursive call of \textsc{Propagate(}\textnormal{n}\textsc{)}. By induction hypothesis to \textsc{Propagate(}\textnormal{n.parent}\textsc{)}  which is then called recursively, \textsc{Propagate(}\textnormal{n}\textsc{)} satisfies the claim.
+\end{proof}
+
+\begin{theorem}
+Algorithm \ref{alg} is linearizable.  
+\end{theorem}
+\begin{proof}
+   Lemma 2 shows us that if \textsc{Propagate} procedure of a \textsc{Do(\textnormal{op})} is terminated then $op$ will be in root. let the linearization point of a finished \textsc{Do(\textnormal{op})} be when $op$ is  concatenated to the root by some \textsc{Propagate} procedure. If several operations are propagated at the same time then they are linearized in the order of adding to root. Since every process runs operation on  $o$ in order of the $history$ stored in the root, then results are consistent with linearization order. 
+  
+  If $do_1$ is finished before $do_2$ begins, then $do_1$ is linearized before $do_2$.
+  From Lemma 2 we know that after line 4 of Algorithm 1 $do_1$ operations are propagated to the root. So $do_1$ is linearized before $do_2$.
+\end{proof}
+
+
+\question{Analysis \& Conclusion}
+  Each \textsc{Do(\textnormal{op})} has a \textsc{Propagate} which uses at most $2\log(p)$ \textsc{CAS} operations. The history is repeated by each process locally. So after $n$ \textsc{Do(\textnormal{op})} operations among $p$ processes there will be $\Omega(\log p + np)$ steps per \textsc{Do(\textnormal{op})}. However the number of shared memory accesses is $\Omega(\log p)$. Since CAS operations work with large words the algorithm is not practical, but it shows that  without restricting size of shared words the lower bound on universal construction shared memory accesses is lower than $\Omega(\log p)$.
+
+\end{document}

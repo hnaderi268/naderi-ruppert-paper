@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass[12pt]{article}
 \usepackage{hyperref}
 \usepackage{graphicx}
 
@@ -55,12 +55,12 @@ Since executions on a shared data structure are different from sequential ones, 
 The standard safety condition is called linearizability, which ensures that for any concurrent execution on a linearizable object, each operation should appear to take effect instantaneously at some moment between its invocation and response. Figure 1 is an example of execution on a linearizable queue. The arrow shows time, and rectangles show the time between invocation and termination of an operation. Since ENQ(A) and ENQ(B) are concurrent ENQ(B) may have taken effect before ENQ(A). Execution in figure 2 is not consistent since A has been enqueued before B, so it has to be dequeued first.
 
 \begin{figure}[hbt]
-  \center\includegraphics[width=4in]{good}
+  \center\includegraphics[width=4in]{pics/good}
   \caption{An example of a linearizable execution. Both could take effect first since ENQ(A), and ENQ(B) are concurrent.}
 \end{figure}
 
 \begin{figure}[hbt]
-  \center\includegraphics[width=3in]{bad}
+  \center\includegraphics[width=3in]{pics/bad}
   \caption{An example of an execution that is not linearizable. Since ENQ(A) has completed before ENQ(B) is invoked the DEQ() should return A.}
 \end{figure}
 
@@ -72,12 +72,24 @@ An algorithm is \textit{wait-free} if each operation terminates after a finite n
 \paragraph{Previous Work}
 
 In the following paragraphs, we look at previous work on distributed queues.
-Michael \& Scott~\cite{DBLP:conf/podc/MichaelS96} introduced a lock-free queue which we refer to as the MS-queue. It is included in the standard Java Concurrency Package. Their idea is to store the queue in a singly~linked~list to compute the head and tail of the queue from the head and tail of the linked list. To insert a node to the linked list, they use compare and swap operations. If $p$ processes try to enqueue simultaneously, only one can succeed and the others have to retry. This makes the worst-case number of steps to be $\Omega(p)$ per enqueue. Similarly, dequeue can $\Omega(p)$ take steps.
+Michael \& Scott~\cite{DBLP:conf/podc/MichaelS96} introduced a lock-free queue which we refer to as the MS-queue. It is included in the standard Java Concurrency Package. Their idea is to store the queue elements in a singly~linked~list. Head points to the first not dequeued node in the linked list and tail points to last element in the queue. To insert a node to the linked list, they use atomic primitive operations like LL/SC or CAS. If $p$ processes try to enqueue simultaneously, only one can succeed and the others have to retry. This makes the worst-case number of steps to be $\Omega(p)$ per enqueue. Similarly, dequeue can $\Omega(p)$ take steps.
 
-Moir, Nussbaum, and Shalev~\cite{DBLP:conf/spaa/MoirNSS05} presented a more sophisticated queue by using the elimination idea. The elimination mechanism benefits the dual purpose of allowing operations to complete in parallel and reducing contention for the queue. An Elimination Queue consists of an MS-queue augmented with an elimination array. Elimination works by allowing opposing operations such as pushes and pops to exchange values. Their algorithm makes it possible for failed aged operations to complement. Empirical evaluation of their work is better than MS-queue, but the worst case is still the same, in case there are $p$ concurrent enqueus their algorithm is not better than MS-queue. 
+\begin{figure}[hbt]
+  \center\includegraphics[width=4in]{pics/msq}
+  \caption{MS-queue structure, Enquque and Dequeue operations}
+\end{figure}
 
 
-Hoffman, Shalev, and Shavit~\cite{DBLP:conf/opodis/HoffmanSS07} tried to make the MS-queue more parallel by introducing the Baskets Queue. Their idea is to allow more parallelism by treating the simultaneous enqueue operations as a basket. Since the operations in a basket are concurrent, we can order them in any way. Operations in a basket try to find their position in queue one by one by using CAS operations. The operations in different baskets can be executed in parallel. However, like the previous algorithm, if still there are $p$ concurrent enqueue operations in a basket, the amortized complexity remains $\Omega(p)$.
+Moir, Nussbaum, and Shalev~\cite{DBLP:conf/spaa/MoirNSS05} presented a more sophisticated queue by using the elimination idea. The elimination mechanism benefits the dual purpose of allowing operations to complete in parallel and reducing contention for the queue. An Elimination Queue consists of an MS-queue augmented with an elimination array. Elimination works by allowing opposing operations such as consecutive enqueues and dequeues in the elimination array to exchange values. Their algorithm makes it possible for failed aged operations to complement. Empirical evaluation of their work is better than MS-queue, but the worst case is still the same, in case there are $p$ concurrent enqueues their algorithm is not better than MS-queue. 
+
+
+Hoffman, Shalev, and Shavit~\cite{DBLP:conf/opodis/HoffmanSS07} tried to make the MS-queue more parallel by introducing the Baskets Queue. Their idea is to allow more parallelism by treating the simultaneous enqueue operations as a basket. Each basket has a time interval in which all its nodes’ enqueue operations overlap. Since the operations in a basket are concurrent, we can order them in any way. Operations in a basket try to find their order in the basket one by one by using CAS operations. However, like the previous algorithms, if still there are $p$ concurrent enqueue operations in a basket, the amortized complexity remains $\Omega(p)$.
+
+
+\begin{figure}[hbt]
+  \center\includegraphics[width=4in]{pics/baskets}
+  \caption{Baskets queue idea}
+\end{figure}
 
 Ladan-Mozes and Shavit~\cite{DBLP:journals/dc/Ladan-MozesS08} presented an Optimistic Approach to Lock-Free FIFO Queues. They use a doubly linked list and do fewer compare and swap operations than MS-queue. But as before, the worst case is when there are $p$ concurrent enqueues which have to be enqueued one by one. The amortized worst-case complexity is still $\Omega(p)$ CASes.
 

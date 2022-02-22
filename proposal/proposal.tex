@@ -1,6 +1,9 @@
 \documentclass[12pt]{article}
+\usepackage[a4paper]{geometry}
 \usepackage{hyperref}
 \usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{tikz-qtree}
 
 \renewcommand{\baselinestretch}{1.5} 
 
@@ -10,37 +13,37 @@
 \author{Hossein Naderi}
 \maketitle
 
-\begin{enumerate}
-  \item Importance of implementing shared data structures
-\begin{itemize}
-  \item how it helps developers
-  \item why lock free data structures are better than using locks?
-\end{itemize} 
-  \item  What properties matter for a distributed data structure?
-\begin{itemize}
-  \item Correctness condition: Linearizability definition
-  \item Wait-freeness
-\end{itemize} 
-  \item Previous works on distributed queues: more detailed
-\begin{itemize}
-  \item why we are studying queus
-  \item $p$ factor in time complexity of all previous algorithms
-  \item types of current queues in the literature
-  \item previous impractical universal constructions that use long words
-\end{itemize}
-  \item Our contribution
-\begin{itemize}
-  \item polylogarithmic algorithm with respect to $p$ and $Q$ size of the queue
-\end{itemize}
-  \item Explaining ideas
-\begin{itemize}
-  \item using tournament tree to agree on the linearization order
-  \item double refresh
-  \item how to compute a dequeue response
-  \item how to be sure the number of blocks in the root is related to the size of the queue
-  \item memory management as a goal
-\end{itemize}
-\end{enumerate}
+%\begin{enumerate}
+%  \item Importance of implementing shared data structures
+%\begin{itemize}
+%  \item how it helps developers
+%  \item why lock free data structures are better than using locks?
+%\end{itemize} 
+%  \item  What properties matter for a distributed data structure?
+%\begin{itemize}
+%  \item Correctness condition: Linearizability definition
+%  \item Wait-freeness
+%\end{itemize} 
+%  \item Previous works on distributed queues: more detailed
+%\begin{itemize}
+%  \item why we are studying queues
+%  \item $p$ factor in time complexity of all previous algorithms
+%  \item types of current queues in the literature
+%  \item previous impractical universal constructions that use long words
+%\end{itemize}
+%  \item Our contribution
+%\begin{itemize}
+%  \item polylogarithmic algorithm with respect to $p$ and $Q$ size of the queue
+%\end{itemize}
+%  \item Explaining ideas
+%\begin{itemize}
+%  \item using tournament tree to agree on the linearization order
+%  \item double refresh
+%  \item how to compute a dequeue response
+%  \item how to be sure the number of blocks in the root is related to the size of the queue
+%  \item memory management as a goal
+%\end{itemize}
+%\end{enumerate}
 
 \pagebreak
 
@@ -76,14 +79,14 @@ Michael \& Scott~\cite{DBLP:conf/podc/MichaelS96} introduced a lock-free queue w
 
 \begin{figure}[hbt]
   \center\includegraphics[width=4in]{pics/msq}
-  \caption{MS-queue structure, Enquque and Dequeue operations}
+  \caption{MS-queue structure, Enqueue and Dequeue operations}
 \end{figure}
 
 
-Moir, Nussbaum, and Shalev~\cite{DBLP:conf/spaa/MoirNSS05} presented a more sophisticated queue by using the elimination idea. The elimination mechanism benefits the dual purpose of allowing operations to complete in parallel and reducing contention for the queue. An Elimination Queue consists of an MS-queue augmented with an elimination array. Elimination works by allowing opposing operations such as consecutive enqueues and dequeues in the elimination array to exchange values. Their algorithm makes it possible for failed aged operations to complement. Empirical evaluation of their work is better than MS-queue, but the worst case is still the same, in case there are $p$ concurrent enqueues their algorithm is not better than MS-queue. 
+Moir, Nussbaum, and Shalev~\cite{DBLP:conf/spaa/MoirNSS05} presented a more sophisticated queue by using the elimination idea. The elimination mechanism benefits the dual purpose of allowing operations to complete in parallel and reducing contention for the queue. An Elimination Queue consists of an MS-queue augmented with an elimination array. Elimination works by allowing opposing operations such as consecutive enqueues and dequeues when the queue is initially empty in the elimination array to exchange values. Their algorithm makes it possible for failed aged operations to complement. Empirical evaluation of their work is better than MS-queue, but the worst case is still the same, in case there are $p$ concurrent enqueues their algorithm is not better than MS-queue. 
 
 
-Hoffman, Shalev, and Shavit~\cite{DBLP:conf/opodis/HoffmanSS07} tried to make the MS-queue more parallel by introducing the Baskets Queue. Their idea is to allow more parallelism by treating the simultaneous enqueue operations as a basket. Each basket has a time interval in which all its nodes’ enqueue operations overlap. Since the operations in a basket are concurrent, we can order them in any way. Operations in a basket try to find their order in the basket one by one by using CAS operations. However, like the previous algorithms, if still there are $p$ concurrent enqueue operations in a basket, the amortized complexity remains $\Omega(p)$.
+Hoffman, Shalev, and Shavit~\cite{DBLP:conf/opodis/HoffmanSS07} tried to make the MS-queue more parallel by introducing the Baskets Queue. Their idea is to allow more parallelism by treating the simultaneous enqueue operations as a basket. Each basket has a time interval in which all its nodes’ enqueue operations overlap. Since the operations in a basket are concurrent, we can order them in any way. Operations in a basket try to find their order in the basket one by one by using CAS operations. However, like the previous algorithms, if there are still $p$ concurrent enqueue operations in a basket, the amortized complexity remains $\Omega(p)$.
 
 
 \begin{figure}[hbt]
@@ -112,7 +115,58 @@ Nikolaev and Ravindran~\cite{DBLP:journals/corr/abs-2201-02179} wCQ to be comple
 %There is a connection between queues and universal constructions. We can implement a universal construction using a queue. We can store operations in the shared queue and compute operations' responses using the queue's content. Some impractical universal constructions are using big words as "...".
 
 \paragraph{Our contribution}
-In this work, we are trying to design a queue with $\log p^2 +Q$ steps per operation, outperforming queues built by LinkedList. Our idea is similar to the Jayanti MESD queue.
+In this work, we are trying to design a queue with $\log p^2 +Q$ steps per operation, outperforming queues built by LinkedList. Our idea is similar to the Jayanti MESD queue. But we do not use CAS operations with big words.
+
+\paragraph{}
+Jayanti~\cite{DBLP:conf/podc/Jayanti98a} proved an $\Omega(\log p)$ lower bound on the worst-case shared-access time complexity of $p$-process universal constructions. He also introduced~\cite{DBLP:conf/podc/ChandraJT98} a construction that achieves $\textsc{O}(\log^2 p)$ shared accesses. We introduce a universal construction using $\textsc{O}(\log p)$ CAS per operation~\cite{DBLP:conf/fsttcs/JayantiP05} called Block tree. We use the block tree as a stepping stone towards our queue algorithm.
+\paragraph{}
+A block tree is a Tournament tree shared among $p$ processes. Each process has a leaf, and it appends its operations to its leaf. After that, the process tries to propagate up to the tree's root. An ordering is stored in each node of the tree of operations propagated to the node. All processes agree on the sequence stored in the root (Linearization ordering). 
+
+\begin{center}
+\Tree [ [ [ $P_1$ $P_2$ ] [ $P_3$ $P_4$ ] ]
+          [ [ $P_5$ $P_6$ ] [ $P_7$ $P_8$ ] ] ]
+\end{center}
+
+The goal is to make each propagate step ensure that the operations are propagated up to the root and fast.
+
+
+Our algorithm uses a subroutine \textsc{Refresh}($n$) that aggregates new operations from node $n$'s children (that have not already been propagated to $n$) and tries to append them into $n$ using CAS operations. The general idea is that if we call \textsc{Refresh}($n$) twice, the operations in the first \textsc{Refresh}($n$) are guaranteed to be in $n$. Since there is a successful instance of \textsc{Refresh}($n$) after the first \textsc{Refresh}($n$) which has appended the talked operations.
+
+To make CAS fast, we do not append operations explicitly, but only remember their number. This allows us to CAS fixed-size objects in each \textsc{Refresh}($n$).
+
+
+\begin{figure}
+\begin{center}
+\begin{subfigure}[b]{.49\textwidth}
+  \centering
+  \resizebox{\columnwidth}{!}{
+  \begin{tikzpicture}[level 1/.style={level distance=1.4cm,sibling distance=0.5cm}]
+\Tree [.{\begin{tabular}{|c|c|c|c|c|c|}  \hline $op_{l_1}$ & $op_{l_2}$ & $op_{r_1}$ & $op_{l_3}$ & $op_{r_2}$ \\ \hline \end{tabular}}
+{\begin{tabular}{|c|c|c||c|c|}  \hline $op_{l_1}$ & $op_{l_2}$ & $op_{l_3}$ & $op_{l_4}$ & $op_{l_5}$ \\ \hline \end{tabular}}
+{\begin{tabular}{|c|c||c|c|}  \hline $op_{r_1}$ & $op_{r_2}$ & $op_{r_3}$ & $op_{r_4}$\\ \hline \end{tabular}} ]
+\end{tikzpicture}}
+  \caption{Operations after $||$ are new.}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{.49\textwidth}
+  \centering
+  \resizebox{\columnwidth}{!}{
+  \begin{tikzpicture}[level 1/.style={level distance=1.4cm,sibling distance=0.5cm}]
+\Tree [.{\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}  \hline $op_{l_1}$ & $op_{l_2}$ & $op_{r_1}$ & $op_{l_3}$ & $op_{r_2}$ & $op_{l_4}$ & $op_{l_5}$ & $op_{r_3}$ & $op_{r_4}$  \\ \hline \end{tabular}}
+{\begin{tabular}{|c|c|c|c|c||}  \hline $op_{l_1}$ & $op_{l_2}$ & $op_{l_3}$ & $op_{l_4}$ & $op_{l_5}$ \\ \hline \end{tabular}}
+{\begin{tabular}{|c|c|c|c||}  \hline $op_{r_1}$ & $op_{r_2}$ & $op_{r_3}$ & $op_{r_4}$\\ \hline \end{tabular}} ]
+\end{tikzpicture}}
+  \caption{New operations are added to the parent node.}
+\end{subfigure}
+\caption{\label{fig:ucexample} Propagate Step in Universal Construction}
+\end{center}
+\end{figure}
+
+We also implement methods Get(i), Index(op) to get the $i$th propagated operation and compute the order of a propagated operation in the linearization. Having methods Append(op), Get(i), Index(op), we can have the linearization shared among the processes. To have a queue, we will implement Enqueue and Dequeue using our block tree. An Enqueue can be done using just an Append operation in the block tree. Dequeue() consists of an Append, Index, compute the corresponding response and return it using Get().
+
+Our future work is to manage the memory of the tree, not to have infinite orderings.
+
+
 
 \bibliography{main} 
 \bibliographystyle{ieeetr}

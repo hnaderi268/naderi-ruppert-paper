@@ -47,9 +47,11 @@
 
 \pagebreak
 
+\section{Introduction}
+
 \paragraph{}
 Shared data structures have become an essential field in distributed algorithms research.
-We are reaching the physical limits of how many transistors we can place on a CPU core. The industry solution to provide more computational power is to increase the number of cores of the CPU. This is why distributed algorithms have become important. It is not hard to see why multiple processes cannot update sequential data structures; for example, consider two processes trying to insert some values to a linked list simultaneously. One solution is to use locks; whenever a process wants to query on a data structure, it locks it, and others cannot use it until the lock is released. Using locks has some disadvantages; for example, one process might be slow, and holding a lock for a long time prevents other processes from progressing. Moreover, locks do not allow parallelism since only one process can make progress in one moment. Our approach is to create a lock-free data structure that developers can safely use without the disadvantages of locks.
+We are reaching the physical limits of how many transistors we can place on a CPU core. The industry solution to provide more computational power is to increase the number of cores of the CPU. This is why distributed algorithms have become important. It is not hard to see why multiple processes cannot update sequential data structures; for example, consider two processes trying to insert some values to a linked list simultaneously. One solution is to use locks; whenever a process wants to do an update query on a data structure, it locks it, and others cannot use it until the lock is released. Using locks has some disadvantages; for example, one process might be slow, and holding a lock for a long time prevents other processes from progressing. Moreover, locks do not allow parallelism since only one process can make progress in one moment. Our approach is to create a lock-free data structure that developers can safely use without the disadvantages of locks.
 
 \paragraph{}
 The question that may arise is, ``What properties matter for a lock-free data structure?''.
@@ -72,18 +74,18 @@ An algorithm is \textit{wait-free} if each operation terminates after a finite n
 
 %Since executions on a shared data structure are different from sequential ones, the correctness condition also differs. The strongest correctness condition is linearizability, defined as "...". Lock-free is good, but a wait-free algorithm guarantees us every operation terminates after finite steps.
 
-\paragraph{Previous Work}
+\section{Previous Work}
 
-In the following paragraphs, we look at previous work on distributed queues.
-Michael \& Scott~\cite{DBLP:conf/podc/MichaelS96} introduced a lock-free queue which we refer to as the MS-queue. It is included in the standard Java Concurrency Package. Their idea is to store the queue elements in a singly~linked~list. Head points to the first not dequeued node in the linked list and tail points to last element in the queue. To insert a node to the linked list, they use atomic primitive operations like LL/SC or CAS. If $p$ processes try to enqueue simultaneously, only one can succeed and the others have to retry. This makes the worst-case number of steps to be $\Omega(p)$ per enqueue. Similarly, dequeue can $\Omega(p)$ take steps.
+In the following paragraphs, we look at previous lock-free queues.
+Michael \& Scott~\cite{DBLP:conf/podc/MichaelS96} introduced a lock-free queue which we refer to as the MS-queue. It is included in the standard Java Concurrency Package. Their idea is to store the queue elements in a singly~linked~list. Head points to the first not dequeued node in the linked list and tail points to the last element in the queue. To insert a node to the linked list, they use atomic primitive operations like LL/SC or CAS. If $p$ processes try to enqueue simultaneously, only one can succeed, and the others have to retry. This makes the worst-case number of steps to be $\Omega(p)$ per enqueue. Similarly, dequeue can $\Omega(p)$ take steps.
 
 \begin{figure}[hbt]
-  \center\includegraphics[width=4in]{pics/msq}
+  \center\includegraphics[width=4in]{pics/msqueue}
   \caption{MS-queue structure, Enqueue and Dequeue operations}
 \end{figure}
 
 
-Moir, Nussbaum, and Shalev~\cite{DBLP:conf/spaa/MoirNSS05} presented a more sophisticated queue by using the elimination idea. The elimination mechanism benefits the dual purpose of allowing operations to complete in parallel and reducing contention for the queue. An Elimination Queue consists of an MS-queue augmented with an elimination array. Elimination works by allowing opposing operations such as consecutive enqueues and dequeues when the queue is initially empty in the elimination array to exchange values. Their algorithm makes it possible for failed aged operations to complement. Empirical evaluation of their work is better than MS-queue, but the worst case is still the same, in case there are $p$ concurrent enqueues their algorithm is not better than MS-queue. 
+Moir, Nussbaum, and Shalev~\cite{DBLP:conf/spaa/MoirNSS05} presented a more sophisticated queue by using the elimination idea. The elimination mechanism benefits the dual purpose of allowing operations to complete in parallel and reducing contention for the queue. An Elimination Queue consists of an MS-queue augmented with an elimination array. Elimination works by allowing opposing operations such as consecutive enqueues and dequeues when the queue is initially empty in the elimination array to exchange values. Their algorithm makes it possible for failed aged operations to complement. Empirical evaluation of their work is better than MS-queue, but the worst case is still the same; in case there are $p$ concurrent enqueues, their algorithm is not better than MS-queue. 
 
 
 Hoffman, Shalev, and Shavit~\cite{DBLP:conf/opodis/HoffmanSS07} tried to make the MS-queue more parallel by introducing the Baskets Queue. Their idea is to allow more parallelism by treating the simultaneous enqueue operations as a basket. Each basket has a time interval in which all its nodes’ enqueue operations overlap. Since the operations in a basket are concurrent, we can order them in any way. Operations in a basket try to find their order in the basket one by one by using CAS operations. However, like the previous algorithms, if there are still $p$ concurrent enqueue operations in a basket, the amortized complexity remains $\Omega(p)$.
@@ -98,14 +100,14 @@ Ladan-Mozes and Shavit~\cite{DBLP:journals/dc/Ladan-MozesS08} presented an Optim
 
 Hendler et al.~\cite{DBLP:conf/spaa/HendlerIST10} proposed a new paradigm called flat combining. Their queue is linearizable but not lock-free. After adding an operation acquiring the lock, they maintain history in publication records and compute all active operations responses. They believe their algorithm in real-world assumptions works well.
 
-Gidenstam, Sundell and Tsigas~\cite{DBLP:conf/opodis/GidenstamST10} introduced a new algorithm using a linked list of arrays. Global head and tail point to arrays and content of arrays are marked if dequeued and written by CAS operations. Their data structure is lock-free but it updates lazily. Threads have a cache view on the queue and update it if it gets old.
+Gidenstam, Sundell and Tsigas~\cite{DBLP:conf/opodis/GidenstamST10} introduced a new algorithm using a linked list of arrays. Global head and tail point to arrays and content of arrays are marked if dequeued and written by CAS operations. Their data structure is lock-free, but it updates lazily. Threads have a cache view on the queue and update it if it gets old.
 
 Kogan and Perank~\cite{DBLP:conf/ppopp/KoganP11} introduced wait-free queues based on MS-queue and use Herlihy's helping technique to achieve wait-freeness. Their step complexity is $\Omega(p)$ because of the helping mechanism.
 
 Milman et al.~\cite{DBLP:conf/spaa/MilmanKLLP18} designed BQ: A Lock-Free Queue with Batching. Their idea of batching allows a sequence of operations to be submitted as a batch for later execution. It supports a new notion introduced by the authors called Extended Medium Futures Linearizability.
 
-Nikolaev and Ravindran~\cite{DBLP:journals/corr/abs-2201-02179} wCQ to be completed.
-
+%Nikolaev and Ravindran~\cite{DBLP:journals/corr/abs-2201-02179} wCQ to be completed.
+In the worst-case step complexity of all the papers discussed above, there is a $p$ term which comes from the case all $p$ processes try to do an enqueue at the same time. We are focusing on seeing if we can do this in sublinear in terms of $p$ or not.
 
 
 %FIFO queues have a wide range of use in OS and applications. The current state-of-the-art queues are implemented using linked lists; that's why they have factor p in their time complexity.
@@ -114,25 +116,22 @@ Nikolaev and Ravindran~\cite{DBLP:journals/corr/abs-2201-02179} wCQ to be comple
 
 %There is a connection between queues and universal constructions. We can implement a universal construction using a queue. We can store operations in the shared queue and compute operations' responses using the queue's content. Some impractical universal constructions are using big words as "...".
 
-\paragraph{Our contribution}
-In this work, we are trying to design a queue with $\log p^2 +Q$ steps per operation, outperforming queues built by LinkedList. Our idea is similar to the Jayanti MESD queue. But we do not use CAS operations with big words.
-
+\section{Our contribution}
+In this work, we are trying to design a queue with $\log p^2 +Q$ steps per operation, outperforming queues built by LinkedList. Our idea is similar to the Jayanti MESD queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but we do not use CAS operations with big words. The new work about our idea is that even if there are $p$ processes trying to enqueue simultaneously, each enqueue takes $\log p^2 +Q$. Jayanti~\cite{DBLP:conf/podc/Jayanti98a} proved an $\Omega(\log p)$ lower bound on the worst-case shared-access time complexity of $p$-process universal constructions. He also introduced~\cite{DBLP:conf/podc/ChandraJT98} a construction that achieves $\textsc{O}(\log^2 p)$ shared accesses. We introduce a data structure that makes processes agree on the linearization ordering using $\textsc{O}(\log p)$ CAS per operation. We use the block tree as a stepping stone towards our queue algorithm.
 \paragraph{}
-Jayanti~\cite{DBLP:conf/podc/Jayanti98a} proved an $\Omega(\log p)$ lower bound on the worst-case shared-access time complexity of $p$-process universal constructions. He also introduced~\cite{DBLP:conf/podc/ChandraJT98} a construction that achieves $\textsc{O}(\log^2 p)$ shared accesses. We introduce a universal construction using $\textsc{O}(\log p)$ CAS per operation~\cite{DBLP:conf/fsttcs/JayantiP05} called Block tree. We use the block tree as a stepping stone towards our queue algorithm.
-\paragraph{}
-A block tree is a Tournament tree shared among $p$ processes. Each process has a leaf, and it appends its operations to its leaf. After that, the process tries to propagate up to the tree's root. An ordering is stored in each node of the tree of operations propagated to the node. All processes agree on the sequence stored in the root (Linearization ordering). 
-
+A block tree is a tournament tree shared among $p$ processes. Each process has a leaf, and it appends its operations to its leaf. After that, the process tries to propagate up to the tree's root. An ordering is stored in each node of the tree of operations propagated to the node. All processes agree on the sequence stored in the root (Linearization ordering). 
+\begin{figure}
 \begin{center}
 \Tree [ [ [ $P_1$ $P_2$ ] [ $P_3$ $P_4$ ] ]
           [ [ $P_5$ $P_6$ ] [ $P_7$ $P_8$ ] ] ]
 \end{center}
+\caption{Each process has a leaf and in each node there is an ordering of operations stored. Each node tries to propagate its operations up to the root which the final ordering is stored.}  
+\end{figure}
 
-The goal is to make each propagate step ensure that the operations are propagated up to the root and fast.
+The goal is to make each propagate step ensure that the operations are propagated up to the root and fast. And then use the linearization ordering to answer the dequeue operations.
 
 
-Our algorithm uses a subroutine \textsc{Refresh}($n$) that aggregates new operations from node $n$'s children (that have not already been propagated to $n$) and tries to append them into $n$ using CAS operations. The general idea is that if we call \textsc{Refresh}($n$) twice, the operations in the first \textsc{Refresh}($n$) are guaranteed to be in $n$. Since there is a successful instance of \textsc{Refresh}($n$) after the first \textsc{Refresh}($n$) which has appended the talked operations.
-
-To make CAS fast, we do not append operations explicitly, but only remember their number. This allows us to CAS fixed-size objects in each \textsc{Refresh}($n$).
+In each propagate step, our algorithm uses a subroutine \textsc{Refresh}($n$) that aggregates new operations from node $n$'s children (that have not already been propagated to $n$) and tries to append them into $n$ using CAS operations. The general idea is that if we call \textsc{Refresh}($n$) twice, the operations in the first \textsc{Refresh}($n$) are guaranteed to be in $n$. Since there is a successful instance of \textsc{Refresh}($n$) after the first \textsc{Refresh}($n$) which has appended the talked operations. To make CAS fast, we do not append operations explicitly, but only remember their number. This allows us to CAS fixed-size objects in each \textsc{Refresh}($n$). To do that, we introduce blocks that only contain the number of operations from left and right child in a \textsc{Refresh}() procedure.
 
 
 \begin{figure}
@@ -158,13 +157,16 @@ To make CAS fast, we do not append operations explicitly, but only remember thei
 \end{tikzpicture}}
   \caption{New operations are added to the parent node.}
 \end{subfigure}
-\caption{\label{fig:ucexample} Propagate Step in Universal Construction}
+\caption{\label{fig:ucexample} Propagate Step, operations in children after || are new.}
 \end{center}
 \end{figure}
 
-We also implement methods Get(i), Index(op) to get the $i$th propagated operation and compute the order of a propagated operation in the linearization. Having methods Append(op), Get(i), Index(op), we can have the linearization shared among the processes. To have a queue, we will implement Enqueue and Dequeue using our block tree. An Enqueue can be done using just an Append operation in the block tree. Dequeue() consists of an Append, Index, compute the corresponding response and return it using Get().
+We also implement methods Get(i), Index(op) to get the $i$th propagated operation and compute the order of a propagated operation in the linearization. Get(i) finds the block containing $i$th in the root and then finds its subblock recursively to reach a leaf. Index() is somewhat similar but more complicated from bottom to top; the main challenge is that each level of the tree should take polylogarithmic steps with respect to $p$. Having methods Get(i), Index(op), we can have the linearization shared among the processes. We will implement Enqueue and Dequeue using our block tree to have a queue. An Enqueue can be done using just an Append operation in the block tree. Dequeue() consists of an Append, Index, compute the corresponding response, and return it using Get().
 
-Our future work is to manage the memory of the tree, not to have infinite orderings.
+However, the algorithm works as a queue, but the Get(i)  may take a long time since it has to find the block containing $i$th operation in the root level. We make it fast by storing prefix sums but still, it is proportional to the number of all operations. We come with a garbage collection only for the root level to reach $\log Q$. The main idea is to make use of the fast split of persistent red-black trees.
+
+\section{Next steps}
+The current algorithm only works as a queue, but other data structures like Stacks share similarities. It might be possible to come up with a generalization for all these types. We do not care about the space, and we use infinite-sized arrays that are not practical. Our future work is to manage the memory of the tree and make it practical.
 
 
 

@@ -10,7 +10,7 @@
 \begin{document}
 
 \title{Thesis Proposal}
-\author{Hossein Naderi \and Eric Ruppert}
+\author{Hossein Naderi \\supervised by Eric Ruppert}
 \maketitle
 
 %\begin{enumerate}
@@ -78,7 +78,7 @@ An algorithm is \textit{wait-free} if each operation terminates after a finite n
 \section{Previous Work}
 
 In the following paragraphs, we look at previous lock-free queues.
-Michael \& Scott~\cite{DBLP:conf/podc/MichaelS96} introduced a lock-free queue which we refer to as the MS-queue. It is included in the standard Java Concurrency Package. Their idea is to store the queue elements in a singly~linked~list. Head points to the first not dequeued node in the linked list and tail points to the last element in the queue. To insert a node to the linked list, they use atomic primitive operations like LL/SC or \texttt{CAS}. If $p$ processes try to enqueue simultaneously, only one can succeed, and the others have to retry. This makes the worst-\texttt{CAS}e number of steps to be $\Omega(p)$ per enqueue. Similarly, dequeue can take $\Omega(p)$ steps.
+Michael \& Scott~\cite{DBLP:conf/podc/MichaelS96} introduced a lock-free queue which we refer to as the MS-queue. It is included in the standard Java Concurrency Package. Their idea is to store the queue elements in a singly~linked~list. Head points to the first not dequeued node in the linked list and tail points to the last element in the queue. To insert a node to the linked list, they use atomic primitive operations like LL/SC or \texttt{CAS}. If $p$ processes try to enqueue simultaneously, only one can succeed, and the others have to retry. This makes the worst-case number of steps to be $\Omega(p)$ per enqueue. Similarly, dequeue can take $\Omega(p)$ steps.
 
 \begin{figure}[hbt]
   \center\includegraphics[scale=0.5]{pics/msqueue}
@@ -86,7 +86,7 @@ Michael \& Scott~\cite{DBLP:conf/podc/MichaelS96} introduced a lock-free queue w
 \end{figure}
 
 
-Moir, Nussbaum, and Shalev~\cite{DBLP:conf/spaa/MoirNSS05} presented a more sophisticated queue by using the elimination idea. The elimination mechanism benefits the dual purpose of allowing operations to complete in parallel and reducing contention for the queue. An Elimination Queue consists of an MS-queue augmented with an elimination array. Elimination works by allowing opposing operations such as consecutive enqueues and dequeues  in the elimination array to exchange values when the queue is empty. Their algorithm makes it possible for failed aged operations to complement. Empirical evaluation of their work is better than MS-queue, but the worst \texttt{CAS}e is still the same; in \texttt{CAS}e there are $p$ concurrent enqueues, their algorithm is not better than MS-queue. 
+Moir, Nussbaum, and Shalev~\cite{DBLP:conf/spaa/MoirNSS05} presented a more sophisticated queue by using the elimination idea. The elimination mechanism benefits the dual purpose of allowing operations to complete in parallel and reducing contention for the queue. An Elimination Queue consists of an MS-queue augmented with an elimination array. Elimination works by allowing opposing operations such as consecutive enqueues and dequeues  in the elimination array to exchange values when the queue is empty. Their algorithm makes it possible for failed aged operations to complement. Empirical evaluation of their work is better than MS-queue, but the worst case is still the same; in case there are $p$ concurrent enqueues, their algorithm is not better than MS-queue. 
 
 
 Hoffman, Shalev, and Shavit~\cite{DBLP:conf/opodis/HoffmanSS07} tried to make the MS-queue more parallel by introducing the Baskets Queue. Their idea is to allow more parallelism by treating the simultaneous enqueue operations as a basket. Each basket has a time interval in which all its nodes’ enqueue operations overlap. Since the operations in a basket are concurrent, we can order them in any way. Operations in a basket try to find their order in the basket one by one by using \texttt{CAS} operations. However, like the previous algorithms, if there are still $p$ concurrent enqueue operations in a basket, the amortized complexity remains $\Omega(p)$.
@@ -97,7 +97,7 @@ Hoffman, Shalev, and Shavit~\cite{DBLP:conf/opodis/HoffmanSS07} tried to make th
   \caption{Baskets queue idea}
 \end{figure}
 
-Ladan-Mozes and Shavit~\cite{DBLP:journals/dc/Ladan-MozesS08} presented an Optimistic Approach to Lock-Free FIFO Queues. They use a doubly linked list and do fewer compare and swap operations than MS-queue. But as before, the worst \texttt{CAS}e is when there are $p$ concurrent enqueues which have to be enqueued one by one. The amortized worst-\texttt{CAS}e complexity is still $\Omega(p)$ \texttt{CAS}es.
+Ladan-Mozes and Shavit~\cite{DBLP:journals/dc/Ladan-MozesS08} presented an Optimistic Approach to Lock-Free FIFO Queues. They use a doubly linked list and do fewer compare and swap operations than MS-queue. But as before, the worst case is when there are $p$ concurrent enqueues which have to be enqueued one by one. The amortized worst-case complexity is still $\Omega(p)$ \texttt{CAS}es.
 
 Hendler et al.~\cite{DBLP:conf/spaa/HendlerIST10} proposed a new paradigm called flat combining. Their queue is linearizable but not lock-free. After adding an operation acquiring the lock, they maintain history in publication records and compute all active operations responses. They believe their algorithm in real-world assumptions works well.
 
@@ -108,7 +108,7 @@ Kogan and Perank~\cite{DBLP:conf/ppopp/KoganP11} introduced wait-free queues bas
 Milman et al.~\cite{DBLP:conf/spaa/MilmanKLLP18} designed BQ: A Lock-Free Queue with Batching. Their idea of batching allows a sequence of operations to be submitted as a batch for later execution. It supports a new notion introduced by the authors called Extended Medium Futures Linearizability.
 
 %Nikolaev and Ravindran~\cite{DBLP:journals/corr/abs-2201-02179} wCQ to be completed.
-In the worst-\texttt{CAS}e step complexity of all the papers discussed above, there is a $p$ term which comes from the \texttt{CAS}e all $p$ processes try to do an enqueue at the same time. We are focusing to see if we can do this in sublinear steps in terms of $p$ or not.
+In the worst-case step complexity of all the papers discussed above, there is a $p$ term which comes from the case all $p$ processes try to do an enqueue at the same time. We are focusing to see if we can do this in sublinear steps in terms of $p$ or not.
 
 
 %FIFO queues have a wide range of use in OS and applications. The current state-of-the-art queues are implemented using linked lists; that's why they have factor p in their time complexity.
@@ -118,7 +118,7 @@ In the worst-\texttt{CAS}e step complexity of all the papers discussed above, th
 %There is a connection between queues and universal constructions. We can implement a universal construction using a queue. We can store operations in the shared queue and compute operations' responses using the queue's content. Some impractical universal constructions are using big words as "...".
 
 \section{Our contribution}
-In this work, we design a queue with $\log^2 p +Q$ steps per operation, outperforming queues built by the LinkedList approach. Our idea is similar to Jayanti 's Multi Enqueuer-Single Dequeuer Queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but we do not use \texttt{CAS} operations with big words. The new work about our idea is that even if there are $p$ processes trying to enqueue or dequeue simultaneously, each operation takes $\log^2 p +Q$. Jayanti proved an $\Omega(\log p)$ lower bound on the worst-\texttt{CAS}e shared-access time complexity of $p$-process universal constructions~\cite{DBLP:conf/podc/Jayanti98a}. He also introduced~ a construction that achieves $\textsc{O}(\log^2 p)$ shared accesses~\cite{DBLP:conf/podc/ChandraJT98}. We introduce a data structure that makes processes agree on the linearization ordering using $\textsc{O}(\log p)$ \texttt{CAS} per operation called \textit{Block tree}. Then we use the block tree as a stepping stone towards our queue algorithm.
+In this work, we design a queue with $\log^2 p +Q$ steps per operation, outperforming queues built by the LinkedList approach. Our idea is similar to Jayanti 's Multi Enqueuer-Single Dequeuer Queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but we do not use \texttt{CAS} operations with big words. The new work about our idea is that even if there are $p$ processes trying to enqueue or dequeue simultaneously, each operation takes $\log^2 p +Q$. Jayanti proved an $\Omega(\log p)$ lower bound on the worst-case shared-access time complexity of $p$-process universal constructions~\cite{DBLP:conf/podc/Jayanti98a}. He also introduced~ a construction that achieves $\textsc{O}(\log^2 p)$ shared accesses~\cite{DBLP:conf/podc/ChandraJT98}. We introduce a data structure that makes processes agree on the linearization ordering using $\textsc{O}(\log p)$ \texttt{CAS} per operation called \textit{Block tree}. Then we use the block tree as a stepping stone towards our queue algorithm.
 A block tree is a tournament tree shared among $p$ processes (See Figure~\ref{fig::blocktree}). Each process has a leaf, and it appends its operations to its leaf. After that, the process tries to propagate up to the tree's root. An ordering is stored in each node of the tree of operations propagated to the node. All processes agree on the sequence stored in the root (Linearization ordering). 
 \begin{figure}
 \begin{center}

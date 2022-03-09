@@ -126,7 +126,7 @@
   editor    = {Christian Scheideler and
                Jeremy T. Fineman},
   title     = {{BQ:} {A} Lock-Free Queue with Batching},
-  booktitle = {Proceedings of the 30th on Symposium on Parallelism in Algorithms
+  booktitle = {Proceedings of the 30th Symposium on Parallelism in Algorithms
                and Architectures, {SPAA} 2018, Vienna, Austria, July 16-18, 2018},
   pages     = {99--109},
   publisher = {{ACM}},
@@ -261,3 +261,29 @@
   biburl    = {https://dblp.org/rec/conf/fsttcs/JayantiP05.bib},
   bibsource = {dblp computer science bibliography, https://dblp.org}
 }
+
+@inproceedings{DBLP:conf/ppopp/MorrisonA13,
+  author    = {Adam Morrison and
+               Yehuda Afek},
+  editor    = {Alex Nicolau and
+               Xiaowei Shen and
+               Saman P. Amarasinghe and
+               Richard W. Vuduc},
+  title     = {Fast concurrent queues for x86 processors},
+  booktitle = {{ACM} {SIGPLAN} Symposium on Principles and Practice of Parallel Programming,
+               PPoPP '13, Shenzhen, China, February 23-27, 2013},
+  pages     = {103--112},
+  publisher = {{ACM}},
+  year      = {2013},
+  url       = {https://doi.org/10.1145/2442516.2442527},
+  doi       = {10.1145/2442516.2442527},
+  timestamp = {Thu, 24 Jun 2021 16:19:30 +0200},
+  biburl    = {https://dblp.org/rec/conf/ppopp/MorrisonA13.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+
+@article{10.1145/114005.102808, author = {Herlihy, Maurice}, title = {Wait-Free Synchronization}, year = {1991}, issue_date = {Jan. 1991}, publisher = {Association for Computing Machinery}, address = {New York, NY, USA}, volume = {13}, number = {1}, issn = {0164-0925}, url = {https://doi.org/10.1145/114005.102808}, doi = {10.1145/114005.102808}, abstract = {A wait-free implementation of a concurrent data object is one that guarantees that any process can complete any operation in a finite number of steps, regardless of the execution speeds of the other processes. The problem of constructing a wait-free implementation of one data object from another lies at the heart of much recent work in concurrent algorithms, concurrent data structures, and multiprocessor architectures. First, we introduce a simple and general technique, based on reduction to a concensus protocol, for proving statements of the form, “there is no wait-free implementation of X by Y.” We derive a hierarchy of objects such that no object at one level has a wait-free implementation in terms of objects at lower levels. In particular, we show that atomic read/write registers, which have been the focus of much recent attention, are at the bottom of the hierarchy: thay cannot be used to construct wait-free implementations of many simple and familiar data types. Moreover, classical synchronization primitives such astest&set and fetch&add, while more powerful than read and write, are also computationally weak, as are the standard message-passing primitives. Second, nevertheless, we show that there do exist simple universal objects from which one can construct a wait-free implementation of any sequential object.}, journal = {ACM Trans. Program. Lang. Syst.}, month = {jan}, pages = {124–149}, numpages = {26}, keywords = {wait-free synchronization, linearization} }
+
+
+@inproceedings{10.1007/978-3-642-41527-2_20, author = {Ellen, Faith and Woelfel, Philipp}, title = {An Optimal Implementation of Fetch-and-Increment}, year = {2013}, isbn = {9783642415265}, publisher = {Springer-Verlag}, address = {Berlin, Heidelberg}, url = {https://doi.org/10.1007/978-3-642-41527-2_20}, doi = {10.1007/978-3-642-41527-2_20}, abstract = {We present a new wait-free implementation of a Fetch&Inc object shared by n processes from read-write registers and load-linked/store-conditional LL/SC objects. The step complexity of each FI operation is Ologn, which is optimal. Our implementation uses O max {m,n} objects, each of which stores Ologm bits, where m is the number of FI operations that are performed. For large m, the number of objects can be reduced to On 2. Similar implementations of other objects, such as Fetch&Inc and Swap, are also obtained.Our implementation uses a new object, called an Aggregator. It supports an operation which, if successful, puts a value into its in-buffer that can depend on the value that is currently there, an operation that copies the value in its in-buffer to its out-buffer, provided its out-buffer is empty, and an operation that empties its out-buffer. We show how to implement an Aggregator from a small constant number of LL/SC objects so that all three operations have constant step complexity.}, booktitle = {Proceedings of the 27th International Symposium on Distributed Computing - Volume 8205}, pages = {284–298}, numpages = {15}, location = {Jerusalem, Israel}, series = {DISC 2013} }

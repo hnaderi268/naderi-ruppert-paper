@@ -287,3 +287,58 @@
 
 
 @inproceedings{10.1007/978-3-642-41527-2_20, author = {Ellen, Faith and Woelfel, Philipp}, title = {An Optimal Implementation of Fetch-and-Increment}, year = {2013}, isbn = {9783642415265}, publisher = {Springer-Verlag}, address = {Berlin, Heidelberg}, url = {https://doi.org/10.1007/978-3-642-41527-2_20}, doi = {10.1007/978-3-642-41527-2_20}, abstract = {We present a new wait-free implementation of a Fetch&Inc object shared by n processes from read-write registers and load-linked/store-conditional LL/SC objects. The step complexity of each FI operation is Ologn, which is optimal. Our implementation uses O max {m,n} objects, each of which stores Ologm bits, where m is the number of FI operations that are performed. For large m, the number of objects can be reduced to On 2. Similar implementations of other objects, such as Fetch&Inc and Swap, are also obtained.Our implementation uses a new object, called an Aggregator. It supports an operation which, if successful, puts a value into its in-buffer that can depend on the value that is currently there, an operation that copies the value in its in-buffer to its out-buffer, provided its out-buffer is empty, and an operation that empties its out-buffer. We show how to implement an Aggregator from a small constant number of LL/SC objects so that all three operations have constant step complexity.}, booktitle = {Proceedings of the 27th International Symposium on Distributed Computing - Volume 8205}, pages = {284–298}, numpages = {15}, location = {Jerusalem, Israel}, series = {DISC 2013} }
+
+@inproceedings{DBLP:conf/spaa/TsigasZ01,
+  author    = {Philippas Tsigas and
+               Yi Zhang},
+  editor    = {Arnold L. Rosenberg},
+  title     = {A simple, fast and scalable non-blocking concurrent {FIFO} queue for
+               shared memory multiprocessor systems},
+  booktitle = {Proceedings of the Thirteenth Annual {ACM} Symposium on Parallel Algorithms
+               and Architectures, {SPAA} 2001, Heraklion, Crete Island, Greece, July
+               4-6, 2001},
+  pages     = {134--143},
+  publisher = {{ACM}},
+  year      = {2001},
+  url       = {https://doi.org/10.1145/378580.378611},
+  doi       = {10.1145/378580.378611},
+  timestamp = {Wed, 21 Nov 2018 12:27:44 +0100},
+  biburl    = {https://dblp.org/rec/conf/spaa/TsigasZ01.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+@inproceedings{DBLP:conf/iceccs/ColvinG05,
+  author    = {Robert Colvin and
+               Lindsay Groves},
+  title     = {Formal Verification of an Array-Based Nonblocking Queue},
+  booktitle = {10th International Conference on Engineering of Complex Computer Systems
+               {(ICECCS} 2005), 16-20 June 2005, Shanghai, China},
+  pages     = {507--516},
+  publisher = {{IEEE} Computer Society},
+  year      = {2005},
+  url       = {https://doi.org/10.1109/ICECCS.2005.49},
+  doi       = {10.1109/ICECCS.2005.49},
+  timestamp = {Wed, 16 Oct 2019 14:14:51 +0200},
+  biburl    = {https://dblp.org/rec/conf/iceccs/ColvinG05.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+@inproceedings{DBLP:conf/icdcn/Shafiei09,
+  author    = {Niloufar Shafiei},
+  editor    = {Vijay K. Garg and
+               Roger Wattenhofer and
+               Kishore Kothapalli},
+  title     = {Non-blocking Array-Based Algorithms for Stacks and Queues},
+  booktitle = {Distributed Computing and Networking, 10th International Conference,
+               {ICDCN} 2009, Hyderabad, India, January 3-6, 2009. Proceedings},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {5408},
+  pages     = {55--66},
+  publisher = {Springer},
+  year      = {2009},
+  url       = {https://doi.org/10.1007/978-3-540-92295-7\_10},
+  doi       = {10.1007/978-3-540-92295-7\_10},
+  timestamp = {Tue, 14 May 2019 10:00:42 +0200},
+  biburl    = {https://dblp.org/rec/conf/icdcn/Shafiei09.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}

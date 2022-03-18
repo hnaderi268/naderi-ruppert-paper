@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE ipe SYSTEM "ipe.dtd">
 <ipe version="70218" creator="Ipe 7.2.24">
-<info created="D:20220225140119" modified="D:20220225140119"/>
+<info created="D:20220225140119" modified="D:20220318165807"/>
 <ipestyle name="basic">
 <symbol name="arrow/arc(spx)">
 <path stroke="sym-stroke" fill="sym-stroke" pen="sym-pen">
@@ -357,22 +357,6 @@ h
 368 672 m
 416 672 l
 </path>
-<path stroke="black" fill="0">
-480 672 m
-528 672 l
-528 672 l
-</path>
-<path stroke="black" arrow="normal/normal">
-480 672 m
-528 672 l
-</path>
-<path stroke="black">
-528 688 m
-528 656 l
-592 656 l
-592 688 l
-h
-</path>
 <text matrix="1 0 0 1 80 192" transformations="translations" pos="160 560" stroke="black" type="label" width="22.416" height="6.918" depth="0" valign="baseline">Head</text>
 <text matrix="1 0 0 1 96 192" transformations="translations" pos="368 560" stroke="black" type="label" width="16.881" height="6.918" depth="0" valign="baseline">Tail</text>
 <path stroke="black" arrow="normal/normal">
@@ -391,7 +375,6 @@ h
 </text>
 <text transformations="translations" pos="368 672" stroke="black" type="label" width="22.416" height="6.128" depth="0" valign="baseline">next
 </text>
-<text transformations="translations" pos="480 672" stroke="black" type="label" width="19.095" height="6.128" depth="0" valign="baseline">next</text>
 <path matrix="1 0 0 1 0 -144" stroke="black">
 80 688 m
 80 656 l
@@ -448,7 +431,7 @@ h
 448 544
 448 544 c
 </path>
-<text matrix="1 0 0 1 0 -80" transformations="translations" pos="272 576" stroke="red" type="label" width="37.498" height="6.815" depth="1.93" valign="baseline">Enqueue</text>
+<text matrix="1 0 0 1 0 -96" transformations="translations" pos="272 576" stroke="red" type="label" width="52.303" height="6.922" depth="2.21" valign="baseline">\texttt{enqueue(x)}</text>
 <path matrix="1 0 0 1 112 -304" stroke="black">
 80 688 m
 80 656 l
@@ -487,7 +470,7 @@ h
 </text>
 <text matrix="1 0 0 1 112 -304" transformations="translations" pos="256 672" stroke="black" type="label" width="22.416" height="6.128" depth="0" valign="baseline">next
 </text>
-<text matrix="1 0 0 1 0 -96" transformations="translations" pos="272 416" stroke="red" type="label" width="40.542" height="6.815" depth="1.93" valign="baseline">Dequeue
+<text matrix="1 0 0 1 0 -96" transformations="translations" pos="272 416" stroke="red" type="label" width="66.085" height="6.922" depth="2.21" valign="baseline">\texttt{y= dequeue()}
 </text>
 <path matrix="1 0 0 1 0 -304" stroke="black">
 80 688 m
@@ -512,14 +495,14 @@ h
 448 576
 448 544 c
 </path>
-<path stroke="lightgray" dash="dashed" arrow="normal/normal">
+<path stroke="darkgray" dash="dashed" arrow="normal/normal">
 464 608 m
 384 576
 336 544 c
 </path>
 <text transformations="translations" pos="224 448" stroke="red" type="label" width="25.737" height="6.918" depth="0" valign="baseline">Head
 </text>
-<path stroke="lightgray" dash="dashed" arrow="normal/normal">
+<path stroke="darkgray" dash="dashed" arrow="normal/normal">
 224 448 m
 160 416
 112 384 c
@@ -540,5 +523,9 @@ h
 224 384
 224 384 c
 </path>
+<text transformations="translations" pos="368 528" stroke="black" type="label" width="19.095" height="6.128" depth="0" valign="baseline">next</text>
+<text matrix="1 0 0 1 -16 0" transformations="translations" pos="288 624" stroke="black" type="label" width="43.172" height="6.815" depth="1.93" valign="baseline">MS-queue</text>
+<text transformations="translations" pos="448 528" stroke="black" type="label" width="5.258" height="4.289" depth="0" valign="baseline">x</text>
+<text transformations="translations" pos="112 368" stroke="black" type="label" width="5.258" height="4.297" depth="1.93" valign="baseline">y</text>
 </page>
 </ipe>

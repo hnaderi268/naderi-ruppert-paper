@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE ipe SYSTEM "ipe.dtd">
 <ipe version="70218" creator="Ipe 7.2.24">
-<info created="D:20220228161703" modified="D:20220228161703"/>
+<info created="D:20220228161703" modified="D:20220318160527"/>
 <ipestyle name="basic">
 <symbol name="arrow/arc(spx)">
 <path stroke="sym-stroke" fill="sym-stroke" pen="sym-pen">
@@ -354,33 +354,12 @@ h
 <path stroke="black">
 11.3137 0 0 11.3137 488 712 e
 </path>
-<text matrix="1 0 0 1 0 -16" transformations="translations" pos="128 624" stroke="black" type="label" width="20.921" height="6.088" depth="0" valign="baseline">\texttt{head}</text>
+<text matrix="1 0 0 1 0 -16" transformations="translations" pos="128 624" stroke="black" type="label" width="20.479" height="6.918" depth="0" valign="baseline">head</text>
 <text matrix="1 0 0 1 0 -16" transformations="translations" pos="256 624" stroke="black" type="label" width="130.926" height="6.918" depth="0" valign="baseline">Basket of concurrent elements</text>
-<text matrix="1 0 0 1 0 -16" transformations="translations" pos="512 624" stroke="black" type="label" width="20.921" height="6.088" depth="0" valign="baseline">\texttt{tail}</text>
-<path stroke="black">
-128 608 m
-144 640
-128 672
-128 672 c
-</path>
-<path stroke="black" arrow="normal/normal">
-128 608 m
-144 640
-128 672 c
-</path>
+<text matrix="1 0 0 1 0 -16" transformations="translations" pos="512 624" stroke="black" type="label" width="14.391" height="6.918" depth="0" valign="baseline">tail</text>
 <path stroke="black" cap="1">
 256 608 m
 256 608 l
-</path>
-<path stroke="black" arrow="normal/normal">
-256 608 m
-272 640
-256 672 c
-</path>
-<path stroke="black" arrow="normal/normal">
-512 608 m
-528 640
-512 672 c
 </path>
 <path stroke="black">
 160 704 m
@@ -398,6 +377,21 @@ h
 <path stroke="black" arrow="normal/normal">
 416 704 m
 480 704 l
+</path>
+<path stroke="gray" arrow="normal/normal">
+256 608 m
+240 640
+272 672 c
+</path>
+<path stroke="black" arrow="normal/normal">
+128 608 m
+144 656
+128 688 c
+</path>
+<path stroke="black" arrow="normal/normal">
+512 608 m
+512 656
+528 688 c
 </path>
 </page>
 </ipe>

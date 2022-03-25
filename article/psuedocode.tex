@@ -78,7 +78,7 @@
 \Statex $\blacktriangleright$ \texttt{\textsl{Node}}
 \begin{itemize}
 \item \texttt{\textsl{*Node} left, right, parent}
-\item \texttt{\textsl{Block[]} blocks}\textsf{: index 0 contains an empty block with all fields equal to 0 and \texttt{en} pointers to the first block of the coresponding children. \texttt{blocks[i]} returns the $i$th block stored.}
+\item \texttt{\textsl{Block[]} blocks}\textsf{: index 0 contains an empty block with all fields equal to 0 and \texttt{en} pointers to the first block of the corresponding children. \texttt{blocks[i]} returns the $i$th block stored.  In the root node it is implemented with a persistent red-black tree and it is a big array in other nodes.}
 \item \texttt{\textsl{int} head= 1}\textsf{: index of the first empty cell of \texttt{blocks}}
 \item \texttt{\textsl{int} counter= 0}\textsf{}
 \item \texttt{\textsl{int[]} super}\textsf{: \texttt{super[i]} stores the index of a superblock in parent that contains some block of this node whose \texttt{time} is field \texttt{i}}
@@ -163,7 +163,8 @@
 \State \texttt{b\textsubscript{r}= root.blocks.get(sum\textsubscript{enq}==i)}\Comment{block in the root contains the invocation of dequeue}
 \State \texttt{b\textsubscript{i}.age= b\textsubscript{i}.age+1}
 \State \texttt{b\textsubscript{r}.age= b\textsubscript{r}.age+1}
-\If{\texttt{b\textsubscript{i} or b\textsubscript{r} become old}} \texttt{update maxOld}
+\If{\texttt{b\textsubscript{i}==b\textsubscript{i}.num or b\textsubscript{r}==b.num}}\Comment{become old}
+\State \texttt{this.leaf.maxOld= Max(b\textsubscript{i}*(b\textsubscript{i}-b\textsubscript{i}.num), b\textsubscript{r}*(b\textsubscript{r}-b\textsubscript{r}.num), this.leaf.maxold)}
 \EndIf
 \EndFunction{Dequeue}
 
@@ -276,6 +277,7 @@
 \State \texttt{b.sum= n.blocks[i-1].sum + b.num}
 
 \If{\texttt{n.parent} \textbf{is} \texttt{null}}
+\State \texttt{Cast(b, RootBlock)} \Comment{cast block to a root block}
 \State \texttt{b.size= max(root.blocks[i-1].size + b.num\textsubscript{enq} - b.num\textsubscript{deq}, 0)}
 \State \texttt{b.sum\textsubscript{non-null deq}= root.blocks[i-1].sum\textsubscript{non-null deq} + max( b.num\textsubscript{deq} - root.blocks[i-1].size - b.num\textsubscript{enq}, 0)}
 \EndIf
@@ -294,7 +296,7 @@
 \Statex $\leadsto$ \textsf{Precondition:~\texttt{n.blocks[b]} contains $\geq$\texttt{i} enqueues.}
 \Function{element}{Get}{\textsl{node} n, \textsl{int} b, \textsl{int} i} 
 \Comment{\textmd{Returns the \texttt{i}th Enqueue in \texttt{b}th block of node \texttt{n}}}
-\If{\texttt{n {\keywordfont is} leaf}} \Return \texttt{n.ops[b]}
+\If{\texttt{n {\keywordfont is} leaf}} \Return \texttt{n.blocks[b].element}
 \Else
 \If{\texttt{i $\leq$ n.blocks[b].num\textsubscript{enq-left}}} \Comment{\texttt{i} exists in the left child of \texttt{n}}
 \State \texttt{subBlock= \Call{BSearch}{n.left, sum\textsubscript{enq}, i, n.blocks[b-1].end\textsubscript{left}+1, n.blocks[b].end\textsubscript{left}}}
@@ -358,7 +360,7 @@
 \State{\texttt{last= l.head-1}}
 \If{\texttt{l.blocks[last]} \textbf{is not} \texttt{null}}
 \If{\texttt{l.blocks[last].element==null}} \Comment{operation is dequeue}
-\State \texttt{goto \ref{deqRest} with} \Comment{run \texttt{Dequeue()}  for \texttt{l.ops[last]} after Propagate()}
+\State \texttt{goto \ref{deqRest} with these values <>} \Comment{run \texttt{Dequeue()}  for \texttt{l.ops[last]} after Propagate(). \textit{TODO}}
 \State \texttt{l.responses[last]= response}
 \EndIf
 \EndIf
@@ -375,16 +377,19 @@
 \Statex
 
 \Function{Block}{FindYoungestOld}{b}
-\State\Return  \texttt{read all maxOld values among leaves and decide the largest one} \Comment{There is no need to do a sasDK;Lnapgshot.}
+\For{\texttt{leaf l} \textbf{in leaves}}
+\State\texttt{max= Max(l.maxOld, max)}
+\EndFor
+\State\Return\texttt{max} \Comment{This snapshot suffies.}
 \EndFunction{findYoungestOld}
 
 \Statex
 
 \Function{response}{FallBack}{op i}
 
-\If{operation i in leaf l cannot find its desired RootBlock}
+\If{a dequeue cannot find the root block}
 
-\State \Return \texttt{l.response[i]}
+\State \Return \texttt{this.leaf.response(block.order)}
 \EndIf
 
 \EndFunction{FallBack}

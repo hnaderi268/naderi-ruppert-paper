@@ -9,7 +9,7 @@
 
 \begin{document}
 
-\title{Thesis Proposal}
+\title{Wait-free Queues with Polylogarithmic\\ Step Complexity}
 \author{Hossein Naderibeni \\supervised by Eric Ruppert}
 \maketitle
 
@@ -51,8 +51,7 @@
 
 \paragraph{}
 Shared data structures have become an essential field in distributed algorithms research.
-We are reaching the physical limits of how many transistors we can place on a CPU core. The industry solution to provide more computational power is to increase the number of cores of the CPU. This is why distributed algorithms have become important. It is not hard to see why multiple processes cannot update sequential data structures designed for one process. For example, consider two processes trying to insert some values into a sequential linked list simultaneously. Processes $p,q$ read the same tail node, $p$ changes the next pointer of the tail node to its new node and after that $q$ does the same. In this run, $p$'s update is overwritten. One solution is to use locks; whenever a process wants to do an update or query on a data structure, the process locks it, and others cannot use it until the lock is released. Using locks has some disadvantages; for example, one process might be slow, and holding a lock for a long time prevents other processes from progressing. Moreover, locks do not allow complete parallelism since only the one process holding the lock can make progress. Our approach is to create a lock-free queue data structure that developers can safely use without the disadvantages of locks.
-%We are going to resolve a common problem in previous shared queues which makes their worst case slow.
+We are reaching the physical limits of how many transistors we can place on a CPU core. The industry solution to provide more computational power is to increase the number of cores of the CPU. This is why distributed algorithms have become important. It is not hard to see why multiple processes cannot update sequential data structures designed for one process. For example, consider two processes trying to insert some values into a sequential linked list simultaneously. Processes $p,q$ read the same tail node, $p$ changes the next pointer of the tail node to its new node and after that $q$ does the same. In this run, $p$'s update is overwritten. One solution is to use locks; whenever a process wants to do an update or query on a data structure, the process locks it, and others cannot use it until the lock is released. Using locks has some disadvantages; for example, one process might be slow, and holding a lock for a long time prevents other processes from progressing. Moreover, locks do not allow complete parallelism since only the one process holding the lock can make progress. Current approach is to create a lock-free queue data structure that developers can safely use without the disadvantages of locks. In this work, we are going to introduce a lock-free queue with better performance in the worst case than the previous lock-free queues.
 
 
 The question that may arise is, ``What properties matter for a lock-free data structure?'', since executions on a shared data structure are different from sequential ones, the correctness conditions also differ. To prove a concurrent object works perfectly, we have to show it satisfies safety and progress conditions. A \textit{safety condition} tells us that the data structure does not return wrong responses, and a \textit{progress property} requires that operations eventually terminate.
@@ -70,7 +69,7 @@ The standard safety condition is called \textit{linearizability}, which ensures 
 \end{figure}
 
 
-There are various progress properties; the strongest is wait-freedom, and the more common is lock-freedom. An algorithm is \textit{wait-free} if each operation terminates after a finite number of its own steps. We call an algorithm \textit{lock-free} if, after a sufficient number of steps, one operation terminates. A wait-free algorithm is also lock-free but not vice versa, in an infinite run of a lock-free algorithm there might be an operation that makes progress every so often but never terminates.
+There are various progress properties; the strongest is wait-freedom, and the more common is lock-freedom. An algorithm is \textit{wait-free} if each operation terminates after a finite number of its own steps. We call an algorithm \textit{lock-free} if, after a sufficient number of steps, one operation terminates. A wait-free algorithm is also lock-free but not vice versa; in an infinite run of a lock-free algorithm there might be an operation that takes infinitely many steps but never terminates.
 %From now on, we are going to focus on wait freedom.
 
 %Since executions on a shared data structure are different from sequential ones, the correctness condition also differs. The strongest correctness condition is linearizability, defined as "...". Lock-free is good, but a wait-free algorithm guarantees us every operation terminates after finite steps.
@@ -82,7 +81,7 @@ Michael and Scott~\cite{DBLP:conf/podc/MichaelS96} introduced a lock-free queue 
 
 \begin{figure}[t]
   \center\includegraphics[scale=0.5]{pics/msqueue}
-  \caption{\label{fig::msq}MS-queue structure, enqueue and dequeue operations. Red arrows show new pointers and gray dashed arrows show the old pointers.}
+  \caption{\label{fig::msq}MS-queue structure, enqueue and dequeue operations. In the first diagram the first element has been dequeued. Red arrows show new pointers and gray dashed arrows show the old pointers.}
 \end{figure}
 
 

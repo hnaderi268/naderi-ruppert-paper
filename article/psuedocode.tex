@@ -45,11 +45,11 @@
   \setcounter{ALC@line}{\numexpr#1-1}}
 
 \newcommand{\sub}[1]{\textsubscript{#1}}
-\renewcommand{\tt}[1]{\tt{#1}}
+\renewcommand{\tt}[1]{\texttt{#1}}
 \renewcommand{\sl}[1]{\textsl{#1}}
 \renewcommand{\it}[1]{\textit{#1}}
 \renewcommand{\bf}[1]{\textbf{#1}}
-\renewcommand{\nf}[1]{\normalfont{#1}}
+\newcommand{\nf}[1]{\normalfont{#1}}
 \newcommand{\cmt}[1]{\Comment{#1}}
 
 \usepackage{amsmath,amssymb,amsthm}
@@ -68,7 +68,7 @@
 \setcounter{ALG@line}{100}
 \begin{multicols}{2}
 
-%\Statex \bf{Structure}
+\Statex \bf{Structure}
 
 \Statex $\diamondsuit$ \tt{\sl{Shared}}
 \begin{itemize}
@@ -90,28 +90,25 @@
 \begin{itemize}
 \item \tt{\sl{*Node} left, right, parent} \textsf{: initialized  when creating the tree.}
 \item \tt{\sl{BlockList} blocks}
+  \textsf{ implemented with an array.}
 \item \tt{\sl{int} size= 1}\textsf{: \#\tt{block}s in \tt{blocks}.}
 \item \tt{\sl{int} num\sub{propagated}= 0}\textsf{} \textsf{: \# groups of blocks that have been propagated from the node to its parent. Since it is incremented after propagating, it may be behind by 1.}
 \item \tt{\sl{int[]} super}\textsf{: \tt{super[i]} stores an approximate index of the superblock of the blocks in \tt{blocks} whose \tt{group} field have value \tt{i}.}
 \end{itemize}
 
-\Statex $\blacktriangleright$ \tt{\sl{Root} extends \sl{Node}}
-\begin{itemize}
-  
-\item \tt{\sl{PBRT} blocks}
+%\Statex $\blacktriangleright$ \tt{\sl{Root} extends \sl{Node}}
+%\begin{itemize}
+%  
+%\item \tt{\sl{PBRT} blocks}
+%
+%  \textsf{\tt{BlockList} is implemented with a persistent red-black tree.}
+%  
+%\end{itemize}
 
-  \textsf{\tt{BlockList} is implemented with a persistent red-black tree.}
-  
-\end{itemize}
-
-\Statex $\blacktriangleright$ \tt{\sl{NonRootNode} extends \sl{Node}}
-\begin{itemize}
-  
-\item \tt{\sl{Block[]} blocks}
-
-  \textsf{\tt{BlockList} is implemented with an array.}
-  
-\end{itemize}
+%\Statex $\blacktriangleright$ \tt{\sl{NonRootNode} extends \sl{Node}}
+%\begin{itemize}
+    
+%\end{itemize}
 
 \Statex $\blacktriangleright$ \tt{\sl{Leaf} extends \sl{NonRootNode}}
 \begin{itemize}
@@ -239,6 +236,7 @@
 \EndFunction{Dequeue}
 
 \Statex
+\pagebreak
 
 \Function{int, int}{FindResponse}{int i, int b}\cmt{Computes the rank  and index of the block in the root of the enqueue that is the response of the \tt{i}th dequeue in the root's \tt{b}th block. Returns \tt{<-1,-->} if the queue is empty.}
 \If{\tt{root.blocks[b-1].length + root.blocks[b].num\sub{enq} - i $<$ 0}}

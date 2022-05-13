@@ -284,10 +284,10 @@
 \State \tt{\Call{CAS}{dir.super[np\sub{dir}], null, h+1}} \cmt{Write would work too.}
 \State \tt{\Call{CAS}{dir.num\sub{propagated}, np\sub{dir}, np\sub{dir}+1}}
 \EndFor
-\State \tt{\Call{CAS}{size, h, h+1}}
+\State \tt{\Call{CAS}{size, h, h+1}} \label{incrementHead1}
 \State \Return{\tt{true}}
 \Else
-\State \tt{\Call{CAS}{size, h, h+1}} \cmt{Even if another process wins, help to increase the size. The winner might have fallen sleep before increasing \tt{size}.}
+\State \tt{\Call{CAS}{size, h, h+1}} \cmt{Even if another process wins, help to increase the size. The winner might have fallen sleep before increasing \tt{size}.} \label{incrementHead2}
 \State \Return{ \tt{false}}
 \EndIf
 \EndFunction{Refresh}
@@ -528,6 +528,10 @@
 
 \framebox[1.1\width]{TEST} As a temporary test I have changed the name of n.size to n.established here, other options are n.head and n.lastBLock but they might be confusing since we have used them before. Fix the logical order of definitions (cyclic refrences).
 
+\framebox[1.1\width]{TODO} Fallback safety lemmas. Some parts are obsolete. 
+
+\framebox[1.1\width]{Questions} When I write the lemmas since every claim in my mind is correct maybe I miss some fact that need proof or maybe I refer to some lemmas that are generally correct but not needed for the linearizability proof. Is lemma 7 necessary? Is lemma 13 induced trivially from lemma 8?
+
 \begin{definition}[Block]
 A block is an object that stores some statistics described in Algorithm Queue. It implicitly shows a set of operations. The set of operations of block $b$ are the operations in the leaf subblocks of $b$. We show the set of operations of block $b$, set of blocks $B$ by $ops(b)$, $ops(B)$. We also say $b$ contains $op$ if $op\in ops(b)$.
 \end{definition}
@@ -553,15 +557,15 @@ For simplicity we say block \nf{b} is propagated to node \nf{n} or set \nf{S} if
 \begin{lemma}[headProgress] \label{lem::sizeProgress}
 \nf{n.established} is non-decreasing over time.
 \end{lemma}
-%\begin{proof}
-%  Simply because \nf{n.head} is only incremented.
-%\end{proof}
+\begin{proof}
+  Induced trivially from the pseudocode since \nf{n.established} is only incremented.
+\end{proof}
 
 
-\begin{lemma}[headPosition] \label{lem::headPosition} The value read in Line \ref{prevLine}(\nf{h=n.established}) might be 1 bit behind the first empty block in the node.
+\begin{lemma}[headPosition] \label{lem::headPosition} If the value read in Line \ref{prevLine}(\nf{h=n.established}) is $h$ then, \nf{n.blocks[i]=null} for \nf{i>h} and \nf{n.blocks[i]$\neq$null} for \nf{i<h}.
 \end{lemma}
 \begin{proof}
- Because at the end of every \nf{Refresh()} with block size greater than 0 (Lines 53,56) \nf{n.head} is incremented. Maybe some process goes to sleep before incrementing the head, but after sleeping if \nf{h} does not increase then \nf{CAS} in Line 52 is going to be failed and nothing is going to be appended to \nf{n.blocks}.
+At the end of every \nf{n.Refresh()} with a block  with size greater than 0 returned by \nf{CreateBlock()} \nf{n.head} is incremented (Lines \ref{incrementHead1}, \ref{incrementHead2}). If a process went to sleep before incrementing the \nf{established} (line \ref{incrementHead1}), nothing can be appended to \nf{n.blocks} until another process increments \nf{n.establsihed} (Line \ref{incrementHead2}).
 \end{proof}
 
 %\begin{lemma}[oldnewOrder] \label{lem::oldnewOrder}
@@ -575,38 +579,39 @@ For simplicity we say block \nf{b} is propagated to node \nf{n} or set \nf{S} if
   If  time $t<$ time $t^\prime$, then \nf{ops(EST\sub{n, t})}$\subseteq$ \nf{ops(EST\sub{n, t$^\prime$})}.
 \end{lemma}
 \begin{proof}
-Because blocks are only appended(not modified) with CAS to \nf{n.blocks[n.head]} and \nf{n.head} is non-decreasing.
+Blocks are only appended(not modified) with CAS to \nf{n.blocks[n.head]} and \nf{n.head} is non-decreasing, so the set of operations in established blocks of a node grows.
 \end{proof}
 
 \begin{lemma}[createBlock] \label{lem::createBlock}
   If \nf{b} is the block returned by \nf{n.CreateBlock(h, x)} invoked at time $t$, then \nf{ops(EST\sub{n.left, t})} $\cup$ \nf{ops(EST\sub{n.right, t})} - \nf{ops(EST\sub{n, t})} $\subseteq$ \nf{ops(b)}.
 \end{lemma}
 \begin{proof}
- We prove the claim for the left child. Blocks in \nf{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} are all the new established operations at time $t$ by definition of Subblock. Line 70 is after $t$ and since the head is only increasing (Lemma~\ref{lem::headProgress}) the lemma holds. See Figure~\ref{fig::createBlock}. The right child is the same.
+ WLOG we prove the claim for the left child. Blocks in \nf{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} are all the new established operations at time $t$ by definition of Subblock. Since the head is only increasing (Lemma~\ref{lem::sizeProgress}) the  claim holds after $t$. See Figure~\ref{fig::createBlock}. The right child is the same.
 \end{proof}
 
 \begin{lemma}[trueRefresh] \label{lem::trueRefresh}
   Let $t_i$ be the time \nf{n.Refresh()} is invoked and $t_t$ be the time it is terminated. Suppose \nf{n.Refresh()}'s \nf{TryAppend(new, s)} returns \nf{true}, then \nf{ops(EST\sub{n.left, t\sub{i}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}})} $\in$ \nf{ops(EST\sub{n, t\sub{t}})}.
 \end{lemma}
 \begin{proof}
-By Lemma~\ref{lem::createBlock} \nf{new} contains \nf{n}'s childrens' established blocks before Line 43 which is  appended to \nf{n.blocks} by \nf{CAS} in Line 48.
+By Lemma~\ref{lem::createBlock} \nf{new} contains \nf{n}'s childrens' established blocks after Line \ref{readSize} which is  appended to \nf{n.blocks[]} by \nf{TryAppend} in Line 313.
 \end{proof}
 
 \begin{lemma}[falseRefresh] \label{lem:falseRefresh}
     If instance \nf{r} of \nf{n.Refresh()} reads value \nf{s} on line \ref{readSize} and then returns \nf{false}, then there is another instance $r^\prime$ of \nf{n.Refresh()} that has performed a successful \nf{TryAppend(new, s)}. A \nf{TryAppend()} is successful if its \nf{CAS} is successful.
 \end{lemma}
 \begin{proof}
-  If there is no other concurrent successful \nf{Refresh(n)} then \nf{Refresh(n)} would succeed in Line 48. So there is another \nf{Refresh(n)}, that has to \nf{CAS}ed successfully its block in \nf{n.blocks[h]} after Line 43 of \nf{Refresh(n)}. Otherwise the other \nf{Refresh(n)} should have read \nf{h$^\prime$>h} instead of \nf{h} for \nf{n.head}(Line 52).
+  If there is no other concurrent successful \nf{n.Refresh()} then \nf{n.Refresh()} would succeed in Line 313. So there is another \nf{n.Refresh()}, that has appended its block in \nf{n.blocks[h]} after Line 310 of the first \nf{n.Refresh()}. 
+%Otherwise the other \nf{Refresh(n)} should have read \nf{h$^\prime$>h} instead of \nf{h} for \nf{n.head}(Line 52).
 \end{proof}
 
 \begin{lemma}[Double Refresh] \label{doubleRefresh}
   Consider two consecutive failed instances $r_1$,$r_2$ of \nf{n.Refresh()} by some process. Let $t_1$ be the time $r_1$ is invoked and $t_2$ be the time $r_2$ terminated. After $r_2$'s \nf{TryAppend} we have \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{2}})}.
 \end{lemma}
-\begin{proof}
-  
-
-If Line 35 (first Refresh which we call $R_1$) returns \nf{true}, the claim is held by Lemma~\ref{lem::trueRefresh}. If not, then there is another successful instance of \nf{Refresh()} $R_1^\prime$ by Lemma~\ref{lem:falseRefresh}. $R_1^\prime$ may or may not have propagated some subblocks of \nf{new} to \nf{n}. It is obvious that the \nf{new} constructed by the second Refresh in Line 36 contains the blocks in \nf{new} by $R_1$ which $R_1^\prime$ did not contain, since \nf{n.head} is only increasing (Maybe Lemma~\ref{lem::oldnewOrder}). If $R_2$ succeeds by Lemma~\ref{lem::trueRefresh} the claim holds. If not, it is deduced that \nf{n.blocks[h]} was not \nf{null} before $R_2$'s \nf{CAS}. Furthermore, \nf{n.blocks[h]} was \nf{null} before reading \nf{h} by $R_1$. So there is a successful \nf{Refresh()} after the read of \nf{h} in $R_1$ and before the \nf{CAS} of $R_2$. This \nf{Refresh()} contains all the new established operations before Line 35 (Maybe Lemma~\ref{lem::oldnewOrder}) and by Lemma~\ref{lem::trueRefresh} our claim holds. See Figure~\ref{}.
-\end{proof}
+%\begin{proof}
+%  
+%
+%If Line 35 (first Refresh which we call $R_1$) returns \nf{true}, the claim is held by Lemma~\ref{lem::trueRefresh}. If not, then there is another successful instance of \nf{Refresh()} $R_1^\prime$ by Lemma~\ref{lem:falseRefresh}. $R_1^\prime$ may or may not have propagated some subblocks of \nf{new} to \nf{n}. It is obvious that the \nf{new} constructed by the second Refresh in Line 36 contains the blocks in \nf{new} by $R_1$ which $R_1^\prime$ did not contain, since \nf{n.head} is only increasing (Maybe Lemma~\ref{lem::oldnewOrder}). If $R_2$ succeeds by Lemma~\ref{lem::trueRefresh} the claim holds. If not, it is deduced that \nf{n.blocks[h]} was not \nf{null} before $R_2$'s \nf{CAS}. Furthermore, \nf{n.blocks[h]} was \nf{null} before reading \nf{h} by $R_1$. So there is a successful \nf{Refresh()} after the read of \nf{h} in $R_1$ and before the \nf{CAS} of $R_2$. This \nf{Refresh()} contains all the new established operations before Line 35 (Maybe Lemma~\ref{lem::oldnewOrder}) and by Lemma~\ref{lem::trueRefresh} our claim holds. See Figure~\ref{}.
+%\end{proof}
 
 \begin{figure}[hbt]
   \center\includegraphics[width=3in]{pics/doublyrefresh.drawio.png}
@@ -618,18 +623,20 @@ If Line 35 (first Refresh which we call $R_1$) returns \nf{true}, the claim is h
 \begin{corollary}[Propagate Step] \label{doublyRefresh}
 All operations in \nf{n}'s children's established blocks before line \ref{firstRefresh} are guaranteed to be in \nf{n}'s blocks after line~\ref{secondRefresh}.
 \end{corollary}
-\begin{proof}
-Suppose block \nf{b} with index \nf{i} is in the the left child of \nf{n} before the line 35. By Lemma~\ref{head} it follows that \nf{n.left.head} is greater than \nf{i}. \nf{Refresh()} calls \nf{CreateBlock()} and creates a block from blocks between \nf{n.blocks[n.head].end\textsubscript{left}} and \nf{n.left.head} in the left child, which contains \nf{b} as well. First it tries to append it in \nf{n.blocks.head} and if it was succsuful it continues recursively. If not it tries again, and if the second call of \nf{Refresh()} in Line 36 fails. It means there is another \nf{Refresh} which has reah its \nf{i} after the Line 35, so it contains \nf{b} as well.
-\end{proof}
+%\begin{proof}
+%Suppose block \nf{b} with index \nf{i} is in the the left child of \nf{n} before the line 35. By Lemma~\ref{head} it follows that \nf{n.left.head} is greater than \nf{i}. \nf{Refresh()} calls \nf{CreateBlock()} and creates a block from blocks between \nf{n.blocks[n.head].end\textsubscript{left}} and \nf{n.left.head} in the left child, which contains \nf{b} as well. First it tries to append it in \nf{n.blocks.head} and if it was succsuful it continues recursively. If not it tries again, and if the second call of \nf{Refresh()} in Line 36 fails. It means there is another \nf{Refresh} which has reah its \nf{i} after the Line 35, so it contains \nf{b} as well.
+%\end{proof}
+
 \nf{CreateBlock()} reads blocks in the children that do not exist in the parent and aggregates them into one block. If a \nf{Refresh()} procedure returns true it means it has appended the block created by \nf{CreateBlock()} into the parent node's sequence. So suppose two \nf{Refresh}es fail. Since the first \nf{Refresh()} was not successful, it means another CAS operation by a \nf{Refresh}, concurrent to the first \nf{Refresh()}, was successful before the second \nf{Refresh()}. So it means the second failed \nf{Refresh} is concurrent with a successful \nf{Refresh()} that assuredly has read block before the mentioned line \nf{35}. After all it means if any of the \nf{Refresh()} attempts were successful the claim is true, and also if both fail the mentioned claim still holds.
 
 \begin{lemma}[No Duplicates]\label{append}
 If \nf{op} is appended to \nf{n.blocks[i]} then after that there is no \nf{j>i} such that \nf{op}$\in$\nf{ops(n.blocks[j])}.
 \end{lemma}
-\begin{proof}
-\nf{Append(op)} adds \nf{op} to \nf{l\textsubscript{p}.blocks}(Line~\ref{addOP}) and \nf{Propagate()} recursively propagates \nf{op} up to the root.
-By lemma \ref{doublyRefresh} we know that operation \nf{op} propagates from child to parent at each level.
-\end{proof}
+%\begin{proof}
+%\nf{Append(op)} adds \nf{op} to \nf{l\textsubscript{p}.blocks}(Line~\ref{addOP}) and \nf{Propagate()} recursively propagates \nf{op} up to the root.
+%By lemma \ref{doublyRefresh} we know that operation \nf{op} propagates from child to parent at each level.
+%\end{proof}
+
 \begin{corollary}
   After \nf{Append(blk)} finishes \nf{ops(blk)}$\subseteq$\nf{ops(root.blocks[x])} for some \nf{x} and only one \nf{x}.
 \end{corollary}
@@ -754,8 +761,6 @@ After that \nf{TryAppend()} who is helping finishes, prefix for the blocks of \n
 \begin{lemma}[Root search range]\label{rootRange}
   \nf{root.size-root.FindMostRecentDone()} is $O(p^2+q)$, which $p$ is \# processes and $q$ is the length of the queue.
 \end{lemma}
-
-\framebox[1.1\width]{TODO} Fallback safety lemmas.
 
 \end{document}
 

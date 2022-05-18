@@ -56,6 +56,7 @@
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}[theorem]{Lemma}
 \newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{observation}[theorem]{Observation}
 \theoremstyle{definition}
 \newtheorem{definition}[theorem]{Definition}
 
@@ -277,17 +278,17 @@
 \Function{boolean}{Refresh()}{}
 \State \tt{s= size} \label{readSize}
 %\If{\tt{n.blocks[h]!=null?}} \tt{h+=1}\EndIf
-\State \tt{<new, np\sub{left}, np\sub{right}>= \Call{CreateBlock}{h}} \cmt{\tt{np\sub{left}, np\sub{right}} are the values read from the children's \tt{num\sub{propagated}} feild.}
+\State \tt{<new, np\sub{left}, np\sub{right}>= \Call{CreateBlock}{s}} \cmt{\tt{np\sub{left}, np\sub{right}} are the values read from the children's \tt{num\sub{propagated}} field.}
 \If{\tt{new.num==0}} \Return{\tt{true}} \cmt{The block contains nothing.}
 \ElsIf{\tt{blocks.tryAppend(new, s)}}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}} \label{okcas}
 \State \tt{\Call{CAS}{dir.super[np\sub{dir}], null, h+1}} \cmt{Write would work too.}
 \State \tt{\Call{CAS}{dir.num\sub{propagated}, np\sub{dir}, np\sub{dir}+1}}
 \EndFor
-\State \tt{\Call{CAS}{size, h, h+1}} \label{incrementHead1}
+\State \tt{\Call{CAS}{size, s, s+1}} \label{incrementHead1}
 \State \Return{\tt{true}}
 \Else
-\State \tt{\Call{CAS}{size, h, h+1}} \cmt{Even if another process wins, help to increase the size. The winner might have fallen sleep before increasing \tt{size}.} \label{incrementHead2}
+\State \tt{\Call{CAS}{size, s, s+1}} \cmt{Even if another process wins, help to increase the size. The winner might have fallen sleep before increasing \tt{size}.} \label{incrementHead2}
 \State \Return{ \tt{false}}
 \EndIf
 \EndFunction{Refresh}
@@ -532,6 +533,8 @@
 
 \framebox[1.1\width]{Questions} When I write the lemmas since every claim in my mind is correct maybe I miss some fact that need proof or maybe I refer to some lemmas that are generally correct but not needed for the linearizability proof. Is lemma 7 necessary? Is lemma 13 induced trivially from lemma 8?
 
+\framebox[1.1\width]{TEST} Is it better to show \nf{ops(EST\sub{n, t})} with \nf{EST\sub{n, t}}?
+
 \begin{definition}[Block]
 A block is an object that stores some statistics described in Algorithm Queue. It implicitly shows a set of operations. The set of operations of block $b$ are the operations in the leaf subblocks of $b$. We show the set of operations of block $b$, set of blocks $B$ by $ops(b)$, $ops(B)$. We also say $b$ contains $op$ if $op\in ops(b)$.
 \end{definition}
@@ -541,18 +544,27 @@ If \nf{n.blocks[i]==b}  we call \nf{i} the \emph{index} of block \nf{b}. Block \
 \end{definition}
 
 \begin{definition}[Subblock]
-Block \texttt{b} is a subblock of \texttt{n.blocks[i]} if it is $\in$ \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]} or  is a subblock of a block in it.
+Block \texttt{b} is a \emph{direct subblock} of \texttt{n.blocks[i]} if it is $\in$ \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}. Block \texttt{b} is a subblock of a \texttt{n.blocks[i]} if it is a direct subblock of it or subblock of a direct subblock of it.
 \end{definition}
 
-For simplicity we say block \nf{b} is propagated to node \nf{n} or set \nf{S} if \nf{b} is in \nf{n.blocks} or \nf{S} or is a subblock of a block in \nf{n.blocks} or \nf{S}.
+For simplicity we say block \nf{b} is propagated to node \nf{n} or to a set of blocks \nf{S} if \nf{b} is in \nf{n.blocks} or \nf{S} or is a subblock of a block in \nf{n.blocks} or \nf{S}.
 
 %\begin{definition}
 %  Block \nf{b} in node \nf{n} is new if \nf{b} is not a subblock of any block in \nf{n.parent.blocks[]}.
 %\end{definition}
 
 \begin{definition}
-  Block \nf{b} in \nf{n.blocks} is \emph{Established} at time $t$ if \nf{n.established} is greater than index of \nf{b} at time $t$. Block \nf{b} in \nf{n.blocks} is in \emph{EST\sub{n, t}} if \nf{b} is a subblock of \nf{b$^\prime$} in \nf{n.blocks} such that \nf{b$^\prime$} is established  at time $t$.
+  Block \nf{b} in \nf{n.blocks} is \emph{Established} at time $t$ if \nf{n.established} is greater than index of \nf{b} at time $t$. Block \nf{b} is in \emph{EST\sub{n, t}} if \nf{b} is a subblock of \nf{b$^\prime$} in \nf{n.blocks} such that \nf{b$^\prime$} is established  at time $t$.
 \end{definition}
+
+
+\begin{observation}[Validity of \nf{head}]\label{head}
+Once block b is written in \nf{n.blocks[i]} then \nf{n.blocks[i]} never changes.
+\end{observation}
+
+\begin{lemma}
+  Each block is not duplicated.
+\end{lemma}
 
 \begin{lemma}[headProgress] \label{lem::sizeProgress}
 \nf{n.established} is non-decreasing over time.
@@ -583,10 +595,10 @@ Blocks are only appended(not modified) with CAS to \nf{n.blocks[n.head]} and \nf
 \end{proof}
 
 \begin{lemma}[createBlock] \label{lem::createBlock}
-  If \nf{b} is the block returned by \nf{n.CreateBlock(h, x)} invoked at time $t$, then \nf{ops(EST\sub{n.left, t})} $\cup$ \nf{ops(EST\sub{n.right, t})} - \nf{ops(EST\sub{n, t})} $\subseteq$ \nf{ops(b)}.
+  If \nf{n.CreateBlock(i)} is invoked at time $t$ and returns block $b$, then \nf{ops(EST\sub{n.left, t})} $\cup$ \nf{ops(EST\sub{n.right, t})} - \nf{ops(EST\sub{n, t})} $\subseteq$ \nf{ops(b)}.
 \end{lemma}
 \begin{proof}
- WLOG we prove the claim for the left child. Blocks in \nf{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} are all the new established operations at time $t$ by definition of Subblock. Since the head is only increasing (Lemma~\ref{lem::sizeProgress}) the  claim holds after $t$. See Figure~\ref{fig::createBlock}. The right child is the same.
+ WLOG we prove the claim for the left child. Blocks in \nf{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} are all the established operations at time $t$ by definition of subblock. Since the head is only increasing (Lemma~\ref{lem::sizeProgress}) the  claim holds after $t$. See Figure~\ref{fig::createBlock}. The right child is the same.
 \end{proof}
 
 \begin{lemma}[trueRefresh] \label{lem::trueRefresh}
@@ -621,7 +633,7 @@ By Lemma~\ref{lem::createBlock} \nf{new} contains \nf{n}'s childrens' establishe
 %  Block \nf{new} is created of new established subblocks of children of \nf{n}(Lemma \ref{lem::createBlock}, Line 46). If \nf{CAS} in Line 48 succeeds then by Lemma~\ref{lem::trueRefresh} new established blocks will be in \nf{n}.
   
 \begin{corollary}[Propagate Step] \label{doublyRefresh}
-All operations in \nf{n}'s children's established blocks before line \ref{firstRefresh} are guaranteed to be in \nf{n}'s blocks after line~\ref{secondRefresh}.
+All operations in \nf{n}'s children's established blocks before line \ref{firstRefresh} are guaranteed to be in \nf{n}'s established blocks after line~\ref{secondRefresh}.
 \end{corollary}
 %\begin{proof}
 %Suppose block \nf{b} with index \nf{i} is in the the left child of \nf{n} before the line 35. By Lemma~\ref{head} it follows that \nf{n.left.head} is greater than \nf{i}. \nf{Refresh()} calls \nf{CreateBlock()} and creates a block from blocks between \nf{n.blocks[n.head].end\textsubscript{left}} and \nf{n.left.head} in the left child, which contains \nf{b} as well. First it tries to append it in \nf{n.blocks.head} and if it was succsuful it continues recursively. If not it tries again, and if the second call of \nf{Refresh()} in Line 36 fails. It means there is another \nf{Refresh} which has reah its \nf{i} after the Line 35, so it contains \nf{b} as well.
@@ -651,7 +663,7 @@ Each block contains at most one operation from each processs \nf{($\forall$ \nf{
 
 
 \begin{lemma}[Subblocks Upperbound]\label{subBlocksBound}
-Each block has at most $p$ subblocks.
+Each block has at most $p$ direct subblocks.
 \end{lemma}
 %\begin{proof}
 %  From Line~\ref{addOP} it is induced directly that each block contains at least one operation. Now it follows directly by Lemma \ref{blockSize}.
@@ -662,7 +674,7 @@ Each block has at most $p$ subblocks.
 $\blacktriangleright$ Note that from Lemma \ref{blockSize} we know there is at most one operation from each process in a given block.
 
 \begin{itemize}
-\item We call operations before $op$ in the sequence of operations $S$, prefix of the $op$.
+\item We call operations strictly before $op$ in the sequence of operations $S$, prefix of the $op$.
   \item $E(n,i)$ is the sequence of enqueue operations $\in$ \nf{ops(n.blocks[i])} ordered by their process id.
   \item $D(n,i)$ is the sequence of dequeue operations $\in$ \nf{ops(n.blocks[i])} ordered by their process id.
 \item Order of the enqueue operations in $n$: $E(n)=E(n,1).E(n,2).E(n,3)...$
@@ -670,28 +682,38 @@ $\blacktriangleright$ Note that from Lemma \ref{blockSize} we know there is at m
 \item Linearization: $L=E(root,1).D(root,1).E(root,2).D(root,2).E(root,3).D(root,3)...$
 \end{itemize}
 \end{definition}
-\it{Note that in the non-root nodes we only order enqueues and dequeues among the operations of their own type. Since \nf{GetENQ()} only works on enqueues and \nf{IndexDEQ()} works on deqeueus.}
+\it{Note that in the non-root nodes we only order enqueues and dequeues among the operations of their own type. Since \nf{GetENQ()} only works on enqueues and \nf{IndexDEQ()} works on dequeues.}
 
-\begin{theorem}
-The queue implementation is linearizable.
-\end{theorem}
+
+
+\begin{lemma}[Search Ranges]\label{search}
+  Preconditions of all invocation of \nf{BSearch} are satisfied.
+\end{lemma}
 %\begin{proof}
-%  We show that the ordering $L$ stored in the root, satisfies the properties of a linearizable ordering.
-%  \begin{enumerate}
-%    \item If $op_1$ ends before $op_2$ begins in $E$, then $op_1$ comes before $op_2$ in $T$.\\$\blacktriangleright$ This is followed by Lemma \ref{append}. The time $op_1$ ends it is in root, before $op_2$, by Definition \ref{ordering} $op_1$ is before $op_2$.
-%    \item Responses to operations in $E$ are same as they would be if done sequentially in order of $L$. \\$\blacktriangleright$ Enqueue operations do not have any response so it does no matter how they are ordered. It remains to prove  Dequeue $d$ returns the correct response according to the linearization order. By Lemma \ref{computeHead} it is deduced that the head of the queue at time of the linearization of $d$ is computed properly. If the Queue is not empty by Lemma \ref{get} we know that the returning response is the computed index element.
-%  \end{enumerate} 
+%  
+%Line 83: \nf{Get(i)} is called if the result of a dequeue is not null. The search is among all blocks in the root.
+%
+%Line 88: This search tries to find the ith enqueue, knowing that it is in the left child. Search is done over the left subblocks. The start and end of the range are followed by definition. Line 92 is the same.
+%
+%Line 101: Here, the goal is to find the superblock. We know the distance between answer and the \nf{super[i]} is at most $p$, since at most $p$ processes could die.
+%
 %\end{proof}
 
-\begin{lemma}[Get corretness] \label{get}
+\begin{lemma}[Get correctness] \label{get}
 \nf{n.GetENQ(b,i)} returns the $i$th Enqueue in $E(n,b)$.
 \end{lemma}
 %\begin{proof}
 %It is obvious that \nf{Get(leaf l,b,1)} returns the operations stored in $b$th block of leaf $l$. To find the \nf{i}th enqueue in block \nf{b} of an internal node \nf{n} in line 87 it is decided that it resides in the left child or the right child. This decision is made by Definition of $E(n,b)$. After that Lines 88, 92 search the proper subblocks of \nf{b}. From Definition~\ref{def::subblock} weknow the subblocks of the $b$th block are within the \nf{prevBlock} and \nf{lastBlock} block of the \nf{CreateBlock()}.
 %\end{proof}
 
+
+\begin{lemma}[help]\label{help}
+After that \nf{TryAppend()} who is helping finishes, prefix for the blocks of \nf{root.blocks[root.FindMostRecentDone]} are done.
+\end{lemma}
+
+
 \begin{lemma}[Index correctness]
- \nf{n.Index(b,i)} returns the rank in the $D(root)$ of ith Dequeue in $D(n,b)$.
+ \nf{n.Index(b,i)} returns the rank in $D(root)$ of the $i$th Dequeue in $D(n,b)$.
 \end{lemma}
 %\begin{proof}
 %  \nf{Index(n,b,i)} computes superblock of $i$th Dequeue in $b$th block of \nf{n} in \nf{n.parent} and then computes the order in $D(n.parent, superblock)$. Then calls \nf{index()} on \nf{n.parent} recursively. It is easy to see why the second is correct. Correctness of computing superblock comes from Lemma \ref{superBlock}.
@@ -723,12 +745,9 @@ After computing line \ref{computeSuper} of \nf{n.IndexDEQ(b,i)}, \nf{superblock}
 %\end{proof}
 
 \begin{lemma}[Computing Queue's Head] \label{computeHead}
-  Let S be the state of an empty queue if the operations in prefix of $i$th dequeue in $D(root,b)$ are applied on it. \nf{FindResponse()} returns the index of the enqueue that is the head in S. If the  queue is empty in S it returns \nf{<-1,-->}.
+  Let $S$ be the state of an empty queue if the operations in prefix in $L$ of $i$th dequeue in $D(root,b)$ are applied on it. \nf{FindResponse()} returns the index in $E(root,b)$ of the enqueue that is the head in S. If the  queue is empty in S it returns \nf{<-1,-->}.
   \end{lemma}
 
-\begin{lemma}[Validity of \nf{head}]\label{head}
-If block b is written in \nf{n.blocks[i]} then \nf{n.blocks[i]} is going to remain b (not overwritten in future).
-\end{lemma}
 %\begin{proof}
 %  \nf{head} is incremented in lines 51, 54 after trying to append a block to the index of the last \nf{head} read. If it was successful, we have to do this, but if it was unsuccessful, it means it has appended to the index before, so we have to update the \nf{head}. If a process dies before line 51, another process will increment \nf{head} in line 54.
 %\end{proof} 
@@ -740,27 +759,23 @@ If \nf{super[i] $\neq$ null}, then \nf{super[i]} in node \nf{n} is the index of 
 %After a successful CAS in line 46 \nf{super} and \nf{counter} are modified in both children. \nf{super[i]} is supposed to be the superblock of a block with \nf{time}=i and \nf{counter} is the timer in each node. \nf{super[i]} and \nf{counter=i} are expected to update after a bunch of blocks with \nf{time=i} have been aggregated together into a block in the parent. If the process dies before line 48 these values remain unchanged and incoming blocks will get the same \nf{time}. We claim that our algorithm still works since at most $p$ processes die and it will not change our complexity. If a process dies right after line 48, then \nf{counter} will remain the same and \nf{super[i]} is correct. Furthermore we are sure that when \nf{super[i]} is read it will not be \nf{null}.
 %\end{proof}
 
-\begin{lemma}[Search Ranges]\label{search}
-  Preconditions of all invocation of \nf{BSearch} are satisfied.
-\end{lemma}
-%\begin{proof}
-%  
-%Line 83: \nf{Get(i)} is called if the result of a dequeue is not null. The search is among all blocks in the root.
-%
-%Line 88: This search tries to find the ith enqueue, knowing that it is in the left child. Search is done over the left subblocks. The start and end of the range are followed by definition. Line 92 is the same.
-%
-%Line 101: Here, the goal is to find the superblock. We know the distance between answer and the \nf{super[i]} is at most $p$, since at most $p$ processes could die.
-%
-%\end{proof}
-
-\begin{lemma}[help]\label{help}
-After that \nf{TryAppend()} who is helping finishes, prefix for the blocks of \nf{root.blocks[root.FindMostRecentDone} are done.
-\end{lemma}
 
 
 \begin{lemma}[Root search range]\label{rootRange}
   \nf{root.size-root.FindMostRecentDone()} is $O(p^2+q)$, which $p$ is \# processes and $q$ is the length of the queue.
 \end{lemma}
+
+\begin{theorem}
+The queue implementation is linearizable.
+\end{theorem}
+%\begin{proof}
+%  We show that the ordering $L$ stored in the root, satisfies the properties of a linearizable ordering.
+%  \begin{enumerate}
+%    \item If $op_1$ ends before $op_2$ begins in $E$, then $op_1$ comes before $op_2$ in $T$.\\$\blacktriangleright$ This is followed by Lemma \ref{append}. The time $op_1$ ends it is in root, before $op_2$, by Definition \ref{ordering} $op_1$ is before $op_2$.
+%    \item Responses to operations in $E$ are same as they would be if done sequentially in order of $L$. \\$\blacktriangleright$ Enqueue operations do not have any response so it does no matter how they are ordered. It remains to prove  Dequeue $d$ returns the correct response according to the linearization order. By Lemma \ref{computeHead} it is deduced that the head of the queue at time of the linearization of $d$ is computed properly. If the Queue is not empty by Lemma \ref{get} we know that the returning response is the computed index element.
+%  \end{enumerate} 
+%\end{proof}
+
 
 \end{document}
 

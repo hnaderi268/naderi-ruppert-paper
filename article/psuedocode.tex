@@ -535,8 +535,10 @@
 
 \framebox[1.1\width]{TEST} Is it better to show \nf{ops(EST\sub{n, t})} with \nf{EST\sub{n, t}}?
 
+\framebox[1.1\width]{TEST} How to merge notions of blocks and operations? block b $\in$ block c means b is subblock of c. block b $\in$ set B means b is in B. Merge these two to have shorter formulaes.
+
 \begin{definition}[Block]
-A block is an object that stores some statistics described in Algorithm Queue. It implicitly shows a set of operations. The set of operations of block $b$ are the operations in the leaf subblocks of $b$. We show the set of operations of block $b$, set of blocks $B$ by $ops(b)$, $ops(B)$. We also say $b$ contains $op$ if $op\in ops(b)$.
+A block is an object storing some statistics described in Algorithm Queue. It implicitly shows a set of operations. The set of operations of block $b$ are the operations in the leaf subblocks of $b$. We show the set of operations of block $b$, set of blocks $B$ by $ops(b)$, $ops(B)$. We also say $b$ contains $op$ if $op\in ops(b)$.
 \end{definition}
 
 \begin{definition}[Order]
@@ -565,6 +567,9 @@ Once block b is written in \nf{n.blocks[i]} then \nf{n.blocks[i]} never changes.
 \begin{lemma}
   Each block is not duplicated.
 \end{lemma}
+\begin{proof}
+  \nf{n.CreateBlock(i)} is successful for \nf{i=1,2,3,...} exactly one time and by definition of \nf{CreateBlock} the range of their blocks are disjoint so in propagation procedure on block can not be propagated twice (reference to propagation).
+\end{proof}
 
 \begin{lemma}[headProgress] \label{lem::sizeProgress}
 \nf{n.established} is non-decreasing over time.
@@ -595,16 +600,19 @@ Blocks are only appended(not modified) with CAS to \nf{n.blocks[n.head]} and \nf
 \end{proof}
 
 \begin{lemma}[createBlock] \label{lem::createBlock}
-  If \nf{n.CreateBlock(i)} is invoked at time $t$ and returns block $b$, then \nf{ops(EST\sub{n.left, t})} $\cup$ \nf{ops(EST\sub{n.right, t})} - \nf{ops(EST\sub{n, t})} $\subseteq$ \nf{ops(b)}.
+  If \nf{n.CreateBlock(i)} is invoked at time $t$ and returns block $new$, then \nf{ops(EST\sub{n.left, t})} $\cup$ \nf{ops(EST\sub{n.right, t})} - \nf{ops(EST\sub{n, t})} $\subseteq$ \nf{ops(new)}.
 \end{lemma}
 \begin{proof}
- WLOG we prove the claim for the left child. Blocks in \nf{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} are all the established operations at time $t$ by definition of subblock. Since the head is only increasing (Lemma~\ref{lem::sizeProgress}) the  claim holds after $t$. See Figure~\ref{fig::createBlock}. The right child is the same.
+From lemmas 7,8 we know that \nf{n.blocks[i-1]} is full and assume it is invoked at $t^\prime$. 
+We want to prove every block $b$ that is $\in$ \nf{EST\sub{n.left,t}} $\cup$ \nf{EST\sub{n.right,t}} is also $\in$ \nf{EST\sub{n,t}}$^\prime$ $\cup$ \nf{new}. It is easy to see \nf{EST\sub{n.left,t}} $\cap$ \nf{EST\sub{n.right,t}} is $\emptyset$. If $b$ is $\in$ \nf{EST\sub{n.left,t$^\prime$}} it is simple to see. Else we can see from the code of the \nf{CreateBlock} that \nf{new} contains it. Right child is the same.
+% WLOG we prove the claim for the left child. Blocks in \nf{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} are established at time $t$.  Since the head is only increasing (Lemma~\ref{lem::sizeProgress}) the  claim holds after $t$. See Figure~\ref{fig::createBlock}. The right child is the same.
 \end{proof}
 
 \begin{lemma}[trueRefresh] \label{lem::trueRefresh}
   Let $t_i$ be the time \nf{n.Refresh()} is invoked and $t_t$ be the time it is terminated. Suppose \nf{n.Refresh()}'s \nf{TryAppend(new, s)} returns \nf{true}, then \nf{ops(EST\sub{n.left, t\sub{i}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}})} $\in$ \nf{ops(EST\sub{n, t\sub{t}})}.
 \end{lemma}
 \begin{proof}
+Suppose the previous true returning \nf{n.Refresh()} took place in time $(t_i^\prime-t_t^\prime)$. By induction on the number of succsuful \nf{Refresh()}'s \nf{n} we know that \nf{ops(EST\sub{n.left, t\sub{i}$^\prime$})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}$^\prime$})} $\in$ \nf{ops(EST\sub{n, t\sub{t}$^\prime$})}. Operations that are in \nf{ops(EST\sub{n.left, t\sub{i}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}})} $\in$ \nf{ops(EST\sub{n, t\sub{t}})} but not in \nf{ops(EST\sub{n.left, t\sub{i}$^\prime$})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}$^\prime$})} $\in$ \nf{ops(EST\sub{n, t\sub{t}$^\prime$})} are in the block returned by \nf{n.CreateBlock()} by lemma 10. 
 By Lemma~\ref{lem::createBlock} \nf{new} contains \nf{n}'s childrens' established blocks after Line \ref{readSize} which is  appended to \nf{n.blocks[]} by \nf{TryAppend} in Line 313.
 \end{proof}
 
@@ -619,11 +627,12 @@ By Lemma~\ref{lem::createBlock} \nf{new} contains \nf{n}'s childrens' establishe
 \begin{lemma}[Double Refresh] \label{doubleRefresh}
   Consider two consecutive failed instances $r_1$,$r_2$ of \nf{n.Refresh()} by some process. Let $t_1$ be the time $r_1$ is invoked and $t_2$ be the time $r_2$ terminated. After $r_2$'s \nf{TryAppend} we have \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{2}})}.
 \end{lemma}
-%\begin{proof}
-%  
-%
-%If Line 35 (first Refresh which we call $R_1$) returns \nf{true}, the claim is held by Lemma~\ref{lem::trueRefresh}. If not, then there is another successful instance of \nf{Refresh()} $R_1^\prime$ by Lemma~\ref{lem:falseRefresh}. $R_1^\prime$ may or may not have propagated some subblocks of \nf{new} to \nf{n}. It is obvious that the \nf{new} constructed by the second Refresh in Line 36 contains the blocks in \nf{new} by $R_1$ which $R_1^\prime$ did not contain, since \nf{n.head} is only increasing (Maybe Lemma~\ref{lem::oldnewOrder}). If $R_2$ succeeds by Lemma~\ref{lem::trueRefresh} the claim holds. If not, it is deduced that \nf{n.blocks[h]} was not \nf{null} before $R_2$'s \nf{CAS}. Furthermore, \nf{n.blocks[h]} was \nf{null} before reading \nf{h} by $R_1$. So there is a successful \nf{Refresh()} after the read of \nf{h} in $R_1$ and before the \nf{CAS} of $R_2$. This \nf{Refresh()} contains all the new established operations before Line 35 (Maybe Lemma~\ref{lem::oldnewOrder}) and by Lemma~\ref{lem::trueRefresh} our claim holds. See Figure~\ref{}.
-%\end{proof}
+\begin{proof}
+  
+
+If Line 313 of $r_1$ or $r_2$ returns \nf{true}, then the claim is held by Lemma~\ref{lem::trueRefresh}. If not, then there is another successful instance of \nf{n.Refresh()} $r_1^\prime$ by Lemma~\ref{lem:falseRefresh} for $r_2$. From $t_{i_{r_2}^\prime} > t_1$ and Lemma~\ref{lem::trueRefresh}, \ref{lem::establishedOrder} we know that \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{2}})}.
+%It is obvious that the \nf{new} constructed by the second Refresh in Line 36 contains the blocks in \nf{new} by $R_1$ which $R_1^\prime$ did not contain, since \nf{n.head} is only increasing (Maybe Lemma~\ref{lem::oldnewOrder}). If $R_2$ succeeds by Lemma~\ref{lem::trueRefresh} the claim holds. If not, it is deduced that \nf{n.blocks[h]} was not \nf{null} before $R_2$'s \nf{CAS}. Furthermore, \nf{n.blocks[h]} was \nf{null} before reading \nf{h} by $R_1$. So there is a successful \nf{Refresh()} after the read of \nf{h} in $R_1$ and before the \nf{CAS} of $R_2$. This \nf{Refresh()} contains all the new established operations before Line 35 (Maybe Lemma~\ref{lem::oldnewOrder}) and by Lemma~\ref{lem::trueRefresh} our claim holds. See Figure~\ref{}.
+\end{proof}
 
 \begin{figure}[hbt]
   \center\includegraphics[width=3in]{pics/doublyrefresh.drawio.png}
@@ -635,9 +644,9 @@ By Lemma~\ref{lem::createBlock} \nf{new} contains \nf{n}'s childrens' establishe
 \begin{corollary}[Propagate Step] \label{doublyRefresh}
 All operations in \nf{n}'s children's established blocks before line \ref{firstRefresh} are guaranteed to be in \nf{n}'s established blocks after line~\ref{secondRefresh}.
 \end{corollary}
-%\begin{proof}
-%Suppose block \nf{b} with index \nf{i} is in the the left child of \nf{n} before the line 35. By Lemma~\ref{head} it follows that \nf{n.left.head} is greater than \nf{i}. \nf{Refresh()} calls \nf{CreateBlock()} and creates a block from blocks between \nf{n.blocks[n.head].end\textsubscript{left}} and \nf{n.left.head} in the left child, which contains \nf{b} as well. First it tries to append it in \nf{n.blocks.head} and if it was succsuful it continues recursively. If not it tries again, and if the second call of \nf{Refresh()} in Line 36 fails. It means there is another \nf{Refresh} which has reah its \nf{i} after the Line 35, so it contains \nf{b} as well.
-%\end{proof}
+\begin{proof}
+Lines \ref{firstRefresh} and \ref{secondRefresh} satisfy the preconditions of Lemma \ref{doubleRefresh}.
+\end{proof}
 
 \nf{CreateBlock()} reads blocks in the children that do not exist in the parent and aggregates them into one block. If a \nf{Refresh()} procedure returns true it means it has appended the block created by \nf{CreateBlock()} into the parent node's sequence. So suppose two \nf{Refresh}es fail. Since the first \nf{Refresh()} was not successful, it means another CAS operation by a \nf{Refresh}, concurrent to the first \nf{Refresh()}, was successful before the second \nf{Refresh()}. So it means the second failed \nf{Refresh} is concurrent with a successful \nf{Refresh()} that assuredly has read block before the mentioned line \nf{35}. After all it means if any of the \nf{Refresh()} attempts were successful the claim is true, and also if both fail the mentioned claim still holds.
 
@@ -669,7 +678,7 @@ Each block has at most $p$ direct subblocks.
 %  From Line~\ref{addOP} it is induced directly that each block contains at least one operation. Now it follows directly by Lemma \ref{blockSize}.
 %\end{proof}
 
-\pagebreak
+
 \begin{definition} [Ordering of operations inside the nodes] \label{ordering}
 $\blacktriangleright$ Note that from Lemma \ref{blockSize} we know there is at most one operation from each process in a given block.
 
@@ -765,7 +774,7 @@ If \nf{super[i] $\neq$ null}, then \nf{super[i]} in node \nf{n} is the index of 
   \nf{root.size-root.FindMostRecentDone()} is $O(p^2+q)$, which $p$ is \# processes and $q$ is the length of the queue.
 \end{lemma}
 
-\begin{theorem}
+\begin{theorem}[Main]
 The queue implementation is linearizable.
 \end{theorem}
 %\begin{proof}
@@ -776,6 +785,9 @@ The queue implementation is linearizable.
 %  \end{enumerate} 
 %\end{proof}
 
+\begin{lemma}[Time analysis]
+  \nf{n.GetEnq(b,i), n.Index(b,i)} take $O(\log^2 p)$ steps. Search in the root may take $O(\log Q+ p^2)$ steps. Helping is done every $p^2$ block appended to the root and takes $p\times \log^2p$ steps. Amortized time consumed for helping by each process is $O(\log^2 p)$.
+\end{lemma}
 
 \end{document}
 

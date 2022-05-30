@@ -195,7 +195,7 @@
   
 \it{Variable naming:}
 \begin{itemize}
-  \item \tt{b\sub{op}}: index of the block containing operation\tt{op}
+  \item \tt{b\sub{op}}: index of the block containing operation \tt{op}
   \item \tt{r\sub{op}}: rank of operation \tt{op} i.e. the ordering among the operations of its type according to linearization ordering
 \end{itemize}
 
@@ -560,14 +560,14 @@ For simplicity we say block \nf{b} is propagated to node \nf{n} or to a set of b
 \end{definition}
 
 
-\begin{observation}[Validity of \nf{head}]\label{head}
+\begin{observation}\label{head}
 Once block b is written in \nf{n.blocks[i]} then \nf{n.blocks[i]} never changes.
 \end{observation}
 
 
 
 \begin{lemma}[headProgress] \label{lem::sizeProgress}
-\nf{n.head} is non-decreasing over time and \nf{n.blocks[i].end\sub{left, right}} is non-decreasing over \nf{i}.
+\nf{n.head} is non-decreasing over time and \nf{n.blocks[i].end\sub{left, right}} $\geq$ \nf{n.blocks[i-1].end\sub{left, right}}.
 \end{lemma}
 \begin{proof}
   Induced trivially from the pseudocode since \nf{n.head} is only incremented. \nf{n.blocks[i]. Also end\sub{left, right}} are greater than or equal the previous values in the \nf{CreateBlock(i)} code (Lines~\ref{lastLine, prevLine}).
@@ -580,10 +580,11 @@ Every block has most one direct superblock.
 To show this we are going to refer to the way n.blocks[] is partitioned while propagating up to n.parent. \nf{n.CreateBlock(i)} merges the blocks in \nf{n.left.blocks[n.blocks[i-1].end\sub{left}..n.blocks[i].end\sub{left}]} and \nf{n.right.blocks[n.blocks[i-1].end\sub{right}..n.blocks[i].end\sub{right}]} (Lines \ref{lastLine, pr}). From we know that \nf{end\sub{left},end\sub{right}} are non decreasing, so the range of the subblocks of n.blocks are disjoint.
 \end{proof}
 
-\begin{lemma}[headPosition] \label{lem::headPosition} If the value read in Line \ref{prevLine}(\nf{h=n.head}) is $h$ then, \nf{n.blocks[i]=null} for \nf{i>h} and \nf{n.blocks[i]$\neq$null} for \nf{i<h}.
+\begin{lemma}[headPosition] \label{lem::headPosition} If the value of \nf{n.head} is \nf{h} then, \nf{n.blocks[i]=null} for \nf{i>h} and \nf{n.blocks[i]$\neq$null} for \nf{i<h}.
 \end{lemma}
 \begin{proof}
-At the end of every \nf{n.Refresh()} with a block  with size greater than 0 returned by \nf{CreateBlock()} \nf{n.head} is incremented (Lines \ref{incrementHead1}, \ref{incrementHead2}). If a process went to sleep before incrementing the \nf{established} (line \ref{incrementHead1}), nothing can be appended to \nf{n.blocks} until another process increments \nf{n.establsihed} (Line \ref{incrementHead2}).
+The value of \nf{n.head} is modified only in lines \ref{incrementHead1, incrementHead2} and a value is written into \nf{n.blocks[head]} is only in Line 313. It's obvious that writing into \nf{n.blocks[head]} does not change the state of the claim of the lemma and if it was right before 312 it is going to be right after 312. We show in both cases of the successful 313 or not the claim holds after the increment lines of \nf{n.head}. In the first case the process applied a successful \nf{TryAppend(new,h)} in line \ref{okcas}, which means \nf{n.blocks[h]} is not null anymore. If the claim was held before it is going to be held after the \ref{incrementHead1}. Since wether\ref{incrementHead1} returns true or false it means \nf{n.head} has been incremented. The failiure case is also the same since it means \nf{n.blocks[head]} is written by some process.
+%At the end of every \nf{n.Refresh()} with a block  with size greater than 0 returned by \nf{CreateBlock()} \nf{n.head} is incremented (Lines \ref{incrementHead1}, \ref{incrementHead2}). If a process went to sleep before incrementing the \nf{established} (line \ref{incrementHead1}), nothing can be appended to \nf{n.blocks} until another process increments \nf{n.establsihed} (Line \ref{incrementHead2}).
 \end{proof}
 
 %\begin{lemma}[oldnewOrder] \label{lem::oldnewOrder}
@@ -638,8 +639,8 @@ If Line 313 of $r_1$ or $r_2$ returns \nf{true}, then the claim is held by Lemma
 \end{proof}
 
 \begin{figure}[hbt]
-  \center\includegraphics[width=6in]{pics/completedouble.png}
-  \caption{$t_t$ is after $R_2^\prime$'s reads n.head after n.head is incremented which is after the succesufil TryAppend(i) which is after $R_1$'s reading n.head that takes place at $t_i$.}
+  \center\includegraphics[width=6in]{pics/compactdouble.png}
+  \caption{$t1<$ $r_1$ reading head $<$ incrementing \nf{n.head} from $i$ to $i+1$ $<$ $R_2^\prime$ reading head $<$ \nf{TryAppend(i+1)} $<$ incrementing \nf{n.head} from $i+1$ to $i+2$ $<t2$}
 \end{figure}
 
 %  Block \nf{new} is created of new established subblocks of children of \nf{n}(Lemma \ref{lem::createBlock}, Line 46). If \nf{CAS} in Line 48 succeeds then by Lemma~\ref{lem::trueRefresh} new established blocks will be in \nf{n}.

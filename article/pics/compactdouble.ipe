@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE ipe SYSTEM "ipe.dtd">
 <ipe version="70218" creator="Ipe 7.2.24">
-<info created="D:20220525113452" modified="D:20220530090706"/>
+<info created="D:20220525113452" modified="D:20220530093249"/>
 <ipestyle name="basic">
 <symbol name="arrow/arc(spx)">
 <path stroke="sym-stroke" fill="sym-stroke" pen="sym-pen">
@@ -326,13 +326,6 @@ h
 432 736 l
 h
 </path>
-<path stroke="black">
-288 688 m
-288 656 l
-480 656 l
-480 688 l
-h
-</path>
 <text matrix="1 0 0 1 128 -80" transformations="translations" pos="128 784" stroke="black" type="label" width="12.034" height="6.812" depth="1.49" valign="baseline" style="math">R_1</text>
 <text transformations="translations" pos="432 704" stroke="black" type="label" width="12.034" height="6.812" depth="1.49" valign="baseline" style="math">R_2</text>
 <text transformations="translations" pos="480 656" stroke="black" type="label" width="12.034" height="7.493" depth="2.47" valign="baseline" style="math">R_2^\prime</text>
@@ -342,7 +335,7 @@ h
 </path>
 <use name="mark/disk(sx)" pos="144 720" size="normal" stroke="black"/>
 <use name="mark/disk(sx)" pos="240 720" size="normal" stroke="black"/>
-<use name="mark/disk(sx)" pos="320 672" size="normal" stroke="black"/>
+<use matrix="1 0 0 1 -16 0" name="mark/disk(sx)" pos="320 672" size="normal" stroke="black"/>
 <use name="mark/disk(sx)" pos="368 672" size="normal" stroke="black"/>
 <use name="mark/disk(sx)" pos="400 720" size="normal" stroke="black"/>
 <text matrix="1 0 0 1 -32 0" transformations="translations" pos="96 768" stroke="black" type="label" width="64.785" height="6.918" depth="0" valign="baseline">i= read n.head</text>
@@ -365,7 +358,7 @@ h
 400 752
 432 768 c
 </path>
-<path stroke="black" arrow="normal/normal">
+<path matrix="1 0 0 1 -16 0" stroke="black" arrow="normal/normal">
 320 672 m
 320 640
 304 640 c
@@ -383,5 +376,14 @@ h
 <use name="mark/disk(sx)" pos="432 576" size="normal" stroke="black"/>
 <text transformations="translations" pos="128 560" stroke="black" type="label" width="8.856" height="6.42" depth="0" valign="baseline">t1</text>
 <text transformations="translations" pos="432 560" stroke="black" type="label" width="8.856" height="6.42" depth="0" valign="baseline">t2</text>
+<path stroke="black">
+480 656 m
+288 656 l
+288 656 l
+</path>
+<path stroke="black">
+480 688 m
+288 688 l
+</path>
 </page>
 </ipe>

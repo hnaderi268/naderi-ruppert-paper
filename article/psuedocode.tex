@@ -59,6 +59,7 @@
 \newtheorem{observation}[theorem]{Observation}
 \theoremstyle{definition}
 \newtheorem{definition}[theorem]{Definition}
+\newtheorem{invariant}[theorem]{Invariant}
 
 \begin{document}
 
@@ -280,7 +281,7 @@
 %\If{\tt{n.blocks[h]!=null?}} \tt{h+=1}\EndIf
 \State \tt{<new, np\sub{left}, np\sub{right}>= \Call{CreateBlock}{s}} \cmt{\tt{np\sub{left}, np\sub{right}} are the values read from the children's \tt{num\sub{propagated}} field.}
 \If{\tt{new.num==0}} \Return{\tt{true}} \cmt{The block contains nothing.}
-\ElsIf{\tt{blocks.tryAppend(new, s)}}
+\ElsIf{\tt{blocks.tryAppend(new, s)}} \label{cas}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}} \label{okcas}
 \State \tt{\Call{CAS}{dir.super[np\sub{dir}], null, h+1}} \cmt{Write would work too.}
 \State \tt{\Call{CAS}{dir.num\sub{propagated}, np\sub{dir}, np\sub{dir}+1}}
@@ -580,10 +581,18 @@ Every block has most one direct superblock.
 To show this we are going to refer to the way n.blocks[] is partitioned while propagating up to n.parent. \nf{n.CreateBlock(i)} merges the blocks in \nf{n.left.blocks[n.blocks[i-1].end\sub{left}..n.blocks[i].end\sub{left}]} and \nf{n.right.blocks[n.blocks[i-1].end\sub{right}..n.blocks[i].end\sub{right}]} (Lines \ref{lastLine, pr}). From we know that \nf{end\sub{left},end\sub{right}} are non decreasing, so the range of the subblocks of n.blocks are disjoint.
 \end{proof}
 
-\begin{lemma}[headPosition] \label{lem::headPosition} If the value of \nf{n.head} is \nf{h} then, \nf{n.blocks[i]=null} for \nf{i>h} and \nf{n.blocks[i]$\neq$null} for \nf{i<h}.
-\end{lemma}
+\begin{corollary}[No Duplicates]\label{append}
+If \nf{op} is appended to \nf{n.blocks[i]} then after that there is no \nf{j>i} such that \nf{op}$\in$\nf{ops(n.blocks[j])}.
+\end{corollary}
+%\begin{proof}
+%\nf{Append(op)} adds \nf{op} to \nf{l\textsubscript{p}.blocks}(Line~\ref{addOP}) and \nf{Propagate()} recursively propagates \nf{op} up to the root.
+%By lemma \ref{doublyRefresh} we know that operation \nf{op} propagates from child to parent at each level.
+%\end{proof}
+
+\begin{invariant}[headPosition] \label{lem::headPosition} If the value of \nf{n.head} is \nf{h} then, \nf{n.blocks[i]=null} for \nf{i>h} and \nf{n.blocks[i]$\neq$null} for \nf{i<h}.
+\end{invariant}
 \begin{proof}
-The value of \nf{n.head} is modified only in lines \ref{incrementHead1, incrementHead2} and a value is written into \nf{n.blocks[head]} is only in Line 313. It's obvious that writing into \nf{n.blocks[head]} does not change the state of the claim of the lemma and if it was right before 312 it is going to be right after 312. We show in both cases of the successful 313 or not the claim holds after the increment lines of \nf{n.head}. In the first case the process applied a successful \nf{TryAppend(new,h)} in line \ref{okcas}, which means \nf{n.blocks[h]} is not null anymore. If the claim was held before it is going to be held after the \ref{incrementHead1}. Since wether\ref{incrementHead1} returns true or false it means \nf{n.head} has been incremented. The failiure case is also the same since it means \nf{n.blocks[head]} is written by some process.
+Some value is written into \nf{n.blocks[head]} only in Line 313. It is obvious that writing into \nf{n.blocks[head]} does not change the state of the claim of the lemma. The value of \nf{n.head} is modified only in lines \ref{incrementHead1}, ][p\ref{incrementHead2}, we show in both cases of the successful \ref{cas} or not the claim holds after the increment lines of \nf{n.head}. If $h$ increments to $h$ it is sufficient to show \nf{n.blocks[h]}$\neq$\nf{null} to claim the invariant still holds. In the first case the process applied a successful \nf{TryAppend(new,h)} in line \ref{okcas}, which means \nf{n.blocks[h]} is not null anymore. Note that wether\ref{incrementHead1} returns true or false after Line \nf{n.head} we know has been incremented from Line \ref{readSize}. The failure case is also the same since it means some value is written into \nf{n.blocks[head]} by some process.
 %At the end of every \nf{n.Refresh()} with a block  with size greater than 0 returned by \nf{CreateBlock()} \nf{n.head} is incremented (Lines \ref{incrementHead1}, \ref{incrementHead2}). If a process went to sleep before incrementing the \nf{established} (line \ref{incrementHead1}), nothing can be appended to \nf{n.blocks} until another process increments \nf{n.establsihed} (Line \ref{incrementHead2}).
 \end{proof}
 
@@ -629,12 +638,12 @@ From Lemma \ref{lem::establishedOrder} we know that \nf{ops(EST\sub{n, t\sub{i}}
 %\end{proof}
 
 \begin{lemma}[Double Refresh] \label{doubleRefresh}
-  Consider two consecutive failed instances $r_1$,$r_2$ of \nf{n.Refresh()} by some process. Let $t_1$ be the time $r_1$ is invoked and $t_2$ be the time $r_2$ terminated. After $r_2$'s \nf{TryAppend} we have \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{2}})}.
+  Consider two consecutive failed instances $r_1$,$r_2$ of \nf{n.Refresh()} by some process. Let $t_1$ be the time $R_1$ is invoked and $t_2$ be the time $R_2$ terminated. After $R_2$'s \nf{TryAppend} we have \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{2}})}.
 \end{lemma}
 \begin{proof}
   
 
-If Line 313 of $r_1$ or $r_2$ returns \nf{true}, then the claim is held by Lemma~\ref{lem::trueRefresh}. If not, then there is another successful instance of \nf{n.Refresh()} $r_2^\prime$ which has did TryAppend successfully into \nf{n.blocks[i+1]}. In figure 1 we see why the block it is appending contains established block in the n's children at $t_i$, since it create a block reading the head after $t_1$.
+If Line \ref{cas} of $R_1$ or $R_2$ returns \nf{true}, then the claim is held by Lemma~\ref{lem::trueRefresh}. If not, then there is another successful instance of \nf{n.Refresh()} $R_2^\prime$ which has did TryAppend successfully into \nf{n.blocks[i+1]}. Note that if $R_2$ reads some value greater than $i+1$ in Line \ref{readSize} it means there is a succesful \nf{Refresh()} instance started after Line \ref{readSize} of $R_1$ and finished its Line \ref{incrementHead1} or \ref{incrementHead2} before \ref{readSize} of $R_2$, form Lemma~\ref{lem::trueRefresh} by finish of this instance \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} has been propagated. In the figure 1 we see why the block $R_2^\prime$ is appending contains established block in the n's children at $t_i$, since it create a block reading the head after $t_1$.
 %It is obvious that the \nf{new} constructed by the second Refresh in Line 36 contains the blocks in \nf{new} by $R_1$ which $R_1^\prime$ did not contain, since \nf{n.head} is only increasing (Maybe Lemma~\ref{lem::oldnewOrder}). If $R_2$ succeeds by Lemma~\ref{lem::trueRefresh} the claim holds. If not, it is deduced that \nf{n.blocks[h]} was not \nf{null} before $R_2$'s \nf{CAS}. Furthermore, \nf{n.blocks[h]} was \nf{null} before reading \nf{h} by $R_1$. So there is a successful \nf{Refresh()} after the read of \nf{h} in $R_1$ and before the \nf{CAS} of $R_2$. This \nf{Refresh()} contains all the new established operations before Line 35 (Maybe Lemma~\ref{lem::oldnewOrder}) and by Lemma~\ref{lem::trueRefresh} our claim holds. See Figure~\ref{}.
 \end{proof}
 
@@ -652,35 +661,31 @@ All operations in \nf{n}'s children's established blocks before line \ref{firstR
 Lines \ref{firstRefresh} and \ref{secondRefresh} satisfy the preconditions of Lemma \ref{doubleRefresh}.
 \end{proof}
 
-\nf{CreateBlock()} reads blocks in the children that do not exist in the parent and aggregates them into one block. If a \nf{Refresh()} procedure returns true it means it has appended the block created by \nf{CreateBlock()} into the parent node's sequence. So suppose two \nf{Refresh}es fail. Since the first \nf{Refresh()} was not successful, it means another CAS operation by a \nf{Refresh}, concurrent to the first \nf{Refresh()}, was successful before the second \nf{Refresh()}. So it means the second failed \nf{Refresh} is concurrent with a successful \nf{Refresh()} that assuredly has read block before the mentioned line \nf{35}. After all it means if any of the \nf{Refresh()} attempts were successful the claim is true, and also if both fail the mentioned claim still holds.
-
-\begin{lemma}[No Duplicates]\label{append}
-If \nf{op} is appended to \nf{n.blocks[i]} then after that there is no \nf{j>i} such that \nf{op}$\in$\nf{ops(n.blocks[j])}.
-\end{lemma}
-%\begin{proof}
-%\nf{Append(op)} adds \nf{op} to \nf{l\textsubscript{p}.blocks}(Line~\ref{addOP}) and \nf{Propagate()} recursively propagates \nf{op} up to the root.
-%By lemma \ref{doublyRefresh} we know that operation \nf{op} propagates from child to parent at each level.
-%\end{proof}
-
 \begin{corollary}
   After \nf{Append(blk)} finishes \nf{ops(blk)}$\subseteq$\nf{ops(root.blocks[x])} for some \nf{x} and only one \nf{x}.
 \end{corollary}
+\begin{proof}
+  Follows from Lemma \ref{doubleRefresh}, \ref{append}.
+\end{proof}
+
+\nf{CreateBlock()} reads blocks in the children that do not exist in the parent and aggregates them into one block. If a \nf{Refresh()} procedure returns true it means it has appended the block created by \nf{CreateBlock()} into the parent node's sequence. So suppose two \nf{Refresh}es fail. Since the first \nf{Refresh()} was not successful, it means another CAS operation by a \nf{Refresh}, concurrent to the first \nf{Refresh()}, was successful before the second \nf{Refresh()}. So it means the second failed \nf{Refresh} is concurrent with a successful \nf{Refresh()} that assuredly has read block before the mentioned line \nf{35}. After all it means if any of the \nf{Refresh()} attempts were successful the claim is true, and also if both fail the mentioned claim still holds.
 
 \begin{lemma}[Block Size Upper Bound]\label{blockSize}
-Each block contains at most one operation from each processs \nf{($\forall$ \nf{process p:}\#\nf{operations of p}$\in$\nf{ops(n.blocks[x]$\leq$1})}.
+Each block contains at most one operation from each processs \nf{($\forall$ \nf{process p, block b:}\#\nf{operations of p}$\in$\nf{ops(b)$\leq$1}}.
 \end{lemma}
-%\begin{proof}
-%  Note that \nf{prevIndex} and \nf{lastIndex} defined in lines \ref{lastLine}, \ref{prevLine} are the indices defined in the Definition~\ref{def::subblock}. After a block has propagated to the parent the blocks between \nf{prevIndex} and \nf{lastIndex} make up to the parent (Lemma~\ref{doublyRefresh}). The number of new operations which have not propagated yet to the parent cannot be more than $p$. If so by the law of pigeonholes there is a process which has appended two concurrent operations.
-%\end{proof}
+\begin{proof}
+Assume there are two operations $op_1, op_2$ from process $p$ in block $b$. A process cannot invoke two operations concurrently. WLOG assume \nf{leaf of p.Append(block containing op\sub{1})} has to be finished before \nf{leaf of p.Append(block containing op\sub{2})} starts. So before appending $op_2$ to the tree $op_1$ exists in every node. So there is a node that has two blocks containing $op_1$ since if not then $b$ cannot exist. This contradicts with \ref{append}.
+\end{proof}
+\textit{Is something wrong with this proof? It is more complicated than I thought.}
 
 
 
 \begin{lemma}[Subblocks Upperbound]\label{subBlocksBound}
 Each block has at most $p$ direct subblocks.
 \end{lemma}
-%\begin{proof}
-%  From Line~\ref{addOP} it is induced directly that each block contains at least one operation. Now it follows directly by Lemma \ref{blockSize}.
-%\end{proof}
+\begin{proof}
+  It follows directly from Lemma \ref{blockSize} and the observation that each block contains at least one operation, induced from Line~\ref{addOP}. 
+\end{proof}
 
 
 \begin{definition} [Ordering of operations inside the nodes] \label{ordering}
@@ -688,74 +693,80 @@ $\blacktriangleright$ Note that from Lemma \ref{blockSize} we know there is at m
 
 \begin{itemize}
 \item We call operations strictly before $op$ in the sequence of operations $S$, prefix of the $op$.
-  \item $E(n,i)$ is the sequence of enqueue operations $\in$ \nf{ops(n.blocks[i])} ordered by their process id.
-  \item $D(n,i)$ is the sequence of dequeue operations $\in$ \nf{ops(n.blocks[i])} ordered by their process id.
+  \item $E(n,b)$ is the sequence of enqueue operations $\in$ \nf{ops(n.blocks[b])} ordered by their process id.
+  \item $E(n,b,i)$ is the $i$th enqueue in $E(n,b)$.
+  \item $D(n,b)$ is the sequence of dequeue operations $\in$ \nf{ops(n.blocks[b])} ordered by their process id.
+  \item $D(n,b,i)$ is the $i$th enqueue in $D(n,b)$.
 \item Order of the enqueue operations in $n$: $E(n)=E(n,1).E(n,2).E(n,3)...$
 \item Order of the dequeue operations in $n$: $D(n)=D(n,1).D(n,2).D(n,3)...$
 \item Linearization: $L=E(root,1).D(root,1).E(root,2).D(root,2).E(root,3).D(root,3)...$
 \end{itemize}
 \end{definition}
-\it{Note that in the non-root nodes we only order enqueues and dequeues among the operations of their own type. Since \nf{GetENQ()} only works on enqueues and \nf{IndexDEQ()} works on dequeues.}
-
-
-
-\begin{lemma}[Search Ranges]\label{search}
-  Preconditions of all invocation of \nf{BSearch} are satisfied.
-\end{lemma}
-%\begin{proof}
-%  
-%Line 83: \nf{Get(i)} is called if the result of a dequeue is not null. The search is among all blocks in the root.
-%
-%Line 88: This search tries to find the ith enqueue, knowing that it is in the left child. Search is done over the left subblocks. The start and end of the range are followed by definition. Line 92 is the same.
-%
-%Line 101: Here, the goal is to find the superblock. We know the distance between answer and the \nf{super[i]} is at most $p$, since at most $p$ processes could die.
-%
-%\end{proof}
+\it{Note that in the non-root nodes we only order enqueues and dequeues among the operations of their own type. Since \nf{GetENQ()} only searches among enqueues and \nf{IndexDEQ()} works on dequeues.}
 
 \begin{lemma}[Get correctness] \label{get}
 \nf{n.GetENQ(b,i)} returns the $i$th Enqueue in $E(n,b)$.
 \end{lemma}
-%\begin{proof}
-%It is obvious that \nf{Get(leaf l,b,1)} returns the operations stored in $b$th block of leaf $l$. To find the \nf{i}th enqueue in block \nf{b} of an internal node \nf{n} in line 87 it is decided that it resides in the left child or the right child. This decision is made by Definition of $E(n,b)$. After that Lines 88, 92 search the proper subblocks of \nf{b}. From Definition~\ref{def::subblock} weknow the subblocks of the $b$th block are within the \nf{prevBlock} and \nf{lastBlock} block of the \nf{CreateBlock()}.
-%\end{proof}
+\begin{proof}
+It is easy to see that \nf{leaf.GetENQ(b,1)} returns the operation stored in the $b$th block of leaf $l$. In Line 404 it is decided that the \nf{i}th enqueue in block \nf{b} of internal node \nf{n}resides in the left child or the right child of \nf{n}. Then \nf{n.child.GetENQ( block containing, order in the block)} is invoked. This recursive procedure ends in a leaf node. After that Lines 88, 92 search the proper subblocks of \nf{b}. The correctness of the invocation parameters is induced from the definition of ops(block), subblock.
+\end{proof}
+\textit{I'm not sure it is going to be long and boring to talk about the parameters, since the reader can find out them.}
 
+\begin{definition}
+An enqueue operation is \textit{finished} if its argument is returned by some process. A dequeue operation is \texttt{finished} if it returns \nf{null} or some value. Block \nf{b} is \textit{done} if all operations in \nf{ops(b)} are finished.
+\end{definition}
+\textit{Problem: we increment the \nf{num\sub{finished}} before returning and after the computing response. How to articulate the sentence above in a not confusing correct way?}
 
 \begin{lemma}[help]\label{help}
 After that \nf{TryAppend()} who is helping finishes, prefix for the blocks of \nf{root.blocks[root.FindMostRecentDone]} are done.
 \end{lemma}
 
+\begin{lemma}[Computing SuperBlock]\label{superBlock}
+After computing line \ref{computeSuper} of \nf{n.IndexDEQ(b,i)}, \nf{n.parent.blocks[superblock]} contains $D(n,b,i)$.
+\end{lemma}
+\begin{proof}
+\begin{enumerate}
+ \item Value read for \nf{super[b.group]} in line 418 is not null.\\$\blacktriangleright$
+  Values \nf{c\textsubscript{dir}} read in lines 23, \nf{super} are set before incrementing in lines 26,27.
+
+ \item \nf{super[]} preserves order from child to parent; if in a child block \nf{b} is before \nf{c} then \nf{b.group} $\leq$ \nf{c.group} and \nf{super[b.group]} $\leq$ \nf{super[c.group]}\\$\blacktriangleright$
+  Follows from the order of lines 60, 48, 49.
+
+% \item In a propagate step at most 2 different time values are read \\ If there are more than 2 numbers then the smallest number should have been propagated far before.
+% \item There are at most $p^2$ blocks with same time value in a node. \\ At most p processes could die before line 27 and each contains at most p elements.
+ \item \nf{super[i+1]-super[i]}$\leq p$
+\\$\blacktriangleright$
+ In a Refresh with successful CAS in line 46, \nf{super} and \nf{counter} are set for each child in lines 48,49. Assume the current value of the counter in node \nf{n} is \nf{i+1} and still \nf{super[i+1]} is not set. If an instance of successful \nf{Refresh(n)} finishes \nf{super[i+1]} is set a new value and a block is added after \nf{n.parent[sup[i]]}. There could be at most $p$ successful unfinished concurrent instances of \nf{Refresh()} that have not reached line 49. So the distance between \nf{super[i+1]} and \nf{super[i]} is less than $p$.
+
+ \item Superblock of \nf{b} is within range $\pm 2p$ of the \nf{super[b.time]}.
+\\$\blacktriangleright$
+\nf{super[i]} is the index of the superblock of a block containing block b, followed by Lemma \ref{superCounter}. It is trivial to see that \nf{n.super} and \nf{n.b.counter} are increasing. \nf{super(b)} is the real superblock of b. \nf{super(t]} is the index of the superblock of the last block with time \nf{t}. If \nf{b.time} is \nf{t} we have:
+$$super[t]-p\leq super[t-1]\leq super(t-1] \leq super(b) \leq super(t+1)\leq super(t+1]\leq super[t]+p$$
+
+\end{enumerate}
+\end{proof}
 
 \begin{lemma}[Index correctness]
- \nf{n.Index(b,i)} returns the rank in $D(root)$ of the $i$th Dequeue in $D(n,b)$.
+ \nf{n.IndexDEQ(b,i)} returns the rank in $D(root)$ of $D(n,b,i)$.
 \end{lemma}
-%\begin{proof}
-%  \nf{Index(n,b,i)} computes superblock of $i$th Dequeue in $b$th block of \nf{n} in \nf{n.parent} and then computes the order in $D(n.parent, superblock)$. Then calls \nf{index()} on \nf{n.parent} recursively. It is easy to see why the second is correct. Correctness of computing superblock comes from Lemma \ref{superBlock}.
-%\end{proof}
+\begin{proof}
+We can see the base case \nf{root.IndexDEQ(b,i)} is trivial.
+  \nf{n.IndexDEQ(b,i)} computes the superblock of the $i$th Dequeue in the $b$th block of \nf{n} in \nf{n.parent}(Lemma \ref{superBlock}). Then the order in $D(n.parent, superblock)$ is computed and \nf{index()} is called on \nf{n.parent} recursively. It is easy to see why the second is correct. Correctness of computing superblock comes from Lemma \ref{superBlock}.
+\end{proof}
+\textit{Do I need to talk about the computation of the order in the parent which is based on the definition of ordering of dequeues in a block?}
 
-\begin{lemma}[Computing SuperBlock]\label{superBlock}
-After computing line \ref{computeSuper} of \nf{n.IndexDEQ(b,i)}, \nf{superblock} contains the \nf{i}th dequeue in the \nf{b}th block of the node \nf{n}.
+\begin{lemma}[Search Ranges]\label{search}
+  Preconditions of all invocation of \nf{BSearch} are satisfied.
 \end{lemma}
-%\begin{proof}
-%\begin{enumerate}
-% \item Value read for \nf{super[b.time]} in line 101 is not null.\\$\blacktriangleright$
-%  Values \nf{c\textsubscript{dir}} read in lines 23, \nf{super} are set before incrementing in lines 26,27.
-%
-% \item \nf{super[]} preserves order from child to parent; if in a child block \nf{b} is before \nf{c} then \nf{b.time} $\leq$ \nf{c.time} and \nf{super[b.time]} $\leq$ \nf{super[c.time]}\\$\blacktriangleright$
-%  Follows from the order of lines 60, 48, 49.
-%
-%% \item In a propagate step at most 2 different time values are read \\ If there are more than 2 numbers then the smallest number should have been propagated far before.
-%% \item There are at most $p^2$ blocks with same time value in a node. \\ At most p processes could die before line 27 and each contains at most p elements.
-% \item \nf{super[i+1]-super[i]}$\leq p$
-%\\$\blacktriangleright$
-% In a Refresh with successful CAS in line 46, \nf{super} and \nf{counter} are set for each child in lines 48,49. Assume the current value of the counter in node \nf{n} is \nf{i+1} and still \nf{super[i+1]} is not set. If an instance of successful \nf{Refresh(n)} finishes \nf{super[i+1]} is set a new value and a block is added after \nf{n.parent[sup[i]]}. There could be at most $p$ successful unfinished concurrent instances of \nf{Refresh()} that have not reached line 49. So the distance between \nf{super[i+1]} and \nf{super[i]} is less than $p$.
-%
-% \item Superblock of \nf{b} is within range $\pm 2p$ of the \nf{super[b.time]}.
-%\\$\blacktriangleright$
-%\nf{super[i]} is the index of the superblock of a block containing block b, followed by Lemma \ref{superCounter}. It is trivial to see that \nf{n.super} and \nf{n.b.counter} are increasing. \nf{super(b)} is the real superblock of b. \nf{super(t]} is the index of the superblock of the last block with time \nf{t}. If \nf{b.time} is \nf{t} we have:
-%$$super[t]-p\leq super[t-1]\leq super(t-1] \leq super(b) \leq super(t+1)\leq super(t+1]\leq super[t]+p$$
-%
-%\end{enumerate}
-%\end{proof}
+\begin{proof}
+  
+Line 83: \nf{Get(i)} is called if the result of a dequeue is not null. The search is among all blocks in the root.
+
+Line 88: This search tries to find the ith enqueue, knowing that it is in the left child. Search is done over the left subblocks. The start and end of the range are followed by definition. Line 92 is the same.
+
+Line 101: Here, the goal is to find the superblock. We know the distance between answer and the \nf{super[i]} is at most $p$, since at most $p$ processes could die.
+
+\end{proof}
 
 \begin{lemma}[Computing Queue's Head] \label{computeHead}
   Let $S$ be the state of an empty queue if the operations in prefix in $L$ of $i$th dequeue in $D(root,b)$ are applied on it. \nf{FindResponse()} returns the index in $E(root,b)$ of the enqueue that is the head in S. If the  queue is empty in S it returns \nf{<-1,-->}.

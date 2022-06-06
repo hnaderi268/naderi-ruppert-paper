@@ -592,6 +592,8 @@ If \nf{op} is appended to \nf{n.blocks[i]} then after that there is no \nf{j>i} 
 \begin{invariant}[headPosition] \label{lem::headPosition} If the value of \nf{n.head} is \nf{h} then, \nf{n.blocks[i]=null} for \nf{i>h} and \nf{n.blocks[i]$\neq$null} for \nf{i<h}.
 \end{invariant}
 \begin{proof}
+Af first the invariant is true since initially 1 is assigned to \nf{n.head} and \nf{n.blocks[x]} is null for every \nf{x}. The satisfiability of the invariant may be effected by writing into \nf{n.blocks} or incrementing \nf{n.head}.
+
 Some value is written into \nf{n.blocks[head]} only in Line 313. It is obvious that writing into \nf{n.blocks[head]} does not change the state of the claim of the lemma. The value of \nf{n.head} is modified only in lines \ref{incrementHead1}, ][p\ref{incrementHead2}, we show in both cases of the successful \ref{cas} or not the claim holds after the increment lines of \nf{n.head}. If $h$ increments to $h$ it is sufficient to show \nf{n.blocks[h]}$\neq$\nf{null} to claim the invariant still holds. In the first case the process applied a successful \nf{TryAppend(new,h)} in line \ref{okcas}, which means \nf{n.blocks[h]} is not null anymore. Note that wether\ref{incrementHead1} returns true or false after Line \nf{n.head} we know has been incremented from Line \ref{readSize}. The failure case is also the same since it means some value is written into \nf{n.blocks[head]} by some process.
 %At the end of every \nf{n.Refresh()} with a block  with size greater than 0 returned by \nf{CreateBlock()} \nf{n.head} is incremented (Lines \ref{incrementHead1}, \ref{incrementHead2}). If a process went to sleep before incrementing the \nf{established} (line \ref{incrementHead1}), nothing can be appended to \nf{n.blocks} until another process increments \nf{n.establsihed} (Line \ref{incrementHead2}).
 \end{proof}
@@ -618,6 +620,8 @@ Blocks are only appended(not modified) with CAS to \nf{n.blocks[n.head]} and \nf
 %We want to prove every block $b$ that is $\in$ \nf{EST\sub{n.left,t}} $\cup$ \nf{EST\sub{n.right,t}} is also $\in$ \nf{EST\sub{n,t}}$^\prime$ $\cup$ \nf{new}. It is easy to see \nf{EST\sub{n.left,t}} $\cap$ \nf{EST\sub{n.right,t}} is $\emptyset$. If $b$ is $\in$ \nf{EST\sub{n.left,t$^\prime$}} it is simple to see. Else we can see from the code of the \nf{CreateBlock} that \nf{new} contains it. Right child is the same.
 %% WLOG we prove the claim for the left child. Blocks in \nf{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} are established at time $t$.  Since the head is only increasing (Lemma~\ref{lem::sizeProgress}) the  claim holds after $t$. See Figure~\ref{fig::createBlock}. The right child is the same.
 %\end{proof}
+
+\nf{CreateBlock()} reads blocks in the children that do not exist in the parent and aggregates them into one block. If a \nf{Refresh()} procedure returns true it means it has appended the block created by \nf{CreateBlock()} into the parent node's sequence. So suppose two \nf{Refresh}es fail. Since the first \nf{Refresh()} was not successful, it means another CAS operation by a \nf{Refresh}, concurrent to the first \nf{Refresh()}, was successful before the second \nf{Refresh()}. So it means the second failed \nf{Refresh} is concurrent with a successful \nf{Refresh()} that assuredly has read block before the mentioned line \nf{35}. After all it means if any of the \nf{Refresh()} attempts were successful the claim is true, and also if both fail the mentioned claim still holds.
 
 \begin{lemma}[trueRefresh] \label{lem::trueRefresh}
   Let $t_i$ be the time \nf{n.Refresh()} is invoked and $t_t$ be the time it is terminated. Suppose \nf{n.Refresh()}'s \nf{TryAppend(new, s)} returns \nf{true}, then \nf{ops(EST\sub{n.left, t\sub{i}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{t}})}.
@@ -668,17 +672,12 @@ Lines \ref{firstRefresh} and \ref{secondRefresh} satisfy the preconditions of Le
   Follows from Lemma \ref{doubleRefresh}, \ref{append}.
 \end{proof}
 
-\nf{CreateBlock()} reads blocks in the children that do not exist in the parent and aggregates them into one block. If a \nf{Refresh()} procedure returns true it means it has appended the block created by \nf{CreateBlock()} into the parent node's sequence. So suppose two \nf{Refresh}es fail. Since the first \nf{Refresh()} was not successful, it means another CAS operation by a \nf{Refresh}, concurrent to the first \nf{Refresh()}, was successful before the second \nf{Refresh()}. So it means the second failed \nf{Refresh} is concurrent with a successful \nf{Refresh()} that assuredly has read block before the mentioned line \nf{35}. After all it means if any of the \nf{Refresh()} attempts were successful the claim is true, and also if both fail the mentioned claim still holds.
-
 \begin{lemma}[Block Size Upper Bound]\label{blockSize}
-Each block contains at most one operation from each processs \nf{($\forall$ \nf{process p, block b:}\#\nf{operations of p}$\in$\nf{ops(b)$\leq$1}}.
+Each block contains at most one operation from each processs.
 \end{lemma}
 \begin{proof}
-Assume there are two operations $op_1, op_2$ from process $p$ in block $b$. A process cannot invoke two operations concurrently. WLOG assume \nf{leaf of p.Append(block containing op\sub{1})} has to be finished before \nf{leaf of p.Append(block containing op\sub{2})} starts. So before appending $op_2$ to the tree $op_1$ exists in every node. So there is a node that has two blocks containing $op_1$ since if not then $b$ cannot exist. This contradicts with \ref{append}.
+By proof of contradiction, assume there are more than one operation from process $p$ in block $b$ in node $n$. A process cannot invoke more than one operations concurrently. From $p$ 's operations in $b$, let $op_1$ be the first operation invoked and $op_2$ be the second one. Note that it is terminated before $op_2$ started. So before appending $op_2$ to the tree $op_1$ exists in every node from the path of $p$'s leaf to the root. So there is some block $b^\prime$  before $b$ in $n$ containing $op_1$. $op_1$ existing in $b$ an $b^\prime$ contradicts with \ref{append}.
 \end{proof}
-\textit{Is something wrong with this proof? It is more complicated than I thought.}
-
-
 
 \begin{lemma}[Subblocks Upperbound]\label{subBlocksBound}
 Each block has at most $p$ direct subblocks.
@@ -689,7 +688,7 @@ Each block has at most $p$ direct subblocks.
 
 
 \begin{definition} [Ordering of operations inside the nodes] \label{ordering}
-$\blacktriangleright$ Note that from Lemma \ref{blockSize} we know there is at most one operation from each process in a given block.
+$\blacktriangleright$ Note that processes are numbered from 1 to $p$, left to right in the leaves of the tree and from Lemma \ref{blockSize} we know there is at most one operation from each process in a given block.
 
 \begin{itemize}
 \item We call operations strictly before $op$ in the sequence of operations $S$, prefix of the $op$.
@@ -705,10 +704,10 @@ $\blacktriangleright$ Note that from Lemma \ref{blockSize} we know there is at m
 \it{Note that in the non-root nodes we only order enqueues and dequeues among the operations of their own type. Since \nf{GetENQ()} only searches among enqueues and \nf{IndexDEQ()} works on dequeues.}
 
 \begin{lemma}[Get correctness] \label{get}
-\nf{n.GetENQ(b,i)} returns the $i$th Enqueue in $E(n,b)$.
+If \nf{n.blocks[b].num\sub{enq}$\geq$i} then \nf{n.GetENQ(b,i)} returns $E(n,b,i)$.
 \end{lemma}
 \begin{proof}
-It is easy to see that \nf{leaf.GetENQ(b,1)} returns the operation stored in the $b$th block of leaf $l$. In Line 404 it is decided that the \nf{i}th enqueue in block \nf{b} of internal node \nf{n}resides in the left child or the right child of \nf{n}. Then \nf{n.child.GetENQ( block containing, order in the block)} is invoked. This recursive procedure ends in a leaf node. After that Lines 88, 92 search the proper subblocks of \nf{b}. The correctness of the invocation parameters is induced from the definition of ops(block), subblock.
+We are going to prove this lemma by induction on the height of the tree. The base case for the leaves of the tree is pretty straight forward. Since leaf blocks contain exactly one operation then only \nf{GetENQ(b,1)} can be called on leaves. \nf{leaf.GetENQ(b,1)} returns the operation stored in the $b$th block of leaf $l$. For non leaf nodes in Line 404 it is decided that the \nf{i}th enqueue in block \nf{b} of internal node \nf{n}resides in the left child or the right child of \nf{n}. By definition of $E(n,b)$ operations from the left child come  before the operations of the right child. Having \nf{sum\sub{enq}}, the prefix sum of the number of enqueues we can compute the direct subblock containing the enqueue we are finding for with binary search. Then \nf{n.child.GetENQ( block containing, order in the block)} is invoked which returns the correct operation by the hypothesis of the induction.
 \end{proof}
 \textit{I'm not sure it is going to be long and boring to talk about the parameters, since the reader can find out them.}
 

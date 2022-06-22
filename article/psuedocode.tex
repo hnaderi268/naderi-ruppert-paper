@@ -293,19 +293,19 @@
 \Statex
 
 \Function{boolean}{Refresh()}{}
-\State \tt{s= \head} \label{readHead}
+\State \tt{h= \head} \label{readHead}
 %\If{\tt{n.blocks[h]!=null?}} \tt{h+=1}\EndIf
 \State \tt{<new, np\sub{left}, np\sub{right}>= \Call{CreateBlock}{s}} \cmt{\tt{np\sub{left}, np\sub{right}} are the values read from the children's \tt{num\sub{propagated}} field.}
 \If{\tt{new.num==0}} \Return{\tt{true}} \cmt{The block contains nothing.}
-\ElsIf{\tt{blocks.tryAppend(new, s)}} \label{cas}
+\ElsIf{\tt{blocks.tryAppend(new, h)}} \label{cas}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}} \label{okcas}
 \State \tt{\Call{CAS}{dir.super[np\sub{dir}], null, h+1}} \cmt{Write would work too.}
 \State \tt{\Call{CAS}{dir.num\sub{propagated}, np\sub{dir}, np\sub{dir}+1}}
 \EndFor
-\State \tt{\Call{CAS}{\head, s, s+1}} \label{incrementHead1}
+\State \tt{\Call{CAS}{\head, h, h+1}} \label{incrementHead1}
 \State \Return{\tt{true}}
 \Else
-\State \tt{\Call{CAS}{\head, s, s+1}} \cmt{Even if another process wins, help to increase the \head. The winner might have fallen sleep before increasing \tt{\head}.} \label{incrementHead2}
+\State \tt{\Call{CAS}{\head, h, h+1}} \cmt{Even if another process wins, help to increase the \head. The winner might have fallen sleep before increasing \tt{\head}.} \label{incrementHead2}
 \State \Return{ \tt{false}}
 \EndIf
 \EndFunction{Refresh}
@@ -319,17 +319,7 @@
 %\State \Return \tt{result block's index}
 \EndFunction{BSearch}
 
-\Statex
-\Statex $\leadsto$ \textsf{Precondition: \tt{root.blocks[end].sum\sub{enq} $\geq$ \tt{r\sub{enq}}}}
-\Function{<int, int>}{DSearch}{\sl{int} i, \sl{int} end}
 
-\Statex \cmt{\textmd{Searches for~the \tt{i}th enqueue of the given prefix sum of \tt{b}th block in the \tt{root}. Returns the index of the leftmost block in \tt{root.blocks} whose \sl{sum\sub{enq}} is $\geq$ \tt{i}}.}
-\State \tt{start= b-1}
-\While{\tt{root.blocks[start].sum\sub{enq}}$\geq$\tt{r\sub{enq}}}
-\State \tt{start= start-(b-start)}
-\EndWhile \State
-\Return \tt{root.BSearch(sum\sub{enq}, r\sub{enq}, start, b)}
-\EndFunction{DSearch}
 
 \pagebreak
 
@@ -337,7 +327,6 @@
 \Statex\cmt{Creates a block to be inserted into as $i$th \tt{block} in \tt{blocks}. Returns the created block as well as values read from each child's num\sub{propagated} field. These values are used for incrementing the children's num\sub{propagated} field if the block was appended to \tt{blocks} successfully.}
 \State \tt{block newBlock= \Call{new}{\sl{block}}}
 \State \tt{newBlock.group= num\sub{propagated}}
-\State \tt{newBlock.order= i}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}}
 \State \tt{index\sub{last}= dir.\head} \label{lastLine}
 \State \tt{index\sub{prev}= blocks[i-1].end\sub{dir}} \label{prevLine}
@@ -355,7 +344,7 @@
 %\State \tt{b.sum= n.blocks[i-1].sum + b.num}
 
 \If{\tt{this} \bf{is} \tt{root}}
-\State \tt{newBlock.\size= max(root.blocks[i-1].\size + b.num\sub{enq} - b.num\sub{deq}, 0)}\label{computeLength}
+\State \tt{newBlock.\size= max(root.blocks[i-1].\size + newBlock.num\sub{enq} - newBlock.num\sub{deq}, 0)}\label{computeLength}
 %\State \tt{b.sum\sub{non-null deq}= root.blocks[i-1].sum\sub{non-null deq} + max( b.num\sub{deq} - root.blocks[i-1].length - b.num\sub{enq}, 0)}
 \EndIf
 
@@ -363,6 +352,23 @@
 \EndFunction{CreateBlock}
 
 \end{multicols}
+\end{algorithmic}
+\end{algorithm}
+\begin{algorithm}
+\caption{Root}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{800}
+\Statex
+\Statex $\leadsto$ \textsf{Precondition: \tt{root.blocks[end].sum\sub{enq} $\geq$ \tt{r\sub{enq}}}}
+\Function{<int, int>}{DSearch}{\sl{int} i, \sl{int} end}
+
+\Statex \cmt{\textmd{Searches for~the \tt{i}th enqueue of the given prefix sum of \tt{b}th block in the \tt{root}. Returns the index of the leftmost block in \tt{root.blocks} whose \sl{sum\sub{enq}} is $\geq$ \tt{i}}.}
+\State \tt{start= end-1}
+\While{\tt{root.blocks[start].sum\sub{enq}}$\geq$\tt{r\sub{enq}}}
+\State \tt{start= start-(end-start)}
+\EndWhile \State
+\Return \tt{root.BSearch(sum\sub{enq}, r\sub{enq}, start, end)}
+\EndFunction{DSearch}
 \end{algorithmic}
 \end{algorithm}
 
@@ -529,33 +535,42 @@
 
 \section{Proof of Linearizability}
 
-\framebox[1.1\width]{TEST} As a temporary test I have changed the name of n.\head to n.head here, other options are n.head and n.lastBLock but they might be confusing since we have used them before. Fix the logical order of definitions (cyclic refrences).
+\framebox[1.1\width]{TEST} Fix the logical order of definitions (cyclic refrences).
 
-\framebox[1.1\width]{TODO} Fallback safety lemmas. Some parts are obsolete. 
-
-\framebox[1.1\width]{Questions} When I write the lemmas since every claim in my mind is correct maybe I miss some fact that need proof or maybe I refer to some lemmas that are generally correct but not needed for the linearizability proof. Is lemma 7 necessary? Is lemma 13 induced trivially from lemma 8?
+%\framebox[1.1\width]{Questions} When I write the lemmas since every claim in my mind is correct maybe I miss some fact that need proof or maybe I refer to some lemmas that are generally correct but not needed for the linearizability proof. Is lemma 7 necessary? Is lemma 13 induced trivially from lemma 8?
 
 \framebox[1.1\width]{TEST} Is it better to show \nf{ops(EST\sub{n, t})} with \nf{EST\sub{n, t}}?
 
-\framebox[1.1\width]{TEST} How to merge notions of blocks and operations? block b $\sqsubseteq$ block c means b is subblock of c. block b $\in$ set B means b is in B. Merge these two to have shorter formulaes.
+%\framebox[1.1\width]{TEST} How to merge notions of blocks and operations? block b $\sqsubseteq$ block c means b is subblock of c. block b $\in$ set B means b is in B. Merge these two to have shorter formulaes.
+
+\framebox[1.1\width]{Question} A good notation for \it{the index of the \nf{b}}?
 
 \begin{definition}[Block]
-A block is an object storing some statistics, as described in Algorithm Queue. It implicitly represents a set of operations. If \nf{n.blocks[i]==b}  we call \nf{i} the \emph{index} of block \nf{b}. Block \nf{b} is before block \nf{b$^\prime$} in node \nf{n} if and only if \nf{b}'s index is smaller than \nf{b$^\prime$}'s. 
+A block is an object storing some statistics, as described in Algorithm Queue. It implicitly represents a set of operations. If \nf{n.blocks[i]==b}  we call \nf{i} the \emph{index} of block \nf{b}. Block \nf{b} is before block \nf{b$^\prime$} in node \nf{n} if and only if the index of the \nf{b} is smaller than the index of the \nf{b$^\prime$}'s. 
 \end{definition}
 
 \begin{definition}[Subblock]
-Block \texttt{b} is a \emph{direct subblock} of \texttt{n.blocks[i]} if it is $\in$ \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}. Block \texttt{b} is a subblock of a \texttt{n.blocks[i]} if it is a direct subblock of it or subblock of a direct subblock of it. Block b is direct superblock of block c if c is direct subblock of b.
-The set of operations of block $b$ are the operations in the leaf sub blocks of $b$. We show the set of operations of block by \nf{ops(b)}. We also say $b$ contains $op$ if $op\in ops(b)$.
+Block \texttt{b} is a \emph{direct subblock} of \texttt{n.blocks[i]} if it is $\in$ \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}. Block \texttt{b} is a subblock of a \texttt{n.blocks[i]} if it is a direct subblock of it or subblock of a direct subblock of it. 
 \end{definition}
 
-For simplicity we say block \nf{b} is propagated to node \nf{n} or to a set of blocks \nf{S} if \nf{b} is in \nf{n.blocks} or \nf{S} or is a subblock of a block in \nf{n.blocks} or \nf{S}.
+\begin{definition}[Superblock]
+  Block b is direct superblock of block c if c is a direct subblock of b.   Block b is superblock of block c if c is a subblock of b.
+\end{definition}
+
+\begin{definition}[Operations of a block]
+A block lb in a leaf represents one operation which if it is \tt{enqueue(x)} then \tt{lb.element=x}, otherwise \tt{element=null}. The set of operations of block $b$ are the operations in the subblocks of $b$. We show the set of operations of block b by \nf{ops(b)}.
+\end{definition}
+
+For simplicity we say block \nf{b} is propagated to node \nf{n} or to a set of blocks \nf{S} if \nf{b} is in \nf{n.blocks} or \nf{S} or is a subblock of a block in \nf{n.blocks} or \nf{S}. We also say $b$ contains $op$ if $op\in ops(b)$.
+
+
 
 %\begin{definition}
 %  Block \nf{b} in node \nf{n} is new if \nf{b} is not a subblock of any block in \nf{n.parent.blocks[]}.
 %\end{definition}
 
 \begin{definition}
- A block \nf{b} in \nf{n.blocks} is \emph{established} at time $t$ if \nf{n.head} is greater than the index of \nf{b} in \nf{n.blocks} at time $t$. Block \nf{b} is in \emph{EST\sub{n, t}} if \nf{b} is a subblock of \nf{b$^\prime$} in \nf{n.blocks} such that \nf{b$^\prime$} is established  at time $t$.
+ A block \nf{b} in \nf{n.blocks} is \emph{established} at time $t$ if the last value written into \nf{n.head} before $t$ is greater than the index of \nf{b} in \nf{n.blocks} at time $t$. \emph{EST\sub{n, t}} is the set of established blocks at time $t$ of node $n$.
 \end{definition}
 
 

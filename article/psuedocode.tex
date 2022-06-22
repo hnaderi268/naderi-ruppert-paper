@@ -51,6 +51,8 @@
 \renewcommand{\bf}[1]{\textbf{#1}}
 \newcommand{\nf}[1]{{\normalfont{\texttt{#1}}}}
 \newcommand{\cmt}[1]{\Comment{#1}}
+\newcommand{\head}{head}
+\newcommand{\size}{size}
 
 \usepackage{amsmath,amssymb,amsthm}
 \newtheorem{theorem}{Theorem}
@@ -75,7 +77,7 @@
 
 \Statex $\diamondsuit$ \tt{\sl{Shared}}
 \begin{itemize}
-\item \tt{\sl{Tree} tree} \textsf{: A binary tree of \tt{Node}s. \tt{root} is a pointer to the root node.}
+\item \tt{\sl{Tree} tree} \textsf{: A binary tree of \tt{Node}s. \tt{root} is the root node.}
 %such that \tt{root} is the root and the left child and the right child and the parent of \tt{Tree[i]} are \tt{Tree[2i+1]}, \tt{Tree[2i+2]} and \tt{Tree[i/2]}.
 \end{itemize}
 
@@ -83,7 +85,7 @@
 
 \Statex $\diamondsuit$ \tt{\sl{Local}}
 \begin{itemize}
-\item \tt{\sl{*Node} leaf:} \sf{ a pointer to the process's leaf in the tree.}
+\item \tt{\sl{Node} leaf:} \sf{ process's leaf in the tree.}
 \end{itemize}
 
 \Statex
@@ -94,7 +96,7 @@
 \item \tt{\sl{*Node} left, right, parent} \textsf{: initialized  when creating the tree.}
 \item \tt{\sl{BlockList} blocks}
   \textsf{ implemented with an array.}
-\item \tt{\sl{int} size= 1}\textsf{: \#\tt{block}s in \tt{blocks}.}
+\item \tt{\sl{int} \head= 1}\textsf{: \#\tt{block}s in \tt{blocks}(-1). \tt{blocks[0]} is a block with all fields equal to zero.}
 \item \tt{\sl{int} num\sub{propagated}= 0}\textsf{} \textsf{: \# groups of blocks that have been propagated from the node to its parent. Since it is incremented after propagating, it may be behind by 1.}
 \item \tt{\sl{int[]} super}\textsf{: \tt{super[i]} stores an approximate index of the superblock of the blocks in \tt{blocks} whose \tt{group} field have value \tt{i}.}
 \end{itemize}
@@ -142,10 +144,7 @@
 \Statex $\blacktriangleright$ \tt{\sl{LeafBlock} extends \sl{Block}}
 \begin{itemize}
   \item \tt{\sl{Object} element}
-  \textsf{: Each block in a leaf represents a single operation. For \tt{enqueue} operations element is the input of the \tt{enqueue} and for \tt{dequeue} operations it is \tt{null}.}
-  
-    \item \tt{\sl{Object} response}
-  \textsf{: stores the response of the operation in the \tt{LeafBlock}.}
+  \textsf{: Each block in a leaf represents a single operation. If the operation is \tt{enqueue(x)} then \tt{element=x}, otherwise \tt{element=null}.}
   
     \item \tt{\sl{int} sum\sub{enq}, sum\sub{deq}}
   \textsf{: \# enqueue, dequeue operations in the prefix for the block}
@@ -171,8 +170,8 @@
 
 \Statex $\blacktriangleright$ \tt{\sl{RootBlock} extends \sl{InternalBlock}}
 \begin{itemize}
-  \item \tt{\sl{int} length}
-  \textsf{: length of the queue after performing all operations in the prefix for this block}
+  \item \tt{\sl{int} \size}
+  \textsf{: size of the queue after performing all operations in the prefix for this block}
 %  \item \tt{\sl{int} sum\sub{non-null deq}}
 %  \textsf{: count of non-null dequeus up to this block}
 %  \item \tt{\sl{counter} num\sub{finished}}
@@ -196,48 +195,13 @@
 
 %##########################################
 
-\begin{algorithm}
-\caption{BlockList}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{700}
-
-\Statex \cmt{\textsf{: Supports two operations \tt{blocks.tryAppend(Block b), blocks[i]}. Initially  empty, when \tt{blocks.tryAppend(b, n)} returns true \tt{b} is appended to \tt{blocks[n]} and \tt{blocks[i]} returns $i$th block in the \tt{blocks}. If some instance of \tt{blocks.tryAppend(b, n)} returns \tt{false} there is a concurrent instance of \tt{blocks.tryAppend(b$^\prime$, n)} which has returned \tt{true}.\tt{blocks[0]} contains an empty block with all fields equal to 0 and \tt{end\sub{left}, end\sub{right}} pointers to the first block of the corresponding children.}}
-
-%\Statex
-%\Statex $\diamondsuit$ \tt{\sl{root implementation}}
-%%  \Statex \sf{A persistant red-black tree supporting \tt{append(b, key),get(key=i),split(j)}}.
-%%  \tt{append(b, key) returns \tt{true} in case successful. Since \tt{order, sum\sub{enq}}are both strictly increasing we can use one of them for another.}
-%%\Statex \tt{root: }\sf{pointer to the root of the PBRT}
-%\Function{boolean}{TryAppend}{\sl{block} blk, \sl{int} n} \cmt{\textsf{adds block b to the \tt{root.blocks[n]}}}
-%\If{\tt{root.size\%$p^2$==0}} \cmt{Help every often $p^2$ operations appended to the root.}
-%\For{\tt{leaf l} \bf{in} \tt{tree leaves}}
-%\State \tt{l.Help()}
-%\EndFor
-%\EndIf
-%\State \tt{blk.num\sub{finished}= 0}
-%%\State \tt{*oldRoot= \&root.blocks.root}
-%%\State \tt{*newRoot= root.blocks.Append(blk).root}
-%%\State \Return \tt{CAS(root, oldRoot, newRoot)}
-%\State \Return{\tt{CAS(blocks[n], null, blk)}}
-%\EndFunction{TryAppend}
-
-\Statex
-\Statex $\diamondsuit$ \tt{\sl{Array implementation}}
-\Statex \tt{blocks[]: }\sf{array of blocks}
-\Function{boolean}{TryAppend}{\sl{block} blk, \sl{int} n} 
-\State \Return{\tt{CAS(blocks[n], null, blk)}}
-\EndFunction{TryAppend}
-
-\end{algorithmic}
-\end{algorithm}
-
 \begin{footnotesize}
   
-\it{Variable naming:}
-\begin{itemize}
-  \item \tt{b\sub{op}}: index of the block containing operation \tt{op}
-  \item \tt{r\sub{op}}: rank of operation \tt{op} i.e. the ordering among the operations of its type according to linearization ordering
-\end{itemize}
+%\it{Variable naming:}
+%\begin{itemize}
+%  \item \tt{b\sub{op}}: index of the block containing operation \tt{op}
+%  \item \tt{r\sub{op}}: rank of operation \tt{op} i.e. the ordering among the operations of its type according to linearization ordering
+%\end{itemize}
 
 \it{Abbreviations:}
 \begin{itemize}
@@ -262,21 +226,23 @@
 \State \tt{block newBlock= \Call{new}{\sl{LeafBlock}}}
 \State \tt{newBlock.element= e}
 %\State \tt{b.num\sub{enq}=1}
-\State \tt{newBlock.sum\sub{enq}= leaf.blocks[leaf.size].sum\sub{enq}+1}
-\State \tt{newBlock.sum\sub{deq}= leaf.blocks[leaf.size].sum\sub{deq}}
+\State \tt{newBlock.sum\sub{enq}= leaf.blocks[leaf.\head].sum\sub{enq}+1}
+\State \tt{newBlock.sum\sub{deq}= leaf.blocks[leaf.\head].sum\sub{deq}}
+\State \tt{leaf.head+=1}
 \State \tt{leaf.}\Call{Append}{newBlock}
 \EndFunction{Enqueue}
 
 \Statex
 
 
-\Function{<int, int>}{FindResponse}{\sl{int} b, \sl{int} i}\cmt{Computes the rank  and index of the block in the root of the enqueue that is the response of the \tt{i}th dequeue in the root's \tt{b}th block. Returns \tt{<-1,-->} if the queue is empty.}
-\If{\tt{root.blocks[b-1].length + root.blocks[b].num\sub{enq} - i $<$ 0}}
+\Function{<int, int>}{FindResponse}{\sl{int} b\sub{d}, \sl{int} i\sub{d}}\cmt{If $E(root,b_e,i_e)$ is the response to the $D(root,b_d,i_d)$ returns \tt{<b\sub{e},i\sub{e}>}. Returns \tt{<-1,-->} if the queue is empty.}
+\If{\tt{ root.blocks[b\sub{d}-1].\size}\tt{ + root.blocks[b\sub{d}].num\sub{enq} - (i + root.blocks[b\sub{d}-1].sum\sub{deq}) $<$ 0}}
 \State \Return \tt{<-1,-->}
 \Else
-\Statex \cmt{We call the dequeues that return a value \it{non-null dequeues}. $r$th non-null dequeue returns the element of th $r$th enqueue. We can compute \# non-null dequeues in the prefix for a block this way: \#non-null dequeues= length - \#enqueues. Note that the $i$th dequeue in the given block is not a non-null dequeue.}
-\State \tt{r\sub{enq}= root.blocks[b-1].sum\sub{enq}- root.blocks[b-1].length + i}
-\State \Return \tt{<root.\Call{DSearch}{r\sub{enq}, b}, r\sub{enq}>}
+
+\State \tt{r\sub{enq}= i + root.blocks[b\sub{d}-1].sum\sub{deq} - (root.blocks[b\sub{d}-1].size - root.blocks[b\sub{d}-1].sum\sub{enq} + root.blocks[b\sub{d}-1].sum\sub{deq})}
+\State \cmt{size-enqs+deqs=null deqs}
+\State \Return \tt{root.\Call{DSearch}{r\sub{enq}, b\sub{d}}}
 \EndIf
 \EndFunction{FindResponse}
 
@@ -285,12 +251,12 @@
 \Function{Object}{Dequeue()}{}
 \State \tt{block newBlock= \Call{new}{\sl{LeafBlock}}} \cmt{Creates a block with null value element, appends it to the tree, computes its order among operations, then computes and returns its response.}
 \State \tt{newBlock.element= null}
-\State \tt{newBlock.sum\sub{enq}= leaf.blocks[leaf.size].sum\sub{enq}}
-\State \tt{newBlock.sum\sub{deq}= leaf.blocks[leaf.size].sum\sub{deq}+1}
+\State \tt{newBlock.sum\sub{enq}= leaf.blocks[leaf.\head].sum\sub{enq}}
+\State \tt{newBlock.sum\sub{deq}= leaf.blocks[leaf.\head].sum\sub{deq}+1}
 \State \tt{leaf.}\Call{Append}{newBlock}
-\State \tt{<b\sub{deq}, r\sub{deq}>=} \Call{IndexDeq}{leaf.size, 1}\cmt{\tt{r} is the rank among the dequeues of the dequeue of  the \tt{b\sub{deq}}th block in the root containing.}
+\State \tt{<b\sub{deq}, r\sub{deq}>=} \Call{IndexDeq}{leaf.\head, 1}\cmt{\tt{r\sub{deq}} is the rank among the dequeues of the dequeue of  the \tt{b\sub{deq}}th block in the root containing.}
 \State \tt{<b\sub{enq}, r\sub{enq}>=} \Call{FindResponse}{b\sub{deq}, r\sub{deq}} 
- \cmt{\tt{r\sub{enq}} is the rank of the enqueue whose element is the response to the dequeue in the block containing it and \tt{b\sub{deq}} is the index of that block of it in the blocklist. If the response is \tt{null} then r\sub{deq} is -1.} \label{deqRest}
+ \cmt{\tt{$E(root,b_{enq},i_{enq})$ is response to the $D(root,b_{deq},i_{deq})$. If the response is \tt{null} then r\sub{enq} is -1.}} \label{deqRest}
 \If{\tt{r\sub{enq}==-1}}
 \State \tt{output= null}
 \pagebreak
@@ -327,7 +293,7 @@
 \Statex
 
 \Function{boolean}{Refresh()}{}
-\State \tt{s= size} \label{readSize}
+\State \tt{s= \head} \label{readHead}
 %\If{\tt{n.blocks[h]!=null?}} \tt{h+=1}\EndIf
 \State \tt{<new, np\sub{left}, np\sub{right}>= \Call{CreateBlock}{s}} \cmt{\tt{np\sub{left}, np\sub{right}} are the values read from the children's \tt{num\sub{propagated}} field.}
 \If{\tt{new.num==0}} \Return{\tt{true}} \cmt{The block contains nothing.}
@@ -336,10 +302,10 @@
 \State \tt{\Call{CAS}{dir.super[np\sub{dir}], null, h+1}} \cmt{Write would work too.}
 \State \tt{\Call{CAS}{dir.num\sub{propagated}, np\sub{dir}, np\sub{dir}+1}}
 \EndFor
-\State \tt{\Call{CAS}{size, s, s+1}} \label{incrementHead1}
+\State \tt{\Call{CAS}{\head, s, s+1}} \label{incrementHead1}
 \State \Return{\tt{true}}
 \Else
-\State \tt{\Call{CAS}{size, s, s+1}} \cmt{Even if another process wins, help to increase the size. The winner might have fallen sleep before increasing \tt{size}.} \label{incrementHead2}
+\State \tt{\Call{CAS}{\head, s, s+1}} \cmt{Even if another process wins, help to increase the \head. The winner might have fallen sleep before increasing \tt{\head}.} \label{incrementHead2}
 \State \Return{ \tt{false}}
 \EndIf
 \EndFunction{Refresh}
@@ -355,13 +321,13 @@
 
 \Statex
 \Statex $\leadsto$ \textsf{Precondition: \tt{root.blocks[end].sum\sub{enq} $\geq$ \tt{r\sub{enq}}}}
-\Function{int}{DSearch}{\sl{int} i, \sl{int} end}
+\Function{<int, int>}{DSearch}{\sl{int} i, \sl{int} end}
 
 \Statex \cmt{\textmd{Searches for~the \tt{i}th enqueue of the given prefix sum of \tt{b}th block in the \tt{root}. Returns the index of the leftmost block in \tt{root.blocks} whose \sl{sum\sub{enq}} is $\geq$ \tt{i}}.}
 \State \tt{start= b-1}
 \While{\tt{root.blocks[start].sum\sub{enq}}$\geq$\tt{r\sub{enq}}}
 \State \tt{start= start-(b-start)}
-\EndWhile
+\EndWhile \State
 \Return \tt{root.BSearch(sum\sub{enq}, r\sub{enq}, start, b)}
 \EndFunction{DSearch}
 
@@ -373,7 +339,7 @@
 \State \tt{newBlock.group= num\sub{propagated}}
 \State \tt{newBlock.order= i}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}}
-\State \tt{index\sub{last}= dir.size} \label{lastLine}
+\State \tt{index\sub{last}= dir.\head} \label{lastLine}
 \State \tt{index\sub{prev}= blocks[i-1].end\sub{dir}} \label{prevLine}
 \State \tt{newBlock.end\sub{dir}= index\sub{last}}
 \State \tt{block\sub{last}= dir.blocks[index\sub{last}]}
@@ -389,7 +355,7 @@
 %\State \tt{b.sum= n.blocks[i-1].sum + b.num}
 
 \If{\tt{this} \bf{is} \tt{root}}
-\State \tt{newBlock.length= max(root.blocks[i-1].length + b.num\sub{enq} - b.num\sub{deq}, 0)}\label{computeLength}
+\State \tt{newBlock.\size= max(root.blocks[i-1].\size + b.num\sub{enq} - b.num\sub{deq}, 0)}\label{computeLength}
 %\State \tt{b.sum\sub{non-null deq}= root.blocks[i-1].sum\sub{non-null deq} + max( b.num\sub{deq} - root.blocks[i-1].length - b.num\sub{enq}, 0)}
 \EndIf
 
@@ -466,9 +432,9 @@
 \setcounter{ALG@line}{600}
 
 \Function{void}{Append}{\sl{block} blk} \cmt{Append is only called by the owner of the leaf.}
-\State \tt{size+=1} \label{appendEnd} 
-\State \tt{blk.group= size} \label{appendStart} 
-\State \tt{blocks[size]= blk} 
+\State \tt{\head+=1} \label{appendEnd} 
+\State \tt{blk.group= \head} \label{appendStart} 
+\State \tt{blocks[\head]= blk} 
 \State \tt{parent.}\Call{Propagate()}{} 
 \EndFunction{Append}
 
@@ -476,8 +442,8 @@
 %
 %\Function{void}{Help}{}\cmt{Helps pending operations}
 %
-%\State{\tt{last= l.size-1}}
-%\cmt{\tt{l.blocks[last]} can not be \tt{null} because size increases after appending, see lines \ref{appendStart}-\ref{appendEnd}.}
+%\State{\tt{last= l.\head-1}}
+%\cmt{\tt{l.blocks[last]} can not be \tt{null} because \head increases after appending, see lines \ref{appendStart}-\ref{appendEnd}.}
 %\If{\tt{l.blocks[last].element==null}} \cmt{operation is dequeue}
 %\State \tt{l.blocks[last].response= l.}\Call{HelpDequeue()}{}
 %\EndIf
@@ -487,7 +453,40 @@
 \end{algorithmic}
 \end{algorithm}
 
+\begin{algorithm}
+\caption{BlockList}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{700}
 
+\Statex \cmt{\textsf{: Supports two operations \tt{blocks.tryAppend(Block b), blocks[i]}. Initially  empty, when \tt{blocks.tryAppend(b, n)} returns true \tt{b} is appended to \tt{blocks[n]} and \tt{blocks[i]} returns $i$th block in the \tt{blocks}. If some instance of \tt{blocks.tryAppend(b, n)} returns \tt{false} there is a concurrent instance of \tt{blocks.tryAppend(b$^\prime$, n)} which has returned \tt{true}.\tt{blocks[0]} contains an empty block with all fields equal to 0 and \tt{end\sub{left}, end\sub{right}} pointers to the first block of the corresponding children.}}
+
+%\Statex
+%\Statex $\diamondsuit$ \tt{\sl{root implementation}}
+%%  \Statex \sf{A persistant red-black tree supporting \tt{append(b, key),get(key=i),split(j)}}.
+%%  \tt{append(b, key) returns \tt{true} in case successful. Since \tt{order, sum\sub{enq}}are both strictly increasing we can use one of them for another.}
+%%\Statex \tt{root: }\sf{pointer to the root of the PBRT}
+%\Function{boolean}{TryAppend}{\sl{block} blk, \sl{int} n} \cmt{\textsf{adds block b to the \tt{root.blocks[n]}}}
+%\If{\tt{root.size\%$p^2$==0}} \cmt{Help every often $p^2$ operations appended to the root.}
+%\For{\tt{leaf l} \bf{in} \tt{tree leaves}}
+%\State \tt{l.Help()}
+%\EndFor
+%\EndIf
+%\State \tt{blk.num\sub{finished}= 0}
+%%\State \tt{*oldRoot= \&root.blocks.root}
+%%\State \tt{*newRoot= root.blocks.Append(blk).root}
+%%\State \Return \tt{CAS(root, oldRoot, newRoot)}
+%\State \Return{\tt{CAS(blocks[n], null, blk)}}
+%\EndFunction{TryAppend}
+
+\Statex
+%\Statex $\diamondsuit$ \tt{\sl{Array implementation}}
+\Statex \tt{blocks[]: }\sf{array of blocks}
+\Function{boolean}{TryAppend}{\sl{block} blk, \sl{int} n} 
+\State \Return{\tt{CAS(blocks[n], null, blk)}}
+\EndFunction{TryAppend}
+
+\end{algorithmic}
+\end{algorithm}
 
 
 %##########################################
@@ -530,7 +529,7 @@
 
 \section{Proof of Linearizability}
 
-\framebox[1.1\width]{TEST} As a temporary test I have changed the name of n.size to n.head here, other options are n.head and n.lastBLock but they might be confusing since we have used them before. Fix the logical order of definitions (cyclic refrences).
+\framebox[1.1\width]{TEST} As a temporary test I have changed the name of n.\head to n.head here, other options are n.head and n.lastBLock but they might be confusing since we have used them before. Fix the logical order of definitions (cyclic refrences).
 
 \framebox[1.1\width]{TODO} Fallback safety lemmas. Some parts are obsolete. 
 
@@ -565,11 +564,11 @@ Once a block \nf{b} is written in \nf{n.blocks[i]} then \nf{n.blocks[i]} never c
 \end{observation}
 
 
-\begin{lemma}[headProgress] \label{lem::sizeProgress}
+\begin{lemma}[headProgress] \label{lem::headProgress}
 \nf{n.head} is non-decreasing over time and \nf{n.blocks[i].end\sub{left}} $\geq$ \nf{n.blocks[i-1].end\sub{left}},\nf{n.blocks[i].end\sub{right}} $\geq$ \nf{n.blocks[i-1].end\sub{right}}.
 \end{lemma}
 \begin{proof}
-The first claim follows trivially from the pseudocode since \nf{n.head} is only incremented. Also  when \nf{n.blocks[i]} is created its \nf{end\sub{left}, end\sub{right}} are greater than or equal to the values in \nf{n.blocks[i-1]}. Since \nf{blocks[i-1].end\sub{dir}}$<$\nf{dir.size = blocks[i].end\sub{dir}} (Lines~\ref{lastLine, prevLine}).
+The first claim follows trivially from the pseudocode since \nf{n.head} is only incremented. Also  when \nf{n.blocks[i]} is created its \nf{end\sub{left}, end\sub{right}} are greater than or equal to the values in \nf{n.blocks[i-1]}. Since \nf{blocks[i-1].end\sub{dir}}$<$\nf{dir.\head = blocks[i].end\sub{dir}} (Lines~\ref{lastLine, prevLine}).
 \end{proof}
 
 \begin{lemma}
@@ -592,8 +591,8 @@ If \nf{op} is in \nf{n.blocks[i]} then there is no \nf{j$\neq$i} such that \nf{o
 \begin{proof}
 The invariant is true initially since 1 is assigned to \nf{n.head} and \nf{n.blocks[x]} is null for every \nf{x}. The truth of the invariant may be affected by writing into \nf{n.blocks} or incrementing \nf{n.head}.
 
-Some value is written into \nf{n.blocks[head]} only in Line 313. It is obvious that writing into \nf{n.blocks[head]} presereves the invariant. The value of \nf{n.head} is modified only in lines \ref{incrementHead1}], \ref{incrementHead2}. Depending on wether the \nf{TryAppend()}in Line\ref{cas} succeeded or not we show that the claim holds after the increment lines of \nf{n.head} in either case. If \nf{head} is incremented to $h$ it is sufficient to show \nf{n.blocks[h]}$\neq$\nf{null} to prove the invariant still holds. In the first case the process applied a successful \nf{TryAppend(new,h)} in line \ref{okcas}, which means \nf{n.blocks[h]} is not null anymore. Note that wether\ref{incrementHead1} returns true or false after Line \nf{n.head} we know has been incremented from Line \ref{readSize}. The failure case is also the same since it means some value is written into \nf{n.blocks[head]} by some process.
-%At the end of every \nf{n.Refresh()} with a block  with size greater than 0 returned by \nf{CreateBlock()} \nf{n.head} is incremented (Lines \ref{incrementHead1}, \ref{incrementHead2}). If a process went to sleep before incrementing the \nf{established} (line \ref{incrementHead1}), nothing can be appended to \nf{n.blocks} until another process increments \nf{n.establsihed} (Line \ref{incrementHead2}).
+Some value is written into \nf{n.blocks[head]} only in Line 313. It is obvious that writing into \nf{n.blocks[head]} presereves the invariant. The value of \nf{n.head} is modified only in lines \ref{incrementHead1}], \ref{incrementHead2}. Depending on wether the \nf{TryAppend()}in Line\ref{cas} succeeded or not we show that the claim holds after the increment lines of \nf{n.head} in either case. If \nf{head} is incremented to $h$ it is sufficient to show \nf{n.blocks[h]}$\neq$\nf{null} to prove the invariant still holds. In the first case the process applied a successful \nf{TryAppend(new,h)} in line \ref{okcas}, which means \nf{n.blocks[h]} is not null anymore. Note that wether\ref{incrementHead1} returns true or false after Line \nf{n.head} we know has been incremented from Line \ref{readHead}. The failure case is also the same since it means some value is written into \nf{n.blocks[head]} by some process.
+%At the end of every \nf{n.Refresh()} with a block  with \head greater than 0 returned by \nf{CreateBlock()} \nf{n.head} is incremented (Lines \ref{incrementHead1}, \ref{incrementHead2}). If a process went to sleep before incrementing the \nf{established} (line \ref{incrementHead1}), nothing can be appended to \nf{n.blocks} until another process increments \nf{n.establsihed} (Line \ref{incrementHead2}).
 \end{proof}
 \it{Explain More}
 
@@ -617,7 +616,7 @@ Blocks are only appended (not modified) with CAS to \nf{n.blocks[n.head]} and \n
 %\begin{proof}
 %From lemmas 7,8 we know that \nf{n.blocks[i-1]} is full and assume it is invoked at $t^\prime$. 
 %We want to prove every block $b$ that is $\in$ \nf{EST\sub{n.left,t}} $\cup$ \nf{EST\sub{n.right,t}} is also $\in$ \nf{EST\sub{n,t}}$^\prime$ $\cup$ \nf{new}. It is easy to see \nf{EST\sub{n.left,t}} $\cap$ \nf{EST\sub{n.right,t}} is $\emptyset$. If $b$ is $\in$ \nf{EST\sub{n.left,t$^\prime$}} it is simple to see. Else we can see from the code of the \nf{CreateBlock} that \nf{new} contains it. Right child is the same.
-%% WLOG we prove the claim for the left child. Blocks in \nf{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} are established at time $t$.  Since the head is only increasing (Lemma~\ref{lem::sizeProgress}) the  claim holds after $t$. See Figure~\ref{fig::createBlock}. The right child is the same.
+%% WLOG we prove the claim for the left child. Blocks in \nf{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} are established at time $t$.  Since the head is only increasing (Lemma~\ref{lem::headProgress}) the  claim holds after $t$. See Figure~\ref{fig::createBlock}. The right child is the same.
 %\end{proof}
 
 \nf{CreateBlock()} aggregates the blocks in the children that are not already established in the parent into one block. If a \nf{Refresh()} procedure returns true it means it has appended the block created by \nf{CreateBlock()} into the parent node's sequence. So suppose two \nf{Refresh}es fail. Since the first \nf{Refresh()} was not successful, it means another CAS operation by a \nf{Refresh}, concurrent to the first \nf{Refresh()}, was successful before the second \nf{Refresh()}. So it means the second failed \nf{Refresh} is concurrent with another successful \nf{Refresh()} that assuredly has read block before the mentioned line \nf{35}. After all it means if any of the \nf{Refresh()} attempts were successful the claim is true, and also if both fail the mentioned claim still holds.
@@ -629,12 +628,12 @@ Blocks are only appended (not modified) with CAS to \nf{n.blocks[n.head]} and \n
 From Lemma \ref{lem::establishedOrder} we know that \nf{ops(EST\sub{n, t\sub{i}})}$\subseteq$\nf{ops(EST\sub{n, t\sub{t}})}. So it remains to show the operations of \nf{ops(EST\sub{n.left, t\sub{i}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}})} - \nf{ops(EST\sub{n, t\sub{i}})}, which we call new operations, are all in \nf{ops(EST\sub{n, t\sub{t}})}. If \nf{TryAppend} returns true a block is appended to \nf{n}. From the code of the \nf{CreateBlock()} this block includes the established blocks in n's children at $t_i$. Since the head in \nf{CreateBlock()} is read after $t_i$. So the new operations are in the block appended to $n$.
 
 %Suppose the previous true returning \nf{n.Refresh()} took place in time $(t_i^\prime-t_t^\prime)$. By induction on the number of succsuful \nf{Refresh()}'s \nf{n} we know that \nf{ops(EST\sub{n.left, t\sub{i}$^\prime$})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}$^\prime$})} $\in$ \nf{ops(EST\sub{n, t\sub{t}$^\prime$})}. Operations that are in \nf{ops(EST\sub{n.left, t\sub{i}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}})} $\in$ \nf{ops(EST\sub{n, t\sub{t}})} but not in \nf{ops(EST\sub{n.left, t\sub{i}$^\prime$})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}$^\prime$})} $\in$ \nf{ops(EST\sub{n, t\sub{t}$^\prime$})} are in the block returned by \nf{n.CreateBlock()} by lemma 10. 
-%By Lemma~\ref{lem::createBlock} \nf{new} contains \nf{n}'s childrens' established blocks after Line \ref{readSize} which is  appended to \nf{n.blocks[]} by \nf{TryAppend} in Line 313.
+%By Lemma~\ref{lem::createBlock} \nf{new} contains \nf{n}'s childrens' established blocks after Line \ref{readHead} which is  appended to \nf{n.blocks[]} by \nf{TryAppend} in Line 313.
 \end{proof}
 \it{Mention this new block is establish in t\sub{t}. last sentece is not complete}
 
 %\begin{lemma}[falseRefresh] \label{lem:falseRefresh}
-%    If instance \nf{r} of \nf{n.Refresh()} reads value \nf{s} on line \ref{readSize} and then returns \nf{false}, then there is another instance $r^\prime$ of \nf{n.Refresh()} that has performed a successful \nf{TryAppend(new, s)}. A \nf{TryAppend()} is successful if its \nf{CAS} is successful.
+%    If instance \nf{r} of \nf{n.Refresh()} reads value \nf{s} on line \ref{readHead} and then returns \nf{false}, then there is another instance $r^\prime$ of \nf{n.Refresh()} that has performed a successful \nf{TryAppend(new, s)}. A \nf{TryAppend()} is successful if its \nf{CAS} is successful.
 %\end{lemma}
 %\begin{proof}
 %  If there is no other concurrent successful \nf{n.Refresh()} then \nf{n.Refresh()} would succeed in Line 313. So there is another \nf{n.Refresh()}, that has appended its block in \nf{n.blocks[h]} after Line 310 of the first \nf{n.Refresh()}. 
@@ -647,7 +646,7 @@ From Lemma \ref{lem::establishedOrder} we know that \nf{ops(EST\sub{n, t\sub{i}}
 \begin{proof}
   
 
-If Line \ref{cas} of $R_1$ or $R_2$ returns \nf{true}, then the claim is held by Lemma~\ref{lem::trueRefresh}. If not, then there is another successful instance $R_2^\prime$ of \nf{n.Refresh()} that has done \nf{TryAppend()} successfully into \nf{n.blocks[i+1]}. If $R_2$ reads some value greater than $i+1$ in Line \ref{readSize} it means a successful instance of \nf{Refresh()} started after Line \ref{readSize} of $R_1$ and finished its Line \ref{incrementHead1} or \ref{incrementHead2} before \ref{readSize} of $R_2$, from Lemma~\ref{lem::trueRefresh} by the end of this instance \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} has been propagated. In Figure 1 we see why the block $R_2^\prime$ is appending contains established block in the n's children at $t_1$, since it create a block reading the head after $t_1$.
+If Line \ref{cas} of $R_1$ or $R_2$ returns \nf{true}, then the claim is held by Lemma~\ref{lem::trueRefresh}. If not, then there is another successful instance $R_2^\prime$ of \nf{n.Refresh()} that has done \nf{TryAppend()} successfully into \nf{n.blocks[i+1]}. If $R_2$ reads some value greater than $i+1$ in Line \ref{readHead} it means a successful instance of \nf{Refresh()} started after Line \ref{readHead} of $R_1$ and finished its Line \ref{incrementHead1} or \ref{incrementHead2} before \ref{readHead} of $R_2$, from Lemma~\ref{lem::trueRefresh} by the end of this instance \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} has been propagated. In Figure 1 we see why the block $R_2^\prime$ is appending contains established block in the n's children at $t_1$, since it create a block reading the head after $t_1$.
 %It is obvious that the \nf{new} constructed by the second Refresh in Line 36 contains the blocks in \nf{new} by $R_1$ which $R_1^\prime$ did not contain, since \nf{n.head} is only increasing (Maybe Lemma~\ref{lem::oldnewOrder}). If $R_2$ succeeds by Lemma~\ref{lem::trueRefresh} the claim holds. If not, it is deduced that \nf{n.blocks[h]} was not \nf{null} before $R_2$'s \nf{CAS}. Furthermore, \nf{n.blocks[h]} was \nf{null} before reading \nf{h} by $R_1$. So there is a successful \nf{Refresh()} after the read of \nf{h} in $R_1$ and before the \nf{CAS} of $R_2$. This \nf{Refresh()} contains all the new established operations before Line 35 (Maybe Lemma~\ref{lem::oldnewOrder}) and by Lemma~\ref{lem::trueRefresh} our claim holds. See Figure~\ref{}.
 \end{proof}
 \it{last sentence need more detail and should be earlier. define i and tell why R2prime exists}
@@ -716,12 +715,12 @@ We are going to prove this lemma by induction on the height of the tree. The bas
 \textit{I'm not sure it is going to be long and boring to talk about the parameters, since the reader can find out them.}
 
 \begin{lemma}[DSearch correctness] \label{dsearch}
-If \nf{root.blocks[end].num\sub{enq}}$\geq$\nf{i} and $E(root, i)$ is the response to some \nf{Dequeue()} in \nf{root.blocks[end]} then \nf{DSearch(i, end)} returns \nf{b} such that \nf{root.blocks[b]} contains $E(root,b,i)$ in $\Theta(\log$(\nf{root.blocks[b].length+root.blocks[end].length}) steps.
+If \nf{root.blocks[end].num\sub{enq}}$\geq$\nf{i} and $E(root, i)$ is the response to some \nf{Dequeue()} in \nf{root.blocks[end]} then \nf{DSearch(i, end)} returns \nf{b} such that \nf{root.blocks[b]} contains $E(root,b,i)$ in $\Theta(\log$(\nf{root.blocks[b].\size+root.blocks[end].\size}) steps.
 \end{lemma}
 \begin{proof}
-First we show \nf{end-b}$\leq$\nf{root.blocks[b].length+root.blocks[end].length}. We know each block size is greater than 0. So every block in \nf{root.blocks[b..end]} contains at least one \nf{Enqueue()} or one \nf{Dequeue()}. There cannot be more than \nf{root.blocks[b].length} \nf{Dequeue()}s in \nf{root.blocks[b+1..end-1]}, since the queue would become empty after bth block end before end and $E(n,i)$ could not be the response to to some \nf{DEQ} in \nf{end}. And since the lentgh of the queue would become \nf{root.blocks[end].length} in the end so there cannot be more than \nf{root.blocks[end].length} Dequeus in \nf{root.blocks[b..end]}. Cause if there was more then the end's lenght would become more than \nf{root.blocks[end].length}.
+First we show \nf{end-b}$\leq$\nf{root.blocks[b].\size+root.blocks[end].\size}. We know each block size is greater than 0. So every block in \nf{root.blocks[b..end]} contains at least one \nf{Enqueue()} or one \nf{Dequeue()}. There cannot be more than \nf{root.blocks[b].\size} \nf{Dequeue()}s in \nf{root.blocks[b+1..end-1]}, since the queue would become empty after bth block end before end and $E(n,i)$ could not be the response to to some \nf{DEQ} in \nf{end}. And since the lentgh of the queue would become \nf{root.blocks[end].\size} in the end so there cannot be more than \nf{root.blocks[end].\size} Dequeus in \nf{root.blocks[b..end]}. Cause if there was more then the end's lenght would become more than \nf{root.blocks[end].\size}.
 
-Now that we know there are at most \nf{root.blocks[b].length+root.blocks[end].length} distance between end and b then with doubling search  in log\nf{root.blocks[b].length+root.blocks[end].length} steps we reach a block \nf{c} that the \nf{c.sum\sub{enq}} is less than i and the distance between c and end is not more than $2\times$\nf{root.blocks[b].length+root.blocks[end].length}. So the binary search takes $\Theta(\log$\nf{root.blocks[b].length+root.blocks[end].length)}$)$ steps.
+Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\size} distance between end and b then with doubling search  in log\nf{root.blocks[b].\size+root.blocks[end].\size} steps we reach a block \nf{c} that the \nf{c.sum\sub{enq}} is less than i and the distance between c and end is not more than $2\times$\nf{root.blocks[b].\size+root.blocks[end].\size}. So the binary search takes $\Theta(\log$\nf{root.blocks[b].\size+root.blocks[end].\size)}$)$ steps.
 \end{proof}
 
 
@@ -758,13 +757,14 @@ $$super[t]-p\leq super[t-1]\leq super(t-1] \leq super(b) \leq super(t+1)\leq sup
 
 \end{enumerate}
 \end{proof}
+We call the dequeues that return some value \it{non-null dequeues}. $r$th non-null dequeue returns the element of th $r$th enqueue. We can compute \# non-null dequeues in the prefix for a block this way: \#non-null dequeues= \size - \#enqueues. Note that the $i$th dequeue in the given block is not a non-null dequeue.
 
 \begin{lemma}[Index correctness]
  \nf{n.IndexDEQ(b,i)} returns the rank in $D(root)$ of $D(n,b,i)$.
 \end{lemma}
 \begin{proof}
 We can see the base case \nf{root.IndexDEQ(b,i)} is trivial.
-  \nf{n.IndexDEQ(b,i)} computes the superblock of the $i$th Dequeue in the $b$th block of \nf{n} in \nf{n.parent}(Lemma \ref{superBlock}). Then the order in $D(n.parent, superblock)$ is computed and \nf{index()} is called on \nf{n.parent} recursively. It is easy to see why the second is correct. Correctness of computing superblock comes from Lemma \ref{superBlock}.
+  \nf{n.IndexDEQ(b,i)} computes the superblock of the $i$th Dequeue in the $b$th block of \nf{n} in \nf{n.parent}(Lemma \ref{superBlock}). Then the order in $D(n.parent, superblock)$ is computed and \nf{index()} is called on \nf{n.parent} recursively. It is easy to see why the second is correct. Correctness of computing superblock comes from Lemma \ref{superBlock}.\size
 \end{proof}
 \textit{Do I need to talk about the computation of the order in the parent which is based on the definition of ordering of dequeues in a block?}
 
@@ -785,9 +785,9 @@ Line 101: Here, the goal is to find the superblock. We know the distance between
   Let $S$ be the state of an empty queue if the operations in prefix in $L$ of $i$th dequeue in $D(root,b)$ are applied on it. \nf{FindResponse()} returns \nf{(b, i)} which $E(root, b, i)$ is the the head of the queue in $S$. If the queue is empty in $S$ then it returns \nf{<-1,-->}.
   \end{lemma}
 \begin{proof}
-  The length of the queue if the operations in the prefix for the $b$th block in the root are applied with the order of $L$ is stored in the \nf{root.blocks[b].length}. It is computed while creating the block in Line~\ref{computeLength}. If the length of a queue is greater than 0 then a \nf{Dequeue()} would decrease the length of the queue, otherwise the length of the queue remains 0. Having length of the queue after the previous block and number of enqueues and dequeues in the block, Line~\ref{computeLength} computes wether the queue becomes empty or the length of it.
+  The \size of the queue if the operations in the prefix for the $b$th block in the root are applied with the order of $L$ is stored in the \nf{root.blocks[b].\size}. It is computed while creating the block in Line~\ref{computeLength}. If the \size of a queue is greater than 0 then a \nf{Dequeue()} would decrease the \size of the queue, otherwise the \size of the queue remains 0. Having \size of the queue after the previous block and number of enqueues and dequeues in the block, Line~\ref{computeLength} computes wether the queue becomes empty or the \size of it.
 \end{proof}
-\framebox[1.1\width]{HOW?} How to prove mathematicaly that \nf{ax(root.blocks[i-1].length + b.num\sub{enq} - b.num\sub{deq}, 0)} is the length of the queue after the block. I can only explain it here.
+\framebox[1.1\width]{HOW?} How to prove mathematicaly that \nf{ax(root.blocks[i-1].\size + b.num\sub{enq} - b.num\sub{deq}, 0)} is the \size of the queue after the block. I can only explain it here.
 %\begin{proof}
 %  \nf{head} is incremented in lines 51, 54 after trying to append a block to the index of the last \nf{head} read. If it was successful, we have to do this, but if it was unsuccessful, it means it has appended to the index before, so we have to update the \nf{head}. If a process dies before line 51, another process will increment \nf{head} in line 54.
 %\end{proof} 
@@ -802,7 +802,7 @@ If \nf{super[i] $\neq$ null}, then \nf{super[i]} in node \nf{n} is the index of 
 
 
 \begin{lemma}[Root search range]\label{rootRange}
-  \nf{root.size-root.FindMostRecentDone()} is $O(p^2+q)$, which $p$ is \# processes and $q$ is the length of the queue.
+  \nf{root.size-root.FindMostRecentDone()} is $O(p^2+q)$, which $p$ is \# processes and $q$ is the \size of the queue.
 \end{lemma}
 
 \begin{theorem}[Main]

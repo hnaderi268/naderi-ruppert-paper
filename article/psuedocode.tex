@@ -299,8 +299,8 @@
 \If{\tt{new.num==0}} \Return{\tt{true}} \cmt{The block contains nothing.}
 \ElsIf{\tt{blocks.tryAppend(new, h)}} \label{cas}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}} \label{okcas}
-\State \tt{\Call{CAS}{dir.super[np\sub{dir}], null, h+1}} \cmt{Write would work too.}
-\State \tt{\Call{CAS}{dir.num\sub{propagated}, np\sub{dir}, np\sub{dir}+1}}
+\State \tt{\Call{CAS}{dir.super[np\sub{dir}], null, h+1}} \cmt{Write would work too.} \label{setSuper}
+\State \tt{\Call{CAS}{dir.num\sub{propagated}, np\sub{dir}, np\sub{dir}+1}} \label{incNP}
 \EndFor
 \State \tt{\Call{CAS}{\head, h, h+1}} \label{incrementHead1}
 \State \Return{\tt{true}}
@@ -326,7 +326,7 @@
 \Function{<Block, int, int>}{CreateBlock}{\sl{int} i} 
 \Statex\cmt{Creates a block to be inserted into as $i$th \tt{block} in \tt{blocks}. Returns the created block as well as values read from each child's num\sub{propagated} field. These values are used for incrementing the children's num\sub{propagated} field if the block was appended to \tt{blocks} successfully.}
 \State \tt{block newBlock= \Call{new}{\sl{block}}}
-\State \tt{newBlock.group= num\sub{propagated}}
+\State \tt{newBlock.group= num\sub{propagated}}\label{setGroup}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}}
 \State \tt{index\sub{last}= dir.\head} \label{lastLine}
 \State \tt{index\sub{prev}= blocks[i-1].end\sub{dir}} \label{prevLine}
@@ -334,7 +334,7 @@
 \State \tt{block\sub{last}= dir.blocks[index\sub{last}]}
 \State \tt{block\sub{prev}= dir.blocks[index\sub{prev}]}
 \State \cmt{\tt{newBlock} includes \tt{dir.blocks[index\sub{prev}+1..index\sub{last}]}.}
-\State \tt{np\sub{dir}= dir.num\sub{propagated}}
+\State \tt{np\sub{dir}= dir.num\sub{propagated}} \label{setNP}
 \State \tt{newBlock.sum\sub{enq-dir}= blocks[i-1].sum\sub{enq-dir} + block\sub{last}.sum\sub{enq} - block\sub{prev}.sum\sub{enq}}
 \State \tt{newBlock.sum\sub{deq-dir}= blocks[i-1].sum\sub{deq-dir} + block\sub{last}.sum\sub{deq} - block\sub{prev}.sum\sub{deq}}
 \EndFor
@@ -388,7 +388,7 @@
 \State \Return\tt{left.}\Call{Get}{i-left.blocks[subBlock-1].sum\sub{enq}, subBlock} 
 \Else
 \State \tt{i= i-blocks[b].num\sub{enq-left}}
-\State\tt{subBlock= right.\Call{BSearch}{sum\sub{enq}, i, blocks[b-1].end\sub{right}+1, blocks[b].end\sub{right}}} \cmt{Search range of right child's subblocks of \tt{blocks[b]}.}
+\State\tt{subBlock= right.\Call{BSearch}{sum\sub{enq}, i, blocks[b-1].end\sub{right}+1, blocks[b].end\sub{right}}} \cmt{Search range of right child's subblocks of \tt{blocks[b]}.} \label{rightChildGet}
 \State \Return\tt{right.}\Call{Get}{i-right.blocks[subBlock-1].sum\sub{enq}, subBlock} 
 \EndIf
 \EndFunction{GetEnq}
@@ -545,13 +545,13 @@
 
 \framebox[1.1\width]{Question} A good notation for \it{the index of the \nf{b}}?
 
-\framebox[1.1\width]{Question} How to remove the notion of time? To say pre(n,i) contains n.blocks[0..i] instead of EST(n,t) which head=i at time t. Is it good?
+\framebox[1.1\width]{Question} How to remove the notion of time? To say pre(n,i) contains n.blocks[0..i] instead of EST(n,t) which head=i at time t. Is it good? Furthermore, can we remove the notion of established blocks?
 
 \begin{definition}[Block]
 A block is an object storing some statistics, as described in Algorithm Queue. It implicitly represents a set of operations. If \nf{n.blocks[i]==b}  we call \nf{i} the \emph{index} of block \nf{b}. Block \nf{b} is before block \nf{b$^\prime$} in node \nf{n} if and only if the index of the \nf{b} is smaller than the index of the \nf{b$^\prime$}'s. 
 \end{definition}
 
-\begin{definition}[Subblock]
+\begin{definition}[Subblock]\label{def::subblock}
 Block \texttt{b} is a \emph{direct subblock} of \texttt{n.blocks[i]} if it is $\in$ \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]} (See line \ref{endDefLine} for the defined range). Block \texttt{b} is a subblock of a \texttt{n.blocks[i]} if it is a direct subblock of it or subblock of a direct subblock of it. 
 \end{definition}
 
@@ -559,7 +559,7 @@ Block \texttt{b} is a \emph{direct subblock} of \texttt{n.blocks[i]} if it is $\
   Block b is direct superblock of block c if c is a direct subblock of b.   Block b is superblock of block c if c is a subblock of b.
 \end{definition}
 
-\begin{definition}[Operations of a block]
+\begin{definition}[Operations of a block]\label{def::ops}
 A block lb in a leaf represents one operation which if it is \tt{enqueue(x)} then \tt{lb.element=x}, otherwise \tt{element=null}. The set of operations of block $b$ are the operations in the subblocks of $b$. We show the set of operations of block b by \nf{ops(b)}.
 \end{definition}
 
@@ -665,6 +665,9 @@ We show \nf{ops(EST\sub{n.left, t\sub{i}})}$\subseteq$\nf{ops(EST\sub{n, t\sub{t
   \center\includegraphics[width=5in]{pics/trueRefresh}
   \caption{New established operations of the left child are in the new block.}
 \end{figure}
+\begin{lemma}[Precise True Refresh] \label{lem::prectrueRefresh}
+  Let $t_i$ be the time an instance of \nf{n.Refresh()} read the head (Line \ref{readHead}) and $t_t$ be the time its \nf{TryAppend(new, s)} terminates with  and returns \nf{true} (Line \ref{cas}). We have \nf{ops(EST\sub{n.left, t\sub{i}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}})} $\subseteq$ \nf{ops(n.blocks)}.
+\end{lemma}
 %\it{Mention this new block is establish in t\sub{t}. last sentece is not complete}
 
 %\begin{lemma}[falseRefresh] \label{lem:falseRefresh}
@@ -679,12 +682,14 @@ We show \nf{ops(EST\sub{n.left, t\sub{i}})}$\subseteq$\nf{ops(EST\sub{n, t\sub{t
 
 
 \begin{lemma}[Double Refresh] \label{doubleRefresh}
-  Consider two consecutive failed instances $R_1$, $R_2$ of \nf{n.Refresh()} by some process. Let $t_1$ be the time $R_1$ is invoked and $t_2$ be the time $R_2$ terminated. W  e have \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{2}})}.
+  Consider two consecutive failed instances $R_1$, $R_2$ of \nf{n.Refresh()} by some process. Let $t_1$ be the time $R_1$ is invoked and $t_2$ be the time $R_2$ terminated. We have \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{2}})}.
 \end{lemma}
 \begin{proof}
   
 
-If Line \ref{cas} of $R_1$ or $R_2$ returns \nf{true}, then the claim is held by Lemma~\ref{lem::trueRefresh}. If not, then there is another successful instance $R_2^\prime$ of \nf{n.Refresh()} that has done \nf{TryAppend()} successfully into \nf{n.blocks[i+1]}. If $R_2$ reads some value greater than $i+1$ in Line \ref{readHead} it means a successful instance of \nf{Refresh()} started after Line \ref{readHead} of $R_1$ and finished its Line \ref{incrementHead1} or \ref{incrementHead2} before \ref{readHead} of $R_2$, from Lemma~\ref{lem::trueRefresh} by the end of this instance \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} has been propagated. In Figure 1 we see why the block $R_2^\prime$ is appending contains established block in the n's children at $t_1$, since it create a block reading the head after $t_1$.
+If Line \ref{cas} of $R_1$ or $R_2$ returns \nf{true}, then the claim is held by Lemma~\ref{lem::trueRefresh}. Let $R_1$ read $i$ and $R_2$ read $i+1$ from Line \ref{readHead}. If $R_2$ reads some value greater than $i+1$ in Line \ref{readHead} it means a successful instance of \nf{Refresh()} started after Line \ref{readHead} of $R_1$ and finished its Line \ref{incrementHead1} or \ref{incrementHead2} before \ref{readHead} of $R_2$, from Lemma~\ref{lem::trueRefresh} by the end of this instance \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} has been propagated.
+
+Since $R_2$'s \nf{TryAppend()} returns \nf{false} then there is another successful instance $R_2^\prime$ of \nf{n.Refresh()} that has done \nf{TryAppend()} successfully into \nf{n.blocks[i+1]} before $R_2$ tries to append. In Figure 1 we see why the block $R_2^\prime$ is appending contains established block in the n's children at $t_1$, since it create a block reading the head after $t_1$. By Lemma \ref{lem::prectrueRefresh} after $R_2^\prime$'s \nf{CAS} we have \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(n.blocks)}. Also by Lemma \ref{lem::headInc} of $R_2$  head is more than $i+1$ after $R_2$\'s \ref{incrementHead2} line, so the block appended by $R_2^\prime$ to \nf{n} is established by then. To summarized $t_1$ is before $R_2^\prime$'s read head and $R_2^\prime$'s \nf{CAS} is before $R_2$'s termination. So \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{2}})}.
 %It is obvious that the \nf{new} constructed by the second Refresh in Line 36 contains the blocks in \nf{new} by $R_1$ which $R_1^\prime$ did not contain, since \nf{n.head} is only increasing (Maybe Lemma~\ref{lem::oldnewOrder}). If $R_2$ succeeds by Lemma~\ref{lem::trueRefresh} the claim holds. If not, it is deduced that \nf{n.blocks[h]} was not \nf{null} before $R_2$'s \nf{CAS}. Furthermore, \nf{n.blocks[h]} was \nf{null} before reading \nf{h} by $R_1$. So there is a successful \nf{Refresh()} after the read of \nf{h} in $R_1$ and before the \nf{CAS} of $R_2$. This \nf{Refresh()} contains all the new established operations before Line 35 (Maybe Lemma~\ref{lem::oldnewOrder}) and by Lemma~\ref{lem::trueRefresh} our claim holds. See Figure~\ref{}.
 \end{proof}
 \it{last sentence need more detail and should be earlier. define i and tell why R2prime exists}
@@ -745,9 +750,9 @@ $\blacktriangleright$ Note that processes are numbered from 1 to $p$, left to ri
   \item $D(n,b)$ is the sequence of dequeue operations $\in$ \nf{ops(n.blocks[b])} ordered by their process id.
   \item $D(n,b,i)$ is the $i$th enqueue in $D(n,b)$.
 \item Order of the enqueue operations in $n$: $E(n)=E(n,1).E(n,2).E(n,3)...$
-\item $E(n,i)$ is the $i$th enqueue in $E(n)$.
+\item $E_{n,i}$ is the $i$th enqueue in $E(n)$.
 \item Order of the dequeue operations in $n$: $D(n)=D(n,1).D(n,2).D(n,3)...$
-\item $D(n,i)$ is the $i$th dequeue in $D(n)$.
+\item $D_{n,i}$ is the $i$th dequeue in $D(n)$.
 \item Linearization: $L=E(root,1).D(root,1).E(root,2).D(root,2).E(root,3).D(root,3)...$
 \end{itemize}
 \end{definition}
@@ -760,8 +765,14 @@ Preconditions of all invocation of \nf{BSearch} are satisfied.
 If \nf{n.blocks[b].num\sub{enq}$\geq$i} then \nf{n.GetENQ(b,i)} returns $E(n,b,i)$.
 \end{lemma}
 \begin{proof}
-We are going to prove this lemma by induction on the height of the tree. The base case for the leaves of the tree is pretty straight forward. Since leaf blocks contain exactly one operation then only \nf{GetENQ(b,1)} can be called on leaves. \nf{leaf.GetENQ(b,1)} returns the operation stored in the $b$th block of leaf $l$. For non leaf nodes in Line 404 it is decided that the \nf{i}th enqueue in block \nf{b} of internal node \nf{n}resides in the left child or the right child of \nf{n}. By definition of $E(n,b)$ operations from the left child come  before the operations of the right child. Having \nf{sum\sub{enq}}, the prefix sum of the number of enqueues we can compute the direct subblock containing the enqueue we are finding for with binary search. Then \nf{n.child.GetENQ( block containing, order in the block)} is invoked which returns the correct operation by the hypothesis of the induction.
+We are going to prove this lemma by induction on the height of the tree. The base case for the leaves of the tree is pretty straight forward. Since leaf blocks contain exactly one operation then only \nf{GetENQ(b,1)} can be called on leaves. \nf{leaf.GetENQ(b,1)} returns the operation stored in the $b$th block of leaf $l$. For non leaf nodes in Line 404 it is decided that the \nf{i}th enqueue in block \nf{b} of internal node \nf{n}resides in the left child or the right child of \nf{n}. From Definition \ref{ordering} we know operations in a block are ordered by  their process id. Furthermore \nf{b.sum\sub{enq-lef}} stores the number of \nf{enqueue()} operations from the \nf{b}'s subblocks of the left child of \nf{n}. So if \nf{i} is greater than \nf{b.sum\sub{enq-lef}} it means $i$th operation is propagated from the right child, otherwise we should search for the $i$th enqueue i the left child subblocks. By definition \ref{def::ops} and \ref{def::subblock} we need to search in subblocks of b which their range is \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}. If the enqueue we're looking for was in the right child as there are \nf{b.sum\sub{enq-left}} enqueues before it we need to search for \nf{i-b.sum\sub{enq-left}} (Line \ref{rightChildGet}). of By definition of $E(n,b)$ operations from the left child come  before the operations of the right child. Having \nf{sum\sub{enq}}, the prefix sum of the number of enqueues we can compute the direct subblock containing the enqueue we are finding for with binary search. Then \nf{n.child.GetENQ( block containing, order in the block)} is invoked which returns the correct operation by the hypothesis of the induction.
 \end{proof}
+
+\begin{figure}[hbt]
+  \center\includegraphics[width=6in]{pics/blockSumEnq.png}
+  \caption{The number of enqueues from the left and the right child}
+\end{figure}
+
 \textit{I'm not sure it is going to be long and boring to talk about the parameters, since the reader can find out them.}
 
 \pagebreak
@@ -795,10 +806,13 @@ After computing line \ref{computeSuper} of \nf{n.IndexDEQ(b,i)}, \nf{n.parent.bl
 \begin{proof}
 \begin{enumerate}
  \item Value read for \nf{super[b.group]} in line 418 is not null.\\$\blacktriangleright$
-  Values \nf{c\textsubscript{dir}} read in lines 23, \nf{super} are set before incrementing in lines 26,27.
+  Values \nf{np\textsubscript{dir}} read in lines \ref{setNP}, \nf{super} are set before incrementing in lines \ref{setSuper},\ref{incNP}. So before incrementing \nf{num\sub{propagated}, super[num\sub{propagated}]} is set so it cannot be null while reading.
 
- \item \nf{super[]} preserves order from child to parent; if in a child block \nf{b} is before \nf{c} then \nf{b.group} $\leq$ \nf{c.group} and \nf{super[b.group]} $\leq$ \nf{super[c.group]}\\$\blacktriangleright$
-  Follows from the order of lines 60, 48, 49.
+ \item \nf{super[]} preserves order from child to parent; i.e. if in node \nf{n} block \nf{b} is before \nf{c} then \nf{b.group} $\leq$ \nf{c.group}
+$\blacktriangleright$ Line \ref{setGroup}. Since  \nf{num\sub{propagated}} is increasing.
+
+ \item Let \nf{b, c} be in node \nf{n}, if \nf{b.group} $\leq$ \nf{c.group} then \nf{super[b.group]} $\leq$ \nf{super[c.group]}\\$\blacktriangleright$ Line \ref{setSuper}.
+
 
 % \item In a propagate step at most 2 different time values are read \\ If there are more than 2 numbers then the smallest number should have been propagated far before.
 % \item There are at most $p^2$ blocks with same time value in a node. \\ At most p processes could die before line 27 and each contains at most p elements.
@@ -871,13 +885,32 @@ If \nf{super[i] $\neq$ null}, then \nf{super[i]} in node \nf{n} is the index of 
 \begin{theorem}[Main]
 The queue implementation is linearizable.
 \end{theorem}
-%\begin{proof}
-%  We show that the ordering $L$ stored in the root, satisfies the properties of a linearizable ordering.
-%  \begin{enumerate}
-%    \item If $op_1$ ends before $op_2$ begins in $E$, then $op_1$ comes before $op_2$ in $T$.\\$\blacktriangleright$ This is followed by Lemma \ref{append}. The time $op_1$ ends it is in root, before $op_2$, by Definition \ref{ordering} $op_1$ is before $op_2$.
-%    \item Responses to operations in $E$ are same as they would be if done sequentially in order of $L$. \\$\blacktriangleright$ Enqueue operations do not have any response so it does no matter how they are ordered. It remains to prove  Dequeue $d$ returns the correct response according to the linearization order. By Lemma \ref{computeHead} it is deduced that the head of the queue at time of the linearization of $d$ is computed properly. If the Queue is not empty by Lemma \ref{get} we know that the returning response is the computed index element.
-%  \end{enumerate} 
-%\end{proof}
+\begin{proof}
+  We choose $L$ in Definition \ref{ordering} to be linearization ordering of operations and prove if we linearize operations as $L$ the queue works consistently.
+\end{proof}
+\begin{lemma}
+Operations in a block have a time point in common (There is a time $t$ all the operations are running).
+\end{lemma}
+
+\begin{lemma}[satisfiability]
+$L$ can be a linearization ordering.
+\end{lemma}
+\begin{proof}
+Once some operations are aggregated in one block they will be propagated together up to the root and we can linearize them in any order among themselves (previous lemma). Furthermore in L we arbitrary choose the order to be by process id, since it makes computations in  the blocks faster .
+\end{proof}
+
+\begin{lemma}[correctness]
+  If operations are applied as $L$ on a sequential queue, the sequence of the responses would be the same as our algorithm.
+\end{lemma}
+
+\begin{proof}
+\it{Old parts to review}
+  We show that the ordering $L$ stored in the root, satisfies the properties of a linearizable ordering.
+  \begin{enumerate}
+    \item If $op_1$ ends before $op_2$ begins in $E$, then $op_1$ comes before $op_2$ in $T$.\\$\blacktriangleright$ This is followed by Lemma \ref{append}. The time $op_1$ ends it is in root, before $op_2$, by Definition \ref{ordering} $op_1$ is before $op_2$.
+    \item Responses to operations in $E$ are same as they would be if done sequentially in order of $L$. \\$\blacktriangleright$ Enqueue operations do not have any response so it does no matter how they are ordered. It remains to prove  Dequeue $d$ returns the correct response according to the linearization order. By Lemma \ref{computeHead} it is deduced that the head of the queue at time of the linearization of $d$ is computed properly. If the Queue is not empty by Lemma \ref{get} we know that the returning response is the computed index element.
+  \end{enumerate} 
+\end{proof}
 
 \pagebreak
 

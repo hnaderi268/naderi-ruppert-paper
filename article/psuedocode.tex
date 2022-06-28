@@ -296,7 +296,7 @@
 \State \tt{h= \head} \label{readHead}
 %\If{\tt{n.blocks[h]!=null?}} \tt{h+=1}\EndIf
 \State \tt{<new, np\sub{left}, np\sub{right}>= \Call{CreateBlock}{s}} \cmt{\tt{np\sub{left}, np\sub{right}} are the values read from the children's \tt{num\sub{propagated}} field.}
-\If{\tt{new.num==0}} \Return{\tt{true}} \cmt{The block contains nothing.}
+\If{\tt{new.num==0}} \Return{\tt{true}} \label{addOP} \cmt{The block contains nothing.}
 \ElsIf{\tt{blocks.tryAppend(new, h)}} \label{cas}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}} \label{okcas}
 \State \tt{\Call{CAS}{dir.super[np\sub{dir}], null, h+1}} \cmt{Write would work too.} \label{setSuper}
@@ -397,7 +397,7 @@
 \Statex $\leadsto$ \textsf{Precondition: \tt{b}th block of the node has propagated up to the root and \tt{blocks[b].num\sub{enq}$\geq$i}.}
 \Function{<int, int>}{IndexDeq}{\sl{int} b, \sl{int} i} \cmt{Returns the rank of $i$th dequeue in the $b$th block of the node, among the dequeues in the root.}
 \If{\tt{this} \bf{is} \tt{root}}
-\State\Return \tt{<b, i>}
+\State\Return \tt{<b, i>} \label{indexBaseCase}
 \Else
 \State \tt{dir= (parent.left==n)? left: right} \cmt{check if a left or a right child}
 \State \tt{superBlock= parent.\Call{BSearch}{sum\sub{deq-dir}, i, super[blocks[b].group]-p, super[blocks[b].group]+p}} \label{computeSuper}
@@ -746,9 +746,9 @@ $\blacktriangleright$ Note that processes are numbered from 1 to $p$, left to ri
 \begin{itemize}
 \item We call operations strictly before $op$ in the sequence of operations $S$, prefix of the $op$.
   \item $E(n,b)$ is the sequence of enqueue operations $\in$ \nf{ops(n.blocks[b])} ordered by their process id.
-  \item $E(n,b,i)$ is the $i$th enqueue in $E(n,b)$.
+  \item $E_{n,b,i}$ is the $i$th enqueue in $E(n,b)$.
   \item $D(n,b)$ is the sequence of dequeue operations $\in$ \nf{ops(n.blocks[b])} ordered by their process id.
-  \item $D(n,b,i)$ is the $i$th enqueue in $D(n,b)$.
+  \item $D_{n,b,i}$ is the $i$th enqueue in $D(n,b)$.
 \item Order of the enqueue operations in $n$: $E(n)=E(n,1).E(n,2).E(n,3)...$
 \item $E_{n,i}$ is the $i$th enqueue in $E(n)$.
 \item Order of the dequeue operations in $n$: $D(n)=D(n,1).D(n,2).D(n,3)...$
@@ -762,7 +762,7 @@ $\blacktriangleright$ Note that processes are numbered from 1 to $p$, left to ri
 
 Preconditions of all invocation of \nf{BSearch} are satisfied.
 \begin{lemma}[Get correctness] \label{get}
-If \nf{n.blocks[b].num\sub{enq}$\geq$i} then \nf{n.GetENQ(b,i)} returns $E(n,b,i)$.
+If \nf{n.blocks[b].num\sub{enq}$\geq$i} then \nf{n.GetENQ(b,i)} returns $E_{n,b,i}$.
 \end{lemma}
 \begin{proof}
 We are going to prove this lemma by induction on the height of the tree. The base case for the leaves of the tree is pretty straight forward. Since leaf blocks contain exactly one operation then only \nf{GetENQ(b,1)} can be called on leaves. \nf{leaf.GetENQ(b,1)} returns the operation stored in the $b$th block of leaf $l$. For non leaf nodes in Line 404 it is decided that the \nf{i}th enqueue in block \nf{b} of internal node \nf{n}resides in the left child or the right child of \nf{n}. From Definition \ref{ordering} we know operations in a block are ordered by  their process id. Furthermore \nf{b.sum\sub{enq-lef}} stores the number of \nf{enqueue()} operations from the \nf{b}'s subblocks of the left child of \nf{n}. So if \nf{i} is greater than \nf{b.sum\sub{enq-lef}} it means $i$th operation is propagated from the right child, otherwise we should search for the $i$th enqueue i the left child subblocks. By definition \ref{def::ops} and \ref{def::subblock} we need to search in subblocks of b which their range is \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}. If the enqueue we're looking for was in the right child as there are \nf{b.sum\sub{enq-left}} enqueues before it we need to search for \nf{i-b.sum\sub{enq-left}} (Line \ref{rightChildGet}). of By definition of $E(n,b)$ operations from the left child come  before the operations of the right child. Having \nf{sum\sub{enq}}, the prefix sum of the number of enqueues we can compute the direct subblock containing the enqueue we are finding for with binary search. Then \nf{n.child.GetENQ( block containing, order in the block)} is invoked which returns the correct operation by the hypothesis of the induction.
@@ -779,7 +779,7 @@ We are going to prove this lemma by induction on the height of the tree. The bas
 
 
 \begin{lemma}[DSearch correctness] \label{dsearch}
-If \nf{root.blocks[end].num\sub{enq}}$\geq$\nf{i} and $E(root, i)$ is the response to some \nf{Dequeue()} in \nf{root.blocks[end]} then \nf{DSearch(i, end)} returns \nf{b} such that \nf{root.blocks[b]} contains $E(root,b,i)$ in $\Theta(\log$(\nf{root.blocks[b].\size+root.blocks[end].\size}) steps.
+If \nf{root.blocks[end].num\sub{enq}}$\geq$\nf{i} and $E_{root, i}$ is the response to some \nf{Dequeue()} in \nf{root.blocks[end]} then \nf{DSearch(i, end)} returns \nf{b} such that \nf{root.blocks[b]} contains $E_{root,b,i}$ in $\Theta(\log$(\nf{root.blocks[b].\size+root.blocks[end].\size}) steps.
 \end{lemma}
 \begin{proof}
 First we show \nf{end-b}$\leq$\nf{root.blocks[b].\size+root.blocks[end].\size}. We know each block size is greater than 0. So every block in \nf{root.blocks[b..end]} contains at least one \nf{Enqueue()} or one \nf{Dequeue()}. There cannot be more than \nf{root.blocks[b].\size} \nf{Dequeue()}s in \nf{root.blocks[b+1..end-1]}, since the queue would become empty after bth block end before end and $E(n,i)$ could not be the response to to some \nf{DEQ} in \nf{end}. And since the lentgh of the queue would become \nf{root.blocks[end].\size} in the end so there cannot be more than \nf{root.blocks[end].\size} Dequeus in \nf{root.blocks[b..end]}. Cause if there was more then the end's lenght would become more than \nf{root.blocks[end].\size}.
@@ -833,11 +833,11 @@ We call the dequeues that return some value \it{non-null dequeues}. $r$th non-nu
 
 
 \begin{lemma}[Index correctness]
- \nf{n.IndexDEQ(b,i)} returns the rank in $D(root)$ of $D(n,b,i)$.
+ \nf{n.IndexDEQ(b,i)} returns the rank in $D(root)$ of $D_{n,b,i}$.
 \end{lemma}
 \begin{proof}
-We can see the base case \nf{root.IndexDEQ(b,i)} is trivial.
-  \nf{n.IndexDEQ(b,i)} computes the superblock of the $i$th Dequeue in the $b$th block of \nf{n} in \nf{n.parent}(Lemma \ref{superBlock}). Then the order in $D(n.parent, superblock)$ is computed and \nf{index()} is called on \nf{n.parent} recursively. It is easy to see why the second is correct. Correctness of computing superblock comes from Lemma \ref{superBlock}.\size
+We will prove this by induction on the distance of \nf{n} from the \nf{root}. We can see the base case \nf{root.IndexDEQ(b,i)} is trivial (Line \ref{indexBaseCase}).
+  In the non-root nodes \nf{n.IndexDEQ(b,i)} computes the superblock of the $i$th Dequeue in the $b$th block of \nf{n} in \nf{n.parent} by Lemma \ref{superBlock} (Line \ref{computeSuper}). After that the order in $D(n.parent, superblock)$ is computed and \nf{index()} is called on \nf{n.parent} recursively. Then if the operation was propagated from the right child the number of dequeues from the left child are added to it, because the left child operations come before the right child operations (\ref{ordering}).
 \end{proof}
 \textit{Do I need to talk about the computation of the order in the parent which is based on the definition of ordering of dequeues in a block?}
 
@@ -864,17 +864,27 @@ We can see the base case \nf{root.IndexDEQ(b,i)} is trivial.
 %\begin{proof}
 %  \nf{head} is incremented in lines 51, 54 after trying to append a block to the index of the last \nf{head} read. If it was successful, we have to do this, but if it was unsuccessful, it means it has appended to the index before, so we have to update the \nf{head}. If a process dies before line 51, another process will increment \nf{head} in line 54.
 %\end{proof} 
-
+\begin{lemma}[super property]\label{superCounter}
+If \nf{super[i] $\neq$ null}, then \nf{super[i]} in node \nf{n} is the index of the superblock of a block with \nf{time=i}$\pm$\nf{p}.
+\end{lemma}
 \pagebreak
 
 
-\begin{lemma}[Validity of \nf{super} and \nf{counter}]\label{superCounter}
-If \nf{super[i] $\neq$ null}, then \nf{super[i]} in node \nf{n} is the index of the superblock of a block with \nf{time=i}$\pm$\nf{p}.
-\end{lemma}
+
 %\begin{proof}
 %After a successful CAS in line 46 \nf{super} and \nf{counter} are modified in both children. \nf{super[i]} is supposed to be the superblock of a block with \nf{time}=i and \nf{counter} is the timer in each node. \nf{super[i]} and \nf{counter=i} are expected to update after a bunch of blocks with \nf{time=i} have been aggregated together into a block in the parent. If the process dies before line 48 these values remain unchanged and incoming blocks will get the same \nf{time}. We claim that our algorithm still works since at most $p$ processes die and it will not change our complexity. If a process dies right after line 48, then \nf{counter} will remain the same and \nf{super[i]} is correct. Furthermore we are sure that when \nf{super[i]} is read it will not be \nf{null}.
 %\end{proof}
 
+\begin{lemma}[Computing Queue's Head block] \label{computeHead}
+  Let $S$ be the state of an empty queue if the operations in prefix in $L$ of $i$th dequeue in $D(root,b)$ are applied on it. \nf{FindResponse()} returns \nf{(b, i)} which $E(root, b, i)$ is the the head of the queue in $S$. If the queue is empty in $S$ then it returns \nf{<-1,-->}.
+  \end{lemma}
+\begin{proof}
+  The \size of the queue if the operations in the prefix for the $b$th block in the root are applied with the order of $L$ is stored in the \nf{root.blocks[b].\size}. It is computed while creating the block in Line~\ref{computeLength}. If the \size of a queue is greater than 0 then a \nf{Dequeue()} would decrease the \size of the queue, otherwise the \size of the queue remains 0. Having \size of the queue after the previous block and number of enqueues and dequeues in the block, Line~\ref{computeLength} computes wether the queue becomes empty or the \size of it.
+\end{proof}
+\framebox[1.1\width]{HOW?} How to prove mathematicaly that \nf{ax(root.blocks[i-1].\size + b.num\sub{enq} - b.num\sub{deq}, 0)} is the \size of the queue after the block. I can only explain it here.
+%\begin{proof}
+%  \nf{head} is incremented in lines 51, 54 after trying to append a block to the index of the last \nf{head} read. If it was successful, we have to do this, but if it was unsuccessful, it means it has appended to the index before, so we have to update the \nf{head}. If a process dies before line 51, another process will increment \nf{head} in line 54.
+%\end{proof} 
 
 \pagebreak
 
@@ -915,13 +925,14 @@ Once some operations are aggregated in one block they will be propagated togethe
 \pagebreak
 
 
-\begin{lemma}[Time analysis]
-  \nf{n.GetEnq(b,i), n.Index(b,i)} take $O(\log^2 p)$ steps. Search in the root may take $O(\log Q+ p^2)$ steps. Helping is done every $p^2$ block appended to the root and takes $p\times \log^2p$ steps. Amortized time consumed for helping by each process is $O(\log^2 p)$.
+\begin{lemma}[Amortized time analysis]
+%  \nf{n.GetEnq(b,i), n.Index(b,i)} take $O(\log^2 p)$ steps. Search in the root may take $O(\log Q+ p^2)$ steps. Helping is done every $p^2$ block appended to the root and takes $p\times \log^2p$ steps. Amortized time consumed for helping by each process is $O(\log^2 p)$.
+\nf{Enqueue()} and \nf{Dequeue} take $O(\log62 p +q)$ steps (amortized anlysis), which $p$ is the number of processes and $q$ is the size of the queue at the time of invocation.
 \end{lemma}
 
-\begin{lemma}[Root search range]\label{rootRange}
-  \nf{root.size-root.FindMostRecentDone()} is $O(p^2+q)$, which $p$ is \# processes and $q$ is the \size of the queue.
-\end{lemma}
+%\begin{lemma}[Root search range]\label{rootRange}
+%  \nf{root.size-root.FindMostRecentDone()} is $O(p^2+q)$, which $p$ is \# processes and $q$ is the \size of the queue.
+%\end{lemma}
 \end{document}
 
 

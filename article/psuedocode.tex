@@ -77,7 +77,7 @@
 
 \Statex $\diamondsuit$ \tt{\sl{Shared}}
 \begin{itemize}
-\item \tt{\sl{Tree} tree} \textsf{: A binary tree of \tt{Node}s. \tt{root} is the root node.}
+\item \textsf{A binary tree of \tt{Node}s with one \tt{leaf} for each process. \tt{root} is the root \nf{node}.}
 %such that \tt{root} is the root and the left child and the right child and the parent of \tt{Tree[i]} are \tt{Tree[2i+1]}, \tt{Tree[2i+2]} and \tt{Tree[i/2]}.
 \end{itemize}
 
@@ -94,11 +94,9 @@
 \Statex $\blacktriangleright$ \tt{\sl{Node}}
 \begin{itemize}
 \item \tt{\sl{*Node} left, right, parent} \textsf{: initialized  when creating the tree.}
-\item \tt{\sl{BlockList} blocks}
-  \textsf{ implemented with an array.}
-\item \tt{\sl{int} \head= 1}\textsf{: \#\tt{block}s in \tt{blocks}(-1). \tt{blocks[0]} is a block with all fields equal to zero.}
+\item \tt{\sl{BlockList}}
+\item \tt{\sl{int} \head= 1}\textsf{: \#\tt{block}s in \tt{blocks}. \tt{blocks[0]} is a block with all integer fields equal to zero.}
 \item \tt{\sl{int} num\sub{propagated}= 0}\textsf{} \textsf{: \# groups of blocks that have been propagated from the node to its parent. Since it is incremented after propagating, it may be behind by 1.}
-\item \tt{\sl{int[]} super}\textsf{: \tt{super[i]} stores an approximate index of the superblock of the blocks in \tt{blocks} whose \tt{group} field have value \tt{i}.}
 \end{itemize}
 
 %\Statex $\blacktriangleright$ \tt{\sl{Root} extends \sl{Node}}
@@ -126,7 +124,6 @@
 
 \Statex $\blacktriangleright$ \tt{\sl{Block}} 
 %\cmt{If \tt{b} is \tt{blocks[i](i!=0)} then \tt{b[-1] is blocks[i-1].}}
-\cmt{For a \tt{block} in a \tt{blocklist} we define \it{the prefix for the block} to be the blocks in the \tt{BlockList} up to and including the \tt{block}. \it{put the definitions before the pseudocode}}
 
 \begin{itemize}
 %  \item \tt{\sl{int} num\sub{enq}, num\sub{deq}}
@@ -156,7 +153,7 @@
 \Statex $\blacktriangleright$ \tt{\sl{InternalBlock} extends \sl{Block}}
 \begin{itemize}
     \item \tt{\sl{int} end\sub{left}, end\sub{right}}
-  \textsf{:~~index of the last subblock of the block in the left and right child}
+  \textsf{:~~indices of the last subblock of the block in the left and right child}
   \item \tt{\sl{int} sum\sub{enq-left}}
   \textsf{: \# enqueue operations in the prefix for \tt{left.blocks[end\sub{left}]}}
   \item \tt{\sl{int} sum\sub{deq-left}}
@@ -207,11 +204,11 @@
 \begin{itemize}
  \item \tt{blocks[b].sum\sub{x}=blocks[b].sum\sub{x-left}+blocks[b].sum\sub{x-right}}  \tt{ (for b$\geq$0 and x $\in$ \{enq, deq\}})
  \item \tt{blocks[b].sum=blocks[b].sum\sub{enq}+blocks[b].sum\sub{deq}}  \tt{ (for b$\geq$0})
-  \item \tt{blocks[b].num\sub{x}=blocks[b].sum\sub{x}-blocks[b-1].sum\sub{x}} \\ \tt{(for b>0 and x $\in$ \{$\emptyset$, enq, deq, enq-left, enq-right, deq-left, deq-right\}, blocks[0].num\sub{x}=0})
+  \item \tt{blocks[b].num\sub{x}=blocks[b].sum\sub{x}-blocks[b-1].sum\sub{x}} \\ \tt{(for b>0 and x $\in$ \{$\emptyset$, enq, deq, enq-left, enq-right, deq-left, deq-right\})}
 \end{itemize}
 \end{footnotesize}
 
-
+\pagebreak
 
 %##########################################
 
@@ -222,56 +219,49 @@
 \setcounter{ALG@line}{200}
 \begin{multicols}{2}
 
-\Function{void}{Enqueue}{\sl{Object} e} \cmt{Creates a block with element \tt{e} and appends it to the tree.}
+\Function{void}{Enqueue}{\sl{Object} e} \cmt{Creates a \tt{block} with element \tt{e} and adds it to the tree.}
 \State \tt{block newBlock= \Call{new}{\sl{LeafBlock}}}
 \State \tt{newBlock.element= e}
 %\State \tt{b.num\sub{enq}=1}
 \State \tt{newBlock.sum\sub{enq}= leaf.blocks[leaf.\head].sum\sub{enq}+1}
 \State \tt{newBlock.sum\sub{deq}= leaf.blocks[leaf.\head].sum\sub{deq}}
-\State \tt{leaf.head+=1}
 \State \tt{leaf.}\Call{Append}{newBlock}
 \EndFunction{Enqueue}
 
 \Statex
 
-
-\Function{<int, int>}{FindResponse}{\sl{int} b\sub{d}, \sl{int} i\sub{d}}\cmt{If $E(root,b_e,i_e)$ is the response to the $D(root,b_d,i_d)$ returns \tt{<b\sub{e},i\sub{e}>}. Returns \tt{<-1,-->} if the queue is empty.}
-\If{\tt{ root.blocks[b\sub{d}-1].\size}\tt{ + root.blocks[b\sub{d}].num\sub{enq} - (i + root.blocks[b\sub{d}-1].sum\sub{deq}) $<$ 0}}
-\State \Return \tt{<-1,-->}
-\Else
-
-\State \tt{r\sub{enq}= i + root.blocks[b\sub{d}-1].sum\sub{deq} - (root.blocks[b\sub{d}-1].size - root.blocks[b\sub{d}-1].sum\sub{enq} + root.blocks[b\sub{d}-1].sum\sub{deq})}
-\State \cmt{size-enqs+deqs=null deqs}
-\State \Return \tt{root.\Call{DSearch}{r\sub{enq}, b\sub{d}}}
-\EndIf
-\EndFunction{FindResponse}
-
-\Statex
-
-\Function{Object}{Dequeue()}{}
-\State \tt{block newBlock= \Call{new}{\sl{LeafBlock}}} \cmt{Creates a block with null value element, appends it to the tree, computes its order among operations, then computes and returns its response.}
+\Function{Object}{Dequeue()}{} \cmt{Creates a block with null value element, appends it to the tree, computes its order among operations, and returns its response.}
+\State \tt{block newBlock= \Call{new}{\sl{LeafBlock}}} 
 \State \tt{newBlock.element= null}
 \State \tt{newBlock.sum\sub{enq}= leaf.blocks[leaf.\head].sum\sub{enq}}
 \State \tt{newBlock.sum\sub{deq}= leaf.blocks[leaf.\head].sum\sub{deq}+1}
 \State \tt{leaf.}\Call{Append}{newBlock}
-\State \tt{<b\sub{deq}, r\sub{deq}>=} \Call{IndexDeq}{leaf.\head, 1}\cmt{\tt{r\sub{deq}} is the rank among the dequeues of the dequeue of  the \tt{b\sub{deq}}th block in the root containing.}
-\State \tt{<b\sub{enq}, r\sub{enq}>=} \Call{FindResponse}{b\sub{deq}, r\sub{deq}} 
- \cmt{\tt{$E(root,b_{enq},i_{enq})$ is response to the $D(root,b_{deq},i_{deq})$. If the response is \tt{null} then r\sub{enq} is -1.}} \label{deqRest}
-\If{\tt{r\sub{enq}==-1}}
+\State \tt{<b\sub{deq}, i\sub{deq}>=} \Call{IndexDeq}{leaf.\head, 1}
+\State \tt{<b\sub{enq}, i\sub{enq}>=} \Call{FindResponse}{b\sub{deq}, i\sub{deq}} 
+\label{deqRest}
+\If{\tt{i\sub{enq}==-1}}
 \State \tt{output= null}
 \pagebreak
 \Else
-\State \tt{output= \Call{GetEnq}{b\sub{enq}, r\sub{enq}}} \cmt{getting the reponse's \tt{element}.}
+\State \tt{output= \Call{GetEnq}{b\sub{enq}, i\sub{enq}}}
 \EndIf
 \State \Return{\tt{output}}
 \EndFunction{Dequeue}
 
+\Statex
+
+\Function{<int, int>}{FindResponse}{\sl{int} b\sub{d}, \sl{int} i\sub{d}}\cmt{Returns \tt{<b\sub{e},i\sub{e}>}, if $E_{root,b_e,i_e}$ is the response to the $D_{root,b_d,i_d}$. Returns \tt{<-1,-->} if the queue is empty.}
+\If{\tt{ root.blocks[b\sub{d}-1].\size}\tt{ + root.blocks[b\sub{d}].num\sub{enq} - i\sub{d} $<$ 0}}
+\State \Return \tt{<-1,-->}
+\Else
+\State \tt{r\sub{enq}= i\sub{d} - root.blocks[b\sub{d}-1].size + root.blocks[b\sub{d}-1].sum\sub{enq}}
+\State \Return \tt{root.\Call{DSearch}{r\sub{enq}, b\sub{d}}}
+\EndIf
+\EndFunction{FindResponse}
 
 \end{multicols}
 \end{algorithmic}
 \end{algorithm}
-\pagebreak
-
 %##########################################
 
 
@@ -283,7 +273,7 @@
 
 \Function{void}{Propagate()}{}
 \If{\bf{not} \Call{Refresh()}{}} \label{firstRefresh}
-\State \Call{Refresh()}{} \cmt{Lemma Double Refresh}\label{secondRefresh}
+\State \Call{Refresh()}{} \label{secondRefresh}
 \EndIf
 \If{\tt{this} \bf{is not} \tt{root}}
 \State \tt{parent.}\Call{Propagate()}{}
@@ -299,13 +289,13 @@
 \If{\tt{new.num==0}} \Return{\tt{true}} \label{addOP} \cmt{The block contains nothing.}
 \ElsIf{\tt{blocks.tryAppend(new, h)}} \label{cas}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}} \label{okcas}
-\State \tt{\Call{CAS}{dir.super[np\sub{dir}], null, h+1}} \cmt{Write would work too.} \label{setSuper}
+\State \tt{\Call{CAS}{dir.super[np\sub{dir}], null, h}} \cmt{Write would work too.} \label{setSuper}
 \State \tt{\Call{CAS}{dir.num\sub{propagated}, np\sub{dir}, np\sub{dir}+1}} \label{incNP}
 \EndFor
 \State \tt{\Call{CAS}{\head, h, h+1}} \label{incrementHead1}
 \State \Return{\tt{true}}
 \Else
-\State \tt{\Call{CAS}{\head, h, h+1}} \cmt{Even if another process wins, help to increase the \head. The winner might have fallen sleep before increasing \tt{\head}.} \label{incrementHead2}
+\State \tt{\Call{CAS}{\head, h, h+1}} \cmt{Even if another process wins, help to increase the \tt{\head}. The winner might have fallen sleep before increasing \tt{\head}.} \label{incrementHead2}
 \State \Return{ \tt{false}}
 \EndIf
 \EndFunction{Refresh}
@@ -324,7 +314,7 @@
 \pagebreak
 
 \Function{<Block, int, int>}{CreateBlock}{\sl{int} i} 
-\Statex\cmt{Creates a block to be inserted into as $i$th \tt{block} in \tt{blocks}. Returns the created block as well as values read from each child's num\sub{propagated} field. These values are used for incrementing the children's num\sub{propagated} field if the block was appended to \tt{blocks} successfully.}
+\cmt{Creates a block to be inserted as $i$th \tt{block} in \tt{blocks}. Returns the created block as well as values read from each child's \tt{num\sub{propagated}} field. These values are used for incrementing the children's \tt{num\sub{propagated}} field if the block was appended to \tt{blocks} successfully.}
 \State \tt{block newBlock= \Call{new}{\sl{block}}}
 \State \tt{newBlock.group= num\sub{propagated}}\label{setGroup}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}}
@@ -344,7 +334,7 @@
 %\State \tt{b.sum= n.blocks[i-1].sum + b.num}
 
 \If{\tt{this} \bf{is} \tt{root}}
-\State \tt{newBlock.\size= max(root.blocks[i-1].\size + newBlock.num\sub{enq} - newBlock.num\sub{deq}, 0)}\label{computeLength}
+\State \tt{newBlock.\size= max(root.blocks[i-1].\size { }+ newBlock.num\sub{enq} - newBlock.num\sub{deq}, 0)}\label{computeLength}
 %\State \tt{b.sum\sub{non-null deq}= root.blocks[i-1].sum\sub{non-null deq} + max( b.num\sub{deq} - root.blocks[i-1].length - b.num\sub{enq}, 0)}
 \EndIf
 
@@ -359,15 +349,16 @@
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{800}
 \Statex
-\Statex $\leadsto$ \textsf{Precondition: \tt{root.blocks[end].sum\sub{enq} $\geq$ \tt{r\sub{enq}}}}
-\Function{<int, int>}{DSearch}{\sl{int} i, \sl{int} end}
-
-\Statex \cmt{\textmd{Searches for~the \tt{i}th enqueue of the given prefix sum of \tt{b}th block in the \tt{root}. Returns the index of the leftmost block in \tt{root.blocks} whose \sl{sum\sub{enq}} is $\geq$ \tt{i}}.}
+\Statex $\leadsto$ \textsf{Precondition: \tt{root.blocks[end].sum\sub{enq} $\geq$ \tt{e} $\geq$ 1}}
+\Function{<int, int>}{DSearch}{\sl{int} e, \sl{int} end}
+\cmt{Returns \tt{<b,i>} if $E_{root,e}=E_{root,b,i}$.}
 \State \tt{start= end-1}
-\While{\tt{root.blocks[start].sum\sub{enq}}$\geq$\tt{r\sub{enq}}}
-\State \tt{start= start-(end-start)}
-\EndWhile \State
-\Return \tt{root.BSearch(sum\sub{enq}, r\sub{enq}, start, end)}
+\While{\tt{root.blocks[start].sum\sub{enq}}$\geq$\tt{e}}
+\State \tt{start= max(start-(end-start), 0)}
+\EndWhile
+\State \tt{b= root.BSearch(sum\sub{enq}, e, start, end)}
+\State \tt{i= e- root.blocks[b-1].sum\sub{enq}}
+\State\Return \tt{<b,i>}
 \EndFunction{DSearch}
 \end{algorithmic}
 \end{algorithm}
@@ -380,35 +371,35 @@
 \setcounter{ALG@line}{400}
 
 \Statex $\leadsto$ \textsf{Precondition:~\tt{blocks[b].num\sub{enq}$\geq$i}}
-\Function{element}{GetEnq}{\sl{int} b, \sl{int} i} 
+\Function{element}{GetEnq}{\sl{int} b, \sl{int} i} \cmt{Returns the element of $E_{this,b,i}$.}
 \If{\tt{this} \bf{is} \tt{leaf}}
 \State\Return \tt{blocks[b].element}
-\ElsIf{\tt{i $\leq$ blocks[b].num\sub{enq-left}}} \cmt{\tt{i} exists in the left child of this node}
-\State \tt{subBlock= left.\Call{BSearch}{sum\sub{enq}, i, blocks[b-1].end\sub{left}+1, blocks[b].end\sub{left}}} \cmt{Search range of left child's subblocks of \tt{blocks[b]}.}
-\State \Return\tt{left.}\Call{Get}{i-left.blocks[subBlock-1].sum\sub{enq}, subBlock} 
+\ElsIf{\tt{i $\leq$ blocks[b].num\sub{enq-left}}} \cmt{$E_{this,b,i}$ is in the left child of this node.}
+\State \tt{subBlock= left.\Call{BSearch}{sum\sub{enq}, i+left.blocks[blocks[b].end\sub{left}-1].sum\sub{enq}, blocks[b-1].end\sub{left}+1, blocks[b].end\sub{left}}} 
+\State \Return\tt{left.}\Call{GetEnq}{subBlock, i} 
 \Else
 \State \tt{i= i-blocks[b].num\sub{enq-left}}
-\State\tt{subBlock= right.\Call{BSearch}{sum\sub{enq}, i, blocks[b-1].end\sub{right}+1, blocks[b].end\sub{right}}} \cmt{Search range of right child's subblocks of \tt{blocks[b]}.} \label{rightChildGet}
-\State \Return\tt{right.}\Call{Get}{i-right.blocks[subBlock-1].sum\sub{enq}, subBlock} 
+\State\tt{subBlock= right.\Call{BSearch}{sum\sub{enq}, i+right.blocks[blocks[b].end\sub{right}-1].sum\sub{enq}, blocks[b-1].end\sub{right}+1, blocks[b].end\sub{right}}} \label{rightChildGet}
+\State \Return\tt{right.}\Call{GetEnq}{subBlock, i} 
 \EndIf
 \EndFunction{GetEnq}
 
 \Statex
 \Statex $\leadsto$ \textsf{Precondition: \tt{b}th block of the node has propagated up to the root and \tt{blocks[b].num\sub{enq}$\geq$i}.}
-\Function{<int, int>}{IndexDeq}{\sl{int} b, \sl{int} i} \cmt{Returns the rank of $i$th dequeue in the $b$th block of the node, among the dequeues in the root.}
+\Function{<int, int>}{IndexDeq}{\sl{int} b, \sl{int} i} \cmt{Returns \tt{<x, y>} if $D_{this,b,i}=D_{root,x,y}$.}
 \If{\tt{this} \bf{is} \tt{root}}
 \State\Return \tt{<b, i>} \label{indexBaseCase}
 \Else
-\State \tt{dir= (parent.left==n)? left: right} \cmt{check if a left or a right child}
-\State \tt{superBlock= parent.\Call{BSearch}{sum\sub{deq-dir}, i, super[blocks[b].group]-p, super[blocks[b].group]+p}} \label{computeSuper}
+\State \tt{dir= (parent.left==n)? left: right} \cmt{check if this node is a left or a right child}
+\State \tt{superBlock= parent.\Call{BSearch}{sum\sub{deq-dir}, i+blocks[b-1].sum\sub{deq}, super[blocks[b].group]-p, super[blocks[b].group]+p}} \label{computeSuper}
 \Statex\cmt{superblock's group has at most $p$ difference with the value stored in \tt{super[]}.}
 \If{\tt{dir {\keywordfont is} right}}
 %\State \tt{i+= parent.blocks[superBlock-1].sum\sub{deq-right}}
-\State \tt{i+= blocks[superBlock].sum\sub{deq-left}} \cmt{consider the dequeues from the right child}
+\State \tt{i+= blocks[superBlock].num\sub{deq-left}} \cmt{consider the dequeues from the right child}
 \EndIf
 \State \Return\tt{this.parent.}\Call{IndexDeq}{superBlock, i}
 \EndIf
-\EndFunction{Index}
+\EndFunction{IndexDeq}
 
 \end{algorithmic}
 \end{algorithm}
@@ -486,10 +477,13 @@
 
 \Statex
 %\Statex $\diamondsuit$ \tt{\sl{Array implementation}}
-\Statex \tt{blocks[]: }\sf{array of blocks}
+\Statex \tt{\sl{block[]} blocks: }\sf{array of blocks}
+\Statex \tt{\sl{int[]} super}\textsf{: \tt{super[i]} stores an approximate index of the superblock of the blocks in \tt{blocks} whose \tt{group} field have value \tt{i}.}
+\Statex
 \Function{boolean}{TryAppend}{\sl{block} blk, \sl{int} n} 
 \State \Return{\tt{CAS(blocks[n], null, blk)}}
 \EndFunction{TryAppend}
+
 
 \end{algorithmic}
 \end{algorithm}
@@ -548,7 +542,7 @@
 \framebox[1.1\width]{Question} How to remove the notion of time? To say pre(n,i) contains n.blocks[0..i] instead of EST(n,t) which head=i at time t. Is it good? Furthermore, can we remove the notion of established blocks?
 
 \begin{definition}[Block]
-A block is an object storing some statistics, as described in Algorithm Queue. It implicitly represents a set of operations. If \nf{n.blocks[i]==b}  we call \nf{i} the \emph{index} of block \nf{b}. Block \nf{b} is before block \nf{b$^\prime$} in node \nf{n} if and only if the index of the \nf{b} is smaller than the index of the \nf{b$^\prime$}'s. 
+A block is an object storing some statistics, as described in Algorithm Queue. It implicitly represents a set of operations. If \nf{n.blocks[i]==b}  we call \nf{i} the \emph{index} of block \nf{b}. Block \nf{b} is before block \nf{b$^\prime$} in node \nf{n} if and only if the index of the \nf{b} is smaller than the index of the \nf{b$^\prime$}'s. For a \tt{block} in a \tt{BlockList} we define \it{the prefix for the block} to be the blocks in the \tt{BlockList} up to and including the \tt{block}.
 \end{definition}
 
 \begin{definition}[Subblock]\label{def::subblock}
@@ -858,7 +852,9 @@ We will prove this by induction on the distance of \nf{n} from the \nf{root}. We
   Let $S$ be the state of an empty queue if the operations in prefix in $L$ of $i$th dequeue in $D(root,b)$ are applied on it. \nf{FindResponse()} returns \nf{(b, i)} which $E(root, b, i)$ is the the head of the queue in $S$. If the queue is empty in $S$ then it returns \nf{<-1,-->}.
   \end{lemma}
 \begin{proof}
-  The \size of the queue if the operations in the prefix for the $b$th block in the root are applied with the order of $L$ is stored in the \nf{root.blocks[b].\size}. It is computed while creating the block in Line~\ref{computeLength}. If the \size of a queue is greater than 0 then a \nf{Dequeue()} would decrease the \size of the queue, otherwise the \size of the queue remains 0. Having \size of the queue after the previous block and number of enqueues and dequeues in the block, Line~\ref{computeLength} computes wether the queue becomes empty or the \size of it.
+  The \size of the queue if the operations in the prefix for the $b$th block in the root are applied with the order of $L$ is stored in the \nf{root.blocks[b].\size}. It is computed while creating the block in Line~\ref{computeLength}. If the \size of a queue is greater than 0 then a \nf{Dequeue()} would decrease the \size of the queue, otherwise the \size of the queue remains 0. Having \size of the queue after the previous block and number of enqueues and dequeues in the block, Line~\ref{computeLength} computes wether the queue becomes empty or the \size  of it.
+  
+  \tt{r\sub{enq}= (i\sub{d} + root.blocks[b\sub{d}-1].sum\sub{deq}) - (root.blocks[b\sub{d}-1].size - root.blocks[b\sub{d}-1].sum\sub{enq} + root.blocks[b\sub{d}-1].sum\sub{deq})}
 \end{proof}
 \framebox[1.1\width]{HOW?} How to prove mathematicaly that \nf{ax(root.blocks[i-1].\size + b.num\sub{enq} - b.num\sub{deq}, 0)} is the \size of the queue after the block. I can only explain it here.
 %\begin{proof}

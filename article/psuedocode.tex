@@ -842,7 +842,7 @@ The number of the \nf{block}s with \nf{group=i} in a node is $\leq p$.
 \begin{lemma}[super property]\label{superCounter}
 If \nf{super[i] $\neq$ null} in node \nf{n}, then \nf{super[i]} is the index of the superblock of a block with \nf{time=i} in \nf{n.parent.blocks}.
 \end{lemma}
-\begin{lemma} Superblock of \nf{b} is within range $\pm 2p$ of the \nf{super[b.time]}.
+\begin{lemma}\label{superRange} Superblock of \nf{b} is within range $\pm 2p$ of the \nf{super[b.time]}.
 \end{lemma}
 
 \begin{proof} \nf{super[i]} is the index of the superblock of a block containing block b, followed by Lemma \ref{superCounter}. \nf{super(b)} is the real superblock of b. \nf{super(t]} is the index of the superblock of the last block with time \nf{t}. If \nf{b.time} is \nf{t} we have:
@@ -917,8 +917,16 @@ Once some operations are aggregated in one block they will be propagated togethe
 
 \begin{lemma}[Amortized time analysis]
 %  \nf{n.GetEnq(b,i), n.Index(b,i)} take $O(\log^2 p)$ steps. Search in the root may take $O(\log Q+ p^2)$ steps. Helping is done every $p^2$ block appended to the root and takes $p\times \log^2p$ steps. Amortized time consumed for helping by each process is $O(\log^2 p)$.
-\nf{Enqueue()} and \nf{Dequeue} take $O(\log62 p +q)$ steps (amortized anlysis), which $p$ is the number of processes and $q$ is the size of the queue at the time of invocation.
+\nf{Enqueue()} and \nf{Dequeue} take $O(\log^2 p +q)$ steps (amortized anlysis), which $p$ is the number of processes and $q$ is the size of the queue at the time of invocation.
 \end{lemma}
+\begin{proof}
+\nf{Enqueue(x)} consists of creating a \nf{block(x)} and appending it to the tree. The first part takes constant time. To propagate \nf{x} to the root the algorithm tries two \nf{Refresh}es in each node of the path from the leaf to the root (Lines \ref{firstRefresh}, \ref{secondRefresh}). Each \nf{Refresh} takes $O(1)$ steps since creating a block is done in constant time and does $O(1)$ \nf{CAS}es. Since the height of the tree is $O(\log p)$, \nf{Enqueue(x)} takes $O(\log p)$ steps.
+
+A \nf{Dequeue()} creates a block with null value element, appends it to the tree, computes its order among operations, and returns the response. The first two part is similar to an \nf{Enqueue} operation. To compute the order there are some constant steps and \nf{IndexDeq} is called. \nf{IndexDeq} does a search with range $p$ in each level (Lemma \ref{superRange}) which takes $O(log^2 p)$ in the tree. In the \nf{FindResponse()} routine \nf{DSearch()} in the root takes $\Theta(\log$(\nf{root.blocks[b].\size+root.blocks[end].\size}) by Lemma \ref{dsearch}, which is $O(\log$ size of the queue when \nf{enqueue} is invoked$)+\log$ size of the queue when \nf{dequeue} is invoked$)$. Each search in \nf{GetEnq()} takes $O(\log p)$ since there are $\leq p$ subblocks in a block (Lemma \ref{subBlocksBound}), so \nf{GetEnq()} takes $O(\log^2 p)$ steps.
+
+If we split \nf{DSearch} time cost between the corresponding \nf{Enqueue}, \nf{Dequeue}, in amortized we have \nf{Enqueue} takes $O(\log p +q)$ and \nf{Dequeue} takes $O(\log^2 p +q)$ steps.
+\end{proof}
+
 
 %\begin{lemma}[Root search range]\label{rootRange}
 %  \nf{root.size-root.FindMostRecentDone()} is $O(p^2+q)$, which $p$ is \# processes and $q$ is the \size of the queue.

@@ -52,7 +52,7 @@
 \newcommand{\nf}[1]{{\normalfont{\texttt{#1}}}}
 \newcommand{\cmt}[1]{\Comment{#1}}
 \newcommand{\head}{head}
-\newcommand{\size}{size}
+\newcommand{\size}{size }
 
 \usepackage{amsmath,amssymb,amsthm}
 \newtheorem{theorem}{Theorem}
@@ -395,7 +395,7 @@
 \Statex\cmt{superblock's group has at most $p$ difference with the value stored in \tt{super[]}.}
 \If{\tt{dir {\keywordfont is} right}}
 %\State \tt{i+= parent.blocks[superBlock-1].sum\sub{deq-right}}
-\State \tt{i+= blocks[superBlock].num\sub{deq-left}} \cmt{consider the dequeues from the right child}
+\State \tt{i+= blocks[superBlock].num\sub{deq-left}} \cmt{consider the dequeues from the right child} \label{considerRight}
 \EndIf
 \State \Return\tt{this.parent.}\Call{IndexDeq}{superBlock, i}
 \EndIf
@@ -784,6 +784,14 @@ Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\si
 
 \pagebreak
 
+\begin{lemma}[Index correctness]
+ \nf{n.IndexDEQ(b,i)} returns the rank in $D(root)$ of $D_{n,b,i}$.
+\end{lemma}
+\begin{proof}
+We will prove this by induction on the distance of \nf{n} from the \nf{root}. We can see the base case \nf{root.IndexDEQ(b,i)} is trivial (Line \ref{indexBaseCase}).
+  In the non-root nodes \nf{n.IndexDEQ(b,i)} computes the superblock of the $i$th Dequeue in the $b$th block of \nf{n} in \nf{n.parent} by Lemma \ref{superBlock} (Line \ref{computeSuper}). After that the order in $D(n.parent, superblock)$ is computed and \nf{index()} is called on \nf{n.parent} recursively. Then if the operation was propagated from the right child the number of dequeues from the left child are added to it (Line \ref{considerRight}), because the left child operations come before the right child operations (Definition \ref{ordering}).
+\end{proof}
+\textit{Do I need to talk about the computation of the order in the parent which is based on the definition of ordering of dequeues in a block? Make sure to show preconditions of all invocation of \nf{BSearch} are satisfied.}
 
 %\begin{definition}
 %An enqueue operation is \textit{finished} if its argument is returned by some process. A dequeue operation is \texttt{finished} if it returns \nf{null} or some value. Block \nf{b} is \textit{done} if all operations in \nf{ops(b)} are finished.
@@ -793,47 +801,58 @@ Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\si
 %\begin{lemma}[help]\label{help}
 %After that \nf{TryAppend()} who is helping finishes, prefix for the blocks of \nf{root.blocks[root.FindMostRecentDone]} are done.
 %\end{lemma}
-Preconditions of all invocation of \nf{BSearch} are satisfied.
+
 \begin{lemma}[Computing SuperBlock]\label{superBlock}
 After computing line \ref{computeSuper} of \nf{n.IndexDEQ(b,i)}, \nf{n.parent.blocks[superblock]} contains $D(n,b,i)$.
 \end{lemma}
 \begin{proof}
-\begin{enumerate}
- \item Value read for \nf{super[b.group]} in line 418 is not null.\\$\blacktriangleright$
+Lemmas 28,29,30,31.
+\end{proof}
+\begin{lemma}
+Value read for \nf{super[b.group]} in line 418 is not null.\end{lemma}
+\begin{proof}
   Values \nf{np\textsubscript{dir}} read in lines \ref{setNP}, \nf{super} are set before incrementing in lines \ref{setSuper},\ref{incNP}. So before incrementing \nf{num\sub{propagated}, super[num\sub{propagated}]} is set so it cannot be null while reading.
+\end{proof}
+\begin{lemma} \nf{super[]} preserves order from child to parent; i.e. if in node \nf{n} block \nf{b} is before \nf{c} then \nf{b.group} $\leq$ \nf{c.group}
+\end{lemma}
+\begin{proof} Line \ref{setGroup}. Since  \nf{num\sub{propagated}} is increasing.\end{proof}
 
- \item \nf{super[]} preserves order from child to parent; i.e. if in node \nf{n} block \nf{b} is before \nf{c} then \nf{b.group} $\leq$ \nf{c.group}
-$\blacktriangleright$ Line \ref{setGroup}. Since  \nf{num\sub{propagated}} is increasing.
+\begin{lemma} Let \nf{b, c} be in node \nf{n}, if \nf{b.group} $\leq$ \nf{c.group} then \nf{super[b.group]} $\leq$ \nf{super[c.group]}\end{lemma}
+\begin{proof} Line \ref{setSuper}.\end{proof}
 
- \item Let \nf{b, c} be in node \nf{n}, if \nf{b.group} $\leq$ \nf{c.group} then \nf{super[b.group]} $\leq$ \nf{super[c.group]}\\$\blacktriangleright$ Line \ref{setSuper}.
+\begin{lemma}
+The number of the \nf{block}s with \nf{group=i} in a node is $\leq p$.  
+\end{lemma}
+\begin{proof}For the sake of simplicity we assumed all the blocks are propagated from the left child.
+\begin{figure}[hbt]
+  \center\includegraphics[width=5in]{pics/index1}
+\end{figure}  
+\end{proof}
 
 
 % \item In a propagate step at most 2 different time values are read \\ If there are more than 2 numbers then the smallest number should have been propagated far before.
 % \item There are at most $p^2$ blocks with same time value in a node. \\ At most p processes could die before line 27 and each contains at most p elements.
- \item \nf{super[i+1]-super[i]}$\leq p$
-\\$\blacktriangleright$
+\begin{lemma} \nf{super[i+1]-super[i]}$\leq p$\end{lemma}
+\begin{proof}
  In a Refresh with successful CAS in line 46, \nf{super} and \nf{counter} are set for each child in lines 48,49. Assume the current value of the counter in node \nf{n} is \nf{i+1} and still \nf{super[i+1]} is not set. If an instance of successful \nf{Refresh(n)} finishes \nf{super[i+1]} is set a new value and a block is added after \nf{n.parent[sup[i]]}. There could be at most $p$ successful unfinished concurrent instances of \nf{Refresh()} that have not reached line 49. So the distance between \nf{super[i+1]} and \nf{super[i]} is less than $p$.
-
- \item Superblock of \nf{b} is within range $\pm 2p$ of the \nf{super[b.time]}.
-\\$\blacktriangleright$
-\nf{super[i]} is the index of the superblock of a block containing block b, followed by Lemma \ref{superCounter}. It is trivial to see that \nf{n.super} and \nf{n.b.counter} are increasing. \nf{super(b)} is the real superblock of b. \nf{super(t]} is the index of the superblock of the last block with time \nf{t}. If \nf{b.time} is \nf{t} we have:
-$$super[t]-p\leq super[t-1]\leq super(t-1] \leq super(b) \leq super(t+1)\leq super(t+1]\leq super[t]+p$$
-
-\end{enumerate}
+ \begin{figure}[hbt]
+  \center\includegraphics[width=4in]{pics/index2}
+\end{figure}  
 \end{proof}
-We call the dequeues that return some value \it{non-null dequeues}. $r$th non-null dequeue returns the element of th $r$th enqueue. We can compute \# non-null dequeues in the prefix for a block this way: \#non-null dequeues= \size - \#enqueues. Note that the $i$th dequeue in the given block is not a non-null dequeue.
+\begin{lemma}[super property]\label{superCounter}
+If \nf{super[i] $\neq$ null} in node \nf{n}, then \nf{super[i]} is the index of the superblock of a block with \nf{time=i} in \nf{n.parent.blocks}.
+\end{lemma}
+\begin{lemma} Superblock of \nf{b} is within range $\pm 2p$ of the \nf{super[b.time]}.
+\end{lemma}
+
+\begin{proof} \nf{super[i]} is the index of the superblock of a block containing block b, followed by Lemma \ref{superCounter}. \nf{super(b)} is the real superblock of b. \nf{super(t]} is the index of the superblock of the last block with time \nf{t}. If \nf{b.time} is \nf{t} we have:
+$$super[t]-p\leq super[t-1]\leq super(t-1] \leq super(b) \leq super(t+1)\leq super(t+1]\leq super[t]+p$$
+\end{proof}
+
 
 \pagebreak
 
 
-\begin{lemma}[Index correctness]
- \nf{n.IndexDEQ(b,i)} returns the rank in $D(root)$ of $D_{n,b,i}$.
-\end{lemma}
-\begin{proof}
-We will prove this by induction on the distance of \nf{n} from the \nf{root}. We can see the base case \nf{root.IndexDEQ(b,i)} is trivial (Line \ref{indexBaseCase}).
-  In the non-root nodes \nf{n.IndexDEQ(b,i)} computes the superblock of the $i$th Dequeue in the $b$th block of \nf{n} in \nf{n.parent} by Lemma \ref{superBlock} (Line \ref{computeSuper}). After that the order in $D(n.parent, superblock)$ is computed and \nf{index()} is called on \nf{n.parent} recursively. Then if the operation was propagated from the right child the number of dequeues from the left child are added to it, because the left child operations come before the right child operations (\ref{ordering}).
-\end{proof}
-\textit{Do I need to talk about the computation of the order in the parent which is based on the definition of ordering of dequeues in a block?}
 
 %\begin{lemma}[Search Ranges]\label{search}
 %  Preconditions of all invocation of \nf{BSearch} are satisfied.
@@ -847,7 +866,7 @@ We will prove this by induction on the distance of \nf{n} from the \nf{root}. We
 %Line 101: Here, the goal is to find the superblock. We know the distance between answer and the \nf{super[i]} is at most $p$, since at most $p$ processes could die.
 %
 %\end{proof}
-
+We call the dequeues that return some value \it{non-null dequeues}. $r$th non-null dequeue returns the element of th $r$th enqueue. We can compute \# non-null dequeues in the prefix for a block this way: \#non-null dequeues= \size - \#enqueues. Note that the $i$th dequeue in the given block is not a non-null dequeue.
 \begin{lemma}[Computing Queue's Head block] \label{computeHead}
   Let $S$ be the state of an empty queue if the operations in prefix in $L$ of $i$th dequeue in $D(root,b)$ are applied on it. \nf{FindResponse()} returns \nf{(b, i)} which $E(root, b, i)$ is the the head of the queue in $S$. If the queue is empty in $S$ then it returns \nf{<-1,-->}.
   \end{lemma}
@@ -860,33 +879,8 @@ We will prove this by induction on the distance of \nf{n} from the \nf{root}. We
 %\begin{proof}
 %  \nf{head} is incremented in lines 51, 54 after trying to append a block to the index of the last \nf{head} read. If it was successful, we have to do this, but if it was unsuccessful, it means it has appended to the index before, so we have to update the \nf{head}. If a process dies before line 51, another process will increment \nf{head} in line 54.
 %\end{proof} 
-\begin{lemma}[super property]\label{superCounter}
-If \nf{super[i] $\neq$ null}, then \nf{super[i]} in node \nf{n} is the index of the superblock of a block with \nf{time=i}$\pm$\nf{p}.
-\end{lemma}
-\pagebreak
-
-
-
-%\begin{proof}
-%After a successful CAS in line 46 \nf{super} and \nf{counter} are modified in both children. \nf{super[i]} is supposed to be the superblock of a block with \nf{time}=i and \nf{counter} is the timer in each node. \nf{super[i]} and \nf{counter=i} are expected to update after a bunch of blocks with \nf{time=i} have been aggregated together into a block in the parent. If the process dies before line 48 these values remain unchanged and incoming blocks will get the same \nf{time}. We claim that our algorithm still works since at most $p$ processes die and it will not change our complexity. If a process dies right after line 48, then \nf{counter} will remain the same and \nf{super[i]} is correct. Furthermore we are sure that when \nf{super[i]} is read it will not be \nf{null}.
-%\end{proof}
-
-\begin{lemma}[Computing Queue's Head block] \label{computeHead}
-  Let $S$ be the state of an empty queue if the operations in prefix in $L$ of $i$th dequeue in $D(root,b)$ are applied on it. \nf{FindResponse()} returns \nf{(b, i)} which $E(root, b, i)$ is the the head of the queue in $S$. If the queue is empty in $S$ then it returns \nf{<-1,-->}.
-  \end{lemma}
-\begin{proof}
-  The \size of the queue if the operations in the prefix for the $b$th block in the root are applied with the order of $L$ is stored in the \nf{root.blocks[b].\size}. It is computed while creating the block in Line~\ref{computeLength}. If the \size of a queue is greater than 0 then a \nf{Dequeue()} would decrease the \size of the queue, otherwise the \size of the queue remains 0. Having \size of the queue after the previous block and number of enqueues and dequeues in the block, Line~\ref{computeLength} computes wether the queue becomes empty or the \size of it.
-\end{proof}
-\framebox[1.1\width]{HOW?} How to prove mathematicaly that \nf{ax(root.blocks[i-1].\size + b.num\sub{enq} - b.num\sub{deq}, 0)} is the \size of the queue after the block. I can only explain it here.
-%\begin{proof}
-%  \nf{head} is incremented in lines 51, 54 after trying to append a block to the index of the last \nf{head} read. If it was successful, we have to do this, but if it was unsuccessful, it means it has appended to the index before, so we have to update the \nf{head}. If a process dies before line 51, another process will increment \nf{head} in line 54.
-%\end{proof} 
 
 \pagebreak
-
-
-
-
 
 \begin{theorem}[Main]
 The queue implementation is linearizable.

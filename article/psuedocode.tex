@@ -241,14 +241,13 @@
 \label{deqRest}
 \If{\tt{i\sub{enq}==-1}}
 \State \tt{output= null}
-\pagebreak
 \Else
 \State \tt{output= \Call{GetEnq}{b\sub{enq}, i\sub{enq}}}
 \EndIf
 \State \Return{\tt{output}}
 \EndFunction{Dequeue}
 
-\Statex
+\pagebreak
 
 \Function{<int, int>}{FindResponse}{\sl{int} b\sub{d}, \sl{int} i\sub{d}}\cmt{Returns \tt{<b\sub{e},i\sub{e}>}, if $E_{root,b_e,i_e}$ is the response to the $D_{root,b_d,i_d}$. Returns \tt{<-1,-->} if the queue is empty.}
 \If{\tt{ root.blocks[b\sub{d}-1].\size}\tt{ + root.blocks[b\sub{d}].num\sub{enq} - i\sub{d} $<$ 0}}
@@ -849,6 +848,12 @@ If \nf{super[i] $\neq$ null} in node \nf{n}, then \nf{super[i]} is the index of 
 $$super[t]-p\leq super[t-1]\leq super(t-1] \leq super(b) \leq super(t+1)\leq super(t+1]\leq super[t]+p$$
 \end{proof}
 
+\begin{lemma}
+Search in each level of \nf{IndexDeq()} takes $O(\log p)$ steps.  
+\end{lemma}
+\begin{proof}
+Show preconditions are satisfied and the range is $p$.  
+\end{proof}
 
 \pagebreak
 
@@ -888,15 +893,17 @@ The queue implementation is linearizable.
 \begin{proof}
   We choose $L$ in Definition \ref{ordering} to be linearization ordering of operations and prove if we linearize operations as $L$ the queue works consistently.
 \end{proof}
-\begin{lemma}
-Operations in a block have a time point in common (There is a time $t$ all the operations are running).
-\end{lemma}
+%\begin{lemma}
+%Operations in a block have a time point in common (There is a time $t$ all the operations are running).
+%\end{lemma}
 
 \begin{lemma}[satisfiability]
 $L$ can be a linearization ordering.
 \end{lemma}
 \begin{proof}
-Once some operations are aggregated in one block they will be propagated together up to the root and we can linearize them in any order among themselves (previous lemma). Furthermore in L we arbitrary choose the order to be by process id, since it makes computations in  the blocks faster .
+To show this we need to say if in an execution, \nf{op\sub{1}} terminates before \nf{op\sub{2}} starts then \nf{op\sub{1}} is linearized before \nf{op\sub{2}}. If \nf{op\sub{1}} terminates before \nf{op\sub{2}} starts it means \nf{op\sub{1}.Append()} is terminated before \nf{op\sub{2}.Append()} starts. From Lemma \ref{append} \nf{op\sub{1}} is in \nf{root.blocks} before \nf{op\sub{2}} propagates so \nf{op\sub{1}} is linearized before \nf{op\sub{2}} by Definition \ref{ordering}.
+
+Once some operations are aggregated in one block they will be propagated together up to the root and we can linearize them in any order among themselves. Furthermore in L we arbitrary choose the order to be by process id, since it makes computations in the blocks faster .
 \end{proof}
 
 \begin{lemma}[correctness]

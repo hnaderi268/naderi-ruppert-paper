@@ -284,7 +284,7 @@
 \Function{boolean}{Refresh()}{}
 \State \tt{h= \head} \label{readHead}
 %\If{\tt{n.blocks[h]!=null?}} \tt{h+=1}\EndIf
-\State \tt{<new, np\sub{left}, np\sub{right}>= \Call{CreateBlock}{s}} \cmt{\tt{np\sub{left}, np\sub{right}} are the values read from the children's \tt{num\sub{propagated}} field.}
+\State \tt{<new, np\sub{left}, np\sub{right}>= \Call{CreateBlock}{h}} \label{invokeCreateBlock} \cmt{\tt{np\sub{left}, np\sub{right}} are the values read from the children's \tt{num\sub{propagated}} field.}
 \If{\tt{new.num==0}} \Return{\tt{true}} \label{addOP} \cmt{The block contains nothing.}
 \ElsIf{\tt{blocks.tryAppend(new, h)}} \label{cas}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}} \label{okcas}
@@ -544,20 +544,39 @@
 A block is an object storing some statistics, as described in Algorithm Queue. It implicitly represents a set of operations. If \nf{n.blocks[i]==b}  we call \nf{i} the \emph{index} of block \nf{b}. Block \nf{b} is before block \nf{b$^\prime$} in node \nf{n} if and only if the index of the \nf{b} is smaller than the index of the \nf{b$^\prime$}'s. For a \tt{block} in a \tt{BlockList} we define \it{the prefix for the block} to be the blocks in the \tt{BlockList} up to and including the \tt{block}.
 \end{definition}
 
+\begin{invariant}[headPosition] \label{lem::headPosition} If the value of \nf{n.head} is \nf{h} then, \nf{n.blocks[i]=null} for \nf{i>h} and \nf{n.blocks[i]$\neq$null} for \nf{i<h}.
+\end{invariant}
+\begin{proof}
+The invariant is true initially since 1 is assigned to \nf{n.head} and \nf{n.blocks[x]} is null for every \nf{x}. The truth of the invariant may be affected by writing into \nf{n.blocks} or incrementing \nf{n.head}.
+
+Some value is written into \nf{n.blocks[head]} only in Line 313. It is obvious that writing into \nf{n.blocks[head]} presereves the invariant. The value of \nf{n.head} is modified only in lines \ref{incrementHead1}], \ref{incrementHead2}. Depending on wether the \nf{TryAppend()}in Line\ref{cas} succeeded or not we show that the claim holds after the increment lines of \nf{n.head} in either case. If \nf{head} is incremented to $h$ it is sufficient to show \nf{n.blocks[h]}$\neq$\nf{null} to prove the invariant still holds. In the first case the process applied a successful \nf{TryAppend(new,h)} in line \ref{okcas}, which means \nf{n.blocks[h]} is not null anymore. Note that wether\ref{incrementHead1} returns true or false after Line \nf{n.head} we know has been incremented from Line \ref{readHead}. The failure case is also the same since it means some value is written into \nf{n.blocks[head]} by some process.
+%At the end of every \nf{n.Refresh()} with a block  with \head greater than 0 returned by \nf{CreateBlock()} \nf{n.head} is incremented (Lines \ref{incrementHead1}, \ref{incrementHead2}). If a process went to sleep before incrementing the \nf{established} (line \ref{incrementHead1}), nothing can be appended to \nf{n.blocks} until another process increments \nf{n.establsihed} (Line \ref{incrementHead2}).
+\end{proof}
+\it{Explain More}
+
+\begin{lemma}[headProgress] \label{lem::headProgress}
+\nf{n.head} is non-decreasing over time and \nf{n.blocks[i].end\sub{left}} $\geq$ \nf{n.blocks[i-1].end\sub{left}} and \nf{n.blocks[i].end\sub{right}} $\geq$ \nf{n.blocks[i-1].end\sub{right}}.
+\end{lemma}
+\begin{proof}
+The first claim follows trivially from the pseudocode since \nf{n.head} is only incremented in the pseudocode in the lines \ref{incrementHead1} and \ref{incrementHead2} of the \nf{Refresh()} .
+
+Consider the block \nf{b} written into \nf{n.blocks[i]} by \nf{TryAppend()} at Line \ref{cas}. It is created by the \nf{CreateBlock()} called at Line \ref{invokeCreateBlock}. Prior to this call to \nf{CreateBlock()}, \nf{n.head=i} at Line \ref{readHead}, so \nf{n.blocks[i-1]} is already a non-null value \nf{b}$^\prime$ by invariant \ref{lem::headPosition}. Thus the \nf{CreateBlock(i-1)} that creates  \nf{b}$^\prime$ terminates before \nf{CreateBlock(i)} that creates \nf{b} is invoked. The value written into \nf{b.end\sub{left}} at Line \ref{endDefLine} of \nf{CreateBlock()}  was read from \nf{n.left.head} at Line \ref{lastLine} of \nf{CreateBlock}. Similarly, the value in \nf{n.blocks[i-1].end\sub{left}} was read from \nf{n.left.head}. Since \nf{n.left.head} is non-decreasing \nf{b}$^\prime$\nf{.end\sub{left}} $\leq$ \nf{b.end\sub{left}}. The proof for \nf{end\sub{right}} is similar.
+\end{proof}
+
 \begin{definition}[Subblock]\label{def::subblock}
-Block \texttt{b} is a \emph{direct subblock} of \texttt{n.blocks[i]} if it is $\in$ \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]} (See line \ref{endDefLine} for the defined range). Block \texttt{b} is a subblock of a \texttt{n.blocks[i]} if it is a direct subblock of it or subblock of a direct subblock of it. 
+Block \texttt{b} is a \emph{direct subblock} of \texttt{n.blocks[i]} if it is in \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]} (The \nf{end\sub{left}, end\sub{right}} fields are written in \ref{endDefLine} of \nf{CreateBlock()}). Block \texttt{b} is a subblock of \texttt{n.blocks[i]} if \nf{b} is a direct subblock of \texttt{n.blocks[i]} or a subblock of a direct subblock of \texttt{n.blocks[i]}. 
 \end{definition}
 
 \begin{definition}[Superblock]
-  Block b is direct superblock of block c if c is a direct subblock of b.   Block b is superblock of block c if c is a subblock of b.
+  Block \nf{b} is \t{direct superblock} of block \nf{c} if c is a direct subblock of b.   Block \nf{b} is \it{superblock} of block \nf{c} if \nf{c} is a subblock of \nf{b}.
 \end{definition}
 
 \begin{definition}[Operations of a block]\label{def::ops}
-A block lb in a leaf represents one operation which if it is \tt{enqueue(x)} then \tt{lb.element=x}, otherwise \tt{element=null}. The set of operations of block $b$ are the operations in the subblocks of $b$. We show the set of operations of block b by \nf{ops(b)}.
+A leaf block \nf{b} in a leaf represents operation \nf{x} if \tt{b.element=x$\neq$null}. The set of operations of block \nf{b} are the operations in the subblocks of \nf{b}. We denote the set of operations of block \nf{b} by \nf{ops(b)}.
+
+
+We say block \nf{b} is \it{propagated to node} \nf{n} if \nf{b} is in \nf{n.blocks} or is a subblock of a block in \nf{n.blocks}. We also say \nf{b} contains \nf{op} if \nf{op}$\in$\nf{ops(b)}.
 \end{definition}
-
-For simplicity we say block \nf{b} is propagated to node \nf{n} or to a set of blocks \nf{S} if \nf{b} is in \nf{n.blocks} or \nf{S} or is a subblock of a block in \nf{n.blocks} or \nf{S}. We also say $b$ contains $op$ if $op\in ops(b)$.
-
 
 
 %\begin{definition}
@@ -565,7 +584,7 @@ For simplicity we say block \nf{b} is propagated to node \nf{n} or to a set of b
 %\end{definition}
 
 \begin{definition}
- A block \nf{b} in \nf{n.blocks} is \emph{established} at time $t$ if the last value written into \nf{n.head} before $t$ is greater than the index of \nf{b} in \nf{n.blocks} at time $t$. \emph{EST\sub{n, t}} is the set of established blocks at time $t$ of node $n$.
+ A block \nf{b} in \nf{n.blocks} is \emph{established} at time $t$ if the last value written into \nf{n.head} before $t$ is greater than the index of \nf{b} in \nf{n.blocks} at time $t$. \emph{EST\sub{n, t}} is the set of established blocks  of node \nf{n} at time $t$.
 \end{definition}
 
 
@@ -573,13 +592,6 @@ For simplicity we say block \nf{b} is propagated to node \nf{n} or to a set of b
 Once a block \nf{b} is written in \nf{n.blocks[i]} then \nf{n.blocks[i]} never changes.
 \end{observation}
 
-
-\begin{lemma}[headProgress] \label{lem::headProgress}
-\nf{n.head} is non-decreasing over time and \nf{n.blocks[i].end\sub{left}} $\geq$ \nf{n.blocks[i-1].end\sub{left}},\nf{n.blocks[i].end\sub{right}} $\geq$ \nf{n.blocks[i-1].end\sub{right}}.
-\end{lemma}
-\begin{proof}
-The first claim follows trivially from the pseudocode since \nf{n.head} is only incremented. Also  when \nf{n.blocks[i]} is created its \nf{end\sub{left}, end\sub{right}} are greater than or equal to the values in \nf{n.blocks[i-1]}. Since \nf{blocks[i-1].end\sub{dir}}$<$\nf{dir.\head = blocks[i].end\sub{dir}} (Lines~\ref{lastLine, prevLine}).
-\end{proof}
 
 \begin{lemma}
 Every block has most one direct superblock.
@@ -595,16 +607,6 @@ If \nf{op} is in \nf{n.blocks[i]} then there is no \nf{j$\neq$i} such that \nf{o
 %\nf{Append(op)} adds \nf{op} to \nf{l\textsubscript{p}.blocks}(Line~\ref{addOP}) and \nf{Propagate()} recursively propagates \nf{op} up to the root.
 %By lemma \ref{doublyRefresh} we know that operation \nf{op} propagates from child to parent at each level.
 %\end{proof}
-
-\begin{invariant}[headPosition] \label{lem::headPosition} If the value of \nf{n.head} is \nf{h} then, \nf{n.blocks[i]=null} for \nf{i>h} and \nf{n.blocks[i]$\neq$null} for \nf{i<h}.
-\end{invariant}
-\begin{proof}
-The invariant is true initially since 1 is assigned to \nf{n.head} and \nf{n.blocks[x]} is null for every \nf{x}. The truth of the invariant may be affected by writing into \nf{n.blocks} or incrementing \nf{n.head}.
-
-Some value is written into \nf{n.blocks[head]} only in Line 313. It is obvious that writing into \nf{n.blocks[head]} presereves the invariant. The value of \nf{n.head} is modified only in lines \ref{incrementHead1}], \ref{incrementHead2}. Depending on wether the \nf{TryAppend()}in Line\ref{cas} succeeded or not we show that the claim holds after the increment lines of \nf{n.head} in either case. If \nf{head} is incremented to $h$ it is sufficient to show \nf{n.blocks[h]}$\neq$\nf{null} to prove the invariant still holds. In the first case the process applied a successful \nf{TryAppend(new,h)} in line \ref{okcas}, which means \nf{n.blocks[h]} is not null anymore. Note that wether\ref{incrementHead1} returns true or false after Line \nf{n.head} we know has been incremented from Line \ref{readHead}. The failure case is also the same since it means some value is written into \nf{n.blocks[head]} by some process.
-%At the end of every \nf{n.Refresh()} with a block  with \head greater than 0 returned by \nf{CreateBlock()} \nf{n.head} is incremented (Lines \ref{incrementHead1}, \ref{incrementHead2}). If a process went to sleep before incrementing the \nf{established} (line \ref{incrementHead1}), nothing can be appended to \nf{n.blocks} until another process increments \nf{n.establsihed} (Line \ref{incrementHead2}).
-\end{proof}
-\it{Explain More}
 
 %\begin{lemma}[oldnewOrder] \label{lem::oldnewOrder}
 %  If block \nf{b} in node \nf{n} is established, then all the blocks in \nf{n.blocks[]} before \nf{b} are established. If block \nf{b} in node \nf{n} is not new then all the blocks in \nf{n.blocks[]} before \nf{b} are not new.

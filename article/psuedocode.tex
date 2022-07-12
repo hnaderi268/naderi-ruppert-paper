@@ -372,9 +372,9 @@
 \Statex $\leadsto$ \textsf{Precondition:~\tt{blocks[b].num\sub{enq}$\geq$i}}
 \Function{element}{GetEnq}{\sl{int} b, \sl{int} i} \cmt{Returns the element of $E_{this,b,i}$.}
 \If{\tt{this} \bf{is} \tt{leaf}}
-\State\Return \tt{blocks[b].element}
-\ElsIf{\tt{i $\leq$ blocks[b].num\sub{enq-left}}} \cmt{$E_{this,b,i}$ is in the left child of this node.}
-\State \tt{subBlock= left.\Call{BSearch}{sum\sub{enq}, i+left.blocks[blocks[b].end\sub{left}-1].sum\sub{enq}, blocks[b-1].end\sub{left}+1, blocks[b].end\sub{left}}} 
+\State\Return \tt{blocks[b].element} \label{getBaseCase}
+\ElsIf{\tt{i $\leq$ blocks[b].num\sub{enq-left}}} \label{leftOrRight} \cmt{$E_{this,b,i}$ is in the left child of this node.}
+\State \tt{subBlock= left.\Call{BSearch}{sum\sub{enq}, i+left.blocks[blocks[b].end\sub{left}-1].sum\sub{enq}, blocks[b-1].end\sub{left}+1, blocks[b].end\sub{left}}} \label{leftChildGet}
 \State \Return\tt{left.}\Call{GetEnq}{subBlock, i} 
 \Else
 \State \tt{i= i-blocks[b].num\sub{enq-left}}
@@ -755,20 +755,33 @@ $\blacktriangleright$ Note that processes are numbered from 1 to $p$, left to ri
 
 \pagebreak
 
-Preconditions of all invocation of \nf{BSearch} are satisfied.
+\begin{lemma}[Get BSearch correctness] \label{getSearch}
+Preconditions of invocation of \nf{BSearch} in \nf{GetENQ} are satisfied i.e. if the direct subblock containg $E_{n,b,i}$ is computed in both cases in Lines \ref{leftChildGet} and \ref{rightChildGet}.
+\end{lemma}
+\begin{proof}
+There are two cases that the subblock we're looking for is in the left child or the right child. If $i$th \nf{enqueue} of \nf{n.blocks[b]} was in the left child it would be in \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} by definition \ref{def::subblock}. \nf{sum\sub{enq}} is the sum of the number of enqueues in the prefix of a block. So $E_{n,b,i}$ is $E_{n.left, i+n.left.blocks[n.blocks[b].end_{left}-1]}$ which is $E_{n.left,b^\prime,i^\prime}$ for some $b^\prime$ and $i^\prime$. The parameters in \ref{leftChildGet} are correct so  this \nf{BSearch} returns the subblock containing $E_{n,b,i}$.
+
+If the enqueue we were looking for was in the right child as there are \nf{n.blocks[b].num\sub{enq-left}} enqueues ahead of it in \nf{n.blocks[b]} but not in \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}. So we need to search for \nf{i-n.blocks[b].num\sub{enq-left}+ n.right.blocks[n.blocks[b].end\sub{right}-1]} (Line \ref{rightChildGet}). Other parameters are the same as the left child.
+\end{proof}
+
+
 \begin{lemma}[Get correctness] \label{get}
 If \nf{n.blocks[b].num\sub{enq}$\geq$i} then \nf{n.GetENQ(b,i)} returns $E_{n,b,i}$.
 \end{lemma}
 \begin{proof}
-We are going to prove this lemma by induction on the height of the tree. The base case for the leaves of the tree is pretty straight forward. Since leaf blocks contain exactly one operation then only \nf{GetENQ(b,1)} can be called on leaves. \nf{leaf.GetENQ(b,1)} returns the operation stored in the $b$th block of leaf $l$. For non leaf nodes in Line 404 it is decided that the \nf{i}th enqueue in block \nf{b} of internal node \nf{n}resides in the left child or the right child of \nf{n}. From Definition \ref{ordering} we know operations in a block are ordered by  their process id. Furthermore \nf{b.sum\sub{enq-lef}} stores the number of \nf{enqueue()} operations from the \nf{b}'s subblocks of the left child of \nf{n}. So if \nf{i} is greater than \nf{b.sum\sub{enq-lef}} it means $i$th operation is propagated from the right child, otherwise we should search for the $i$th enqueue i the left child subblocks. By definition \ref{def::ops} and \ref{def::subblock} we need to search in subblocks of b which their range is \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}. If the enqueue we're looking for was in the right child as there are \nf{b.sum\sub{enq-left}} enqueues before it we need to search for \nf{i-b.sum\sub{enq-left}} (Line \ref{rightChildGet}). of By definition of $E(n,b)$ operations from the left child come  before the operations of the right child. Having \nf{sum\sub{enq}}, the prefix sum of the number of enqueues we can compute the direct subblock containing the enqueue we are finding for with binary search. Then \nf{n.child.GetENQ( block containing, order in the block)} is invoked which returns the correct operation by the hypothesis of the induction.
+We are going to prove this lemma by induction on the height of the tree. The base case, the leaves of the tree, is pretty straight forward (Line \ref{getBaseCase}). Since leaf blocks contain exactly one operation thus only \nf{GetENQ(b,1)} can be called on a leaf block \nf{b}. \nf{l.GetENQ(b,1)} returns the operation stored in the $b$th block of leaf $l$. In the next paragraph we prove \nf{n.GetENQ()} returns $E_{n,b,i}$, if \nf{n.child.GetENQ()} works properly.
+
+For non leaf nodes it is decided that the \nf{i}th enqueue in block \nf{b} of internal node \nf{n} is in the \nf{n.blocks[b]}'s subblocks in the left child of \nf{n} or in the \nf{n.blocks[b]}'s subblocks in the right child of \nf{n} (line \ref{leftOrRight}). From Definition \ref{ordering} we know operations in a block are ordered by their process id and since in leaves of the tree are ordered ascendingly by process id from left to right, thus operations from the left subblocks come before operations from the right subblocks in a block (See Figure \ref{figGet}). Furthermore \nf{b.num\sub{enq-left}} stores the number of \nf{enqueue()} operations from the \nf{n.blocks[b]}'s subblocks in the left child of \nf{n}. So if \nf{i} is greater than \nf{b.num\sub{enq-left}} it means $i$th operation is propagated from the right child, otherwise we should search for the $i$th enqueue in the left child. By definition \ref{def::ops} and \ref{def::subblock} we need to search in subblocks of \nf{n.blocks[b]} which their range is \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}. We can compute the direct subblock containing the enqueue we are finding for with binary search by Lemma \ref{getSearch}. Finaly \nf{n.child.GetENQ()} is invoked on the subblock containing $E_{n,b,i}$ which returns $E_{n,b,i}$ by the hypothesis of the induction.
 \end{proof}
 
-\begin{figure}[hbt]
-  \center\includegraphics[width=6in]{pics/blockSumEnq.png}
-  \caption{The number of enqueues from the left and the right child}
+\begin{figure}[hbt]  
+  \center\includegraphics[width=7in]{pics/blockSumEnq.png}
+  
+  \caption{The number and ordering of the enqueues propagated from the left and the right child to \nf{n.blocks[b]}. \nf{n.blocks[b]} is  colored in the tope node by the color of the subblocks propagted to it. Left subblocks in red come before the right subblocks in blue and \nf{n.blocks[b].sum\sub{enq}=n.blocks[b].sum\sub{enq-left}+n.blocks[b].sum\sub{enq-right}}.
+  }\label{figGet}
 \end{figure}
 
-\textit{I'm not sure it is going to be long and boring to talk about the parameters, since the reader can find out them.}
+%\textit{I'm not sure it is going to be long and boring to talk about the parameters, since the reader can find out them.}
 
 \pagebreak
 

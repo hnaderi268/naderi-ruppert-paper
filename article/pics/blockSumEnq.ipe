@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE ipe SYSTEM "ipe.dtd">
 <ipe version="70218" creator="Ipe 7.2.24">
-<info created="D:20220624164416" modified="D:20220624164416"/>
+<info created="D:20220624164416" modified="D:20220712173129"/>
 <ipestyle name="basic">
 <symbol name="arrow/arc(spx)">
 <path stroke="sym-stroke" fill="sym-stroke" pen="sym-pen">
@@ -320,14 +320,6 @@ h
 h
 </path>
 <path stroke="black">
-336 704 m
-336 672 l
-368 672 l
-368 704 l
-h
-</path>
-<text transformations="translations" pos="352 688" stroke="black" type="label" width="5.535" height="6.918" depth="0" valign="baseline">b</text>
-<path stroke="black">
 272 608 m
 272 576 l
 64 576 l
@@ -374,7 +366,71 @@ h
 128 608 l
 h
 </path>
-<text transformations="translations" pos="160 560" stroke="black" type="label" width="59.511" height="6.919" depth="2.85" valign="baseline" style="math">b.sum_{enq-left}</text>
-<text transformations="translations" pos="480 560" stroke="black" type="label" width="64.038" height="6.919" depth="2.85" valign="baseline" style="math">b.sum_{enq-right}</text>
+<text matrix="1 0 0 1 -32 -16" transformations="translations" pos="160 560" stroke="black" type="label" width="100.548" height="7.472" depth="2.85" valign="baseline" style="math">n.blocks[b].sum_{enq-left}</text>
+<text matrix="1 0 0 1 -32 -16" transformations="translations" pos="480 560" stroke="black" type="label" width="105.075" height="7.472" depth="2.85" valign="baseline" style="math">n.blocks[b].sum_{enq-right}</text>
+<path stroke="black" fill="red">
+288 704 m
+288 672 l
+400 672 l
+400 704 l
+h
+</path>
+<path stroke="black" fill="blue">
+224 608 m
+224 576 l
+128 576 l
+128 608 l
+h
+</path>
+<path stroke="black" fill="blue">
+544 608 m
+544 576 l
+464 576 l
+464 608 l
+h
+</path>
+<path stroke="black" fill="blue">
+400 704 m
+400 672 l
+352 672 l
+352 704 l
+h
+</path>
+<path stroke="black">
+288 704 m
+288 720
+352 720
+400 720
+400 704 c
+</path>
+<path stroke="black">
+224 576 m
+224 560
+176 560
+128 560
+128 576 c
+</path>
+<text matrix="1 0 0 1 16 0" transformations="translations" pos="288 736" stroke="black" type="label" width="80.305" height="7.472" depth="2.85" valign="baseline" style="math">n.blocks[b].sum_{enq}</text>
+<path stroke="black">
+224 608 m
+224 576 l
+128 576 l
+128 608 l
+h
+</path>
+<path stroke="black">
+464 576 m
+464 560
+512 560
+544 560
+544 576 c
+</path>
+<path stroke="black" fill="red">
+224 576 m
+224 608 l
+128 608 l
+128 576 l
+h
+</path>
 </page>
 </ipe>

@@ -48,6 +48,7 @@
 \renewcommand{\tt}[1]{\texttt{#1}}
 \renewcommand{\sl}[1]{\textsl{#1}}
 \renewcommand{\it}[1]{\textit{#1}}
+\renewcommand{\sc}[1]{\textsc{#1}}
 \renewcommand{\bf}[1]{\textbf{#1}}
 \newcommand{\nf}[1]{{\normalfont{\texttt{#1}}}}
 \newcommand{\cmt}[1]{\Comment{#1}}
@@ -237,24 +238,24 @@
 \State \tt{newBlock.sum\sub{deq}= leaf.blocks[leaf.\head].sum\sub{deq}+1}
 \State \tt{leaf.}\Call{Append}{newBlock}
 \State \tt{<b\sub{deq}, i\sub{deq}>=} \Call{IndexDeq}{leaf.\head, 1}
-\State \tt{<b\sub{enq}, i\sub{enq}>=} \Call{FindResponse}{b\sub{deq}, i\sub{deq}} 
+\State \tt{output=} \Call{FindResponse}{b\sub{deq}, i\sub{deq}} 
 \label{deqRest}
-\If{\tt{i\sub{enq}==-1}}
-\State \tt{output= null}
-\Else
-\State \tt{output= \Call{GetEnq}{b\sub{enq}, i\sub{enq}}}
-\EndIf
+%\If{\tt{i\sub{enq}==-1}}
+%\State \tt{output= null}
+%\Else
+%\State \tt{output= \Call{GetEnq}{b\sub{enq}, i\sub{enq}}}
+%\EndIf
 \State \Return{\tt{output}}
 \EndFunction{Dequeue}
 
 \pagebreak
 
-\Function{<int, int>}{FindResponse}{\sl{int} b\sub{d}, \sl{int} i\sub{d}}\cmt{Returns \tt{<b\sub{e},i\sub{e}>}, if $E_{root,b_e,i_e}$ is the response to the $D_{root,b_d,i_d}$. Returns \tt{<-1,-->} if the queue is empty.}
+\Function{<int, int>}{FindResponse}{\sl{int} b\sub{d}, \sl{int} i\sub{d}}\Statex\cmt{Returns the the response to the $D_{root,b_d,i_d}$. Returns \tt{null} if the queue is empty.}
 \If{\tt{ root.blocks[b\sub{d}-1].\size}\tt{ + root.blocks[b\sub{d}].num\sub{enq} - i\sub{d} $<$ 0}}
-\State \Return \tt{<-1,-->}
+\State \Return \tt{null}
 \Else
 \State \tt{r\sub{enq}= i\sub{d} - root.blocks[b\sub{d}-1].size + root.blocks[b\sub{d}-1].sum\sub{enq}}
-\State \Return \tt{root.\Call{DSearch}{r\sub{enq}, b\sub{d}}}
+\State \Return \tt{root.GetENQ(root.\Call{DSearch}{r\sub{enq}, b\sub{d}})}
 \EndIf
 \EndFunction{FindResponse}
 
@@ -348,15 +349,15 @@
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{800}
 \Statex
-\Statex $\leadsto$ \textsf{Precondition: \tt{root.blocks[end].sum\sub{enq} $\geq$ \tt{e} $\geq$ 1}}
+\Statex $\leadsto$ \textsf{Precondition: \tt{root.blocks[end].sum\sub{enq} $\geq$ \tt{e}}}
 \Function{<int, int>}{DSearch}{\sl{int} e, \sl{int} end}
 \cmt{Returns \tt{<b,i>} if $E_{root,e}=E_{root,b,i}$.}
 \State \tt{start= end-1}
 \While{\tt{root.blocks[start].sum\sub{enq}}$\geq$\tt{e}}
-\State \tt{start= max(start-(end-start), 0)}
+\State \tt{start= max(start-(end-start), 0)} \label{doubling}
 \EndWhile
 \State \tt{b= root.BSearch(sum\sub{enq}, e, start, end)}
-\State \tt{i= e- root.blocks[b-1].sum\sub{enq}}
+\State \tt{i= e- root.blocks[b-1].sum\sub{enq}} \label{DSearchComputei}
 \State\Return \tt{<b,i>}
 \EndFunction{DSearch}
 \end{algorithmic}
@@ -775,7 +776,7 @@ For non leaf nodes it is decided that the \nf{i}th enqueue in block \nf{b} of in
 \end{proof}
 
 \begin{figure}[hbt]  
-  \center\includegraphics[width=7in]{pics/blockSumEnq.png}
+  \center\includegraphics[width=6in]{pics/blockSumEnq.png}
   
   \caption{The number and ordering of the enqueues propagated from the left and the right child to \nf{n.blocks[b]}. \nf{n.blocks[b]} is  colored in the tope node by the color of the subblocks propagted to it. Left subblocks in red come before the right subblocks in blue and \nf{n.blocks[b].sum\sub{enq}=n.blocks[b].sum\sub{enq-left}+n.blocks[b].sum\sub{enq-right}}.
   }\label{figGet}
@@ -787,14 +788,28 @@ For non leaf nodes it is decided that the \nf{i}th enqueue in block \nf{b} of in
 
 
 \begin{lemma}[DSearch correctness] \label{dsearch}
-If \nf{root.blocks[end].num\sub{enq}}$\geq$\nf{i} and $E_{root, i}$ is the response to some \nf{Dequeue()} in \nf{root.blocks[end]} then \nf{DSearch(i, end)} returns \nf{b} such that \nf{root.blocks[b]} contains $E_{root,b,i}$ in $\Theta(\log$(\nf{root.blocks[b].\size+root.blocks[end].\size}) steps.
+Assume \nf{root.blocks[end].num\sub{enq}}$\geq$\nf{e} and $E_{root, e}$ is the response to some \nf{Dequeue()} in \nf{root.blocks[end]}.  \nf{DSearch(e, end)} returns \nf{<b, i>} such $E_{root,b,i}= E_{root,e}$ in $\Theta \big(\log($\nf{root.blocks[b].\size + root.blocks[end].\size} \hspace{-0.8em}$)\big)$ steps.
 \end{lemma}
 \begin{proof}
-First we show \nf{end-b}$\leq$\nf{root.blocks[b].\size+root.blocks[end].\size}. We know each block size is greater than 0. So every block in \nf{root.blocks[b..end]} contains at least one \nf{Enqueue()} or one \nf{Dequeue()}. There cannot be more than \nf{root.blocks[b].\size} \nf{Dequeue()}s in \nf{root.blocks[b+1..end-1]}, since the queue would become empty after bth block end before end and $E(n,i)$ could not be the response to to some \nf{DEQ} in \nf{end}. And since the lentgh of the queue would become \nf{root.blocks[end].\size} in the end so there cannot be more than \nf{root.blocks[end].\size} Dequeus in \nf{root.blocks[b..end]}. Cause if there was more then the end's lenght would become more than \nf{root.blocks[end].\size}.
+First we show \nf{end-b}$\leq 2 \times$\nf{root.blocks[b].\size+root.blocks[end].\size+1}. From line \ref{addOP}, we know that size of the every block in the tree is greater than 0. So each block in \nf{root.blocks[b..end]} contains at least one \nf{Enqueue()} or at least one \nf{Dequeue()}. There cannot be more than \nf{root.blocks[b].\size} \nf{Dequeue()}s in \nf{root.blocks[b+1..end-1]}, since the  elements of the queue after \nf{blocks[b]} would become dequeued at some point, after \nf{root.blocks[b]} operations finish end before \nf{root.blocks[end]} operations start. And the response to to some \nf{dequeue()} in \nf{root.blocks[end]} could not be in $E(n,b)$. Furthermore since the size of the queue would become \nf{root.blocks[end].\size} in the end and there cannot be more than \nf{root.blocks[b].\size} \nf{Dequeue()}s so there cannot be more than \nf{root.blocks[b].\size + root.blocks[end].\size} \nf{enqueue()} operations in \nf{root.blocks[b..end]}. Cause if there were more, then the \nf{root.blocks[end]}'s size would become more than \nf{root.blocks[end].\size}. Overall there can be at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} operations in \nf{root.blocks[b+1..end-1]} and since each block size is $\geq 1$ thus there are at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} blocks in between \nf{root.blocks[b]} and \nf{root.blocks[end]}. So \nf{end-b}$\leq 2 \times$\nf{root.blocks[b].\size+root.blocks[end].\size+1}. See Figure \ref{end-b}.
 
-Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\size} distance between end and b then with doubling search  in log\nf{root.blocks[b].\size+root.blocks[end].\size} steps we reach a block \nf{c} that the \nf{c.sum\sub{enq}} is less than i and the distance between c and end is not more than $2\times$\nf{root.blocks[b].\size+root.blocks[end].\size}. So the binary search takes $\Theta(\log$\nf{root.blocks[b].\size+root.blocks[end].\size)}$)$ steps.
+Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\size} blocks in between \nf{root.blocks[b]} and \nf{root.blocks[end]} then with doubling search in $\Theta \big(\log($\nf{root.blocks[b].\size+root.blocks[end].\size}$)\big)$ steps we reach \nf{start=c} that the \nf{root.blocks[c].sum\sub{enq}} is less than \nf{e} and \nf{end-c} is not more than $2\times$\nf{root.blocks[b].\size+root.blocks[end].\size}. Cause if otherwise, then \nf{(end-c)/2} satisfied the \nf{root.blocks[(end-c)/2].sum\sub{enq}<e}. Note that in the line \ref{doubling} the distance between \nf{end} and \nf{stat} is doubled. See figure \ref{fig::doubling}.
+
+After computing \nf{b}, the value \nf{i} is computed via the definition of \nf{sum\sub{enq}} in constant time (Line \ref{DSearchComputei}). So the routine non constant part is the binary search which takes $\Theta(\log$\nf{root.blocks[b].\size+root.blocks[end].\size)}$)$ steps from the first paragraph.
 \end{proof}
+\begin{figure}[hbt]  
+  \center\includegraphics[width=6in]{pics/doubling.png}
+  
+  \caption{Distance relations between $b,c,end$}
+  \label{fig::doubling}
+\end{figure}
 
+\begin{figure}[hbt]  
+  \center\includegraphics[width=3in]{pics/end-b.png}
+
+  \caption{The number written on top of the bars is the queue size. the first block is $b$ and the last block is $end$.}
+  \label{end-b}
+\end{figure}
 
 \pagebreak
 
@@ -886,6 +901,9 @@ Show preconditions are satisfied and the range is $p$.
 %Line 101: Here, the goal is to find the superblock. We know the distance between answer and the \nf{super[i]} is at most $p$, since at most $p$ processes could die.
 %
 %\end{proof}
+\it{Update the findresposne returning arguments.}
+
+
 We call the dequeues that return some value \it{non-null dequeues}. $r$th non-null dequeue returns the element of th $r$th enqueue. We can compute \# non-null dequeues in the prefix for a block this way: \#non-null dequeues= \size - \#enqueues. Note that the $i$th dequeue in the given block is not a non-null dequeue.
 \begin{lemma}[Computing Queue's Head block] \label{computeHead}
   Let $S$ be the state of an empty queue if the operations in prefix in $L$ of $i$th dequeue in $D(root,b)$ are applied on it. \nf{FindResponse()} returns \nf{(b, i)} which $E(root, b, i)$ is the the head of the queue in $S$. If the queue is empty in $S$ then it returns \nf{<-1,-->}.

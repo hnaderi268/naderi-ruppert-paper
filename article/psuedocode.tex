@@ -237,8 +237,8 @@
 \State \tt{newBlock.sum\sub{enq}= leaf.blocks[leaf.\head].sum\sub{enq}}
 \State \tt{newBlock.sum\sub{deq}= leaf.blocks[leaf.\head].sum\sub{deq}+1}
 \State \tt{leaf.}\Call{Append}{newBlock}
-\State \tt{<b\sub{deq}, i\sub{deq}>=} \Call{IndexDeq}{leaf.\head, 1}
-\State \tt{output=} \Call{FindResponse}{b\sub{deq}, i\sub{deq}} 
+\State \tt{<b, i>=} \Call{IndexDeq}{leaf.\head, 1}
+\State \tt{output=} \Call{FindResponse}{b, i} 
 \label{deqRest}
 %\If{\tt{i\sub{enq}==-1}}
 %\State \tt{output= null}
@@ -250,12 +250,12 @@
 
 \pagebreak
 
-\Function{<int, int>}{FindResponse}{\sl{int} b\sub{d}, \sl{int} i\sub{d}}\Statex\cmt{Returns the the response to the $D_{root,b_d,i_d}$. Returns \tt{null} if the queue is empty.}
-\If{\tt{ root.blocks[b\sub{d}-1].\size}\tt{ + root.blocks[b\sub{d}].num\sub{enq} - i\sub{d} $<$ 0}}
-\State \Return \tt{null}
+\Function{<int, int>}{FindResponse}{\sl{int} b, \sl{int} i}\Statex\cmt{Returns the the response to the $D_{root,b,i}$.}
+\If{\tt{ root.blocks[b-1].\size}\tt{ + root.blocks[b].num\sub{enq} - i $<$ 0}} \State \Return \tt{null} \label{checkEmpty}\cmt{Check if the queue is empty.}
 \Else
-\State \tt{r\sub{enq}= i\sub{d} - root.blocks[b\sub{d}-1].size + root.blocks[b\sub{d}-1].sum\sub{enq}}
-\State \Return \tt{root.GetENQ(root.\Call{DSearch}{r\sub{enq}, b\sub{d}})}
+\State \tt{e= i - root.blocks[b-1].size + root.blocks[b-1].sum\sub{enq}} \label{computeE}
+\Statex\cmt{$E_{root,e}$ is the response.}
+\State \Return \tt{root.GetENQ(root.\Call{DSearch}{e, b})}\label{findAnswer}
 \EndIf
 \EndFunction{FindResponse}
 
@@ -901,19 +901,62 @@ Show preconditions are satisfied and the range is $p$.
 %Line 101: Here, the goal is to find the superblock. We know the distance between answer and the \nf{super[i]} is at most $p$, since at most $p$ processes could die.
 %
 %\end{proof}
-\it{Update the findresposne returning arguments.}
 
+\begin{definition}
+In an execution on a queue, the dequeue operations that return some value are called \it{non-null dequeues}.  
+\end{definition}
+\begin{observation} \label{responseToADeq}
+$k$th non-null dequeue in an execution returns the \nf{element} of $k$th enqueue.
+\end{observation}
 
-We call the dequeues that return some value \it{non-null dequeues}. $r$th non-null dequeue returns the element of th $r$th enqueue. We can compute \# non-null dequeues in the prefix for a block this way: \#non-null dequeues= \size - \#enqueues. Note that the $i$th dequeue in the given block is not a non-null dequeue.
-\begin{lemma}[Computing Queue's Head block] \label{computeHead}
-  Let $S$ be the state of an empty queue if the operations in prefix in $L$ of $i$th dequeue in $D(root,b)$ are applied on it. \nf{FindResponse()} returns \nf{(b, i)} which $E(root, b, i)$ is the the head of the queue in $S$. If the queue is empty in $S$ then it returns \nf{<-1,-->}.
-  \end{lemma}
+\begin{lemma}\label{sizeCorrectness}
+  \nf{root.blocks[b].\size}is the \size of the queue if the operations in the prefix for the $b$th block in the root are applied with the order of $L$.  
+\end{lemma}
 \begin{proof}
-  The \size of the queue if the operations in the prefix for the $b$th block in the root are applied with the order of $L$ is stored in the \nf{root.blocks[b].\size}. It is computed while creating the block in Line~\ref{computeLength}. If the \size of a queue is greater than 0 then a \nf{Dequeue()} would decrease the \size of the queue, otherwise the \size of the queue remains 0. Having \size of the queue after the previous block and number of enqueues and dequeues in the block, Line~\ref{computeLength} computes wether the queue becomes empty or the \size  of it.
-  
-  \tt{r\sub{enq}= (i\sub{d} + root.blocks[b\sub{d}-1].sum\sub{deq}) - (root.blocks[b\sub{d}-1].size - root.blocks[b\sub{d}-1].sum\sub{enq} + root.blocks[b\sub{d}-1].sum\sub{deq})}
+If the \size of a queue is greater than 0 then a \nf{Dequeue()} would decrease the \size of the queue, otherwise the \size of the queue remains 0. By definition  of $L$ in definition \ref{ordering} enqueue operations come before dequeue operations in a block. If the queue won't become empty after $b$th block we can compute the size of the queue after $b$th block using with this equality \nf{root.blocks[b].size= root.blocks[b-1].size+ root.blocks[b].sum\sub{enq}- root.blocks[b].sum\sub{deq}} (Line \ref{computeLength}). Otherwise \nf{root.blocks[b-1].size+ root.blocks[b].sum\sub{enq}- root.blocks[b].sum\sub{deq}} would become negative. Since there are more dequeue operations than the size of the queue. See table \ref{qhistory}.
 \end{proof}
-\framebox[1.1\width]{HOW?} How to prove mathematicaly that \nf{ax(root.blocks[i-1].\size + b.num\sub{enq} - b.num\sub{deq}, 0)} is the \size of the queue after the block. I can only explain it here.
+
+\begin{lemma} \label{numberOfNND}
+If the operations are applied with the order of $L$, the number of non-null dequeues in the prefix for a block \nf{b} is \nf{b.sum\sub{enq}-b.\size}
+\end{lemma}
+\begin{proof}
+If there are $enqs$ enqueue operations in the prefix for \nf{b}, then the size of the queue after  prefix for \nf{b} is \nf{enqs - non-null deqs} by Observation 35. The correctness of the feild \size is showed in Lemma \ref{sizeCorrectness}.
+\end{proof}
+
+\begin{lemma}\label{nullReturn}
+$D_{root,b,i}$ returns \nf{null} iff \nf{root.blocks[b-1].\size+ root.blocks[b].num\sub{enq}- i <0}.
+\end{lemma}
+
+
+\begin{lemma}[Computing Response] \label{computeHead}
+  Let $S$ be the state of an empty queue if the operations in $L$ are applied on it. \nf{FindResponse(b,i)} returns the element that is the the response to $D_{root,b,i}$ in $S$. If the queue is empty in $S$ then it returns \nf{null}.
+\end{lemma}
+\begin{proof}
+First note that by Definition \ref{ordering} the linearization ordering  of operations will not change as new operations come so instead of talking about the linearization of operations before the $E_{root, b, i}$ we talk about what if the whole operation in the linearization are applied on a queue.
+
+$D_{root,b,i}$ is $D_{root,root.blocks[b-1].sum_{deq}+i}$ from the definition \ref{ordering} and \it{$sum_{enq}$}.  $D_{root,b,i}$ returns \nf{null} if \nf{root.blocks[b-1].\size+ root.blocks[b].num\sub{enq}- i <0} by Lemma \ref{nullReturn} (Line \ref{checkEmpty}). Otherwise if it is $d^\prime$th non-null dequeue in $L$ it returns $d^\prime$th enqueue by Observation \ref{responseToADeq} . By Lemma \ref{numberOfNND} there are \nf{root.blocks[b-1].sum\sub{enq} - root.blocks[b-1].\size} non-null dequeue operations before prefix for \nf{root.blocks[b-1]}. Note that the dequeues in \nf{root.blocks[b]} before the $i$th dequeue are non-null dequeues. So the response is $E_{root,i - root.blocks[b-1].size + root.blocks[b-1].sum\sub{deq}}$ (Line \ref{computeE}). See figure \ref{computeResponseDetail}.
+
+After computing \nf{e} we can find \nf{b,i} such that $E_{root,b,i}=E_{root,e}$ using \nf{DSearch} and then find its \nf{element} using \nf{GetEnq} (Line \ref{findAnswer}).
+\end{proof}
+
+\begin{figure}[hbt]  
+  \center\includegraphics[width=2in]{pics/computeResponseDetail.png}\caption{The position of $E_{root,b,i}$.}
+\label{computeResponseDetail}
+\end{figure}
+
+\begin{table}[hbt]
+\centering
+  \begin{tabular}{c|c|c|c|c}
+    \hline &\texttt{DEQ()} & \texttt{ENQ(5)}, \texttt{ENQ(2)}, \texttt{ENQ(1)}, \texttt{DEQ()}& \texttt{ENQ(3)}, \texttt{DEQ()}&  \texttt{ENQ(4)}, \texttt{DEQ()}, \texttt{DEQ()}, \texttt{DEQ()}, \texttt{DEQ()}\\ \hline
+    \#enqueues & 0 & 3 & 1 & 1 \\ \hline
+        \#dequeues & 1 & 1 & 1 & 4 \\ \hline
+            \#non-null dequeues & 0 & 1 & 2 & 5 \\ \hline
+                size & 0 & 2 & 2 & 0 \\ \hline
+  \end{tabular}
+  \caption{An example of root blocks fields. Blocks are from left to right and operations in the blocks are also from the left to right.}\label{qhistory}
+\end{table}
+
+
 %\begin{proof}
 %  \nf{head} is incremented in lines 51, 54 after trying to append a block to the index of the last \nf{head} read. If it was successful, we have to do this, but if it was unsuccessful, it means it has appended to the index before, so we have to update the \nf{head}. If a process dies before line 51, another process will increment \nf{head} in line 54.
 %\end{proof} 

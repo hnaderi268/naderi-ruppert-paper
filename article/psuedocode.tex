@@ -370,7 +370,7 @@
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{400}
 
-\Statex $\leadsto$ \textsf{Precondition:~\tt{blocks[b].num\sub{enq}$\geq$i}}
+\Statex $\leadsto$ \textsf{Precondition:~\tt{blocks[b].num\sub{enq}$\geq$i$\geq 1$}}
 \Function{element}{GetEnq}{\sl{int} b, \sl{int} i} \cmt{Returns the element of $E_{this,b,i}$.}
 \If{\tt{this} \bf{is} \tt{leaf}}
 \State\Return \tt{blocks[b].element} \label{getBaseCase}
@@ -542,15 +542,15 @@
 \framebox[1.1\width]{Question} How to remove the notion of time? To say pre(n,i) contains n.blocks[0..i] instead of EST(n,t) which head=i at time t. Is it good? Furthermore, can we remove the notion of established blocks?
 
 \begin{definition}[Block]
-A block is an object storing some statistics, as described in Algorithm Queue. It implicitly represents a set of operations. If \nf{n.blocks[i]==b}  we call \nf{i} the \emph{index} of block \nf{b}. Block \nf{b} is before block \nf{b$^\prime$} in node \nf{n} if and only if the index of the \nf{b} is smaller than the index of the \nf{b$^\prime$}'s. For a \tt{block} in a \tt{BlockList} we define \it{the prefix for the block} to be the blocks in the \tt{BlockList} up to and including the \tt{block}.
+A block is an object storing some statistics, as described in Algorithm Queue. A block in a node's blocklist implicitly represents a set of operations. If \nf{n.blocks[i]==b}  we call \nf{i} the \emph{index} of block \nf{b}. Block \nf{b} is before block \nf{b$^\prime$} in node \nf{n} if and only if the index of the \nf{b} is smaller than the index of the \nf{b$^\prime$}'s. For a \tt{block} in a \tt{BlockList} we define \it{the prefix for the block} to be the blocks in the \tt{BlockList} up to and including the \tt{block}.
 \end{definition}
 
 \begin{invariant}[headPosition] \label{lem::headPosition} If the value of \nf{n.head} is \nf{h} then, \nf{n.blocks[i]=null} for \nf{i>h} and \nf{n.blocks[i]$\neq$null} for \nf{i<h}.
 \end{invariant}
 \begin{proof}
-The invariant is true initially since 1 is assigned to \nf{n.head} and \nf{n.blocks[x]} is null for every \nf{x}. The truth of the invariant may be affected by writing into \nf{n.blocks} or incrementing \nf{n.head}.
+The invariant is true initially since 1 is assigned to \nf{n.head} and \nf{n.blocks[x]} is null for every \nf{x}. The truth of the invariant may be affected by writing into \nf{n.blocks} or incrementing \nf{n.head}. We show the invariant still holds after these two changes.
 
-Some value is written into \nf{n.blocks[head]} only in Line 313. It is obvious that writing into \nf{n.blocks[head]} presereves the invariant. The value of \nf{n.head} is modified only in lines \ref{incrementHead1}], \ref{incrementHead2}. Depending on wether the \nf{TryAppend()}in Line\ref{cas} succeeded or not we show that the claim holds after the increment lines of \nf{n.head} in either case. If \nf{head} is incremented to $h$ it is sufficient to show \nf{n.blocks[h]}$\neq$\nf{null} to prove the invariant still holds. In the first case the process applied a successful \nf{TryAppend(new,h)} in line \ref{okcas}, which means \nf{n.blocks[h]} is not null anymore. Note that wether\ref{incrementHead1} returns true or false after Line \nf{n.head} we know has been incremented from Line \ref{readHead}. The failure case is also the same since it means some value is written into \nf{n.blocks[head]} by some process.
+In the algorithm, some value is appended to \nf{n.blocks[]} by writting into \nf{n.blocks[head]} only in Line 313. It is obvious that writing into \nf{n.blocks[head]} presereves the invariant, since the claims does not talk about \nf{n.blocks[head]}. The value of \nf{n.head} is modified only in lines \ref{incrementHead1}], \ref{incrementHead2}. Depending on wether the \nf{TryAppend()}in Line\ref{cas} succeeded or not we show that the claim holds after the increment lines of \nf{n.head} in either case. If \nf{n.head} is incremented to $h$ it is sufficient to show \nf{n.blocks[h]}$\neq$\nf{null} to prove the invariant still holds. In the first case the process applied a successful \nf{TryAppend(new,h)} in line \ref{okcas}, which means \nf{n.blocks[h]} is not null anymore. Note that wether \ref{incrementHead1} returns true or false after Line \nf{n.head} we know has been incremented from Line \ref{readHead}. The failure case is also the same since it means some value is written into \nf{n.blocks[head]} by some process.
 %At the end of every \nf{n.Refresh()} with a block  with \head greater than 0 returned by \nf{CreateBlock()} \nf{n.head} is incremented (Lines \ref{incrementHead1}, \ref{incrementHead2}). If a process went to sleep before incrementing the \nf{established} (line \ref{incrementHead1}), nothing can be appended to \nf{n.blocks} until another process increments \nf{n.establsihed} (Line \ref{incrementHead2}).
 \end{proof}
 \it{Explain More}
@@ -637,15 +637,15 @@ Blocks are only appended (not modified) with CAS to \nf{n.blocks[n.head]} and \n
 \pagebreak
 
 \begin{lemma}[head Increment] \label{lem::headInc}
-If an n.Refresh  instance reaches Line \ref{cas} instance and reads head=h (\ref{readHead}) after it terminates head is greater than h.
+Let \nf{R=n.Refresh} be an instance of \nf{Refresh} that reaches Line \ref{cas}. After \nf{R} terminates \nf{n.head} is greater than h, the value read  in line \ref{readHead} of \nf{R}.
 \end{lemma}
 \begin{proof}
-If Line \ref{incrementHead1} or \ref{incrementHead1} succeeded the claim holds, otherwise another process has incremented the head.
+If Line \ref{incrementHead1} or \ref{incrementHead1} are successful then the claim holds, otherwise another process has incremented the head from \nf{h} to \nf{h+1}.
 \end{proof}
 
 
 \begin{lemma}[trueRefresh] \label{lem::trueRefresh}
-  Let $t_i$ be the time an instance of \nf{n.Refresh()} is invoked and $t_t$ be the time it terminates. Suppose the \nf{TryAppend(new, s)} of the \nf{n.Refresh()}  returns \nf{true}, then \nf{ops(EST\sub{n.left, t\sub{i}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{t}})}.
+  Let $t_i$ be the time an instance \nf{R} of \nf{n.Refresh()} is invoked and $t_t$ be the time it terminates. Suppose the \nf{TryAppend(new, s)} of \nf{R}  returns \nf{true}, then \nf{ops(EST\sub{n.left, t\sub{i}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{t}})}.
 \end{lemma}
 \begin{proof}
 From Lemma \ref{lem::establishedOrder} we know that \nf{ops(EST\sub{n, t\sub{i}})}$\subseteq$\nf{ops(EST\sub{n, t\sub{t}})}.
@@ -702,17 +702,17 @@ Since $R_2$'s \nf{TryAppend()} returns \nf{false} then there is another successf
 
 
 \begin{corollary}[Propagate Step] \label{doublyRefresh}
-All operations in \nf{n}'s children's established blocks before line \ref{firstRefresh} are guaranteed to be in \nf{n}'s established blocks after line~\ref{secondRefresh}.
+All operations in \nf{n}'s children's established blocks before running line \ref{firstRefresh}  of a \nf{Propagate} routine are guaranteed to be in \nf{n}'s established blocks after line~\ref{secondRefresh}.
 \end{corollary}
 \begin{proof}
-Lines \ref{firstRefresh} and \ref{secondRefresh} satisfy the preconditions of Lemma \ref{doubleRefresh}.
+If \ref{firstRefresh} or \ref{secondRefresh} succeed, the claim is true by \ref{lem::trueRefresh}. Otherwise Lines \ref{firstRefresh} and \ref{secondRefresh} satisfy the preconditions of Lemma \ref{doubleRefresh}.
 \end{proof}
 
 \begin{corollary}
   After \nf{Append(blk)} finishes \nf{ops(blk)}$\subseteq$\nf{ops(root.blocks[x])} for some \nf{x} and only one \nf{x}.
 \end{corollary}
 \begin{proof}
-  Follows from Lemma \ref{doubleRefresh}, \ref{append}.
+After \nf{Append(blk)}'s termination, \nf{blk} is in \nf{root.blocks} since \nf{blk} is established  in the leaf it has been added to. By induction on \ref{doublyRefresh} it is propagated up to the root. Finally \ref{append} shows  only one block in the root contains \nf{blk}.
 \end{proof}
 
 \pagebreak
@@ -722,14 +722,14 @@ Lines \ref{firstRefresh} and \ref{secondRefresh} satisfy the preconditions of Le
 Each block contains at most one operation from each processs.
 \end{lemma}
 \begin{proof}
-By proof of contradiction, assume there are more than one operation from process $p$ in block $b$ in node $n$. A process cannot invoke more than one operations concurrently. From $p$ 's operations in $b$, let $op_1$ be the first operation invoked and $op_2$ be the second one. Note that it is terminated before $op_2$ started. So before appending $op_2$ to the tree $op_1$ exists in every node from the path of $p$'s leaf to the root. So there is some block $b^\prime$  before $b$ in $n$ containing $op_1$. $op_1$ existing in $b$ an $b^\prime$ contradicts with \ref{append}.
+By proof of contradiction, assume there are more than one operation from process $p$ in block $b$ in node $n$. A process cannot invoke more than one operations concurrently, so one operation hasto be finished before the other starts. From $p$ 's operations in $b$, let $op_1$ be the operation invoked first, before $op_2$. Note that $op_1$ has terminated before $op_2$ started. So  by Corollary 17 before appending $op_2$ to the tree $op_1$ exists in every node from the path of $p$'s leaf to the root. Because $op_1$'s \nf{Append} is finished before $op_2$'s \nf{Append} starts. So there is some block $b^\prime$  before $b$ in $n$ containing $op_1$. $op_1$ existing in $b$ an $b^\prime$ contradicts with \ref{append}.
 \end{proof}
 
 \begin{lemma}[Subblocks Upperbound]\label{subBlocksBound}
 Each block has at most $p$ direct subblocks.
 \end{lemma}
 \begin{proof}
-  It follows directly from Lemma \ref{blockSize} and the observation that each block contains at least one operation, induced from Line~\ref{addOP}. 
+  It follows directly from Lemma \ref{blockSize} and the observation that each block appended to the tree contains at least one operation, induced from Line~\ref{addOP}. 
 \end{proof}
 
 

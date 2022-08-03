@@ -900,6 +900,9 @@ Show preconditions are satisfied and the range is $p$.
 %Line 101: Here, the goal is to find the superblock. We know the distance between answer and the \nf{super[i]} is at most $p$, since at most $p$ processes could die.
 %
 %\end{proof}
+\begin{definition}
+   Assume the operations in $L$ are applied on an empty queue. If element of \nf{enqueue e} is the response to  \nf{dequeue d} then we say \nf{R(d)=e}. If \nf{d} 's response id \nf{null} (queue is empty) then \nf{R(d)=null}.
+\end{definition}
 
 \begin{definition}
 In an execution on a queue, the dequeue operations that return some value are called \it{non-null dequeues}.  
@@ -912,23 +915,25 @@ $k$th non-null dequeue in an execution returns the \nf{element} of $k$th enqueue
   \nf{root.blocks[b].\size}is the \size of the queue if the operations in the prefix for the $b$th block in the root are applied with the order of $L$.  
 \end{lemma}
 \begin{proof}
-If the \size of a queue is greater than 0 then a \nf{Dequeue()} would decrease the \size of the queue, otherwise the \size of the queue remains 0. By definition  of $L$ in definition \ref{ordering} enqueue operations come before dequeue operations in a block. If the queue won't become empty after $b$th block we can compute the size of the queue after $b$th block using with this equality \nf{root.blocks[b].size= root.blocks[b-1].size+ root.blocks[b].sum\sub{enq}- root.blocks[b].sum\sub{deq}} (Line \ref{computeLength}). Otherwise \nf{root.blocks[b-1].size+ root.blocks[b].sum\sub{enq}- root.blocks[b].sum\sub{deq}} would become negative. Since there are more dequeue operations than the size of the queue. See table \ref{qhistory}.
+ need to say? :: If the \size of a queue is greater than 0 then a \nf{Dequeue()} would decrease the \size of the queue, otherwise the \size of the queue remains 0. By definition \ref{ordering} enqueue operations come before dequeue operations in a block in $L$.
+
+We prove the claim by induction on \nf{b}. Base case \nf{b=0} is trivial since the queue is initialy empty and \nf{root.blocks[0].size=0}. For \nf{b=i} we are going to use the hypothesis for \nf{b=i-1}. If there are more than \nf{root.blocks[i-1].size+ root.blocks[i].sum\sub{enq}} dequeue operations in \nf{root.blocks[i]} then the queue would become empty after \nf{root.blocks[i]}. Otherwise we can compute the size of the queue after $b$th block using with this equality \nf{root.blocks[b].size= root.blocks[b-1].size+ root.blocks[b].sum\sub{enq}- root.blocks[b].sum\sub{deq}} (Line \ref{computeLength}). See Table \ref{qhistory} for an example of running some blocks of operations on an empty queue.
 \end{proof}
 
-\begin{lemma} \label{numberOfNND}
+\begin{lemma}[Duality of \#non-null dequeues and \nf{block.size}] \label{numberOfNND}
 If the operations are applied with the order of $L$, the number of non-null dequeues in the prefix for a block \nf{b} is \nf{b.sum\sub{enq}-b.\size}
 \end{lemma}
 \begin{proof}
-If there are $enqs$ enqueue operations in the prefix for \nf{b}, then the size of the queue after  prefix for \nf{b} is \nf{enqs - non-null deqs} by Observation 35. The correctness of the feild \size is showed in Lemma \ref{sizeCorrectness}.
+There are \nf{b.sum\sub{enq}} enqueue operations in the prefix for \nf{b}, then the size of the queue after the prefix for \nf{b} is \nf{\#enqs - \#non-null dequeues} in the prefix for \nf{b}, by Observation 35. So \nf{\#non-null dequeues} is \nf{b.sum\sub{enq}-b.\size}. The correctness of the \nf{block.\size}field is shown in Lemma \ref{sizeCorrectness}.
 \end{proof}
 
 \begin{lemma}\label{nullReturn}
-$D_{root,b,i}$ returns \nf{null} iff \nf{root.blocks[b-1].\size+ root.blocks[b].num\sub{enq}- i <0}.
+\nf{R(D\sub{root,b,i})} is \nf{null} iff \nf{root.blocks[b-1].\size+ root.blocks[b].num\sub{enq}- i <0}.
 \end{lemma}
 
 
 \begin{lemma}[Computing Response] \label{computeHead}
-  Let $S$ be the state of an empty queue if the operations in $L$ are applied on it. \nf{FindResponse(b,i)} returns the element that is the the response to $D_{root,b,i}$ in $S$. If the queue is empty in $S$ then it returns \nf{null}.
+\nf{FindResponse(b,i)} returns \nf{R(D\sub{root,b,i}).element}.
 \end{lemma}
 \begin{proof}
 First note that by Definition \ref{ordering} the linearization ordering  of operations will not change as new operations come so instead of talking about the linearization of operations before the $E_{root, b, i}$ we talk about what if the whole operation in the linearization are applied on a queue.

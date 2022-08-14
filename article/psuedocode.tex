@@ -685,26 +685,35 @@ After the successful \nf{TryAppend} in line \ref{cas} we know all blocks in \nf{
 
 
 \begin{lemma}[Double Refresh] \label{doubleRefresh}
-  Consider two consecutive failed instances $R_1$, $R_2$ of \nf{n.Refresh()} by some process. Let $t_1$ be the time $R_1$ is invoked and $t_2$ be the time $R_2$ terminated. We have \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{2}})}.
+  Consider two consecutive instances $R_1$, $R_2$ of \nf{Refresh()} on \nf{n} by process $p$. Let $t_1$ be the time $R_1$ is invoked and $t_2$ be the time $R_2$ terminated. If $R_1$ and $R_2$ both fail and return false, then we have \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{2}})}.
 \end{lemma}
 \begin{proof}
   
 
 If Line \ref{cas} of $R_1$ or $R_2$ returns \nf{true}, then the claim is held by Lemma~\ref{lem::trueRefresh}. Let $R_1$ read $i$ and $R_2$ read $i+1$ from Line \ref{readHead}. If $R_2$ reads some value greater than $i+1$ in Line \ref{readHead} it means a successful instance of \nf{Refresh()} started after Line \ref{readHead} of $R_1$ and finished its Line \ref{incrementHead1} or \ref{incrementHead2} before \ref{readHead} of $R_2$, from Lemma~\ref{lem::trueRefresh} by the end of this instance \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} has been propagated.
 
-Since $R_2$'s \nf{TryAppend()} returns \nf{false} then there is another successful instance $R_2^\prime$ of \nf{n.Refresh()} that has done \nf{TryAppend()} successfully into \nf{n.blocks[i+1]} before $R_2$ tries to append. In Figure 1 we see why the block $R_2^\prime$ is appending contains established block in the n's children at $t_1$, since it create a block reading the head after $t_1$. By Lemma \ref{lem::prectrueRefresh} after $R_2^\prime$'s \nf{CAS} we have \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(n.blocks)}. Also by Lemma \ref{lem::headInc} of $R_2$  head is more than $i+1$ after $R_2$\'s \ref{incrementHead2} line, so the block appended by $R_2^\prime$ to \nf{n} is established by then. To summarized $t_1$ is before $R_2^\prime$'s read head and $R_2^\prime$'s \nf{CAS} is before $R_2$'s termination. So \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{2}})}.
+Since $R_2$'s \nf{TryAppend()} returns \nf{false} then there is another successful instance $R_2^\prime$ of \nf{n.Refresh()} that has done \nf{TryAppend()} successfully into \nf{n.blocks[i+1]} before $R_2$ tries to append. Since $R_2^\prime$ creates the block after reading the value $i+1$ from \nf{n.head}(Line \ref{readHead}) and $R_1$ reads the value $i$ from \nf{n.head} and the \nf{head}'s value is increaing by Lemma \ref{lem::headProgress} then $t_{R2^\prime \; \ref{readHead}} > t_{R1 \; \ref{readHead}} > t_1$ (See Figure \ref{fig::doubleRefresh}). By Lemma \ref{lem::prectrueRefresh} after $R_2^\prime$'s \nf{CAS} we have \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(n.blocks)}. Also by Lemma \ref{lem::headInc} on $R_2$ the value  of \nf{n.head}  head is more than $i+1$ after $R_2$\' terminates, so the block appended by $R_2^\prime$ to \nf{n} is established by then (\nf{n.head>=i+2>i+1}). To summarize $t_1$ is before $R_2^\prime$'s \nf{read n.head} and $R_2^\prime$'s successful \nf{CAS} is before $R_2$'s termination. So by Lemma \ref{lem::prectrueRefresh} \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{2}})}.
 %It is obvious that the \nf{new} constructed by the second Refresh in Line 36 contains the blocks in \nf{new} by $R_1$ which $R_1^\prime$ did not contain, since \nf{n.head} is only increasing (Maybe Lemma~\ref{lem::oldnewOrder}). If $R_2$ succeeds by Lemma~\ref{lem::trueRefresh} the claim holds. If not, it is deduced that \nf{n.blocks[h]} was not \nf{null} before $R_2$'s \nf{CAS}. Furthermore, \nf{n.blocks[h]} was \nf{null} before reading \nf{h} by $R_1$. So there is a successful \nf{Refresh()} after the read of \nf{h} in $R_1$ and before the \nf{CAS} of $R_2$. This \nf{Refresh()} contains all the new established operations before Line 35 (Maybe Lemma~\ref{lem::oldnewOrder}) and by Lemma~\ref{lem::trueRefresh} our claim holds. See Figure~\ref{}.
 \end{proof}
-\it{last sentence need more detail and should be earlier. define i and tell why R2prime exists}
 
 \begin{figure}[hbt]
   \center\includegraphics[width=6in]{pics/compactdouble.png}
-  \caption{$t1<$ $r_1$ reading head $<$ incrementing \nf{n.head} from $i$ to $i+1$ $<$ $R_2^\prime$ reading head $<$ \nf{TryAppend(i+1)} $<$ incrementing \nf{n.head} from $i+1$ to $i+2$ $<t2$}
+  \caption{\label{fig::doubleRefresh}$t1<$ $r_1$ reading head $<$ incrementing \nf{n.head} from $i$ to $i+1$ $<$ $R_2^\prime$ reading head $<$ \nf{TryAppend(i+1)} $<$ incrementing \nf{n.head} from $i+1$ to $i+2$ $<t2$} 
 \end{figure}
 \it{this chain with more depth should be in the proof}
 
 %  Block \nf{new} is created of new established subblocks of children of \nf{n}(Lemma \ref{lem::createBlock}, Line 46). If \nf{CAS} in Line 48 succeeds then by Lemma~\ref{lem::trueRefresh} new established blocks will be in \nf{n}.
-  
+ 
+\begin{definition}
+  $t_{before \; line}$ is the immediate time before running Line $line$.   $t_{before \; line}$ is the immediate time after running Line $line$.
+\end{definition} 
+\begin{corollary}
+  \nf{ops(EST\sub{n.left, t\sub{before \ref{firstRefresh}}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{before \ref{firstRefresh}}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{after \ref{secondRefresh}})}}
+\end{corollary}
+\begin{proof}
+  If the first \nf{Refresh()} in line \ref{firstRefresh} returns \nf{true} then by Lemma \ref{lem::trueRefresh} the claim holds. Also if first \nf{Refresh()} failed and the second \nf{Refresh()} succeeded the claim still holds by Lemma \ref{lem::trueRefresh}. Finally, if both failed the claim is satisfied by Lemma \ref{doubleRefresh}.
+\end{proof}
+
 \pagebreak
 
 
@@ -1011,20 +1020,22 @@ Once some operations are aggregated in one block they will be propagated togethe
 
 \begin{lemma}[Amortized time analysis]
 %  \nf{n.GetEnq(b,i), n.Index(b,i)} take $O(\log^2 p)$ steps. Search in the root may take $O(\log Q+ p^2)$ steps. Helping is done every $p^2$ block appended to the root and takes $p\times \log^2p$ steps. Amortized time consumed for helping by each process is $O(\log^2 p)$.
-\nf{Enqueue()} and \nf{Dequeue} take $O(\log^2 p +q)$ steps (amortized anlysis), which $p$ is the number of processes and $q$ is the size of the queue at the time of invocation.
+\nf{Enqueue()} and \nf{Dequeue()}, each take $O(\log^2 p + \log q)$ steps in amortized analysis. Where $p$ is the number of processes and $q$ is the size of the queue at the time of invocation of operation.
 \end{lemma}
 \begin{proof}
-\nf{Enqueue(x)} consists of creating a \nf{block(x)} and appending it to the tree. The first part takes constant time. To propagate \nf{x} to the root the algorithm tries two \nf{Refresh}es in each node of the path from the leaf to the root (Lines \ref{firstRefresh}, \ref{secondRefresh}). Each \nf{Refresh} takes $O(1)$ steps since creating a block is done in constant time and does $O(1)$ \nf{CAS}es. Since the height of the tree is $O(\log p)$, \nf{Enqueue(x)} takes $O(\log p)$ steps.
+\nf{Enqueue(x)} consists of creating a \nf{block(x)} and appending it to the tree. The first part takes constant time. To propagate \nf{x} to the root the algorithm tries two \nf{Refresh}es in each node of the path from the leaf to the root (Lines \ref{firstRefresh}, \ref{secondRefresh}). We can see from the code  that each \nf{Refresh} takes constant number of steps since creating a block is done in constant time and does $O(1)$ \nf{CAS}es. Since the height of the tree is $\Theta(\log p)$, \nf{Enqueue(x)} takes $O(\log p)$ steps.
 
-A \nf{Dequeue()} creates a block with null value element, appends it to the tree, computes its order among operations, and returns the response. The first two part is similar to an \nf{Enqueue} operation. To compute the order there are some constant steps and \nf{IndexDeq} is called. \nf{IndexDeq} does a search with range $p$ in each level (Lemma \ref{superRange}) which takes $O(log^2 p)$ in the tree. In the \nf{FindResponse()} routine \nf{DSearch()} in the root takes $\Theta(\log$(\nf{root.blocks[b].\size+root.blocks[end].\size}) by Lemma \ref{dsearch}, which is $O(\log$ size of the queue when \nf{enqueue} is invoked$)+\log$ size of the queue when \nf{dequeue} is invoked$)$. Each search in \nf{GetEnq()} takes $O(\log p)$ since there are $\leq p$ subblocks in a block (Lemma \ref{subBlocksBound}), so \nf{GetEnq()} takes $O(\log^2 p)$ steps.
+A \nf{Dequeue()} creates a block with null value element, appends it to the tree, computes its order among enqueue operations, and returns the response. The first two part is similar to an \nf{Enqueue} operation. To compute the order of a \nf{dqueue} in $D(n)$ there are some constant steps and \nf{IndexDeq()} is called. \nf{IndexDeq} does a search with range $p$ in each level (Lemma \ref{superRange}) which takes $O(log^2 p)$ in the tree. In the \nf{FindResponse()} routine \nf{DSearch()} in the root takes $\Theta(\log$(\nf{root.blocks[b].\size+root.blocks[end].\size}) by Lemma \ref{dsearch}, which is $O(\log$ size of the queue when \nf{enqueue} is invoked$)+\log$ size of the queue when \nf{dequeue} is invoked$)$. Each search in \nf{GetEnq()} takes $O(\log p)$ since there are $\leq p$ subblocks in a block (Lemma \ref{subBlocksBound}), so \nf{GetEnq()} takes $O(\log^2 p)$ steps.
 
 If we split \nf{DSearch} time cost between the corresponding \nf{Enqueue}, \nf{Dequeue}, in amortized we have \nf{Enqueue} takes $O(\log p +q)$ and \nf{Dequeue} takes $O(\log^2 p +q)$ steps.
 \end{proof}
 
-
-%\begin{lemma}[Root search range]\label{rootRange}
-%  \nf{root.size-root.FindMostRecentDone()} is $O(p^2+q)$, which $p$ is \# processes and $q$ is the \size of the queue.
-%\end{lemma}
+\begin{lemma}[CASes invoked]
+An \nf{Enqueue()} or \nf{Dequeue()} operation, does at most $4\log p$ \nf{CAS} operations.
+\end{lemma}
+\begin{proof}
+  In each height of the tree at most 2 times \nf{Refresh()} is invoked and  every \nf{Refresh()} has 2 \nf{CAS}es, one in Line \ref{cas} and one in Lines \ref{incrementHead1} or \ref{incrementHead2}.
+\end{proof}
 \end{document}
 
 

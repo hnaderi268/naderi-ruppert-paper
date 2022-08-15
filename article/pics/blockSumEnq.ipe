@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE ipe SYSTEM "ipe.dtd">
 <ipe version="70218" creator="Ipe 7.2.24">
-<info created="D:20220624164416" modified="D:20220727114213"/>
+<info created="D:20220624164416" modified="D:20220815115030"/>
 <ipestyle name="basic">
 <symbol name="arrow/arc(spx)">
 <path stroke="sym-stroke" fill="sym-stroke" pen="sym-pen">
@@ -368,34 +368,6 @@ h
 </path>
 <text matrix="1 0 0 1 -32 -16" transformations="translations" pos="160 560" stroke="black" type="label" width="101.858" height="7.472" depth="2.85" valign="baseline" style="math">n.blocks[b].num_{enq-left}</text>
 <text matrix="1 0 0 1 -32 -16" transformations="translations" pos="480 560" stroke="black" type="label" width="106.385" height="7.472" depth="2.85" valign="baseline" style="math">n.blocks[b].num_{enq-right}</text>
-<path stroke="black" fill="red">
-288 704 m
-288 672 l
-400 672 l
-400 704 l
-h
-</path>
-<path stroke="black" fill="blue">
-224 608 m
-224 576 l
-128 576 l
-128 608 l
-h
-</path>
-<path stroke="black" fill="blue">
-544 608 m
-544 576 l
-464 576 l
-464 608 l
-h
-</path>
-<path stroke="black" fill="blue">
-400 704 m
-400 672 l
-352 672 l
-352 704 l
-h
-</path>
 <path stroke="black">
 288 704 m
 288 720
@@ -412,25 +384,22 @@ h
 </path>
 <text matrix="1 0 0 1 16 0" transformations="translations" pos="288 736" stroke="black" type="label" width="81.615" height="7.472" depth="2.85" valign="baseline" style="math">n.blocks[b].num_{enq}</text>
 <path stroke="black">
-224 608 m
-224 576 l
-128 576 l
-128 608 l
-h
-</path>
-<path stroke="black">
 464 576 m
 464 560
 512 560
 544 560
 544 576 c
 </path>
-<path stroke="black" fill="red">
-224 576 m
-224 608 l
-128 608 l
-128 576 l
+<text matrix="1 0 0 1 32 -48" transformations="translations" pos="112 640" stroke="red" type="label" width="61.879" height="2.032" depth="0" valign="baseline" size="Huge"> ..........</text>
+<text matrix="1 0 0 1 384 -128" transformations="translations" pos="96 720" stroke="blue" type="label" width="49.503" height="2.032" depth="0" valign="baseline" size="Huge">........</text>
+<path stroke="black" fill="lightgray">
+288 704 m
+288 672 l
+400 672 l
+400 704 l
 h
 </path>
+<text matrix="1 0 0 1 176 -48" transformations="translations" pos="128 736" stroke="red" type="label" width="43.315" height="2.032" depth="0" valign="baseline" size="Huge">.......</text>
+<text matrix="1 0 0 1 192 -32" transformations="translations" pos="160 720" stroke="blue" type="label" width="30.94" height="2.032" depth="0" valign="baseline" size="Huge">.....</text>
 </page>
 </ipe>

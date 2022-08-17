@@ -97,7 +97,7 @@
 \item \tt{\sl{*Node} left, right, parent} \textsf{: initialized  when creating the tree.}
 \item \tt{\sl{BlockList}}
 \item \tt{\sl{int} \head= 1}\textsf{: \#\tt{block}s in \tt{blocks}. \tt{blocks[0]} is a block with all integer fields equal to zero.}
-\item \tt{\sl{int} num\sub{propagated}= 0}\textsf{} \textsf{: \# groups of blocks that have been propagated from the node to its parent. Since it is incremented after propagating, it may be behind by 1.}
+\item \tt{\sl{int} num\sub{propagated}= 0}\textsf{} \textsf{: \# groups of blocks that have been propagated from the node to its parent.}
 \end{itemize}
 
 %\Statex $\blacktriangleright$ \tt{\sl{Root} extends \sl{Node}}
@@ -393,9 +393,14 @@
 \State \tt{dir= (parent.left==n)? left: right} \cmt{check if this node is a left or a right child}
 \State \tt{superBlock= parent.\Call{BSearch}{sum\sub{deq-dir}, i+blocks[b-1].sum\sub{deq}, super[blocks[b].group]-p, super[blocks[b].group]+p}} \label{computeSuper}
 \Statex\cmt{superblock's group has at most $p$ difference with the value stored in \tt{super[]}.}
+
+\If{\tt{dir {\keywordfont is} left}}
+\State \tt{i+= blocks[b-1].sum\sub{enq}-blocks[superBlock-1].sum\sub{enq-left}} \cmt{consider the enqueues in the previous blocks from the left child} \label{considerPreviousLeft}
+\EndIf
+
 \If{\tt{dir {\keywordfont is} right}}
-%\State \tt{i+= parent.blocks[superBlock-1].sum\sub{deq-right}}
-\State \tt{i+= blocks[superBlock].num\sub{deq-left}} \cmt{consider the dequeues from the right child} \label{considerRight}
+\State \tt{i+= blocks[b-1].sum\sub{enq}-blocks[superBlock-1].sum\sub{enq-right}} \cmt{consider the enqueues in the previous blocks from the right child} \label{considerPreviousRight}
+\State \tt{i+= blocks[superBlock].num\sub{deq-left}} \cmt{consider the dequeues from the right child} \label{considerLeftBeforeRight}
 \EndIf
 \State \Return\tt{this.parent.}\Call{IndexDeq}{superBlock, i}
 \EndIf
@@ -650,12 +655,20 @@ $\blacktriangleright$ Note that processes are numbered from 1 to $p$, left to ri
 
 \begin{itemize}
 \item Prefix of the $op$ in the sequence of operations $S$, is the operations strictly before $op$.
-  \item $E(n,b)$ is the sequence of enqueue operations in \nf{ops(n.blocks[b])} ordered by their process id.
+  \item $E(n,b)$ is the sequence of enqueue operations in \nf{ops(n.blocks[b])}. $E(leaf,b)$ is the enqueue operation in \nf{ops(leaf.blocks[b])}.
+\begin{align*} 
+E(n,b) =&  E(n.left,n.blocks[b-1].end\sub{left}+1).E(n.left,n.blocks[b-1].end\sub{left}+2)...E(n.left,n.blocks[b].end\sub{left}). \\ 
+&E(n.right,n.blocks[b-1].end\sub{right}+1).E(n.right,n.blocks[b-1].end\sub{right}+2)...E(n.right,n.blocks[b].end\sub{right})
+\end{align*}
   \item $E_{n,b,i}$ is the $i$th enqueue in $E(n,b)$.
-  \item $D(n,b)$ is the sequence of dequeue operations in \nf{ops(n.blocks[b])} ordered by their process id.
-  \item $D_{n,b,i}$ is the $i$th enqueue in $D(n,b)$.
 \item Order of the enqueue operations in the node $n$: $E(n)=E(n,1).E(n,2).E(n,3)...$
 \item $E_{n,i}$ is the $i$th enqueue in $E(n)$.
+  \item $D(n,b)$ is the sequence of dequeue operations in \nf{ops(n.blocks[b])}. $D(leaf,b)$ is the dequeue operation in \nf{ops(leaf.blocks[b])}.
+\begin{align*} 
+D(n,b) =&  D(n.left,n.blocks[b-1].end\sub{left}+1).D(n.left,n.blocks[b-1].end\sub{left}+2)...D(n.left,n.blocks[b].end\sub{left}). \\ 
+&D(n.right,n.blocks[b-1].end\sub{right}+1).D(n.right,n.blocks[b-1].end\sub{right}+2)...D(n.right,n.blocks[b].end\sub{right})
+\end{align*}
+    \item $D_{n,b,i}$ is the $i$th enqueue in $D(n,b)$.
 \item Order of the dequeue operations in the node $n$: $D(n)=D(n,1).D(n,2).D(n,3)...$
 \item $D_{n,i}$ is the $i$th dequeue in $D(n)$.
 \item Linearization: $L=E(root,1).D(root,1).E(root,2).D(root,2).E(root,3).D(root,3)...$
@@ -811,7 +824,6 @@ Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\si
 \end{proof}
 \begin{figure}[hbt]  
   \center\includegraphics[width=6in]{pics/doubling.png}
-  
   \caption{Distance relations between $b,c,end$}
   \label{fig::doubling}
 \end{figure}
@@ -823,16 +835,9 @@ Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\si
 %  \label{end-b}
 %\end{figure}
 
-\pagebreak
+Hello Im hoseen master student in cs at York uni. I will defend my thesis by Nov this year and I was looking for ful time jobs starting from novomber. I have experince in both acdemia and indusrty. When I was a bachelors srudent I workd from 2 years as a Software dveloper. I have expereince with backend devlopment. I have implemented, deploeyd an maintained backend systems.
 
-\begin{lemma}[Index correctness]
- \nf{n.IndexDEQ(b,i)} returns the rank in $D(root)$ of $D_{n,b,i}$.
-\end{lemma}
-\begin{proof}
-We will prove this by induction on the distance of \nf{n} from the \nf{root}. We can see the base case \nf{root.IndexDEQ(b,i)} is trivial (Line \ref{indexBaseCase}).
-  In the non-root nodes \nf{n.IndexDEQ(b,i)} computes the superblock of the $i$th Dequeue in the $b$th block of \nf{n} in \nf{n.parent} by Lemma \ref{superBlock} (Line \ref{computeSuper}). After that the order in $D(n.parent, superblock)$ is computed and \nf{index()} is called on \nf{n.parent} recursively. Then if the operation was propagated from the right child the number of dequeues from the left child are added to it (Line \ref{considerRight}), because the left child operations come before the right child operations (Definition \ref{ordering}).
-\end{proof}
-\textit{Do I need to talk about the computation of the order in the parent which is based on the definition of ordering of dequeues in a block? Make sure to show preconditions of all invocation of \nf{BSearch} are satisfied.}
+\pagebreak
 
 %\begin{definition}
 %An enqueue operation is \textit{finished} if its argument is returned by some process. A dequeue operation is \texttt{finished} if it returns \nf{null} or some value. Block \nf{b} is \textit{done} if all operations in \nf{ops(b)} are finished.
@@ -843,17 +848,14 @@ We will prove this by induction on the distance of \nf{n} from the \nf{root}. We
 %After that \nf{TryAppend()} who is helping finishes, prefix for the blocks of \nf{root.blocks[root.FindMostRecentDone]} are done.
 %\end{lemma}
 
-\begin{lemma}[Computing SuperBlock]\label{superBlock}
-After computing line \ref{computeSuper} of \nf{n.IndexDEQ(b,i)}, \nf{n.parent.blocks[superblock]} contains $D(n,b,i)$.
+\begin{lemma} Let $n.propagates$ be the number of groups of blocks that have been propagated from node \nf{n} to its parent (successful \nf{n.parent.Refresh()}).
+We have \nf{num\sub{propagated}}$\leq n.propagates\leq$\nf{num\sub{propagated}+p}. \nf{p} is the number of processes.
 \end{lemma}
 \begin{proof}
-Lemmas 28,29,30,31.
+    \tt{num\sub{propagated}} is incremented after propagating (Line \ref{incNP}). Since maybe some process falls sleep before incrementing \tt{num\sub{propagated}} it may be behind by \nf{p}.
 \end{proof}
-\begin{lemma}
-Value read for \nf{super[b.group]} in line 418 is not null.\end{lemma}
-\begin{proof}
-  Values \nf{np\textsubscript{dir}} read in lines \ref{setNP}, \nf{super} are set before incrementing in lines \ref{setSuper},\ref{incNP}. So before incrementing \nf{num\sub{propagated}, super[num\sub{propagated}]} is set so it cannot be null while reading.
-\end{proof}
+
+
 \begin{lemma} \nf{super[]} preserves order from child to parent; i.e. if in node \nf{n} block \nf{b} is before \nf{c} then \nf{b.group} $\leq$ \nf{c.group}
 \end{lemma}
 \begin{proof} Line \ref{setGroup}. Since  \nf{num\sub{propagated}} is increasing.\end{proof}
@@ -883,7 +885,7 @@ The number of the \nf{block}s with \nf{group=i} in a node is $\leq p$.
 \begin{lemma}[super property]\label{superCounter}
 If \nf{super[i] $\neq$ null} in node \nf{n}, then \nf{super[i]} is the index of the superblock of a block with \nf{time=i} in \nf{n.parent.blocks}.
 \end{lemma}
-\begin{lemma}\label{superRange} Superblock of \nf{b} is within range $\pm 2p$ of the \nf{super[b.time]}.
+\begin{lemma}\label{superRange} Superblock of \nf{b} is within range $\pm 2p$ of the \nf{super[b.group]}.
 \end{lemma}
 
 \begin{proof} \nf{super[i]} is the index of the superblock of a block containing block b, followed by Lemma \ref{superCounter}. \nf{super(b)} is the real superblock of b. \nf{super(t]} is the index of the superblock of the last block with time \nf{t}. If \nf{b.time} is \nf{t} we have:
@@ -896,6 +898,32 @@ Search in each level of \nf{IndexDeq()} takes $O(\log p)$ steps.
 \begin{proof}
 Show preconditions are satisfied and the range is $p$.  
 \end{proof}
+
+\begin{lemma}[Computing SuperBlock]\label{superBlock}
+For the \nf{superblock} value computed in line \ref{computeSuper} of \nf{n.IndexDEQ(b,i)} we have \nf{n.parent.blocks[superblock]} contains $D_{n,b,i}$.
+\end{lemma}
+\begin{proof}
+First we show the value read for \nf{super[b.group]} in line 418 is not null.
+  Values \nf{np\textsubscript{dir}} read in lines \ref{setNP}, \nf{super} are set before incrementing in lines \ref{setSuper},\ref{incNP}. So before incrementing \nf{num\sub{propagated}, super[num\sub{propagated}]} is set so it cannot be null while reading. Then by Lemma \ref{superRange}if we search in the range $p$, we can find the superblock.
+
+\end{proof}
+
+
+\begin{lemma}[Index correctness]
+ If \nf{n.blocks[b].num\sub{enq}}$\geq$\nf{i} then \nf{n.IndexDEQ(b,i)} returns the rank in $D(root)$ of $D_{n,b,i}$.
+\end{lemma}
+\begin{proof}
+We will prove this by induction on the distance of \nf{n} from the \nf{root}. We can see the base case where \nf{n} is root is trivial (Line \ref{indexBaseCase}).
+  In the non-root nodes \nf{n.IndexDEQ(b,i)} computes the superblock of the $i$th Dequeue in the $b$th block of \nf{n} in \nf{n.parent} by Lemma \ref{superBlock} (Line \ref{computeSuper}). After that the order in $D(n.parent, superblock)$ is computed. Note that by Lemma \ref{blockSize} in each block there is at most one operation from each process and operations of one type are ordered based on the order in the subblocks (See Figure \ref{fig::orderFromSubblocks}). Finally \nf{index()} is called on \nf{n.parent} recursively and it returns the correct response from induction hypothesis. If the operation was propagated from the right child the number of dequeues from the left child are added to it (Line \ref{considerRight}), because the left child operations come before the right child operations (Definition \ref{ordering}).
+\end{proof}
+\textit{Make sure to show preconditions of all invocation of \nf{BSearch} are satisfied.}
+
+\begin{figure}[hbt]  
+  \center\includegraphics[width=4in]{pics/orderFromSubblocks.png}
+  \caption{Relation of ordering of operations of a block from its subblocks}
+  \label{fig::orderFromSubblocks}
+\end{figure}
+
 
 \pagebreak
 

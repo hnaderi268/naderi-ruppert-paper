@@ -580,6 +580,13 @@ Consider the block \nf{b} written into \nf{n.blocks[i]} by \nf{TryAppend()} at L
 Block \texttt{b} is a \emph{direct subblock} of \texttt{n.blocks[i]} if it is in \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]} . Block \texttt{b} is a subblock of \texttt{n.blocks[i]} if \nf{b} is a direct subblock of \texttt{n.blocks[i]} or a subblock of a direct subblock of \texttt{n.blocks[i]}. 
 \end{definition}
 
+\begin{corollary}[No Duplicates]\label{append}
+If \nf{op} is in \nf{n.blocks[i]} then there is no \nf{j$\neq$i} such that \nf{op}$\in$\nf{ops(n.blocks[j])}.
+\end{corollary}
+\begin{proof}
+  Operation \nf{op} is invoked only one time in an execution because every operations invoked is distinct. Since there is node \nf{n} which \nf{op} is in two different blocks of \nf{n}, there is node \nf{n}$^\prime$ that is the lowest height node in the tree that contains \nf{op} in two of its blocks \nf{b1,b2}. By Definition \ref{def::subblock}, \nf{b1} and \nf{b2} have  distinct subblocks(not only direct subblocks) and since \nf{op} is in only one leaf block, then it cannot be in both \nf{b1} and \nf{b2}.
+\end{proof}
+
 %(The \nf{end\sub{left}, end\sub{right}} fields are written in \ref{endDefLine} of \nf{CreateBlock()})
 
 \begin{definition}[Superblock]
@@ -611,12 +618,10 @@ Once a block \nf{b} is written in \nf{n.blocks[i]} then \nf{n.blocks[i]} never c
 Every block has at most one direct superblock.
 \end{lemma}
 \begin{proof}
-To show this we are going to refer to the way \nf{n.blocks[]} is partitioned while propagating blocks up to \nf{n.parent}. \nf{n.CreateBlock(i)} merges the blocks in \nf{n.left.blocks[n.blocks[i-1].end\sub{left}..n.blocks[i].end\sub{left}]} and \nf{n.right.blocks[n.blocks[i-1].end\sub{right}..n.blocks[i].end\sub{right}]} (Lines \ref{lastLine, pr}). Since \nf{end\sub{left},end\sub{right}} are non-decreasing (\nf{n.blocks[i].end\sub{left|right}>n.blocks[i-1].end\sub{left|right}}), so the range of the subblocks of \nf{n.blocks[i]} which is \nf{(n.blocks[i-1].end\sub{dir}+1..n.blocks[i].end\sub{dir})} does not overlap with the range of the subblocks of \nf{n.blocks[i-1]}.
+To show this we are going to refer to the way \nf{n.blocks[]} is partitioned while propagating blocks up to \nf{n.parent}. \nf{n.CreateBlock(i)} merges the blocks in \nf{n.left.blocks[n.blocks[i-1].end\sub{left}..n.blocks[i].end\sub{left}]} and \nf{n.right.blocks[n.blocks[i-1].end\sub{right}..n.blocks[i].end\sub{right}]} (Lines \ref{lastLine}, \ref{prevLine}). Since \nf{end\sub{left},end\sub{right}} are non-decreasing (\nf{n.blocks[i].end\sub{left|right}>n.blocks[i-1].end\sub{left|right}}), so the range of the subblocks of \nf{n.blocks[i]} which is \nf{(n.blocks[i-1].end\sub{dir}+1..n.blocks[i].end\sub{dir})} does not overlap with the range of the subblocks of \nf{n.blocks[i-1]}.
 \end{proof}
 
-\begin{corollary}[No Duplicates]\label{append}
-If \nf{op} is in \nf{n.blocks[i]} then there is no \nf{j$\neq$i} such that \nf{op}$\in$\nf{ops(n.blocks[j])}.
-\end{corollary}
+
 %\begin{proof}
 %\nf{Append(op)} adds \nf{op} to \nf{l\textsubscript{p}.blocks}(Line~\ref{addOP}) and \nf{Propagate()} recursively propagates \nf{op} up to the root.
 %By lemma \ref{doublyRefresh} we know that operation \nf{op} propagates from child to parent at each level.
@@ -650,32 +655,35 @@ Blocks are only appended (not modified) with CAS to \nf{n.blocks[n.head]} and \n
 %\text
 \pagebreak
 
+$\blacktriangleright$ Processes are numbered from 1 to $p$ and leaves of the tree are assigned from left to right. We will show in Lemma \ref{blockSize} that there is at most one operation from each process in a given block.
 \begin{definition} [Ordering of operations inside the nodes] \label{ordering}
-$\blacktriangleright$ Note that processes are numbered from 1 to $p$, left to right in the leaves of the tree and from Lemma \ref{blockSize} we know there is at most one operation from each process in a given block.
+
 
 \begin{itemize}
-\item Prefix of the $op$ in the sequence of operations $S$, is the operations strictly before $op$.
-  \item $E(n,b)$ is the sequence of enqueue operations in \nf{ops(n.blocks[b])}. $E(leaf,b)$ is the enqueue operation in \nf{ops(leaf.blocks[b])}.
+\item The prefix of an operation $op$ in the sequence of operations $S$ is the sequence of operations strictly before $op$.
+  \item $E(n,b)$ is the sequence of enqueue operations in \nf{ops(n.blocks[b])} defined recursively as follows. $E(leaf,b)$ is the single enqueue operation in \nf{ops(leaf.blocks[b])} or an empty sequence if \nf{leaf.blocks[b].num\sub{enq}=0}. If \nf{n} is an internal node, then
 \begin{align*} 
-E(n,b) =&  E(n.left,n.blocks[b-1].end\sub{left}+1).E(n.left,n.blocks[b-1].end\sub{left}+2)...E(n.left,n.blocks[b].end\sub{left}). \\ 
-&E(n.right,n.blocks[b-1].end\sub{right}+1).E(n.right,n.blocks[b-1].end\sub{right}+2)...E(n.right,n.blocks[b].end\sub{right})
+E(n,b) =&  E(n.left,n.blocks[b-1].end\sub{left}+1)\cdot E(n.left,n.blocks[b-1].end\sub{left}+2)\cdots E(n.left,n.blocks[b].end\sub{left})\cdot \\ 
+&E(n.right,n.blocks[b-1].end\sub{right}+1)\cdot E(n.right,n.blocks[b-1].end\sub{right}+2)\cdots E(n.right,n.blocks[b].end\sub{right})
 \end{align*}
   \item $E_{n,b,i}$ is the $i$th enqueue in $E(n,b)$.
-\item Order of the enqueue operations in the node $n$: $E(n)=E(n,1).E(n,2).E(n,3)...$
+\item The order of the enqueue operations in the node $n$ is $E(n)=E(n,1)\cdot E(n,2)\cdot E(n,3)\cdots$
 \item $E_{n,i}$ is the $i$th enqueue in $E(n)$.
-  \item $D(n,b)$ is the sequence of dequeue operations in \nf{ops(n.blocks[b])}. $D(leaf,b)$ is the dequeue operation in \nf{ops(leaf.blocks[b])}.
+  \item $D(n,b)$ is the sequence of dequeue operations in \nf{ops(n.blocks[b])} defined recursively as follows. $D(leaf,b)$ is the single dequeue operation in \nf{ops(leaf.blocks[b])} or an empty sequence if \nf{leaf.blocks[b].num\sub{deq}=0}. If \nf{n} is an internal node, then
 \begin{align*} 
-D(n,b) =&  D(n.left,n.blocks[b-1].end\sub{left}+1).D(n.left,n.blocks[b-1].end\sub{left}+2)...D(n.left,n.blocks[b].end\sub{left}). \\ 
-&D(n.right,n.blocks[b-1].end\sub{right}+1).D(n.right,n.blocks[b-1].end\sub{right}+2)...D(n.right,n.blocks[b].end\sub{right})
+D(n,b) =&  D(n.left,n.blocks[b-1].end\sub{left}+1)\cdot D(n.left,n.blocks[b-1].end\sub{left}+2)\cdots D(n.left,n.blocks[b].end\sub{left})\cdot \\ 
+&D(n.right,n.blocks[b-1].end\sub{right}+1)\cdot D(n.right,n.blocks[b-1].end\sub{right}+2)\cdots D(n.right,n.blocks[b].end\sub{right})
 \end{align*}
     \item $D_{n,b,i}$ is the $i$th enqueue in $D(n,b)$.
-\item Order of the dequeue operations in the node $n$: $D(n)=D(n,1).D(n,2).D(n,3)...$
+\item The order of the dequeue operations in the node $n$: $D(n)=D(n,1)\cdot D(n,2)\cdot D(n,3)...$
 \item $D_{n,i}$ is the $i$th dequeue in $D(n)$.
-\item Linearization: $L=E(root,1).D(root,1).E(root,2).D(root,2).E(root,3).D(root,3)...$
 \end{itemize}
 \end{definition}
-\it{Note that in the non-root nodes we only need ordering of enqueues and dequeues among the operations of their own type. Since \nf{GetENQ()} only searches among enqueues and \nf{IndexDEQ()} works on dequeues.}
 
+\begin{definition}[Linearization] \label{def::lin}
+ $L=E(root,1).D(root,1).E(root,2).D(root,2).E(root,3).D(root,3)...$
+\end{definition}
+$\blacktriangleright$ In the non-root nodes, we only need ordering of enqueues and dequeues among the operations of their own type. Since \nf{GetENQ()} only searches among enqueues and \nf{IndexDEQ()} works with dequeues.
 \pagebreak
 
 
@@ -769,26 +777,26 @@ After \nf{Append(blk)}'s termination, \nf{blk} is in \nf{root.blocks} since \nf{
 Each block contains at most one operation of each processs.
 \end{lemma}
 \begin{proof}
-To derive a contradiction, assume there are 2 operations $op_1$ and $op_2$ from process $p$ in block $b$ in node $n$. WLOG $op_1$ is invoked earlier than $op_2$. A process cannot invoke more than one operations concurrently, so one operation has to be finished before the other starts. So $op_1$ has terminated before $op_2$ started. By Corollary \ref{lem::appendExactlyOnce} before appending $op_2$ to the tree $op_1$ exists in every node from the path of $p$'s leaf to the root. Because $op_1$'s \nf{Append} is finished before $op_2$'s \nf{Append} starts. So there is some block $b^\prime$  before $b$ in $n$ containing $op_1$. $op_1$ existing in $b$ an $b^\prime$ contradicts Lemma \ref{append}.
+To derive a contradiction, assume there are two operations $op_1$ and $op_2$ of process $p$ in block $b$ in node $n$. Without loss of generality $op_1$ is invoked earlier than $op_2$. A process cannot invoke more than one operations concurrently, so $op_1$ has to be finished before $op_2$. By Corollary \ref{lem::appendExactlyOnce}, before appending $op_2$ to the tree $op_1$ exists in every node on the path from $p$'s leaf to the root, because $op_1$'s \nf{Append} is finished before $op_2$'s \nf{Append} starts. So, there is some block $b^\prime$  before $b$ in $n$ containing $op_1$.  Existence of $op_1$ in $b$ and $b^\prime$ contradicts Lemma \ref{append}.
 \end{proof}
 
 \begin{lemma}[Subblocks Upperbound]\label{subBlocksBound}
 Each block has at most $p$ direct subblocks.
 \end{lemma}
 \begin{proof}
-  It follows directly from Lemma \ref{blockSize} and the observation that each block appended to the tree contains at least one operation, induced from Line~\ref{addOP}. 
+The claim follows directly from Lemma \ref{blockSize} and the observation that each block appended to the tree contains at least one operation, due to the test on Line~\ref{addOP}. We can also see the blocks in the leaves have exactly one operation in the \nf{Enqueue()} and \nf{Dequeue()} routines.
 \end{proof}
 
 
 \pagebreak
 
 \begin{lemma}[Get correctness] \label{get}
-If \nf{n.blocks[b].num\sub{enq}$\geq$i} then \nf{n.GetENQ(b,i)} returns $E_{n,b,i}$.
+If \nf{n.blocks[b].num\sub{enq}$\geq$i} then \nf{n.GetENQ(b,i)} returns the \nf{element} enqueued by $E_{n,b,i}$.
 \end{lemma}
 \begin{proof}
-We are going to prove this lemma by induction on the height of node \nf{n}. The base case, where \nf{n} is a leaf, is straightforward (Line \ref{getBaseCase}). Leaf blocks each contain exactly one operation, so only \nf{n.GetENQ(b,1)} can be called where \nf{n} is a leaf. \nf{n.GetENQ(b,1)} returns the \nf{element} of the \nf{enqueue} operation stored in the $b$th block of leaf \nf{n}.
+We are going to prove this lemma by induction on the height of node \nf{n}. For the base case \nf{n} is a leaf. Leaf blocks each contain exactly one operation, so by the preconditions of \nf{GetENQ()}, only \nf{n.GetENQ(b,1)} can be called and \nf{n.blocks[b]} contains an enqueue. At Line \ref{getBaseCase} \nf{n.GetENQ(b,1)} returns the \nf{element} of the \nf{enqueue} operation stored in the $b$th block of leaf \nf{n} .
 
-For the induction step we prove \nf{n.GetENQ(b,i)} returns $E_{n,b,i}$, if \nf{n.child.GetENQ(b,i)} returns $E_{n.child,b,i}$. In the Line\ref{leftOrRight} it is decided for the non-leaf nodes that the \nf{i}th enqueue in  \nf{b}th block  of internal node \nf{n} is in the \nf{n.blocks[b]}'s left child or right child subblocks. From Definition  \ref{ordering} of $E(n,b)$ we know enqueue operations in a block are ordered by their process id and since the leaves of the tree are ordered by process id from left to right, thus operations from the left subblocks come before operations from the right subblocks in a block (See Figure \ref{figGet}). Furthermore the \nf{num\sub{enq-left}} field  in a block stores the number of \nf{enqueue()} operations from the blocks's subblocks in the left child of \nf{n}. So $i$th enqueue operation is propagated from the right child if \nf{i} is greater than \nf{b.num\sub{enq-left}}. otherwise we should search for the $i$th enqueue in the left child. By definition \ref{def::ops} and \ref{def::subblock} we need to search in subblocks of \nf{n.blocks[b]} from the range \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}.
+For the induction step we prove \nf{n.GetENQ(b,i)} returns $E_{n,b,i}$, if \nf{n.child.GetENQ(b,i)} returns $E_{n.child,b,i}$. In  Line \ref{leftOrRight} it is decided for the non-leaf nodes that the \nf{i}th enqueue in  \nf{b}th block  of internal node \nf{n} is in the \nf{n.blocks[b]}'s left child or right child subblocks. From Definition  \ref{ordering} of $E(n,b)$ we know enqueue operations in a block are ordered by their process id and since the leaves of the tree are ordered by process id from left to right, thus operations from the left subblocks come before operations from the right subblocks in a block (See Figure \ref{figGet}). Furthermore the \nf{num\sub{enq-left}} field  in a block stores the number of \nf{enqueue()} operations from the blocks's subblocks in the left child of \nf{n}. So $i$th enqueue operation is propagated from the right child if \nf{i} is greater than \nf{b.num\sub{enq-left}}. otherwise we should search for the $i$th enqueue in the left child. By definition \ref{def::ops} and \ref{def::subblock} we need to search in subblocks of \nf{n.blocks[b]} from the range \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}.
 
 If the $i$th \nf{enqueue} of \nf{n.blocks[b]} is in the left child it would be $i$th enqueue in \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} by Definition \ref{def::subblock}. Also we know there are $eb=n.blocks[b-1].sum_{enq-left}$ enqueues in the blocks before this range, so $E_{n,b,i}$ is $E_{n.left, i+eb}$ which is $E_{n.left,b^\prime,i^\prime}$ for some $b^\prime$ and $i^\prime$. We can compute $b^\prime$ search for $i+eb$th enqueue in \tt{n.left} and $i^\prime$ is \tt{i+eb-n.left.blocks[}$b^\prime-1$\tt{].sum\sub{enq}}. The parameters in \ref{leftChildGet} are for searching $E_{n.left, i+eb}$ in \nf{n.left.block} in the expected range of blocks, so this \nf{BSearch} returns the index of the subblock containing $E_{n,b,i}$.
 
@@ -910,7 +918,7 @@ First we show the value read for \nf{super[b.group]} in line 418 is not null.
 
 
 \begin{lemma}[Index correctness]
- If \nf{n.blocks[b].num\sub{enq}}$\geq$\nf{i} then \nf{n.IndexDEQ(b,i)} returns the rank in $D(root)$ of $D_{n,b,i}$.
+ If \nf{n.blocks[b].num\sub{deq}}$\geq$\nf{i} then \nf{n.IndexDEQ(b,i)} returns the rank in $D(root)$ of $D_{n,b,i}$.
 \end{lemma}
 \begin{proof}
 We will prove this by induction on the distance of \nf{n} from the \nf{root}. We can see the base case where \nf{n} is root is trivial (Line \ref{indexBaseCase}).
@@ -949,7 +957,7 @@ We will prove this by induction on the distance of \nf{n} from the \nf{root}. We
 In an execution on a queue, the dequeue operations that return some value are called \it{non-null dequeues}.  
 \end{definition}
 \begin{observation} \label{responseToADeq}
-$k$th non-null dequeue in an execution returns the \nf{element} of $k$th enqueue.
+In a sequential execution on a queue, $k$th non-null dequeue returns the \nf{element} of $k$th enqueue.
 \end{observation}
 
 \begin{lemma}\label{sizeCorrectness}
@@ -1062,9 +1070,4 @@ An \nf{Enqueue()} or \nf{Dequeue()} operation, does at most $4\log p$ \nf{CAS} o
   In each height of the tree at most 2 times \nf{Refresh()} is invoked and  every \nf{Refresh()} has 2 \nf{CAS}es, one in Line \ref{cas} and one in Lines \ref{incrementHead1} or \ref{incrementHead2}.
 \end{proof}
 \end{document}
-
-
-
-
-
 

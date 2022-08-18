@@ -254,7 +254,7 @@
 \If{\tt{ root.blocks[b-1].\size}\tt{ + root.blocks[b].num\sub{enq} - i $<$ 0}} \State \Return \tt{null} \label{checkEmpty}\cmt{Check if the queue is empty.}
 \Else
 \State \tt{e= i - root.blocks[b-1].size + root.blocks[b-1].sum\sub{enq}} \label{computeE}
-\Statex\cmt{$E_{root,e}$ is the response.}
+\Statex\cmt{$E_e(root)$ is the response.}
 \State \Return \tt{root.GetENQ(root.\Call{DSearch}{e, b})}\label{findAnswer}
 \EndIf
 \EndFunction{FindResponse}
@@ -351,7 +351,7 @@
 \Statex
 \Statex $\leadsto$ \textsf{Precondition: \tt{root.blocks[end].sum\sub{enq} $\geq$ \tt{e}}}
 \Function{<int, int>}{DSearch}{\sl{int} e, \sl{int} end}
-\cmt{Returns \tt{<b,i>} if $E_{root,e}=E_{root,b,i}$.}
+\cmt{Returns \tt{<b,i>} if $E_e(root)=E_i(root,b)$.}
 \State \tt{start= end-1}
 \While{\tt{root.blocks[start].sum\sub{enq}}$\geq$\tt{e}}
 \State \tt{start= max(start-(end-start), 0)} \label{doubling}
@@ -371,10 +371,10 @@
 \setcounter{ALG@line}{400}
 
 \Statex $\leadsto$ \textsf{Precondition:~\tt{blocks[b].num\sub{enq}$\geq$i$\geq 1$}}
-\Function{element}{GetEnq}{\sl{int} b, \sl{int} i} \cmt{Returns the element of $E_{this,b,i}$.}
+\Function{element}{GetEnq}{\sl{int} b, \sl{int} i} \cmt{Returns the element of $E_i(this,b)$.}
 \If{\tt{this} \bf{is} \tt{leaf}}
 \State\Return \tt{blocks[b].element} \label{getBaseCase}
-\ElsIf{\tt{i $\leq$ blocks[b].num\sub{enq-left}}} \label{leftOrRight} \cmt{$E_{this,b,i}$ is in the left child of this node.}
+\ElsIf{\tt{i $\leq$ blocks[b].num\sub{enq-left}}} \label{leftOrRight} \cmt{$E_i(this,b)$ is in the left child of this node.}
 \State \tt{subBlock= left.\Call{BSearch}{sum\sub{enq}, i+blocks[b-1].sum\sub{enq-left}, blocks[b-1].end\sub{left}+1, blocks[b].end\sub{left}}} \label{leftChildGet}
 \State \Return\tt{left.}\Call{GetEnq}{subBlock, i} 
 \Else
@@ -666,17 +666,17 @@ $\blacktriangleright$ Processes are numbered from 1 to $p$ and leaves of the tre
 E(n,b) =&  E(n.left,n.blocks[b-1].end\sub{left}+1)\cdot E(n.left,n.blocks[b-1].end\sub{left}+2)\cdots E(n.left,n.blocks[b].end\sub{left})\cdot \\ 
 &E(n.right,n.blocks[b-1].end\sub{right}+1)\cdot E(n.right,n.blocks[b-1].end\sub{right}+2)\cdots E(n.right,n.blocks[b].end\sub{right})
 \end{align*}
-  \item $E_{n,b,i}$ is the $i$th enqueue in $E(n,b)$.
+  \item $E_i(n,b)$ is the $i$th enqueue in $E(n,b)$.
 \item The order of the enqueue operations in the node $n$ is $E(n)=E(n,1)\cdot E(n,2)\cdot E(n,3)\cdots$
-\item $E_{n,i}$ is the $i$th enqueue in $E(n)$.
+\item $E_i(n)$ is the $i$th enqueue in $E(n)$.
   \item $D(n,b)$ is the sequence of dequeue operations in \nf{ops(n.blocks[b])} defined recursively as follows. $D(leaf,b)$ is the single dequeue operation in \nf{ops(leaf.blocks[b])} or an empty sequence if \nf{leaf.blocks[b].num\sub{deq}=0}. If \nf{n} is an internal node, then
 \begin{align*} 
 D(n,b) =&  D(n.left,n.blocks[b-1].end\sub{left}+1)\cdot D(n.left,n.blocks[b-1].end\sub{left}+2)\cdots D(n.left,n.blocks[b].end\sub{left})\cdot \\ 
 &D(n.right,n.blocks[b-1].end\sub{right}+1)\cdot D(n.right,n.blocks[b-1].end\sub{right}+2)\cdots D(n.right,n.blocks[b].end\sub{right})
 \end{align*}
-    \item $D_{n,b,i}$ is the $i$th enqueue in $D(n,b)$.
+    \item $D_i(n,b)$ is the $i$th enqueue in $D(n,b)$.
 \item The order of the dequeue operations in the node $n$: $D(n)=D(n,1)\cdot D(n,2)\cdot D(n,3)...$
-\item $D_{n,i}$ is the $i$th dequeue in $D(n)$.
+\item $D_i(n)$ is the $i$th dequeue in $D(n)$.
 \end{itemize}
 \end{definition}
 
@@ -791,18 +791,18 @@ The claim follows directly from Lemma \ref{blockSize} and the observation that e
 \pagebreak
 
 \begin{lemma}[Get correctness] \label{get}
-If \nf{n.blocks[b].num\sub{enq}$\geq$i} then \nf{n.GetENQ(b,i)} returns the \nf{element} enqueued by $E_{n,b,i}$.
+If \nf{n.blocks[b].num\sub{enq}$\geq$i} then \nf{n.GetENQ(b,i)} returns the \nf{element} enqueued by $E_i(n,b)$.
 \end{lemma}
 \begin{proof}
 We are going to prove this lemma by induction on the height of node \nf{n}. For the base case \nf{n} is a leaf. Leaf blocks each contain exactly one operation, so by the preconditions of \nf{GetENQ()}, only \nf{n.GetENQ(b,1)} can be called and \nf{n.blocks[b]} contains an enqueue. At Line \ref{getBaseCase} \nf{n.GetENQ(b,1)} returns the \nf{element} of the \nf{enqueue} operation stored in the $b$th block of leaf \nf{n} .
 
-For the induction step we prove \nf{n.GetENQ(b,i)} returns $E_{n,b,i}$, if \nf{n.child.GetENQ(b,i)} returns $E_{n.child,b,i}$. In  Line \ref{leftOrRight} it is decided for the non-leaf nodes that the \nf{i}th enqueue in  \nf{b}th block  of internal node \nf{n} is in the \nf{n.blocks[b]}'s left child or right child subblocks. From Definition  \ref{ordering} of $E(n,b)$ we know enqueue operations in a block are ordered by their process id and since the leaves of the tree are ordered by process id from left to right, thus operations from the left subblocks come before operations from the right subblocks in a block (See Figure \ref{figGet}). Furthermore the \nf{num\sub{enq-left}} field  in a block stores the number of \nf{enqueue()} operations from the blocks's subblocks in the left child of \nf{n}. So $i$th enqueue operation is propagated from the right child if \nf{i} is greater than \nf{b.num\sub{enq-left}}. otherwise we should search for the $i$th enqueue in the left child. By definition \ref{def::ops} and \ref{def::subblock} we need to search in subblocks of \nf{n.blocks[b]} from the range \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}.
+For the induction step we prove \nf{n.GetENQ(b,i)} returns $E_i(n,b)$, if \nf{n.child.GetENQ(b,i)} returns $E_i(n.child,b)$. In  Line \ref{leftOrRight} it is decided for the non-leaf nodes that the \nf{i}th enqueue in  \nf{b}th block  of internal node \nf{n} is in the \nf{n.blocks[b]}'s left child or right child subblocks. From Definition  \ref{ordering} of $E(n,b)$ we know enqueue operations in a block are ordered by their process id and since the leaves of the tree are ordered by process id from left to right, thus operations from the left subblocks come before operations from the right subblocks in a block (See Figure \ref{figGet}). Furthermore the \nf{num\sub{enq-left}} field  in a block stores the number of \nf{enqueue()} operations from the blocks's subblocks in the left child of \nf{n}. So $i$th enqueue operation is propagated from the right child if \nf{i} is greater than \nf{b.num\sub{enq-left}}. otherwise we should search for the $i$th enqueue in the left child. By definition \ref{def::ops} and \ref{def::subblock} we need to search in subblocks of \nf{n.blocks[b]} from the range \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}.
 
-If the $i$th \nf{enqueue} of \nf{n.blocks[b]} is in the left child it would be $i$th enqueue in \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} by Definition \ref{def::subblock}. Also we know there are $eb=n.blocks[b-1].sum_{enq-left}$ enqueues in the blocks before this range, so $E_{n,b,i}$ is $E_{n.left, i+eb}$ which is $E_{n.left,b^\prime,i^\prime}$ for some $b^\prime$ and $i^\prime$. We can compute $b^\prime$ search for $i+eb$th enqueue in \tt{n.left} and $i^\prime$ is \tt{i+eb-n.left.blocks[}$b^\prime-1$\tt{].sum\sub{enq}}. The parameters in \ref{leftChildGet} are for searching $E_{n.left, i+eb}$ in \nf{n.left.block} in the expected range of blocks, so this \nf{BSearch} returns the index of the subblock containing $E_{n,b,i}$.
+If the $i$th \nf{enqueue} of \nf{n.blocks[b]} is in the left child it would be $i$th enqueue in \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} by Definition \ref{def::subblock}. Also we know there are $eb=n.blocks[b-1].sum_{enq-left}$ enqueues in the blocks before this range, so $E_i(n,b)$ is $E_{i+eb}(n.left)$ which is $E_{i^\prime}(n.left,b^\prime)$ for some $b^\prime$ and $i^\prime$. We can compute $b^\prime$ search for $i+eb$th enqueue in \tt{n.left} and $i^\prime$ is \tt{i+eb-n.left.blocks[}$b^\prime-1$\tt{].sum\sub{enq}}. The parameters in \ref{leftChildGet} are for searching $E_{i+eb}(n.left)$ in \nf{n.left.block} in the expected range of blocks, so this \nf{BSearch} returns the index of the subblock containing $E_i(n,b)$.
 
-Else if the enqueue we are looking for is in the right child then there are \nf{n.blocks[b].num\sub{enq-left}} enqueues ahead of it in \nf{n.blocks[b]} but not in \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}. So we need to search for \nf{i-n.blocks[b].num\sub{enq-left}+ n.blocks[b-1].sum\sub{enq-right}} (Line \ref{rightChildGet}). Other parameters are assigned similar for the left child. So in both cases the direct subblock containing $E_{n,b,i}$ is computed in Lines \ref{leftChildGet} and \ref{rightChildGet}.
+Else if the enqueue we are looking for is in the right child then there are \nf{n.blocks[b].num\sub{enq-left}} enqueues ahead of it in \nf{n.blocks[b]} but not in \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}. So we need to search for \nf{i-n.blocks[b].num\sub{enq-left}+ n.blocks[b-1].sum\sub{enq-right}} (Line \ref{rightChildGet}). Other parameters are assigned similar for the left child. So in both cases the direct subblock containing $E_i(n,b)$ is computed in Lines \ref{leftChildGet} and \ref{rightChildGet}.
 
- Finally, \nf{n.child.GetENQ()} is invoked on the subblock containing $E_{n,b,i}$ which returns $E_{n,b,i}$ by the hypothesis of the induction.
+ Finally, \nf{n.child.GetENQ()} is invoked on the subblock containing $E_i(n,b)$ which returns $E_i(n,b)$ by the hypothesis of the induction.
 \end{proof}
 
 \begin{figure}[hbt]  
@@ -818,10 +818,10 @@ Else if the enqueue we are looking for is in the right child then there are \nf{
 
 
 \begin{lemma}[DSearch correctness] \label{dsearch}
-Assume \nf{root.blocks[end].sum\sub{enq}}$\geq$\nf{e} and $E_{root, e}$'s \nf{element} is the response to some \nf{Dequeue()} operation in \nf{root.blocks[end]}.  \nf{DSearch(e, end)} returns \nf{<b, i>} such that $E_{root,b,i}= E_{root,e}$.
+Assume \nf{root.blocks[end].sum\sub{enq}}$\geq$\nf{e} and $E_e(root)$'s \nf{element} is the response to some \nf{Dequeue()} operation in \nf{root.blocks[end]}.  \nf{DSearch(e, end)} returns \nf{<b, i>} such that $E_i(root,b)= E_e(root)$.
 \end{lemma}
 \begin{proof}
-It is trivial to see that the doubling search from \nf{root.blocks[end]} to \nf{root.blocks[0]} will find $E_{root,e}$ eventually. Because \nf{root.blocks[].sum\sub{enq}} is an increasing value from 0 to some value greater than \nf{e}. So there is a \nf{b} that \nf{root.blocks[b].sum\sub{enq}}$>e$ but \nf{root.blocks[b-1].sum\sub{enq}}$<e$. 
+It is trivial to see that the doubling search from \nf{root.blocks[end]} to \nf{root.blocks[0]} will find $E_e(root)$ eventually. Because \nf{root.blocks[].sum\sub{enq}} is an increasing value from 0 to some value greater than \nf{e}. So there is a \nf{b} that \nf{root.blocks[b].sum\sub{enq}}$>e$ but \nf{root.blocks[b-1].sum\sub{enq}}$<e$. 
 
 First we show \nf{end-b}$\leq 2 \times$\nf{root.blocks[b].\size+root.blocks[end].\size+1}. From line \ref{addOP}, we know that size of the every block in the tree is greater than 0. So each block in \nf{root.blocks[b..end]} contains at least one \nf{Enqueue} or at least one \nf{Dequeue}. Suppose there were more than \nf{root.blocks[b].\size}\nf{Dequeue}s in \nf{root.blocks[b+1..end-1]}. Then the  queue would become empty at some point after \nf{blocks[b]}'s last operations and before \nf{root.blocks[end]}'s first operation. Which means the response to to a \nf{Dequeue} in \nf{root.blocks[end]} could not be in $E(n,b)$. Furthermore since the size of the queue would become \nf{root.blocks[end].\size} after the \nf{root.blocks[end]}, there cannot be more than \nf{root.blocks[b].\size + root.blocks[end].\size} \nf{Enqueue}s. Because there can be at most \nf{root.blocks[b].\size}\nf{Dequeue}s and the final size is \nf{root.blocks[end].\size}. Overall there can be at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} operations in \nf{root.blocks[b+1..end-1]} and since each block size is $\geq 1$ thus there are at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} blocks in between \nf{root.blocks[b]} and \nf{root.blocks[end]}. So \nf{end-b}$\leq 2 \times$\nf{root.blocks[b].\size+root.blocks[end].\size+1}. See Figure \ref{end-b}.
 
@@ -842,8 +842,6 @@ Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\si
 %  \caption{The number written on top of the bars is the queue size. the first block is $b$ and the last block is $end$.}
 %  \label{end-b}
 %\end{figure}
-
-Hello Im hoseen master student in cs at York uni. I will defend my thesis by Nov this year and I was looking for ful time jobs starting from novomber. I have experince in both acdemia and indusrty. When I was a bachelors srudent I workd from 2 years as a Software dveloper. I have expereince with backend devlopment. I have implemented, deploeyd an maintained backend systems.
 
 \pagebreak
 
@@ -985,15 +983,15 @@ There are \nf{b.sum\sub{enq}} enqueue operations in the prefix for \nf{b}, then 
 \nf{FindResponse(b,i)} returns \nf{R(D\sub{root,b,i}).element}.
 \end{lemma}
 \begin{proof}
-First note that by Definition \ref{ordering} the linearization ordering  of operations will not change as new operations come so instead of talking about the linearization of operations before the $E_{root, b, i}$ we talk about what if the whole operation in the linearization are applied on a queue.
+First note that by Definition \ref{ordering} the linearization ordering  of operations will not change as new operations come so instead of talking about the linearization of operations before the $E_i(root, b)$ we talk about what if the whole operation in the linearization are applied on a queue.
 
-$D_{root,b,i}$ is $D_{root,root.blocks[b-1].sum_{deq}+i}$ from the definition \ref{ordering} and \it{$sum_{enq}$}.  $D_{root,b,i}$ returns \nf{null} if \nf{root.blocks[b-1].\size+ root.blocks[b].num\sub{enq}- i <0} by Lemma \ref{nullReturn} (Line \ref{checkEmpty}). Otherwise if it is $d^\prime$th non-null dequeue in $L$ it returns $d^\prime$th enqueue by Observation \ref{responseToADeq} . By Lemma \ref{numberOfNND} there are \nf{root.blocks[b-1].sum\sub{enq} - root.blocks[b-1].\size} non-null dequeue operations before prefix for \nf{root.blocks[b-1]}. Note that the dequeues in \nf{root.blocks[b]} before the $i$th dequeue are non-null dequeues. So the response is $E_{root,i - root.blocks[b-1].size + root.blocks[b-1].sum\sub{deq}}$ (Line \ref{computeE}). See figure \ref{computeResponseDetail}.
+$D_{root,b,i}$ is $D_{root,root.blocks[b-1].sum_{deq}+i}$ from the definition \ref{ordering} and \it{$sum_{enq}$}.  $D_{root,b,i}$ returns \nf{null} if \nf{root.blocks[b-1].\size+ root.blocks[b].num\sub{enq}- i <0} by Lemma \ref{nullReturn} (Line \ref{checkEmpty}). Otherwise if it is $d^\prime$th non-null dequeue in $L$ it returns $d^\prime$th enqueue by Observation \ref{responseToADeq} . By Lemma \ref{numberOfNND} there are \nf{root.blocks[b-1].sum\sub{enq} - root.blocks[b-1].\size} non-null dequeue operations before prefix for \nf{root.blocks[b-1]}. Note that the dequeues in \nf{root.blocks[b]} before the $i$th dequeue are non-null dequeues. So the response is $E_{i - root.blocks[b-1].size + root.blocks[b-1].sum\sub{deq}}(root)$ (Line \ref{computeE}). See figure \ref{computeResponseDetail}.
 
-After computing \nf{e} we can find \nf{b,i} such that $E_{root,b,i}=E_{root,e}$ using \nf{DSearch} and then find its \nf{element} using \nf{GetEnq} (Line \ref{findAnswer}).
+After computing \nf{e} we can find \nf{b,i} such that $E_i(root,b)=E_e(root)$ using \nf{DSearch} and then find its \nf{element} using \nf{GetEnq} (Line \ref{findAnswer}).
 \end{proof}
 
 \begin{figure}[hbt]  
-  \center\includegraphics[width=2in]{pics/computeResponseDetail.png}\caption{The position of $E_{root,b,i}$.}
+  \center\includegraphics[width=2in]{pics/computeResponseDetail.png}\caption{The position of $E_i(root,b)$.}
 \label{computeResponseDetail}
 \end{figure}
 

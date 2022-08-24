@@ -10,7 +10,7 @@
 \makeatother
 \usepackage{graphicx}
 \usepackage{subcaption}
-\usepackage{showkeys}
+%\usepackage{showkeys}
 \usepackage{amsmath}
 
 
@@ -1192,7 +1192,7 @@ In the algorithm, some value is appended to \nf{n.blocks[]} by writing into \nf{
 \it{Explain More}
 
 \begin{lemma}[headProgress] \label{lem::headProgress}
-\nf{n.head} is non-decreasing over time. If \nf{n.blocks[i]$\neq$null} and \nf{i$.$0} then \nf{n.blocks[i].end\sub{left}} $\geq$ \nf{n.blocks[i-1].end\sub{left}} and \nf{n.blocks[i].end\sub{right}} $\geq$ \nf{n.blocks[i-1].end\sub{right}}.
+\nf{n.head} is non-decreasing over time. If \nf{n.blocks[i]$\neq$null} and \nf{i$.$0} then $\nf{n.blocks[i].end\sub{left}} \geq \nf{n.blocks[i-1].end\sub{left}}$ and $\nf{n.blocks[i].end\sub{right}} \geq \nf{n.blocks[i-1].end\sub{right}}$.
 \end{lemma}
 \begin{proof}
 The first claim follows trivially from the pseudocode since \nf{n.head} is only incremented in the pseudocode in lines \ref{incrementHead1} and \ref{incrementHead2} of \nf{Refresh()} .
@@ -1334,6 +1334,9 @@ After the successful \nf{TryAppend} in line \ref{cas} we know all blocks in \nf{
 \begin{lemma}[Stronger True Refresh] \label{lem::prectrueRefresh}
   Let $t_i$ be the time an instance of \nf{n.Refresh()} read the head (Line \ref{readHead}) and $t_t$ be the time its \nf{TryAppend(new, s)} terminates with  and returns \nf{true} (Line \ref{cas}). We have \nf{ops(EST\sub{n.left, t\sub{i}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}})} $\subseteq$ \nf{ops(n.blocks)}.
 \end{lemma}
+\begin{definition}
+  An instance of \nf{Refresh()} is successful iff its \nf{TryAppend(new, s)} terminates with  and returns \nf{true}.
+\end{definition}
 %\it{Mention this new block is establish in t\sub{t}. last sentece is not complete}
 
 %\begin{lemma}[falseRefresh] \label{lem:falseRefresh}
@@ -1346,32 +1349,34 @@ After the successful \nf{TryAppend} in line \ref{cas} we know all blocks in \nf{
 
 \pagebreak
 
+\begin{definition}
+Let $_{R_1}t$ be the time $R_1$ is invoked and $t_{R_2}$ be the time $R_2$ terminates.
+  $_{line}t$ is the immediate time before running Line $line$.   $t_{line}$ is the immediate time after running Line $line$. $_{line}t^{op}$ is the immediate time before running Line $line$ of operation $op$.   $t_{line}^{op}$ is the immediate time after running Line $line$ of operation $op$.
+\end{definition} 
 
 \begin{lemma}[Double Refresh] \label{doubleRefresh}
-  Consider two consecutive instances $R_1$, $R_2$ of \nf{Refresh()} on \nf{n} by process $p$. Let $t_1$ be the time $R_1$ is invoked and $t_2$ be the time $R_2$ terminated. If $R_1$ and $R_2$ both fail and return false, then we have \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{2}})}.
+  Consider two consecutive instances $R_1$, $R_2$ of \nf{Refresh()} on internal node \nf{n} by a process $p$. If $R_1$ and $R_2$ both fail and return false, then we have \nf{ops(EST\sub{n.left, \sub{R1}t})} $\cup$ \nf{ops(EST\sub{n.right, \sub{R1}t})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{R2}})}.
 \end{lemma}
 \begin{proof}
   
 
-If Line \ref{cas} of $R_1$ or $R_2$ returns \nf{true}, then the claim is held by Lemma~\ref{lem::trueRefresh}. Let $R_1$ read $i$ and $R_2$ read $i+1$ from Line \ref{readHead}. If $R_2$ reads some value greater than $i+1$ in Line \ref{readHead} it means a successful instance of \nf{Refresh()} started after Line \ref{readHead} of $R_1$ and finished its Line \ref{incrementHead1} or \ref{incrementHead2} before \ref{readHead} of $R_2$, from Lemma~\ref{lem::trueRefresh} by the end of this instance \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} has been propagated.
+If $R_2$ reads some value greater than $i+1$ in Line \ref{readHead} it means a successful instance of \nf{Refresh()} performed its Line \ref{readHead} after $t_{\ref{readHead}}^{R_1}$ and finished its Line \ref{incrementHead1} or \ref{incrementHead2} before $t_{\ref{readHead}}^{R_2}$, from Lemma~\ref{lem::prectrueRefresh} by the end of this instance \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} has been propagated.
 
-Since $R_2$'s \nf{TryAppend()} returns \nf{false} then there is another successful instance $R_2^\prime$ of \nf{n.Refresh()} that has done \nf{TryAppend()} successfully into \nf{n.blocks[i+1]} before $R_2$ tries to append. Since $R_2^\prime$ creates the block after reading the value $i+1$ from \nf{n.head}(Line \ref{readHead}) and $R_1$ reads the value $i$ from \nf{n.head} and the \nf{head}'s value is increaing by Lemma \ref{lem::headProgress} then $t_{R2^\prime \; \ref{readHead}} > t_{R1 \; \ref{readHead}} > t_1$ (See Figure \ref{fig::doubleRefresh}). By Lemma \ref{lem::prectrueRefresh} after $R_2^\prime$'s \nf{CAS} we have \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(n.blocks)}. Also by Lemma \ref{lem::headInc} on $R_2$ the value  of \nf{n.head}  head is more than $i+1$ after $R_2$\' terminates, so the block appended by $R_2^\prime$ to \nf{n} is established by then (\nf{n.head>=i+2>i+1}). To summarize $t_1$ is before $R_2^\prime$'s \nf{read n.head} and $R_2^\prime$'s successful \nf{CAS} is before $R_2$'s termination. So by Lemma \ref{lem::prectrueRefresh} \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{2}})}.
+ Let $R_1$ read $i$ and $R_2$ read $i+1$ from Line \ref{readHead}. As $R_2$'s \nf{TryAppend()} returns \nf{false}, there is another successful instance $R_2^\prime$ of \nf{n.Refresh()} that has done \nf{TryAppend()} successfully into \nf{n.blocks[i+1]} before $R_2$ tries to append. Since $R_2^\prime$ creates the block after reading the value $i+1$ from \nf{n.head} (Line \ref{readHead}) and $R_1$ reads the value $i$ from \nf{n.head} and the \nf{head}'s value is increasing by Lemma \ref{lem::headProgress} then $t_{R2^\prime \; \ref{readHead}} > t_{R1 \; \ref{readHead}} > _{R_1}t$ (see Figure \ref{fig::doubleRefresh}). By Lemma \ref{lem::prectrueRefresh} after $R_2^\prime$'s \nf{CAS} ($t_{\ref{cas}}^{R_2^\prime}$) we have \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(n.blocks)}. Also by Lemma \ref{lem::headInc} on $R_2$ the value  of \nf{n.head}  head is more than $i+1$ after $R_2^\prime$ terminates, so the block appended by $R_2^\prime$ to \nf{n} is established by then ($\nf{n.head}\geq i+2 > i+1$). To summarize, $_{R_1}t$ is before $R_2^\prime$'s read of \nf{n.head} ($t_{\ref{readHead}}^{R_2^\prime}$) and $R_2^\prime$'s successful \nf{CAS} is before $R_2$'s termination. So, by Lemma \ref{lem::prectrueRefresh}, \nf{ops(EST\sub{n.left, t\sub{1}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{1}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{2}})}.
 %It is obvious that the \nf{new} constructed by the second Refresh in Line 36 contains the blocks in \nf{new} by $R_1$ which $R_1^\prime$ did not contain, since \nf{n.head} is only increasing (Maybe Lemma~\ref{lem::oldnewOrder}). If $R_2$ succeeds by Lemma~\ref{lem::trueRefresh} the claim holds. If not, it is deduced that \nf{n.blocks[h]} was not \nf{null} before $R_2$'s \nf{CAS}. Furthermore, \nf{n.blocks[h]} was \nf{null} before reading \nf{h} by $R_1$. So there is a successful \nf{Refresh()} after the read of \nf{h} in $R_1$ and before the \nf{CAS} of $R_2$. This \nf{Refresh()} contains all the new established operations before Line 35 (Maybe Lemma~\ref{lem::oldnewOrder}) and by Lemma~\ref{lem::trueRefresh} our claim holds. See Figure~\ref{}.
 \end{proof}
 
 \begin{figure}[hbt]
   \center\includegraphics[width=6in]{pics/compactdouble.png}
-  \caption{\label{fig::doubleRefresh}$t1<$ $r_1$ reading head $<$ incrementing \nf{n.head} from $i$ to $i+1$ $<$ $R_2^\prime$ reading head $<$ \nf{TryAppend(i+1)} $<$ incrementing \nf{n.head} from $i+1$ to $i+2$ $<t2$} 
+  \caption{\label{fig::doubleRefresh}$_{R_1}t<$ $t_{\ref{readHead}}^{R_1}$ $<$ incrementing \nf{n.head} from $i$ to $i+1$ $<$ $t_{\ref{readHead}}^{R_2^\prime}$ $<$ $t_{\ref{cas}}^{R_2^\prime}$ $<$ incrementing \nf{n.head} from $i+1$ to $i+2$ $<t_{R_2}$} 
 \end{figure}
-\it{this chain with more depth should be in the proof}
+
 
 %  Block \nf{new} is created of new established subblocks of children of \nf{n}(Lemma \ref{lem::createBlock}, Line 46). If \nf{CAS} in Line 48 succeeds then by Lemma~\ref{lem::trueRefresh} new established blocks will be in \nf{n}.
  
-\begin{definition}
-  $t_{before \; line}$ is the immediate time before running Line $line$.   $t_{before \; line}$ is the immediate time after running Line $line$.
-\end{definition} 
+
 \begin{corollary}
-  \nf{ops(EST\sub{n.left, t\sub{before \ref{firstRefresh}}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{before \ref{firstRefresh}}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{after \ref{secondRefresh}})}}
+  \nf{ops(EST\sub{n.left, \sub{\ref{firstRefresh}}t})} $\cup$ \nf{ops(EST\sub{n.right, \sub{\ref{firstRefresh}}t})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{\ref{secondRefresh}})}}
 \end{corollary}
 \begin{proof}
   If the first \nf{Refresh()} in line \ref{firstRefresh} returns \nf{true} then by Lemma \ref{lem::trueRefresh} the claim holds. Also if first \nf{Refresh()} failed and the second \nf{Refresh()} succeeded the claim still holds by Lemma \ref{lem::trueRefresh}. Finally, if both failed the claim is satisfied by Lemma \ref{doubleRefresh}.
@@ -1394,8 +1399,6 @@ If \ref{firstRefresh} or \ref{secondRefresh} succeed, the claim is true by Lemma
 After \nf{Append(blk)}'s termination, \nf{blk} is in \nf{root.blocks} since \nf{blk} is established  in the leaf it has been added to. By applying Lemma \ref{doublyRefresh} inductively it is propagated up to the root. Finally Lemma \ref{append} shows  only one block in the root contains \nf{blk}.
 \end{proof}
 
-\pagebreak
-
 
 \begin{lemma}[Block Size Upper Bound]\label{blockSize}
 Each block contains at most one operation of each processs.
@@ -1415,18 +1418,20 @@ The claim follows directly from Lemma \ref{blockSize} and the observation that e
 \pagebreak
 
 \begin{lemma}[Get correctness] \label{get}
-If \nf{n.blocks[b].num\sub{enq}$\geq$i} then \nf{n.GetENQ(b,i)} returns the \nf{element} enqueued by $E_i(n,b)$.
+If $\nf{n.blocks[b].num\sub{enq}} \geq \nf{i}$ then \nf{n.GetENQ(b,i)} returns the \nf{element} enqueued by $E_i(n,b)$.
 \end{lemma}
 \begin{proof}
-We are going to prove this lemma by induction on the height of node \nf{n}. For the base case \nf{n} is a leaf. Leaf blocks each contain exactly one operation, so by the preconditions of \nf{GetENQ()}, only \nf{n.GetENQ(b,1)} can be called and \nf{n.blocks[b]} contains an enqueue. At Line \ref{getBaseCase} \nf{n.GetENQ(b,1)} returns the \nf{element} of the \nf{enqueue} operation stored in the $b$th block of leaf \nf{n} .
+We are going to prove this lemma by induction on the height of node \nf{n}. For the base case, \nf{n} is a leaf. Leaf blocks each contain exactly one operation, so by the hypothesis, only \nf{n.GetENQ(b,1)} can be called and only when \nf{n.blocks[b]} contains an enqueue. At Line \ref{getBaseCase}, \nf{n.GetENQ(b,1)} returns the \nf{element} of the \nf{enqueue} operation stored in the $b$th block of leaf \nf{n} .
 
-For the induction step we prove \nf{n.GetENQ(b,i)} returns $E_i(n,b)$, if \nf{n.child.GetENQ(b,i)} returns $E_i(n.child,b)$. In  Line \ref{leftOrRight} it is decided for the non-leaf nodes that the \nf{i}th enqueue in  \nf{b}th block  of internal node \nf{n} is in the \nf{n.blocks[b]}'s left child or right child subblocks. From Definition  \ref{ordering} of $E(n,b)$ we know enqueue operations in a block are ordered by their process id and since the leaves of the tree are ordered by process id from left to right, thus operations from the left subblocks come before operations from the right subblocks in a block (See Figure \ref{figGet}). Furthermore the \nf{num\sub{enq-left}} field  in a block stores the number of \nf{enqueue()} operations from the blocks's subblocks in the left child of \nf{n}. So $i$th enqueue operation is propagated from the right child if \nf{i} is greater than \nf{b.num\sub{enq-left}}. otherwise we should search for the $i$th enqueue in the left child. By definition \ref{def::ops} and \ref{def::subblock} we need to search in subblocks of \nf{n.blocks[b]} from the range \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}.
+For the induction step we prove \nf{n.GetENQ(b, i)} returns $E_i(n,b)$, assuming \nf{n.child.GetENQ(subblock, i)} returns $E_i(n.child,b)$. We argue that  Line \ref{leftOrRight} correctly decides whether the \nf{i}th enqueue in  \nf{b}th block  of internal node \nf{n} is in the  left child or right child subblocks of \nf{n.blocks[b]}. From Definition  \ref{ordering} of $E(n,b)$ we know enqueue operations in a block are ordered from left to right and since the leaves of the tree are ordered by process id from left to right, thus operations from the left subblocks come before operations from the right subblocks in a block (See Figure \ref{figGet}). Furthermore the \nf{num\sub{enq-left}} field  in \nf{n.blocks[b]} stores the number of \nf{enqueue()} operations from the blocks's subblocks in the left child of \nf{n}. So the $i$th enqueue operation is propagated from the right child if \nf{i} is greater than \nf{b.num\sub{enq-left}}. Otherwise we should search for the $i$th enqueue in the left child. By definition \ref{def::subblock} and \ref{def::ops} we need to search in subblocks of \nf{n.blocks[b]} from the range \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}.
 
-If the $i$th \nf{enqueue} of \nf{n.blocks[b]} is in the left child it would be $i$th enqueue in \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} by Definition \ref{def::subblock}. Also we know there are $eb=n.blocks[b-1].sum_{enq-left}$ enqueues in the blocks before this range, so $E_i(n,b)$ is $E_{i+eb}(n.left)$ which is $E_{i^\prime}(n.left,b^\prime)$ for some $b^\prime$ and $i^\prime$. We can compute $b^\prime$ search for $i+eb$th enqueue in \tt{n.left} and $i^\prime$ is \tt{i+eb-n.left.blocks[}$b^\prime-1$\tt{].sum\sub{enq}}. The parameters in \ref{leftChildGet} are for searching $E_{i+eb}(n.left)$ in \nf{n.left.block} in the expected range of blocks, so this \nf{BSearch} returns the index of the subblock containing $E_i(n,b)$.
+If the $i$th \nf{enqueue} of \nf{n.blocks[b]} is in the left child it would be $i$th enqueue in \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} by Definition \ref{def::subblock}. Also, we know there are $eb=n.blocks[b-1].sum_{enq-left}$ enqueues in the blocks before this range, so $E_i(n,b)$ is $E_{i+eb}(n.left)$ which is $E_{i^\prime}(n.left,b^\prime)$ for some $b^\prime$ and $i^\prime$. We can compute $b^\prime$ and then search for $i+eb$th enqueue in \tt{n.left}, where $i^\prime$ is \tt{i+eb-n.left.blocks[}$b^\prime-1$\tt{].sum\sub{enq}}. The parameters in Line \ref{leftChildGet} are for searching $E_{i+eb}(n.left)$ in \nf{n.left.block} in the expected range of blocks, so this \nf{BSearch} returns the index of the subblock containing $E_i(n,b)$.
 
-Else if the enqueue we are looking for is in the right child then there are \nf{n.blocks[b].num\sub{enq-left}} enqueues ahead of it in \nf{n.blocks[b]} but not in \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}. So we need to search for \nf{i-n.blocks[b].num\sub{enq-left}+ n.blocks[b-1].sum\sub{enq-right}} (Line \ref{rightChildGet}). Other parameters are assigned similar for the left child. So in both cases the direct subblock containing $E_i(n,b)$ is computed in Lines \ref{leftChildGet} and \ref{rightChildGet}.
+Otherwise the enqueue we are looking for is in the right child. Then, there are \nf{n.blocks[b].num\sub{enq-left}} enqueues ahead of it in \nf{n.blocks[b]} but not in \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}. So we need to search for \nf{i-n.blocks[b].num\sub{enq-left}+ n.blocks[b-1].sum\sub{enq-right}} (Line \ref{rightChildGet}). Other parameters for the left child are chosen similarly to the way they were chosen for the right child. 
 
- Finally, \nf{n.child.GetENQ()} is invoked on the subblock containing $E_i(n,b)$ which returns $E_i(n,b)$ by the hypothesis of the induction.
+
+So, in both cases the direct subblock containing $E_i(n,b)$ is computed in Lines \ref{leftChildGet} and \ref{rightChildGet}.
+ Finally, \nf{n.child.GetENQ(subblock, i)} is invoked on the subblock containing $E_i(n,b)$ and it returns $E_i(n,b)$ by the hypothesis of the induction.
 \end{proof}
 
 \begin{figure}[hbt]  
@@ -1442,12 +1447,12 @@ Else if the enqueue we are looking for is in the right child then there are \nf{
 
 
 \begin{lemma}[DSearch correctness] \label{dsearch}
-Assume \nf{root.blocks[end].sum\sub{enq}}$\geq$\nf{e} and $E_e(root)$'s \nf{element} is the response to some \nf{Dequeue()} operation in \nf{root.blocks[end]}.  \nf{DSearch(e, end)} returns \nf{<b, i>} such that $E_i(root,b)= E_e(root)$.
+Assume $\nf{root.blocks[end].sum\sub{enq}}\geq\nf{e}$ and $E_e(root)$'s \nf{element} is the response to some \nf{Dequeue()} operation in \nf{root.blocks[end]}.  \nf{DSearch(e, end)} returns \nf{<b, i>} such that $E_i(root,b)= E_e(root)$.
 \end{lemma}
 \begin{proof}
-It is trivial to see that the doubling search from \nf{root.blocks[end]} to \nf{root.blocks[0]} will find $E_e(root)$ eventually. Because \nf{root.blocks[].sum\sub{enq}} is an increasing value from 0 to some value greater than \nf{e}. So there is a \nf{b} that \nf{root.blocks[b].sum\sub{enq}}$>e$ but \nf{root.blocks[b-1].sum\sub{enq}}$<e$. 
+It is trivial to see that the doubling search from \nf{root.blocks[end]} to \nf{root.blocks[0]} will find $E_e(root)$ eventually. Because \nf{root.blocks[].sum\sub{enq}} is an increasing value from 0 to some value greater than \nf{e}. So there is a \nf{b} that $\nf{root.blocks[b].sum\sub{enq}}>e$ but $\nf{root.blocks[b-1].sum\sub{enq}}<e$. 
 
-First we show \nf{end-b}$\leq 2 \times$\nf{root.blocks[b].\size+root.blocks[end].\size+1}. From line \ref{addOP}, we know that size of the every block in the tree is greater than 0. So each block in \nf{root.blocks[b..end]} contains at least one \nf{Enqueue} or at least one \nf{Dequeue}. Suppose there were more than \nf{root.blocks[b].\size}\nf{Dequeue}s in \nf{root.blocks[b+1..end-1]}. Then the  queue would become empty at some point after \nf{blocks[b]}'s last operations and before \nf{root.blocks[end]}'s first operation. Which means the response to to a \nf{Dequeue} in \nf{root.blocks[end]} could not be in $E(n,b)$. Furthermore since the size of the queue would become \nf{root.blocks[end].\size} after the \nf{root.blocks[end]}, there cannot be more than \nf{root.blocks[b].\size + root.blocks[end].\size} \nf{Enqueue}s. Because there can be at most \nf{root.blocks[b].\size}\nf{Dequeue}s and the final size is \nf{root.blocks[end].\size}. Overall there can be at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} operations in \nf{root.blocks[b+1..end-1]} and since each block size is $\geq 1$ thus there are at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} blocks in between \nf{root.blocks[b]} and \nf{root.blocks[end]}. So \nf{end-b}$\leq 2 \times$\nf{root.blocks[b].\size+root.blocks[end].\size+1}. See Figure \ref{end-b}.
+First we show $\nf{end}-\nf{b} \leq 2 \times \big(\nf{root.blocks[b].\size}+\nf{root.blocks[end].\size+1\big)$. From line \ref{addOP}, we know that size of the every block in the tree is greater than 0. So each block in \nf{root.blocks[b..end]} contains at least one \nf{Enqueue} or at least one \nf{Dequeue}. Suppose there were more than \nf{root.blocks[b].\size}\nf{Dequeue}s in \nf{root.blocks[b+1..end-1]}. Then the  queue would become empty at some point after \nf{blocks[b]}'s last operations and before \nf{root.blocks[end]}'s first operation. Which means the response to to a \nf{Dequeue} in \nf{root.blocks[end]} could not be in $E(n,b)$. Furthermore since the size of the queue would become \nf{root.blocks[end].\size} after the \nf{root.blocks[end]}, there cannot be more than \nf{root.blocks[b].\size + root.blocks[end].\size} \nf{Enqueue}s. Because there can be at most \nf{root.blocks[b].\size}\nf{Dequeue}s and the final size is \nf{root.blocks[end].\size}. Overall there can be at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} operations in \nf{root.blocks[b+1..end-1]} and since each block size is $\geq 1$ thus there are at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} blocks in between \nf{root.blocks[b]} and \nf{root.blocks[end]}. So \nf{end-b}$\leq 2 \times$\nf{root.blocks[b].\size+root.blocks[end].\size+1}. See Figure \ref{fig::doubling}.
 
 Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\size} blocks in between \nf{root.blocks[b]} and \nf{root.blocks[end]} then with doubling search in $\Theta \big(\log($\nf{root.blocks[b].\size+root.blocks[end].\size}$)\big)$ steps we reach \nf{start=c} that the \nf{root.blocks[c].sum\sub{enq}} is less than \nf{e} and \nf{end-c} is not more than $2\times$\nf{root.blocks[b].\size+root.blocks[end].\size}. Beause otherwise, then \nf{(end-c)/2} satisfied the \nf{root.blocks[(end-c)/2].sum\sub{enq}<e}. In line \ref{doubling} the differnece between \nf{end} and \nf{start} is doubled. See Figure \ref{fig::doubling}.
 
@@ -1540,7 +1545,7 @@ First we show the value read for \nf{super[b.group]} in line 418 is not null.
 
 
 \begin{lemma}[Index correctness]
- If \nf{n.blocks[b].num\sub{deq}}$\geq$\nf{i} then \nf{n.IndexDEQ(b,i)} returns the rank in $D(root)$ of $D_{n,b,i}$.
+ If $\nf{n.blocks[b].num\sub{deq}}\geq\nf{i}$ then \nf{n.IndexDEQ(b,i)} returns the rank in $D(root)$ of $D_{n,b,i}$.
 \end{lemma}
 \begin{proof}
 We will prove this by induction on the distance of \nf{n} from the \nf{root}. We can see the base case where \nf{n} is root is trivial (Line \ref{indexBaseCase}).

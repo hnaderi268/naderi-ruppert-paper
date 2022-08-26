@@ -64,14 +64,19 @@
 \newtheorem{definition}[theorem]{Definition}
 \newtheorem{invariant}[theorem]{Invariant}
 
-\begin{document}
 
+\begin{document}
+\title{Wait-free Queues with Polylogarithmic Step Complexity}
+\author{Hossein Naderibeni \\supervised by Eric Ruppert}
+\maketitle
 
 \begin{abstract}
 In this work, we are going to introduce a novel lock-free queue implementation.
 Linearizability and lock-freedom are standard requirements for designing shared data structures. All existing linearizable, lock-free queues in the literature have a common problem in their worst case called CAS Retry Problem. Our contribution is solving this problem while outperforming the previous algorithms.
 \end{abstract}
 
+\tableofcontents
+\pagebreak
 \section{Introduction}
 Shared data structures have become an essential field in distributed algorithms research.
 We are reaching the physical limits of how many transistors we can place on a CPU core. The industry solution to provide more computational power is to increase the number of cores of the CPU. This is why distributed algorithms have become important. It is not hard to see why multiple processes cannot update sequential data structures designed for one process. For example, consider two processes trying to insert some values into a sequential linked list simultaneously. Processes $p,q$ read the same tail node, $p$ changes the next pointer of the tail node to its new node and after that $q$ does the same. In this run, $p$'s update is overwritten. One solution is to use locks; whenever a process wants to do an update or query on a data structure, the process locks it, and others cannot use it until the lock is released. Using locks has some disadvantages; for example, one process might be slow, and holding a lock for a long time prevents other processes from progressing. Moreover, locks do not allow complete parallelism since only the one process holding the lock can make progress. 
@@ -103,6 +108,7 @@ In section 4 we introduce a concurrent wait-free datastructure, to agree on the 
 
 In section 5 we introduce our main work, the queue; prove its linearizability and wait-freeness.
 
+\pagebreak
 \section{Related Work}
 \subsection{List-based Queues}
 In the following paragraphs, we look at previous lock-free queues.
@@ -153,116 +159,12 @@ Ellen and Woelfel introduced an implementation of a Fetch\&Inc object with step 
 
 %There is a connection between queues and universal constructions. We can implement a universal construction using a queue. We can store operations in the shared queue and compute operations' responses using the queue's content. Some impractical universal constructions are using big words as "...".
 
+\subsection{Attiya Fourier Lower Bound}
 \pagebreak
-\section{ Universal Construction using Tournament Tree with Big CAS Objects }
-
-\paragraph{}
-A universal construction gets any sequential object and creates a concurrent version of the given datastructure. Our universal construction in Algorithm~\ref{alg1} relies on a tournament tree with $p$ leaves and height $\log(p)$ is shared among $p$ processes. Nodes in the tree are CAS objects that store an ordering and support \tt{append()} and \tt{diff()} operations. Leaf $l_i$ stores the sequence of the operations invoked by $P_i$. Each internal node stores the sequence of operations propagated up to it. When process $P_i$ wishes to apply an operation $op$ on the implemented object, it appends $op$ to its assigned leaf and tries to propagate it up to the root. The history of operations stored at the root is the linearization ordering. The operation $op$ is linearized when it is appended to the root.
-
-\begin{center}
-\Tree [ [ [ $P_1$ $P_2$ ] [ $P_3$ $P_4$ ] ]
-          [ [ $P_5$ $P_6$ ] [ $P_7$ $P_8$ ] ] ]
-\end{center}
-
-
-The algorithm uses a subroutine \textsc{Refresh}($n$) that concatenates new operations from node $n$'s children (that have not already been propagated to $n$) to the sequence of operations stored in $n$ and tries to CAS the new sequence into $n$. In other words, \textsc{Refresh}($n$) tries to append $n$'s children's new operations to $n$'s sequence.
-After a process adding a new operations to its leaf, it has to propagate new operations up to the root. \textsc{Propagate}($n$) tries to append $n$'s new operations to the root $n$ by recursively calling \textsc{Refresh}($n$). In each \tt{Propagate()} step if a \textsc{Refresh}($n$) fails, it means another CAS operation has succeeded; if so, it tries to \textsc{Refresh}($n$) again. If the second attempt fails too, another process has already appended the operations the current \textsc{Propagate} is trying to append.
-Operations that were in $l_i$ before \textsc{Propagate}($l_i$.parent) was invoked are guaranteed to be added to the root by the time the \textsc{Propagate}($l_i$.parent) terminates.
-
-
-
-\begin{figure}
-\begin{center}
-\begin{subfigure}[b]{.49\textwidth}
-  \centering
-  \resizebox{\columnwidth}{!}{
-  \begin{tikzpicture}[level 1/.style={level distance=1.4cm,sibling distance=0.5cm}]
-\Tree [.{\begin{tabular}{|c|c|c|c|c|c|}  \hline $op_{l_1}$ & $op_{l_2}$ & $op_{r_1}$ & $op_{l_3}$ & $op_{r_2}$ \\ \hline \end{tabular}}
-{\begin{tabular}{|c|c|c||c|c|}  \hline $op_{l_1}$ & $op_{l_2}$ & $op_{l_3}$ & $op_{l_4}$ & $op_{l_5}$ \\ \hline \end{tabular}}
-{\begin{tabular}{|c|c||c|c|}  \hline $op_{r_1}$ & $op_{r_2}$ & $op_{r_3}$ & $op_{r_4}$\\ \hline \end{tabular}} ]
-\end{tikzpicture}
-}
-  \caption{Operations after $||$ are new.}
-
-\end{subfigure}
-\hfill
-\begin{subfigure}[b]{.49\textwidth}
-
-
-  \centering
-  \resizebox{\columnwidth}{!}{
-  \begin{tikzpicture}[level 1/.style={level distance=1.4cm,sibling distance=0.5cm}]
-\Tree [.{\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}  \hline $op_{l_1}$ & $op_{l_2}$ & $op_{r_1}$ & $op_{l_3}$ & $op_{r_2}$ & $op_{l_4}$ & $op_{l_5}$ & $op_{r_3}$ & $op_{r_4}$  \\ \hline \end{tabular}}
-{\begin{tabular}{|c|c|c|c|c||}  \hline $op_{l_1}$ & $op_{l_2}$ & $op_{l_3}$ & $op_{l_4}$ & $op_{l_5}$ \\ \hline \end{tabular}}
-{\begin{tabular}{|c|c|c|c||}  \hline $op_{r_1}$ & $op_{r_2}$ & $op_{r_3}$ & $op_{r_4}$\\ \hline \end{tabular}} ]
-\end{tikzpicture}
-}
-  \caption{New operations are added to the parent node.}
-
-\end{subfigure}
-
-
-\caption{\label{fig:ucexample} Propagate Step in Universal Construction}
-\end{center}
-\end{figure}
-
-
-\begin{algorithm}
-\caption{Universal Construction Idea}\label{alg1}
-\begin{algorithmic}[1]
-\begin{multicols}{2}
-
-\Function{response}{Do}{\textsl{operation} op, \textsl{pid} i} 
-\State \texttt{l\textsubscript{i}.\Call{append}{op}}
-\State \Call{Propagate}{parent of l\textsubscript{i}}
-\State \texttt{Run} \textsf{the sequence stored in root}
-\State \texttt{\Return op}\textsf{'s response from line 4}
-\EndFunction{Do}
-
-\Statex
-
-\Function{void}{Propagate}{\textsl{node} n}
-\If{\texttt{n==root}} \Return
-\ElsIf{!\Call{Refresh}{n}}
-\State \Call{Refresh}{$n$} \EndIf
-\State \Call{Propagate}{parent of n}
-\EndFunction{Propagate}
-
-\columnbreak
-
-\Function{boolean}{Refresh}{\textsl{node} n}
-\State \texttt{old=} \Call{Read}{n}
-\State \texttt{new=} \textsf{ops that n's children contain but \texttt{old} does not}
-\State \texttt{new= old$\cdot$new}
-\State \Return n.\Call{CAS}{old, new}
-\EndFunction{Refresh}
-
-\end{multicols}
-\end{algorithmic}
-\end{algorithm}
-
-
-$\textsc{O}(\log n)$ CAS operations are invoked to do a \textsc{Propagate}, but the CAS words store sequences of unbounded length.
-The problem is that we are trying to store unbounded sequence of operations in each node $n$ (see Figure~\ref{fig::uc}). However, to compute the result of an operation, we only use the total ordering that is stored at the root. Although we use a similar construction for our queue implementation, we develop an implicit representation of the sequence of operations, so that we can use reasonable sized CAS objects and still achieve polygarithmic step complexity.
-
-\begin{figure}[h]
-\begin{center}
-\begin{tikzpicture}[level 1/.style={level distance=1.8cm,sibling distance=1cm}, level 2/.style={level distance=1.4cm,sibling distance=1cm}]
-  
-\Tree [.{\begin{tabular}{|c|c|c|c|c|c|c|c|c|c}  \hline  $op_2^1$ & $op_2^2$ & $op_3^1$ & $op_4^1$ & $op_3^2$ & $op_1^1$ & $op_4^2$ & $op_1^2$ \\ \hline\end{tabular}}  [.{\begin{tabular}{|c|c|c|c|c|c}  \hline $op_2^1$ & $op_2^2$ & $op_1^1$ & $op_1^2$ \\ \hline\end{tabular}}
-      {\begin{tabular}{|c|c|c|c}  \hline $op_1^1$ & $op_1^2$ \\ \hline\end{tabular}} {\begin{tabular}{|c|c|c|c}  \hline $op_2^1$ & $op_2^2$ \\ \hline\end{tabular}} ] [.{\begin{tabular}{|c|c|c|c|c|c}  \hline $op_3^1$ & $op_4^1$ & $op_3^2$ & $op_4^2$ \\ \hline\end{tabular}} {\begin{tabular}{|c|c|c|c}  \hline $op_3^1$ & $op_3^2$ \\ \hline\end{tabular}} {\begin{tabular}{|c|c|c|c}  \hline $op_4^1$ & $op_4^2$ \\ \hline\end{tabular}} ] ]
-
-\end{tikzpicture}
-\caption{\label{fig::uc} Universal Construction: $op_j^i$ denotes the $i$th operation from process $j$. In each node, we store the ordering of all the operations propagated up to it.}
-\end{center}
-\end{figure}
-
-
 
 \pagebreak
-\section{Block Trees}
-Here we introduce a data structure that allows processes to agree on the linearization ordering of their operations using $\textsc{O}(\log p)$ \texttt{CAS} per operation called a \textit{block tree}. Then we use the block tree as a stepping stone towards our queue algorithm.
-A block tree is a tournament tree shared among $p$ processes (see Figure~\ref{fig::blocktree}). Each process has a leaf, and it appends its operations to its leaf. After that, the process tries to propagate its new operation up to the tree's root. An ordering of operations propagated up to a node is stored in that node. All processes agree on the sequence stored in the root and this is used as the linearization ordering. Our idea is similar to Jayanti and Petrovic's multi-enqueuer single-dequeuer Queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but we do not use \texttt{CAS} operations with big words and do not put a limit on the number of concurrent operations.
+\section{Our work}
+Jayanti introduced a wait-free polylogarithmic MESD queue, we are going to design a polylogarithmic MEMD queue based on some of their ideas. We apply two ideas from universal their work to create a new linearizable data structure agreeing on a sequence of elements among processes. First, there is a shared tournament tree among processes, in which each process appends its element to its leaf in the tree and then tries to propagate it up to the root by performing \textsc{Refresh()} operations at each node. Second, each operation is linearized when its element is appended to the root.  We use the shared tournament tree among $p$ processes (see Figure~\ref{fig::blocktree}) to agree on one total ordering on the operations invoked by procesess. Each process has a leaf, and it appends its operations to its leaf. After that, the process tries to propagate its new operation up to the tree's root. An ordering of operations propagated up to a node is stored in that node. All processes agree on the sequence stored in the root and this is used as the linearization ordering. Our idea is similar to Jayanti and Petrovic's multi-enqueuer single-dequeuer Queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but we do not use \texttt{CAS} operations with big words and do not put a limit on the number of concurrent operations.
 
 \begin{figure}[hbt]
 \begin{center}
@@ -313,15 +215,8 @@ We also implement methods \texttt{Get(i)}, \texttt{Index(op)} to get the $i$th p
 
 Block tree can be used to implement queue, but \texttt{Get(i)}  may take a long time since it has to find the block containing the $i$th operation at the root level.
 
-
-
-%\subsection{Idea in a nutshell}
-We apply two ideas from universal construction to create a new linearizable data structure agreeing on a sequence of elements among processes. First, there is a shared tournament tree among processes, in which each process appends its element to its leaf in the tree and then tries to propagate it up to the root by performing \textsc{Refresh()} operations at each node. Second, each operation is linearized when its element is appended to the root.
-
-
-
 \paragraph{}
- In the universal construction, we order new concurrent operations at each \textsc{Refresh}() and maintain that order in the path up to the root. However, we can instead keep track of sets of concurrent operations and create the total ordering of all operations at the root (see Figure~\ref{fig::set}).
+We can instead keep track of sets of concurrent operations and create the total ordering of all operations at the root (see Figure~\ref{fig::set}).
  
  \begin{figure}[h]
 \begin{center}
@@ -338,21 +233,6 @@ We apply two ideas from universal construction to create a new linearizable data
 
 The definition of linearizability allows concurrent operations to be reordered arbitrarily. Thus, a group of concurrent operations can be appended to our root sequence as one block without specifying the order among the operations.
 
-
-%\begin{lemma}
-%Operations in the same block can be linearized in any order.
-%\end{lemma}
-
-
-\paragraph{}
- We used unbounded CAS objects storing sequences as big words in the universal construction. One can represent sequences as arrays to overcome this implementation problem. Each array element will store one of the blocks of concurrent operations described in section \ref{subsec::block}.
- 
-
-
-\paragraph{}
-Copying operation sequences from children to their parent in a \textsc{Refresh}() takes time proportioned to the number of operations being copied. This is time-consuming, so we propose a way to augment the tree to calculate lines 15,16 in $\textsc{O}(\log p)$ steps which reads new operation and concats them with old operations. Instead of representing the set of operations by explicitly listing them in a node, we represent a set of operations implicitly by recording which of the children's sets were unioned to create the set. Having operation sequences stored at leaves, we can deduce a set of operations in a node using this implicit representation.~(see Figure~\ref{fig:block}.)
-
-\pagebreak
 \begin{figure}
 
 \begin{center}
@@ -374,43 +254,17 @@ Copying operation sequences from children to their parent in a \textsc{Refresh}(
 \caption{\label{fig:block} Showing concurrent operation sets with blocks. Each block consists of a pair(left, right) indicating the number of operations from the left and the right child, respectively. Block (12,6) in the root contains blocks (10,2) from the left child and (6,0) from the right child. Blocks between two lines $||$ are propagated together to the parent. For example, Blocks (2,3) and (4,1) from the leftmost leaf and (0,2) from its sibling are propagated together into the block (10,2) in their parent. The number underneath a group of blocks in a node indicates which block in the node's parent those blocks were propagated to.}
 \end{figure}
 
+In the original algorithm  we differ between the enqueues and the dequeues in a block. Later we discuss about the reason.
 
 Each block $b$ in node $n$ is the aggregation of blocks in the  children of $n$ that are newly read by the\textsc{Propagate}() step that created block $b$. For example, the third block in the root (8,36) is created by merging block (5,3) from the left child and (14,6) and (0,16) from the right child. Block (5,3) also points to elements from blocks (0,5) and (1,2). 
-%Recursively we can deduce each block contents until the leaf nodes store arrays of individual element operations.
 
-\begin{definition}\{Existence of an operation in a block\}  Operation op exists in block b if it has propagated up to block b.
-\end{definition}
-
-
-\begin{definition}\{Subblock\}
-  The blocks that are aggregated into block $b$ in a \textsc{Propagate}() step are called subblocks of $b$. Block $b_1$ is a subblock of $b_2$ if and only if $b_1$ is a block in node $v$ and in $b_2$ is a block in the parent of $v$ and $b_1$'s elements exits in $b_2$'s elements.
-\end{definition}
-%{\TODO: describe how blocks work with a good example how exactly it is done}
 
 \paragraph{}
 We choose to linearize operations in a block from the left child before those from the right child as a convention. Operations within a block of the root can be ordered in any way that is convenient. In effect, this means that if there are concurrent new blocks in a \textsc{Refresh}() step from several processes we linearize them in the order of their process ids. So for example  operations aggregated in block (10,2) are in the order (2,3),(4,1),(0,2). All blocks from the left child with come before the right child and the order of blocks of each child is preserved among themselves.
-%\begin{lemma}
-%\label{lem:block_size}
-%There cannot be more than one operation from each process in a \textsc{Refresh}() invocation.
-%\end{lemma}
-%\begin{proof}
-%  If so, then that parent process has invoked two simultaneous operations. $ \blacksquare $
-%\end{proof}
 
 \paragraph{}
 In a \textsc{Propagate}() invocation path from a leaf to root, there will be \textsc{Refresh}() steps with merges from $2, 4, 8, ..., p$ processes. So in a complete propagation, at most $2p$ blocks are merged into one block. \texttt{(maybe useful for analysis)}
-%\begin{lemma}
-%A block in the root cannot contain more than one operation from a process.
-%\end{lemma}
-%\begin{proof}
-%  Assume a process in a block invokes two operations; one has to be finished another. If so, it has been added to root before. $\blacksquare$
-%\end{proof}
 
-\pagebreak
-\subsection{Using pointers and prefix sum to make \textsc{GetIndex}($i$) faster}
-%\begin{definition}
-%  \textsc{BSearch}($i$): Search $i$th element in a prefix sum array with length $n$ in \textsc{O}($\log n$) steps.
-%\end{definition}
 \paragraph{}
 \textsc{GetIndex}($i$) returns the $i$th operation stored in the block tree sequence. We do that by finding the block $b_i$ containing $i$th element in the root, and then recursively finding the subblock of $b_i$ which contains $i$th element. To make this recursive search faster, instead of iterating over all elements in sequence of blocks we store prefix sum of number of elements in the blocks sequence and pointers to make BSearch faster.
 
@@ -441,11 +295,8 @@ Starting from the root, \textsc{GetIndex}($i$) BSearches $i$ in the prefix sum a
 
 
 \pagebreak
-\subsection{Block Tree Algorithm}
-\paragraph{}
-Our Block Tree is a linearizable implementation of a data structure that stores a sequence of elements. It has two methods (see Algorithm~\ref{alg2}), \textsc{Append}($e$) which appends element $e$ to the sequence, and \textsc{Get}($i$) which returns the $i$th element in the sequence.
-
-\paragraph{Design of a block tree}
+\subsection{Queue Decription}
+\paragraph{Design of a Queue}
 
 Each process is assigned to a leaf in a shared tournament tree. Thus, for example, the leaf node for process $p_i$ contains an array of elements by $p_i$ in the order they were invoked.
 Each internal node of the tree contains an array of blocks of elements.
@@ -458,32 +309,7 @@ After element $e$ is propagated (appended to a block int the root), its index ca
 In order to compute elements of a block faster we store prefix-sum blocks(block i has tuple(right-sum=$\#$right ops in previous block, left-sum=$\#$left ops in previous blocks)[See Figure \ref{fig:prefix}]. Here is the algorithm to get elements of a block.
 
 \paragraph{Specification}
-A block tree is a shared data structure that stores a sequence of elements.  It has two methods \texttt{Append(e)} and \texttt{Get(i)}. \texttt{Append(e)} adds \texttt{e} to the end of the sequence and returns the index of \texttt{e} in the sequence. \texttt{Get(i)} returns \texttt{i}th element stored in the sequence. 
-
-\paragraph{SubBlock} Block \texttt{s} is a subblock of \texttt{b} if \texttt{s} is between blocks \texttt{start..end} in \texttt{n} from Lines 41,42 of \texttt{CreateBlock()}.
-
-\paragraph{Membership}
-Element \texttt{e} is a member of block \texttt{b} in:
-\begin{itemize}
-  \item internal node \texttt{n}, if \texttt{e} is a memeber of \texttt{s} that \texttt{s} is a subblock of \texttt{b}.
-  \item leaf node \texttt{n}, if \texttt{e} belongs to \texttt{n.dir.blocks[b\textsuperscript{$\prime$}.end\textsubscript{dir}+1..b.end\textsubscript{dir}]} for \texttt{dir} $\in$ \texttt{\{left, right\}} which b\textsuperscript{$\prime$} is the previous block of \texttt{b} in \texttt{n}.
-\end{itemize}
-
-
-\pagebreak
-\paragraph{Order of elements inside node}
-Element \texttt{d} is before element \texttt{e} in node \texttt{n}, if:
-\begin{itemize}
-  \item The block containing d is before the block containing e.
-  \item e and d are in the same block and d is in the left child and e is in the right child.
-  \item d is before e in the same child's order.
-\end{itemize}
-
-
-\begin{figure}[hbt]
-  \center\includegraphics[width=5.5in]{pics/tree}
-  \caption{Order of elements in b: elements in leaves are ordered with numerical order in the drawing.}
-\end{figure}
+A Queue is a shared data structure that stores a sequence of elements. It has two methods \texttt{Enqueue(e)} and \texttt{Dequeue()}. \texttt{Enqueue(e)} adds \texttt{e} to the end of the sequence. \texttt{Dequeue()} returns the first element stored in the sequence and removes it from the sequence.
 
 
 \paragraph{\texttt{CreateBlock()}} \texttt{CreateBlock(n)} returns a block containing new operations of \texttt{n}'s children. \texttt{b\textsuperscript{$\prime$}.end\textsubscript{left}} stores the index of the rightmost subblock of left child of \texttt{b}'s previous block. Other attributes are assigned values followed by definition.
@@ -495,33 +321,10 @@ Element \texttt{d} is before element \texttt{e} in node \texttt{n}, if:
 %\textsf{Is it necessary to say \texttt{CreateBlock()} is doing what it's supposed to do by definition? Or \texttt{Append()} for example?}
 
 
-\pagebreak
-\paragraph{Double Refresh}
-Elements in \texttt{n}'s children's blocks before line \texttt{13} are guaranteed to be in \texttt{n}'s blocks after Line~\texttt{15}.
-\begin{proof}
-\texttt{CreateBlock()} reads blocks in the children that does not exist in the parent and aggregates them into one block. If a \texttt{Refresh} procedure returns true it means it has appended the block created by \texttt{CreateBlock()} into the parent node's sequence. So suppose two \texttt{Refresh}es fail. Since the first \texttt{Refresh} was not successful, it means another CAS operation by a \texttt{Refresh}, concurrent to the first\texttt{Refresh}, was successful before the second \texttt{Refresh}. So it means the second failed \texttt{Refresh} is concurrent with a successful \texttt{Refresh} that assuredly has read block before the mentioned line \texttt{13}. After all it means if any of the \texttt{Refresh} attempts were successful the claim is true, and also if both fail the mentioned claim still holds.
-\end{proof}
 \begin{figure}[hbt]
   \center\includegraphics[width=4in]{pics/doublerefresh.png}
   \caption{The second failed Refresh is assuredly concurrent to a Successful \texttt{Refresh()} with \texttt{CreateBlock} line after first failed \texttt{Refresh}'s \texttt{CreateBlock()}.}
 \end{figure}
-
-
-\paragraph{Disjunction} Blocks in node \texttt{n}'s contain disjoint sets of elements.
-\begin{proof}
-Without loss of generality, assume blocks \texttt{b1, b2} contain common element \texttt{e} from the left child, and \texttt{b2} is after \texttt{b1} in \texttt{n}'s sequence of blocks. So block start of b2's \texttt{CreateBlock()} is after block end of \texttt{b1}'s end. Since \texttt{b2}'s start is the end of the block before itself, it cannot be before \texttt{b1}'s end.
-\end{proof}
-
-\paragraph{Total Order}
-Sequence represented by the Block Tree is the sequence of the blocks stored in the root.
-
-\paragraph{Linearization Points}
-\texttt{Get(i)} is linearized when it terminates. \texttt{Append(e)} is linearized right after when a block containing \texttt{e} is appended to the root, if there are multiple elements appended together, they are linearized by the defined order in the root.
-
-\paragraph{Subblocks Upperbound} Block b has at most $p$ subblocks.
-\begin{proof}
-If there are more than $p$ subblocks, then there is more than one block from process pl. \texttt{Append(e)} finishes after propagating and appending \texttt{e} to the root(line 9). So these blocks cannot be appended to root already, so pl has invoked two concurrent \texttt{Append()}s(line 1) without terminating the first one.
-\end{proof}
 
 \paragraph{Computing \texttt{Get(n, b, i)}}
 To find the \texttt{i}th element in block \texttt{b} of node \texttt{n}, we search among subblocks of \texttt{b} that is bounded by $p$. Subblocks of a block are within the start and end block of the \texttt{CreateBlock()} procedure of it.
@@ -546,29 +349,9 @@ To find the \texttt{i}th element in block \texttt{b} of node \texttt{n}, we sear
 \end{figure}
 
 \paragraph{Computing superblock}
-\begin{enumerate}
-  \item Value read for \texttt{super[b.time]} in line 71 is not null.\begin{proof}
-    \texttt{Index()} is invoked after finishing \texttt{Propagate()} in line 10. For each value \texttt{c\textsubscript{dir}} read in lines 23, \texttt{super} is set before incrementing in lines 26,27.
-  \end{proof} 
-  \item \texttt{super[]} preserves order from child to parent; if in a child block \texttt{b} is before \texttt{c} then \texttt{b.time} $\leq$ \texttt{c.time} and \texttt{super[b.time]} $\leq$ \texttt{super[c.time]}\begin{proof}
-   Follows from the order of lines 37, 26, 27.
- \end{proof}
-%  \item In a propagate step at most 2 different time values are read \\ If there are more than 2 numbers then the smallest number should have been propagated far before.
-%  \item There are at most $p^2$ blocks with same time value in a node. \\ At most p processes could die before line 27 and each contains at most p elements.
-  \item \texttt{super[i+1]-super[i]}$\leq p$
-\begin{proof}
- In a Refresh with successful CAS in line 24, \texttt{super} and \texttt{counter} are set for each child in lines 26,27. Assume the current value of the counter in node \texttt{n} is \texttt{i+1} and still \texttt{super[i+1]} is not set. If an instance of successful \texttt{Refresh(n)} finishes \texttt{super[i+1]} is set a new value and a block is added after \texttt{n.parent[sup[i]]}. There could be at most $p$ successful unfinished concurrent instances of \texttt{Refresh()} that have not reached line 27. So the distance between \texttt{super[i+1]} and \texttt{super[i]} is less than $p$.
- \end{proof}
-  \item Superblock of \texttt{b} is within range $\pm 2p$ of the \texttt{super[b.time]}.
-\begin{proof}
-\texttt{super[i]} is the index of the superblock of a block containing block b. It is trivial to see that \texttt{n.super} and \texttt{n.b.counter} are increasing.  \texttt{super(b)} is the real superblock of b. \texttt{super(t]} is the index of the superblock of the last block with time \texttt{t}. If \texttt{b.time} is \texttt{t} we have:
-$$super[t]-p\leq super[t-1]\leq super(t-1] \leq super(b) \leq super(t+1)\leq super(t+1]\leq super[t]+p$$
-  \end{proof} 
-\end{enumerate}
 
 
-
-\section{Implementing Queue using Block Tree}
+\paragraph{Implementing Queue using Block Tree}
 In this work, we design a queue with $O(\log^2 p +\log n)$ steps per operation, where $n$ is the number of total operations invoked. We avoid the $\Omega(p)$ worst-case step complexity of existing shared queues based on linked lists or arrays (CAS Retry Problem). A queue stores a sequence of elements and supports two operations, enqueue and dequeue. \texttt{Enqueue(e)} appends element \texttt{e} to the sequence stored.\texttt{Dequeue()} removes and returns the first element among in the sequence. If the queue is empty it returns \texttt{null}. Knowing index $i$ is the tail of the queue, we can return the dequeue response using \texttt{Get(i)}.  So in the rest we modify block tree to compute \texttt{i} for each \texttt{Dequeue()} to achieve a FIFO queue.
 %
 %\subsection{What should a \texttt{Dequeue()} return, regarding history of operations?}
@@ -583,12 +366,8 @@ Next, we describe how to use block tree to implement queues. The block tree, mai
   \caption{An example histoy of operations on the queue}
 \end{table}
 
-\begin{definition}
-A non-null dequeue is one that returns a non-null value.
-\end{definition}
-
 \paragraph{}
-In the example above, \texttt{Dequeue()} operations return \texttt{5, 2, 3, null, 4} in order. Before \texttt{ENQ(4)} the queue gets empty so the last \texttt{DEQ()} returns null. If the queue is non-empty and $r$ \texttt{Dequeue()} operations have returned a non-null response, then $i$th \texttt{Dequeue()} returns the input of the $r+1$th \texttt{Enqueue()}. So, in order to answer a Dequeue, it's sufficent to know the size of the queue and the number of previous non-null dequeues.
+A non-null dequeue is one that returns a non-null value. In the example above, \texttt{Dequeue()} operations return \texttt{5, 2, 3, null, 4} in order. Before \texttt{ENQ(4)} the queue gets empty so the last \texttt{DEQ()} returns null. If the queue is non-empty and $r$ \texttt{Dequeue()} operations have returned a non-null response, then $i$th \texttt{Dequeue()} returns the input of the $r+1$th \texttt{Enqueue()}. So, in order to answer a Dequeue, it's sufficent to know the size of the queue and the number of previous non-null dequeues.
 
 %\texttt{DEQ[i] = (size>0) ? ENQ[r+1] : null;}
 
@@ -636,11 +415,6 @@ Size and the number of non-null dequeues for $b$th block could be computed this 
 Given \texttt{DEQ} is in block \texttt{b}, \texttt{response(DEQ)} would be:\\
 \texttt{(size[b-1]- index of DEQ in the block's dequeus >=0) ? ENQ[non-null dequeus[b-1]+ index of DEQ in the block's dequeus] : null;}
 
-\pagebreak
-\section{Main Algorithm}
-
-\paragraph{Specification}
-A Queue is a shared data structure that stores a sequence of elements. It has two methods \texttt{Enqueue(e)} and \texttt{Dequeue()}. \texttt{Enqueue(e)} adds \texttt{e} to the end of the sequence. \texttt{Dequeue()} returns the first element stored in the sequence and removes it from the sequence.
 
 \begin{figure}[hbt]
 \centering
@@ -651,29 +425,12 @@ A Queue is a shared data structure that stores a sequence of elements. It has tw
 
 \subsection{Pseudocode description}
 
-\paragraph{Tournament Tree}
+\paragraph{Tree}
 In order to reach an agreement on the order of operations among $p$ processes, we use a Tournament Tree. Leaf \texttt{l\textsubscript{i}} is assigned to a process \texttt{i}. Each process adds $op$ to its leaf. In each internal node an ordering of operations in its subtree is stored. All processes agree on the total ordering of all operations stored in the root. This ordering will be the linearization of the operations.
 \paragraph{Implicit Storing Blocks}
 For efficiency, instead of storing explicit sequence of operations in nodes of the Tournament Tree, we use Blocks. A Block is a constant size object that implicitly represents a sequence of operations. In each node there is an array of Blocks.
 
-\begin{definition}[Block]
-A block is an object that stores some statistics described in Algorithm Queue.   
-\end{definition}
-
-\begin{definition}[\label{def::subblock}Subblock]
-Block \texttt{b} is a subblock of \texttt{n.blocks[i]} if it is in \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} or \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}.
-\end{definition}
 Block $b$ contains subblocks in the left and right children. WLOG left subblocks of $b$ are some consecutive blocks in the left child starting from where previous block of $b$ has ended to the the end of $b$. See Figure \ref{fig::createBlock} .
-
-
-\begin{definition}[Membership of an operation in a block]
-Operation \texttt{e} is a member of block \texttt{b} in:
-\begin{itemize}
- \item leaf node \texttt{n}, if \texttt{e} belongs to \texttt{n.ops[b's index]}.
- \item internal node \texttt{n}, if \texttt{e} is a member of \texttt{s} that \texttt{s} is a subblock of \texttt{b}.
-\end{itemize}
-  
-\end{definition}
 
 We store ordering among \texttt{operation}s in the tournament tree constructed by \texttt{node}s. In each \texttt{node} we store pointers to its relatives, an array of \texttt{block}s and an index to the first empty \texttt{block}. Furthermore in \texttt{leaf} nodes there is an array of \texttt{operations} where each \texttt{operation} is stored in one cell with the same index in \texttt{blocks}. There is a \texttt{counter} in each \texttt{node} incrementing after a successful \texttt{Refresh()} step. It means after that some bunch of \texttt{block}s in a node have propagated into the parent then the \texttt{counter} increases. Each new \texttt{block} added to a node sets its \texttt{time} regarding \texttt{counter}. This helps us to know which blocks have aggregated together to a block, not precisely though. We also store the index of the aggregated \texttt{block} of a \texttt{block} with \texttt{time} $i$ in \texttt{super[i]}. 
 
@@ -690,7 +447,7 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 
 
 \pagebreak
-\section{Pseudocode}
+\subsection{Pseudocode}
 
 \begin{algorithm}
 \caption{Tree Fields Description}
@@ -1156,7 +913,7 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 
 \clearpage
 
-\section{Proof of Linearizability}
+\subsection{Proof of Correctness}
 
 \framebox[1.1\width]{TEST} Fix the logical order of definitions (cyclic refrences).
 
@@ -1279,8 +1036,15 @@ Blocks are only appended (not modified) with CAS to \nf{n.blocks[n.head]} and \n
 %\text
 \pagebreak
 
+
+\begin{figure}[hbt]
+  \center\includegraphics[width=5.5in]{pics/tree}
+  \caption{Order of elements in b: elements in leaves are ordered with numerical order in the drawing.}
+\end{figure}
+
 $\blacktriangleright$ Processes are numbered from 1 to $p$ and leaves of the tree are assigned from left to right. We will show in Lemma \ref{blockSize} that there is at most one operation from each process in a given block.
 \begin{definition} [Ordering of operations inside the nodes] \label{ordering}
+
 
 
 \begin{itemize}
@@ -1452,9 +1216,9 @@ Assume $\nf{root.blocks[end].sum\sub{enq}}\geq\nf{e}$ and $E_e(root)$'s \nf{elem
 \begin{proof}
 It is trivial to see that the doubling search from \nf{root.blocks[end]} to \nf{root.blocks[0]} will find $E_e(root)$ eventually. Because \nf{root.blocks[].sum\sub{enq}} is an increasing value from 0 to some value greater than \nf{e}. So there is a \nf{b} that $\nf{root.blocks[b].sum\sub{enq}}>e$ but $\nf{root.blocks[b-1].sum\sub{enq}}<e$. 
 
-First we show $\nf{end}-\nf{b} \leq 2 \times \big(\nf{root.blocks[b].\size}+\nf{root.blocks[end].\size+1\big)$. From line \ref{addOP}, we know that size of the every block in the tree is greater than 0. So each block in \nf{root.blocks[b..end]} contains at least one \nf{Enqueue} or at least one \nf{Dequeue}. Suppose there were more than \nf{root.blocks[b].\size}\nf{Dequeue}s in \nf{root.blocks[b+1..end-1]}. Then the  queue would become empty at some point after \nf{blocks[b]}'s last operations and before \nf{root.blocks[end]}'s first operation. Which means the response to to a \nf{Dequeue} in \nf{root.blocks[end]} could not be in $E(n,b)$. Furthermore since the size of the queue would become \nf{root.blocks[end].\size} after the \nf{root.blocks[end]}, there cannot be more than \nf{root.blocks[b].\size + root.blocks[end].\size} \nf{Enqueue}s. Because there can be at most \nf{root.blocks[b].\size}\nf{Dequeue}s and the final size is \nf{root.blocks[end].\size}. Overall there can be at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} operations in \nf{root.blocks[b+1..end-1]} and since each block size is $\geq 1$ thus there are at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} blocks in between \nf{root.blocks[b]} and \nf{root.blocks[end]}. So \nf{end-b}$\leq 2 \times$\nf{root.blocks[b].\size+root.blocks[end].\size+1}. See Figure \ref{fig::doubling}.
+First we show $\nf{end}-\nf{b} \leq 2 \times \big(\nf{root.blocks[b].\size}+\nf{root.blocks[end].\size}+1\big)$. From line \ref{addOP}, we know that size of the every block in the tree is greater than 0. So each block in \nf{root.blocks[b..end]} contains at least one \nf{Enqueue} or at least one \nf{Dequeue}. Suppose there were more than \nf{root.blocks[b].\size}\nf{Dequeue}s in \nf{root.blocks[b+1..end-1]}. Then the  queue would become empty at some point after \nf{blocks[b]}'s last operations and before \nf{root.blocks[end]}'s first operation. Which means the response to to a \nf{Dequeue} in \nf{root.blocks[end]} could not be in $E(n,b)$. Furthermore since the size of the queue would become \nf{root.blocks[end].\size} after the \nf{root.blocks[end]}, there cannot be more than \nf{root.blocks[b].\size + root.blocks[end].\size} \nf{Enqueue}s. Because there can be at most \nf{root.blocks[b].\size}\nf{Dequeue}s and the final size is \nf{root.blocks[end].\size}. Overall there can be at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} operations in \nf{root.blocks[b+1..end-1]} and since each block size is $\geq 1$ thus there are at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} blocks in between \nf{root.blocks[b]} and \nf{root.blocks[end]}. So $\nf{end-b}\leq 2 \times\nf{root.blocks[b].\size}+\nf{root.blocks[end].\size}+1$. See Figure \ref{fig::doubling}.
 
-Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\size} blocks in between \nf{root.blocks[b]} and \nf{root.blocks[end]} then with doubling search in $\Theta \big(\log($\nf{root.blocks[b].\size+root.blocks[end].\size}$)\big)$ steps we reach \nf{start=c} that the \nf{root.blocks[c].sum\sub{enq}} is less than \nf{e} and \nf{end-c} is not more than $2\times$\nf{root.blocks[b].\size+root.blocks[end].\size}. Beause otherwise, then \nf{(end-c)/2} satisfied the \nf{root.blocks[(end-c)/2].sum\sub{enq}<e}. In line \ref{doubling} the differnece between \nf{end} and \nf{start} is doubled. See Figure \ref{fig::doubling}.
+Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\size} blocks in between \nf{root.blocks[b]} and \nf{root.blocks[end]} then with doubling search in $\Theta \big(\log($\nf{root.blocks[b].\size+root.blocks[end].\size}$)\big)$ steps we reach \nf{start=c} that the \nf{root.blocks[c].sum\sub{enq}} is less than \nf{e} and \nf{end-c} is not more than $2\times$\nf{root.blocks[b].\size+root.blocks[end].\size}. Beause otherwise, then \nf{(end-c)/2} satisfied the $\nf{root.blocks[(end-c)/2].sum\sub{enq}}<\nf{e}$. In line \ref{doubling} the differnece between \nf{end} and \nf{start} is doubled. See Figure \ref{fig::doubling}.
 
  After computing \nf{b}, the value \nf{i} is computed via the definition of \nf{sum\sub{enq}} in constant time (Line \ref{DSearchComputei}). So the routine non constant part is the binary search which takes $\Theta(\log$\nf{root.blocks[b].\size+root.blocks[end].\size)}$)$ steps from the first paragraph.
 
@@ -1696,5 +1460,23 @@ An \nf{Enqueue()} or \nf{Dequeue()} operation, does at most $4\log p$ \nf{CAS} o
 \begin{proof}
   In each height of the tree at most 2 times \nf{Refresh()} is invoked and  every \nf{Refresh()} has 2 \nf{CAS}es, one in Line \ref{cas} and one in Lines \ref{incrementHead1} or \ref{incrementHead2}.
 \end{proof}
+
+
+\pagebreak
+\subsection{Garbage Collection or Getting rid of the infinite Arrays}
+
+\pagebreak
+\section{Using Queues to Implement Vectors}
+Supporting Append, Read, Write in PolyLog time by modifying Get(Enq) Method. Create a Universal Construction Using our vector
+
+\pagebreak
+\section{Conclusion}
+possible directions for work
+
+Maybe Stacks
+
+Characterize what datastructure can be used for this approach, we already know: queue, fetch \& Inc, Vectors
+
+
 \end{document}
 

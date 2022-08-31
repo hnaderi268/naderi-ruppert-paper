@@ -164,23 +164,19 @@ Ellen and Woelfel introduced an implementation of a Fetch\&Inc object with step 
 
 \pagebreak
 \section{Our work}
-Jayanti introduced a wait-free polylogarithmic MESD queue, we are going to design a polylogarithmic MEMD queue based on some of their ideas. We apply two ideas from universal their work to create a new linearizable data structure agreeing on a sequence of elements among processes. First, there is a shared tournament tree among processes, in which each process appends its element to its leaf in the tree and then tries to propagate it up to the root by performing \textsc{Refresh()} operations at each node. Second, each operation is linearized when its element is appended to the root.  We use the shared tournament tree among $p$ processes (see Figure~\ref{fig::blocktree}) to agree on one total ordering on the operations invoked by procesess. Each process has a leaf, and it appends its operations to its leaf. After that, the process tries to propagate its new operation up to the tree's root. An ordering of operations propagated up to a node is stored in that node. All processes agree on the sequence stored in the root and this is used as the linearization ordering. Our idea is similar to Jayanti and Petrovic's multi-enqueuer single-dequeuer Queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but we do not use \texttt{CAS} operations with big words and do not put a limit on the number of concurrent operations.
-
+Jayanti and Petrovic introduced a wait-free polylogarithmic multi-enqueuer single-dequeuer queue~\cite{DBLP:conf/fsttcs/JayantiP05}. We are going to design a polylogarithmic multi-enqueuer multi-dequeuer queue using some of their ideas. But we do not use \texttt{CAS} operations with big words and do not put a limit on the number of concurrent operations. We apply two ideas from their work to create a new shared data structure which enables processes to agree on the linearization ordering of the processes.   We use the shared tournament tree among $p$ processes (see Figure~\ref{fig::blocktree}) to agree on one total ordering on the operations invoked by processes. Each process has a leaf which the order of operations invoked by the process is stored in it. When the process wishes to do an operation it appends the operation to its leaf's sequence and after that, the process tries to propagate its new operation up to the tree's root. An ordering of operations propagated up to a node is stored in that node. All processes agree on the sequence stored in the root that is used as the linearization ordering. 
 \begin{figure}[hbt]
 \begin{center}
 \Tree [ [ [ $P_1$ $P_2$ ] [ $P_3$ $P_4$ ] ]
           [ [ $P_5$ $P_6$ ] [ $P_7$ $P_8$ ] ] ]
 \end{center}
-\caption{ّ\label{fig::blocktree}In the block tree each process has a leaf and in each node there is an ordering of operations stored. Each node tries to propagate its operations up to the root, which stores the final ordering of all operations.}  
+\caption{ّ\label{fig::blocktree}Each process has a leaf and in each node there is an ordering of operations stored. Each node tries to propagate its operations up to the root, which stores the totall ordering of all operations.}  
 \end{figure}
 
-The goal here is to ensure that in each propagate step the new operations are propagated up to the parent in $O(\log p)$ steps (see~Figure~\ref{fig::propagstep}). Then, a dequeue operation uses the linearization ordering to compute its answer.
 
 
-In each propagate step, our algorithm uses a subroutine \textsc{Refresh}($n$) that aggregates new operations from node $n$'s children (that have not already been propagated to $n$) and tries to append them into $n$ using a \texttt{CAS} operation. The general idea is that if we call \textsc{Refresh}($n$) twice, the operations in $n$'s children before the first \textsc{Refresh}($n$) are guaranteed to be in $n$.
-%Since there is a successful instance of \textsc{Refresh}($n$) after the first \textsc{Refresh}($n$), which has appended the talked operations.
-Instead of storing operations explicitly in the nodes, we only keep track of the number of them. This allows us to \texttt{CAS} fixed-size objects in each \textsc{Refresh}($n$). To do that, we introduce blocks that only contain the number of operations from the left and the right child in a \texttt{Refresh}() procedure and only propagate the block of the new operations.
-\pagebreak
+As we said in  each node the sequence of operations is stored. We implement the sequence using an array and appending to the sequence by doing \tt{CAS} operations on the first null element in the array. In each propagate step, our algorithm uses a subroutine \textsc{Refresh}($n$) that aggregates new operations from node $n$'s both children (that have not already been propagated to $n$) and tries to append them into $n$. The general idea is that if we call \textsc{Refresh}($n$) twice, the operations in $n$'s children before the first \textsc{Refresh}($n$) are guaranteed to be in $n$.
+Because if both of the \nf{Refresh()}es fail there is another instance of \nf{Refresh()} in between which has succeeded to do \nf{CAS} and has already appended the operations the first \nf{Refresh} was trying to append. This mechanism makes us to do \nf{TryAppend}s twice instead of \nf{Append}ing to the array. From the next paragraph we explain our ideas which are different from Jayanti.
 
 \begin{figure}[hbt]
 \begin{center}
@@ -209,16 +205,9 @@ Instead of storing operations explicitly in the nodes, we only keep track of the
 \end{center}
 \end{figure}
 
-We also implement methods \texttt{Get(i)}, \texttt{Index(op)} to get the $i$th propagated operation and compute the rank of a propagated operation in the linearization. \texttt{Get(i)} finds the block containing the $i$th operation in the root and then finds its sub-block recursively to reach a leaf. \texttt{Index()} is  similar but more complicated, finding super-blocks from a leaf to the root. The main challenge in each level of \texttt{Get(i)} and \texttt{Index(op)} is that it should take polylogarithmic steps with respect to $p$. After appending operation \texttt{op} to the root, processes can find out information about the linearization ordering using \texttt{Get(i)} and \texttt{Index(op)}. 
+Instead of storing operations explicitly in the nodes, we are going to keep track of some statistics of them. This allows us to \texttt{CAS} fixed-size objects in each \textsc{Refresh}($n$).To do that, we introduce blocks that only contain the number of operations from the left and the right child in a \texttt{Refresh}() procedure and only propagate the statistics block of the new operations. In each \nf{Refresh()} there is at most one operation from  each process trying to be propagated. Since one operation cannot invoke two operations concurrently. Also as the operations in a \textsc{Refresh()} step are concurrent we can linearize them  among themselves in any order we wish. Note that if two operations are in one \nf{Porpagate()} step in a node they are going to be propagated up to the root together. From now on instead of propagating sequence of operations in  \nf{Refresh} steps we propagate \nf{block}s of operations. The idea is that we can describe a blocks contents only using some numbers. Our choice is to put the operations propagated from the left child before the operations propagated from the right child. In this way if we know the number of total operations in a block and the number of operations from the left child we can order the operations in a unique way which is a complete ordering. We can instead keep track of sets of concurrent operations and create the total ordering of all operations at the root (see Figure~\ref{fig::set}). In the next paragraphs we explain the reason behind our choice of ordering.
 
-\texttt{Get()} and \texttt{Index()} search among blocks in each level of the tree to find the sub-block or super-block containing the given operation. Each block stores a constant amount of information (like prefix sums) to allow binary searches to find the required block in a node quickly.
-
-Block tree can be used to implement queue, but \texttt{Get(i)}  may take a long time since it has to find the block containing the $i$th operation at the root level.
-
-\paragraph{}
-We can instead keep track of sets of concurrent operations and create the total ordering of all operations at the root (see Figure~\ref{fig::set}).
- 
- \begin{figure}[h]
+\begin{figure}[h]
 \begin{center}
 \begin{tikzpicture}
   
@@ -229,6 +218,13 @@ We can instead keep track of sets of concurrent operations and create the total 
 \caption{\label{fig::set} In each internal node, we store the set of all the operations propagated together, and one can arbitrarily linearize the sets of concurrent operations among themselves. Since we linearize operations when they are added to the root, ordering the blocks in the root is important.}
 \end{center}
 \end{figure}
+
+Previously we talked about storing the sequence of operations in the nodes of the tree. A process may wish to know information about the root ordering. Two functionalities are to get the $i$th propagated operation and compute the rank of a propagated operation in the linearization. Since our algorithm is aimed for a queue, we make some assumptions here that we one wish only to know the order of a dequeue and one only tries to get an enqueue. We will explain in detail in the next but for now let's say \nf{enqueue}s and \nf{dequeue}s are appended to the tree and when one wants to find the response to a dequeu, it computes the order of the dequeue in linearization and using this information it computes which eneueue is the answer to the dequeue or if the answer is null. If the answer was some enqueue we find the enqueue using \texttt{DSearch(i)} and \nf{GetENQ(n,b,i)}. \texttt{DSearch(i)} finds the block containing the $i$th enqueue in the root and \nf{GetENQ(n,b,i)} finds its sub-block recursively to reach a leaf. \texttt{Index()} is similar but more complicated, finding super-blocks from a leaf to the root. The main challenge in each level of \texttt{Get(i)} and \texttt{Index(op)} is that it should take polylogarithmic steps with respect to $p$. After appending operation \texttt{op} to the root, processes can find out information about the linearization ordering using \texttt{Get(i)} and \texttt{Index(op)}. Each block stores an extra constant amount of information (like prefix sums) to allow binary searches to find the required block in a node quickly.
+
+ \pagebreak
+ 
+ 
+
 
 
 The definition of linearizability allows concurrent operations to be reordered arbitrarily. Thus, a group of concurrent operations can be appended to our root sequence as one block without specifying the order among the operations.
@@ -262,8 +258,14 @@ Each block $b$ in node $n$ is the aggregation of blocks in the  children of $n$ 
 \paragraph{}
 We choose to linearize operations in a block from the left child before those from the right child as a convention. Operations within a block of the root can be ordered in any way that is convenient. In effect, this means that if there are concurrent new blocks in a \textsc{Refresh}() step from several processes we linearize them in the order of their process ids. So for example  operations aggregated in block (10,2) are in the order (2,3),(4,1),(0,2). All blocks from the left child with come before the right child and the order of blocks of each child is preserved among themselves.
 
+
+\pagebreak
+
+
 \paragraph{}
 In a \textsc{Propagate}() invocation path from a leaf to root, there will be \textsc{Refresh}() steps with merges from $2, 4, 8, ..., p$ processes. So in a complete propagation, at most $2p$ blocks are merged into one block. \texttt{(maybe useful for analysis)}
+
+\pagebreak
 
 \paragraph{}
 \textsc{GetIndex}($i$) returns the $i$th operation stored in the block tree sequence. We do that by finding the block $b_i$ containing $i$th element in the root, and then recursively finding the subblock of $b_i$ which contains $i$th element. To make this recursive search faster, instead of iterating over all elements in sequence of blocks we store prefix sum of number of elements in the blocks sequence and pointers to make BSearch faster.
@@ -290,12 +292,12 @@ Furthermore, in each block, we store the prefix sum of left and right elements. 
   \caption{Block have pointers to the starting block of theirs for each child. \label{fig::pointer}}
 \end{figure}
 
+\pagebreak
+
 \paragraph{}
 Starting from the root, \textsc{GetIndex}($i$) BSearches $i$ in the prefix sum array to find block containing $i$th operation, then continues recursively calling \textsc{GetElement}($b,i$) to find $i$th element of block $b$. From lemma $\ref{lem:block_size}$ we know a block size is at most $p$. So BSearch takes at most \textsc(O)$(\log p)$, since  with knowing pointers of a block and its previous block we can determine the base \texttt{(domain ?)} to search and its size is \textsc{O}$(p)$.
 
 
-\pagebreak
-\subsection{Queue Decription}
 \paragraph{Design of a Queue}
 
 Each process is assigned to a leaf in a shared tournament tree. Thus, for example, the leaf node for process $p_i$ contains an array of elements by $p_i$ in the order they were invoked.
@@ -312,6 +314,9 @@ In order to compute elements of a block faster we store prefix-sum blocks(block 
 A Queue is a shared data structure that stores a sequence of elements. It has two methods \texttt{Enqueue(e)} and \texttt{Dequeue()}. \texttt{Enqueue(e)} adds \texttt{e} to the end of the sequence. \texttt{Dequeue()} returns the first element stored in the sequence and removes it from the sequence.
 
 
+\pagebreak
+
+
 \paragraph{\texttt{CreateBlock()}} \texttt{CreateBlock(n)} returns a block containing new operations of \texttt{n}'s children. \texttt{b\textsuperscript{$\prime$}.end\textsubscript{left}} stores the index of the rightmost subblock of left child of \texttt{b}'s previous block. Other attributes are assigned values followed by definition.
 \begin{figure}[hbt]
   \center\includegraphics[width=5.5in]{pics/createblock}
@@ -325,6 +330,10 @@ A Queue is a shared data structure that stores a sequence of elements. It has tw
   \center\includegraphics[width=4in]{pics/doublerefresh.png}
   \caption{The second failed Refresh is assuredly concurrent to a Successful \texttt{Refresh()} with \texttt{CreateBlock} line after first failed \texttt{Refresh}'s \texttt{CreateBlock()}.}
 \end{figure}
+
+
+\pagebreak
+
 
 \paragraph{Computing \texttt{Get(n, b, i)}}
 To find the \texttt{i}th element in block \texttt{b} of node \texttt{n}, we search among subblocks of \texttt{b} that is bounded by $p$. Subblocks of a block are within the start and end block of the \texttt{CreateBlock()} procedure of it.
@@ -348,6 +357,9 @@ To find the \texttt{i}th element in block \texttt{b} of node \texttt{n}, we sear
   \caption{\texttt{Sup} and \texttt{timer} in a node, numbers on blocks are their \texttt{time} values.}
 \end{figure}
 
+
+\pagebreak
+
 \paragraph{Computing superblock}
 
 
@@ -365,6 +377,9 @@ Next, we describe how to use block tree to implement queues. The block tree, mai
   \end{tabular}
   \caption{An example histoy of operations on the queue}
 \end{table}
+
+
+\pagebreak
 
 \paragraph{}
 A non-null dequeue is one that returns a non-null value. In the example above, \texttt{Dequeue()} operations return \texttt{5, 2, 3, null, 4} in order. Before \texttt{ENQ(4)} the queue gets empty so the last \texttt{DEQ()} returns null. If the queue is non-empty and $r$ \texttt{Dequeue()} operations have returned a non-null response, then $i$th \texttt{Dequeue()} returns the input of the $r+1$th \texttt{Enqueue()}. So, in order to answer a Dequeue, it's sufficent to know the size of the queue and the number of previous non-null dequeues.
@@ -422,6 +437,9 @@ Given \texttt{DEQ} is in block \texttt{b}, \texttt{response(DEQ)} would be:\\
   \caption{Fields stored in the Queue nodes. \label{fig::queue}}
 \end{figure}
 
+
+
+\pagebreak
 
 \subsection{Pseudocode description}
 

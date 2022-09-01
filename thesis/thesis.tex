@@ -481,22 +481,20 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 %such that \tt{root} is the root and the left child and the right child and the parent of \tt{Tree[i]} are \tt{Tree[2i+1]}, \tt{Tree[2i+2]} and \tt{Tree[i/2]}.
 \end{itemize}
 
-\Statex
-
 \Statex $\diamondsuit$ \tt{\sl{Local}}
 \begin{itemize}
 \item \tt{\sl{Node} leaf:} \sf{ process's leaf in the tree.}
 \end{itemize}
 
-\Statex
-\Statex $\diamondsuit$ \tt{\sl{Structures}}
+
+%\Statex $\diamondsuit$ \tt{\sl{Structures}}
 
 \Statex $\blacktriangleright$ \tt{\sl{Node}}
 \begin{itemize}
 \item \tt{\sl{*Node} left, right, parent} \textsf{: initialized  when creating the tree.}
 \item \tt{\sl{BlockList}}
 \item \tt{\sl{int} \head= 1}\textsf{: \#\tt{block}s in \tt{blocks}. \tt{blocks[0]} is a block with all integer fields equal to zero.}
-\item \tt{\sl{int} num\sub{propagated}= 0}\textsf{} \textsf{: \# groups of blocks that have been propagated from the node to its parent.}
+%\item \tt{\sl{int} num\sub{propagated}= 0}\textsf{} \textsf{: \# groups of blocks that have been propagated from the node to its parent.}
 \end{itemize}
 
 %\Statex $\blacktriangleright$ \tt{\sl{Root} extends \sl{Node}}
@@ -531,11 +529,11 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 %  \item \tt{\sl{int} num, sum}
 %  \textsf{: total \# operations in block, prefix sum of \tt{num}}
 
-  \item \tt{\sl{int} group}
-  \textsf{: the value read from \tt{num\sub{propagated}} when appending this block to the node.}
+  \item \tt{\sl{int} super}
+  \textsf{: approximate index of the superblock, read from \tt{parent.head} when appending the block to the node}
 \end{itemize}
 
-\pagebreak
+
 
 
 \Statex $\blacktriangleright$ \tt{\sl{LeafBlock} extends \sl{Block}}
@@ -548,7 +546,7 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
   
 \end{itemize}
 
-
+\pagebreak
 
 \Statex $\blacktriangleright$ \tt{\sl{InternalBlock} extends \sl{Block}}
 \begin{itemize}
@@ -683,13 +681,20 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 
 \Function{boolean}{Refresh()}{}
 \State \tt{h= \head} \label{readHead}
+\State \tt{hp= parent.\head} \label{readParentHead1}
+\State \tt{CAS(blocks[h-1].super, null, hp)}
+\ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}}
+\State \tt{h\sub{dir}= dir.\head} \label{readChildHead}
+\State \tt{CAS(dir.blocks[h\sub{dir}], null, h)}
+\EndFor
 %\If{\tt{n.blocks[h]!=null?}} \tt{h+=1}\EndIf
-\State \tt{<new, np\sub{left}, np\sub{right}>= \Call{CreateBlock}{h}} \label{invokeCreateBlock} \cmt{\tt{np\sub{left}, np\sub{right}} are the values read from the children's \tt{num\sub{propagated}} field.}
-\If{\tt{new.num==0}} \Return{\tt{true}} \label{addOP} \cmt{The block contains nothing.}
+\State \tt{new= \Call{CreateBlock}{h}} \label{invokeCreateBlock}
+\If{\tt{new.num==0}} \Return{\tt{true}} \label{addOP} \cmt{Created block contains nothing.}
 \ElsIf{\tt{blocks.tryAppend(new, h)}} \label{cas}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}} \label{okcas}
-\State \tt{\Call{CAS}{dir.super[np\sub{dir}], null, h}} \cmt{Write would work too.} \label{setSuper}
-\State \tt{\Call{CAS}{dir.num\sub{propagated}, np\sub{dir}, np\sub{dir}+1}} \label{incNP}
+\State \tt{hp= parent.\head} \label{readParentHead2}
+\State \tt{\Call{CAS}{new.super, null, hp}} \label{setSuper}
+%\State \tt{\Call{CAS}{dir.num\sub{propagated}, np\sub{dir}, np\sub{dir}+1}} \label{incNP}
 \EndFor
 \State \tt{\Call{CAS}{\head, h, h+1}} \label{incrementHead1}
 \State \Return{\tt{true}}
@@ -699,8 +704,8 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 \EndIf
 \EndFunction{Refresh}
 
-\Statex
 
+\pagebreak
 \Statex $\leadsto$ \textsf{Precondition: \tt{blocks[start..end]} contains a block with field \tt{f} $\geq$ \tt{i}}
 \Function{int}{BSearch}{\sl{field} f, \sl{int} i, \sl{int} start, \sl{int} end}
 
@@ -708,14 +713,11 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 %\State \Return \tt{result block's index}
 \EndFunction{BSearch}
 
-
-
-\pagebreak
+\Statex
 
 \Function{<Block, int, int>}{CreateBlock}{\sl{int} i} 
-\cmt{Creates a block to be inserted as $i$th \tt{block} in \tt{blocks}. Returns the created block as well as values read from each child's \tt{num\sub{propagated}} field. These values are used for incrementing the children's \tt{num\sub{propagated}} field if the block was appended to \tt{blocks} successfully.}
+\cmt{Creates and returns the block to be inserted as $i$th \tt{block} in \tt{blocks}.}
 \State \tt{block newBlock= \Call{new}{\sl{block}}}
-\State \tt{newBlock.group= num\sub{propagated}}\label{setGroup}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}}
 \State \tt{index\sub{last}= dir.\head-1} \label{lastLine}
 \State \tt{index\sub{prev}= blocks[i-1].end\sub{dir}} \label{prevLine}
@@ -723,7 +725,6 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 \State \tt{block\sub{last}= dir.blocks[index\sub{last}]}
 \State \tt{block\sub{prev}= dir.blocks[index\sub{prev}]}
 \State \cmt{\tt{newBlock} includes \tt{dir.blocks[index\sub{prev}+1..index\sub{last}]}.}
-\State \tt{np\sub{dir}= dir.num\sub{propagated}} \label{setNP}
 \State \tt{newBlock.sum\sub{enq-dir}= blocks[i-1].sum\sub{enq-dir} + block\sub{last}.sum\sub{enq} - block\sub{prev}.sum\sub{enq}}
 \State \tt{newBlock.sum\sub{deq-dir}= blocks[i-1].sum\sub{deq-dir} + block\sub{last}.sum\sub{deq} - block\sub{prev}.sum\sub{deq}}
 \EndFor
@@ -790,7 +791,7 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 \State\Return \tt{<b, i>} \label{indexBaseCase}
 \Else
 \State \tt{dir= (parent.left==n)? left: right} \cmt{check if this node is a left or a right child}
-\State \tt{superBlock= parent.\Call{BSearch}{sum\sub{deq-dir}, i+blocks[b-1].sum\sub{deq}, super[blocks[b].group]-p, super[blocks[b].group]+p}} \label{computeSuper}
+\State \tt{superBlock= parent.\Call{BSearch}{sum\sub{deq-dir}, i+blocks[b-1].sum\sub{deq}, blocks[b].super-2, blocks[b].super+2}} \label{computeSuper}
 \Statex\cmt{superblock's group has at most $p$ difference with the value stored in \tt{super[]}.}
 
 \If{\tt{dir {\keywordfont is} left}}
@@ -1239,7 +1240,7 @@ If $\nf{root.blocks[end].sum\sub{enq}} \geq \nf{e}$, \nf{DSearch(e, end)} return
   Assume $\nf{root.blocks[end].sum\sub{enq}} \geq \nf{e}$ and $E_e(root)$'s \nf{element} is the response to some \nf{Dequeue()} operation in \nf{root.blocks[end]}, then  \nf{DSearch(e, end)} takes $\Theta(\log$\nf{root.blocks[b].\size+ root.blocks[end].\size}$)$ steps.
 \end{lemma}
 \begin{proof}
-First we show $\nf{end} - \nf{b} \leq 2 \times \big(\nf{root.blocks[b].\size}+\nf{root.blocks[end].\size}+1 \big)$. From line \ref{addOP}, we know that \nf{num} field of the every block in the tree is greater than 0. So, each block in \nf{root.blocks[b..end]} contains at least one \nf{Enqueue} or at least one \nf{Dequeue}. Suppose there were more than \nf{root.blocks[b].\size}\nf{Dequeue}s in \nf{root.blocks[b+1..end-1]}. Then the element in the queue which is the response to the \nf{Dequeue()} would become dequeued at some point after \nf{blocks[b]}'s last operations and before \nf{root.blocks[end]}'s first operation. Which means the response to to a \nf{Dequeue} in \nf{root.blocks[end]} could not be in $E(n,b)$. Furthermore since the size of the queue would become \nf{root.blocks[end].\size} after the operations of \nf{root.blocks[end]}, there cannot be more than \nf{root.blocks[b].\size + root.blocks[end-1].\size} \nf{Enqueue}s in \nf{root.blocks[b+1..end-1]}. Because there can be at most \nf{root.blocks[b].\size}\nf{Dequeue}s and the final size of the queue is \nf{root.blocks[end-1].\size}. Overall there can be at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} operations in \nf{root.blocks[b+1..end-1]} and since each block size is $\geq 1$ thus there are at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} blocks in between \nf{root.blocks[b]} and \nf{root.blocks[end]}. So $\nf{end-b}\leq 2 \times\nf{root.blocks[b].\size}+\nf{root.blocks[end].\size}+1$. See Figure \ref{fig::doubling}.
+First we show $\nf{end} - \nf{b} \leq 2 \times \big(\nf{root.blocks[b].\size}+\nf{root.blocks[end].\size}+1 \big)$. From line \ref{addOP}, we know that \nf{num} field of the every block in the tree is greater than 0. So, each block in \nf{root.blocks[b..end]} contains at least one \nf{Enqueue} or at least one \nf{Dequeue}. Suppose there were more than \nf{root.blocks[b].\size}\nf{Dequeue}s in \nf{root.blocks[b+1..end-1]}. Then the element in the queue which is the response to the \nf{Dequeue()} would become dequeued at some point after \nf{blocks[b]}'s last operations and before \nf{root.blocks[end]}'s first operation. Which means the response to to a \nf{Dequeue} in \nf{root.blocks[end]} could not be in $E(n,b)$. Furthermore since the size of the queue would become \nf{root.blocks[end].\size} after the operations of \nf{root.blocks[end]}, there cannot be more than \nf{root.blocks[b].\size + root.blocks[end-1].\size} \nf{Enqueue}s in \nf{root.blocks[b+1..end-1]}., because there can be at most \nf{root.blocks[b].\size}\nf{Dequeue}s and the final size of the queue is \nf{root.blocks[end-1].\size}. Overall there can be at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} operations in \nf{root.blocks[b+1..end-1]} and since each block size is $\geq 1$ thus there are at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} blocks in between \nf{root.blocks[b]} and \nf{root.blocks[end]}. So $\nf{end-b}\leq 2 \times\nf{root.blocks[b].\size}+\nf{root.blocks[end].\size}+1$. See Figure \ref{fig::doubling}.
 
 Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\size} blocks in between \nf{root.blocks[b]} and \nf{root.blocks[end]} then with doubling search in $\Theta \big(\log($\nf{root.blocks[b].\size+root.blocks[end].\size}$)\big)$ steps we reach \nf{start=c} that the \nf{root.blocks[c].sum\sub{enq}} is less than \nf{e} and \nf{end-c} is not more than $2 \times 2 \times \big(\nf{root.blocks[b].\size+root.blocks[end].\size}\big)$. Beause otherwise, then \nf{(end-c)/2} satisfied the $\nf{root.blocks[(end-c)/2].sum\sub{enq}}<\nf{e}$. In line \ref{doubling} the difference between \nf{end} and \nf{start} is doubled. See Figure \ref{fig::doubling}.
 

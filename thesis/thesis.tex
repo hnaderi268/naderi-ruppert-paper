@@ -10,7 +10,7 @@
 \makeatother
 \usepackage{graphicx}
 \usepackage{subcaption}
-%\usepackage{showkeys}
+\usepackage{showkeys}
 \usepackage{amsmath}
 
 
@@ -265,7 +265,6 @@ We choose to linearize operations in a block from the left child before those fr
 \paragraph{}
 In a \textsc{Propagate}() invocation path from a leaf to root, there will be \textsc{Refresh}() steps with merges from $2, 4, 8, ..., p$ processes. So in a complete propagation, at most $2p$ blocks are merged into one block. \texttt{(maybe useful for analysis)}
 
-\pagebreak
 
 \paragraph{}
 \textsc{GetIndex}($i$) returns the $i$th operation stored in the block tree sequence. We do that by finding the block $b_i$ containing $i$th element in the root, and then recursively finding the subblock of $b_i$ which contains $i$th element. To make this recursive search faster, instead of iterating over all elements in sequence of blocks we store prefix sum of number of elements in the blocks sequence and pointers to make BSearch faster.
@@ -575,13 +574,6 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 %  \textsf{: the index of the block in the \tt{BlockList} containing the block.}
 \end{itemize}
 
-%\Statex $\blacktriangleright$ \tt{Conventions}
-%\begin{itemize}
-%  \item \tt{i} : index of ith operation in the tree
-%  \item \tt{j} : index of jth operation in a node
-%  \item \tt{b\sub{n}} : index of the block containing the operation n based on the scope
-%  \item Also we are not going to refer to blocks directly, only with their indices. Except while constructing a new block.
-%\end{itemize}
 
 
 \end{multicols}
@@ -659,6 +651,44 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 \end{multicols}
 \end{algorithmic}
 \end{algorithm}
+
+
+\begin{algorithm}
+\caption{BlockList}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{700}
+
+\Statex \cmt{\textsf{: Supports two operations \tt{blocks.tryAppend(Block b), blocks[i]}. Initially  empty, when \tt{blocks.tryAppend(b, n)} returns true \tt{b} is appended to \tt{blocks[n]} and \tt{blocks[i]} returns $i$th block in the \tt{blocks}. If some instance of \tt{blocks.tryAppend(b, n)} returns \tt{false} there is a concurrent instance of \tt{blocks.tryAppend(b$^\prime$, n)} which has returned \tt{true}.\tt{blocks[0]} contains an empty block with all fields equal to 0 and \tt{end\sub{left}, end\sub{right}} pointers to the first block of the corresponding children.}}
+
+%\Statex
+%\Statex $\diamondsuit$ \tt{\sl{root implementation}}
+%%  \Statex \sf{A persistant red-black tree supporting \tt{append(b, key),get(key=i),split(j)}}.
+%%  \tt{append(b, key) returns \tt{true} in case successful. Since \tt{order, sum\sub{enq}}are both strictly increasing we can use one of them for another.}
+%%\Statex \tt{root: }\sf{pointer to the root of the PBRT}
+%\Function{boolean}{TryAppend}{\sl{block} blk, \sl{int} n} \cmt{\textsf{adds block b to the \tt{root.blocks[n]}}}
+%\If{\tt{root.size\%$p^2$==0}} \cmt{Help every often $p^2$ operations appended to the root.}
+%\For{\tt{leaf l} \bf{in} \tt{tree leaves}}
+%\State \tt{l.Help()}
+%\EndFor
+%\EndIf
+%\State \tt{blk.num\sub{finished}= 0}
+%%\State \tt{*oldRoot= \&root.blocks.root}
+%%\State \tt{*newRoot= root.blocks.Append(blk).root}
+%%\State \Return \tt{CAS(root, oldRoot, newRoot)}
+%\State \Return{\tt{CAS(blocks[n], null, blk)}}
+%\EndFunction{TryAppend}
+
+\Statex
+%\Statex $\diamondsuit$ \tt{\sl{Array implementation}}
+\Statex \tt{\sl{block[]} blocks: }\sf{array of blocks}
+\Statex
+\Function{boolean}{TryAppend}{\sl{block} blk, \sl{int} n} 
+\State \Return{\tt{CAS(blocks[n], null, blk)}}
+\EndFunction{TryAppend}
+
+
+\end{algorithmic}
+\end{algorithm}
 %##########################################
 
 
@@ -682,11 +712,13 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 \Function{boolean}{Refresh()}{}
 \State \tt{h= \head} \label{readHead}
 \State \tt{hp= parent.\head} \label{readParentHead1}
-\State \tt{CAS(blocks[h-1].super, null, hp)}
-\ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}}
+\If{\nf{blocks[h]!=null}}
+\State \tt{CAS(blocks[h].super, null, hp)} \label{helpSuper1}
+\EndIf
+\ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}} \label{startHelpChild1}
 \State \tt{h\sub{dir}= dir.\head} \label{readChildHead}
 \State \tt{CAS(dir.blocks[h\sub{dir}], null, h)}
-\EndFor
+\EndFor \label{endHelpChild1}
 %\If{\tt{n.blocks[h]!=null?}} \tt{h+=1}\EndIf
 \State \tt{new= \Call{CreateBlock}{h}} \label{invokeCreateBlock}
 \If{\tt{new.num==0}} \Return{\tt{true}} \label{addOP} \cmt{Created block contains nothing.}
@@ -699,6 +731,11 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 \State \tt{\Call{CAS}{\head, h, h+1}} \label{incrementHead1}
 \State \Return{\tt{true}}
 \Else
+\ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}} \label{okcas}
+\State \tt{hp= parent.\head} \label{readParentHead2}
+\State \tt{\Call{CAS}{new.super, null, hp}} \label{setSuper}
+%\State \tt{\Call{CAS}{dir.num\sub{propagated}, np\sub{dir}, np\sub{dir}+1}} \label{incNP}
+\EndFor
 \State \tt{\Call{CAS}{\head, h, h+1}} \cmt{Even if another process wins, help to increase the \tt{\head}. The winner might have fallen sleep before increasing \tt{\head}.} \label{incrementHead2}
 \State \Return{ \tt{false}}
 \EndIf
@@ -855,43 +892,6 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 \end{algorithmic}
 \end{algorithm}
 
-\begin{algorithm}
-\caption{BlockList}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{700}
-
-\Statex \cmt{\textsf{: Supports two operations \tt{blocks.tryAppend(Block b), blocks[i]}. Initially  empty, when \tt{blocks.tryAppend(b, n)} returns true \tt{b} is appended to \tt{blocks[n]} and \tt{blocks[i]} returns $i$th block in the \tt{blocks}. If some instance of \tt{blocks.tryAppend(b, n)} returns \tt{false} there is a concurrent instance of \tt{blocks.tryAppend(b$^\prime$, n)} which has returned \tt{true}.\tt{blocks[0]} contains an empty block with all fields equal to 0 and \tt{end\sub{left}, end\sub{right}} pointers to the first block of the corresponding children.}}
-
-%\Statex
-%\Statex $\diamondsuit$ \tt{\sl{root implementation}}
-%%  \Statex \sf{A persistant red-black tree supporting \tt{append(b, key),get(key=i),split(j)}}.
-%%  \tt{append(b, key) returns \tt{true} in case successful. Since \tt{order, sum\sub{enq}}are both strictly increasing we can use one of them for another.}
-%%\Statex \tt{root: }\sf{pointer to the root of the PBRT}
-%\Function{boolean}{TryAppend}{\sl{block} blk, \sl{int} n} \cmt{\textsf{adds block b to the \tt{root.blocks[n]}}}
-%\If{\tt{root.size\%$p^2$==0}} \cmt{Help every often $p^2$ operations appended to the root.}
-%\For{\tt{leaf l} \bf{in} \tt{tree leaves}}
-%\State \tt{l.Help()}
-%\EndFor
-%\EndIf
-%\State \tt{blk.num\sub{finished}= 0}
-%%\State \tt{*oldRoot= \&root.blocks.root}
-%%\State \tt{*newRoot= root.blocks.Append(blk).root}
-%%\State \Return \tt{CAS(root, oldRoot, newRoot)}
-%\State \Return{\tt{CAS(blocks[n], null, blk)}}
-%\EndFunction{TryAppend}
-
-\Statex
-%\Statex $\diamondsuit$ \tt{\sl{Array implementation}}
-\Statex \tt{\sl{block[]} blocks: }\sf{array of blocks}
-\Statex \tt{\sl{int[]} super}\textsf{: \tt{super[i]} stores an approximate index of the superblock of the blocks in \tt{blocks} whose \tt{group} field have value \tt{i}.}
-\Statex
-\Function{boolean}{TryAppend}{\sl{block} blk, \sl{int} n} 
-\State \Return{\tt{CAS(blocks[n], null, blk)}}
-\EndFunction{TryAppend}
-
-
-\end{algorithmic}
-\end{algorithm}
 
 
 %##########################################
@@ -1270,58 +1270,112 @@ Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\si
 %\begin{lemma}[help]\label{help}
 %After that \nf{TryAppend()} who is helping finishes, prefix for the blocks of \nf{root.blocks[root.FindMostRecentDone]} are done.
 %\end{lemma}
+%
+%\begin{lemma} Let $n.propagates$ be the number of groups of blocks that have been propagated from node \nf{n} to its parent (successful \nf{n.parent.Refresh()}).
+%We have \nf{num\sub{propagated}}$\leq n.propagates\leq$\nf{num\sub{propagated}+p}. \nf{p} is the number of processes.
+%\end{lemma}
+%\begin{proof}
+%    \tt{num\sub{propagated}} is incremented after propagating (Line \ref{incNP}). Since maybe some process falls sleep before incrementing \tt{num\sub{propagated}} it may be behind by \nf{p}.
+%\end{proof}
+%
+%
+%\begin{lemma} \nf{super[]} preserves order from child to parent; i.e. if in node \nf{n} block \nf{b} is before \nf{c} then \nf{b.group} $\leq$ \nf{c.group}
+%\end{lemma}
+%\begin{proof} Line \ref{setGroup}. Since  \nf{num\sub{propagated}} is increasing.\end{proof}
+%
+%\begin{lemma} Let \nf{b, c} be in node \nf{n}, if \nf{b.group} $\leq$ \nf{c.group} then \nf{super[b.group]} $\leq$ \nf{super[c.group]}\end{lemma}
+%\begin{proof} Line \ref{setSuper}.\end{proof}
 
-\begin{lemma} Let $n.propagates$ be the number of groups of blocks that have been propagated from node \nf{n} to its parent (successful \nf{n.parent.Refresh()}).
-We have \nf{num\sub{propagated}}$\leq n.propagates\leq$\nf{num\sub{propagated}+p}. \nf{p} is the number of processes.
-\end{lemma}
-\begin{proof}
-    \tt{num\sub{propagated}} is incremented after propagating (Line \ref{incNP}). Since maybe some process falls sleep before incrementing \tt{num\sub{propagated}} it may be behind by \nf{p}.
-\end{proof}
-
-
-\begin{lemma} \nf{super[]} preserves order from child to parent; i.e. if in node \nf{n} block \nf{b} is before \nf{c} then \nf{b.group} $\leq$ \nf{c.group}
-\end{lemma}
-\begin{proof} Line \ref{setGroup}. Since  \nf{num\sub{propagated}} is increasing.\end{proof}
-
-\begin{lemma} Let \nf{b, c} be in node \nf{n}, if \nf{b.group} $\leq$ \nf{c.group} then \nf{super[b.group]} $\leq$ \nf{super[c.group]}\end{lemma}
-\begin{proof} Line \ref{setSuper}.\end{proof}
-
-\begin{lemma}
-The number of the \nf{block}s with \nf{group=i} in a node is $\leq p$.  
-\end{lemma}
-\begin{proof}For the sake of simplicity we assumed all the blocks are propagated from the left child.
-\begin{figure}[hbt]
-  \center\includegraphics[width=5in]{pics/index1}
-\end{figure}  
-\end{proof}
+%\begin{lemma}
+%The number of the \nf{block}s with \nf{super=i} in a node is $\leq p$.  
+%\end{lemma}
+%\begin{proof}For the sake of simplicity we assumed all the blocks are propagated from the left child.
+%\begin{figure}[hbt]
+%  \center\includegraphics[width=5in]{pics/index1}
+%\end{figure}  
+%\end{proof}
 
 
 % \item In a propagate step at most 2 different time values are read \\ If there are more than 2 numbers then the smallest number should have been propagated far before.
 % \item There are at most $p^2$ blocks with same time value in a node. \\ At most p processes could die before line 27 and each contains at most p elements.
-\begin{lemma} \nf{super[i+1]-super[i]}$\leq p$\end{lemma}
-\begin{proof}
- In a Refresh with successful CAS in line 46, \nf{super} and \nf{counter} are set for each child in lines 48,49. Assume the current value of the counter in node \nf{n} is \nf{i+1} and still \nf{super[i+1]} is not set. If an instance of successful \nf{Refresh(n)} finishes \nf{super[i+1]} is set a new value and a block is added after \nf{n.parent[sup[i]]}. There could be at most $p$ successful unfinished concurrent instances of \nf{Refresh()} that have not reached line 49. So the distance between \nf{super[i+1]} and \nf{super[i]} is less than $p$.
- \begin{figure}[hbt]
-  \center\includegraphics[width=4in]{pics/index2}
-\end{figure}  
-\end{proof}
-\begin{lemma}[super property]\label{superCounter}
-If \nf{super[i] $\neq$ null} in node \nf{n}, then \nf{super[i]} is the index of the superblock of a block with \nf{time=i} in \nf{n.parent.blocks}.
-\end{lemma}
-\begin{lemma}\label{superRange} Superblock of \nf{b} is within range $\pm 2p$ of the \nf{super[b.group]}.
-\end{lemma}
+%\begin{lemma} \nf{super[i+1]-super[i]}$\leq p$\end{lemma}
+%\begin{proof}
+% In a Refresh with successful CAS in line 46, \nf{super} and \nf{counter} are set for each child in lines 48,49. Assume the current value of the counter in node \nf{n} is \nf{i+1} and still \nf{super[i+1]} is not set. If an instance of successful \nf{Refresh(n)} finishes \nf{super[i+1]} is set a new value and a block is added after \nf{n.parent[sup[i]]}. There could be at most $p$ successful unfinished concurrent instances of \nf{Refresh()} that have not reached line 49. So the distance between \nf{super[i+1]} and \nf{super[i]} is less than $p$.
+% \begin{figure}[hbt]
+%  \center\includegraphics[width=4in]{pics/index2}
+%\end{figure}  
+%\end{proof}
+%\begin{lemma}[super property]\label{superCounter}
+%If \nf{super[i] $\neq$ null} in node \nf{n}, then \nf{super[i]} is the index of the superblock of a block with \nf{time=i} in \nf{n.parent.blocks}.
+%\end{lemma}
 
-\begin{proof} \nf{super[i]} is the index of the superblock of a block containing block b, followed by Lemma \ref{superCounter}. \nf{super(b)} is the real superblock of b. \nf{super(t]} is the index of the superblock of the last block with time \nf{t}. If \nf{b.time} is \nf{t} we have:
-$$super[t]-p\leq super[t-1]\leq super(t-1] \leq super(b) \leq super(t+1)\leq super(t+1]\leq super[t]+p$$
-\end{proof}
+
+
+%\begin{proof} \nf{super[i]} is the index of the superblock of a block containing block b, followed by Lemma \ref{superCounter}. \nf{super(b)} is the real superblock of b. \nf{super(t]} is the index of the superblock of the last block with time \nf{t}. If \nf{b.time} is \nf{t} we have:
+%$$super[t]-p\leq super[t-1]\leq super(t-1] \leq super(b) \leq super(t+1)\leq super(t+1]\leq super[t]+p$$
+%\end{proof}
+
+%\begin{lemma}
+%Search in each level of \nf{IndexDeq()} takes $O(\log p)$ steps.  
+%\end{lemma}
+%\begin{proof}
+%Show preconditions are satisfied and the range is $p$.  
+%\end{proof}
 
 \begin{lemma}
-Search in each level of \nf{IndexDeq()} takes $O(\log p)$ steps.  
+ Let the value When an instance of \nf{Refresh()} is called on the node \nf{n}, the instance is supposed to do a \nf{CAS} into \nf{n.blocks[h]} where \nf{h} is the value read from \nf{n.head}.
 \end{lemma}
 \begin{proof}
-Show preconditions are satisfied and the range is $p$.  
+  By Invariant \ref{lem::headPosition}, \nf{n.blocks[h]} may be \nf{null} or not \nf{null}. This also holds for \nf{n.parent.blocks[hp]}. Unless all other fields of a block that is set  while creating the block because of a technical problem we set the \nf{super} field of a block after appending it to the blocklist. \nf{super} field is supposed to show the approximate index of the superblock of a block, We set the value while appending the block or while a block is appended to the parent. These times the value of parent's \nf{head} is really close to the actual value of the superblock of the block.
+  
+The \nf{Refresh} routine first helps to fill the \nf{super} field of \nf{n.blocks[h]} in case \nf{n.blocks[h]} is not null (Line \ref{helpSuper1}) and \nf{n.blocks[h].super} field is not set yet, and then the \nf{TryAppend} in Line \ref{cas} fails  and the \nf{Refresh} routine helps to increment \nf{n.head} value in Line \ref{incrementHead2}.
+
+After helping to fill the current \nf{block} at the \nf{head} index, \nf{Refresh} helps the left child and the right child to fill their \nf{super} field. A process may go to sleeps after Line \ref{cas} of its \nf{Refresh} and before Line \ref{setSuper}. So when a block is going to be appended to parent we help the children so the super field dos not change very much form its real value. After this step we are assured for all the blocks in the children that their index is less than the \nf{head}, the \nf{super} field is set.
+
+We claim after Line \ref{endHelpChild1} of \nf{n.Refresh()}, \nf{super} field of all the established blocks in \nf{n,n.left,n.right} is set and $\neq \nf{null}$.
 \end{proof}
 
+\begin{corollary}
+  Since Line \ref{incrementHead1} is executed after the Lines \ref{setSuper} and \ref{endHelpChild1}, then when \nf{n.head} is increased from \nf{h} to \nf{h+1}, we know that \nf{n.blocks[h]} is set. It might be two cases that the process which did \nf{TryAppend(new,h)} successfully, has incremented \nf{h} to \nf{h+1} or it might went to sleep and another process  which failed to do \nf{TryAppend(new,h)} comes and helps to set \nf{n.blocks[h].super} and increments \nf{n.head}. Or maybe a process that is trying to add a block to \nf{n.parent} after the \nf{TryAppend(new,h)} helps to set the \nf{super} field of \nf{n.blocks[h]}.
+\end{corollary}
+
+
+\begin{corollary}
+  After a successful \nf{TryAppend(new,h)}, \nf{n.blocks[h].super} is set by itself or the process that incremented the head from \nf{h} to \nf{h+1}, or the process that did the Lines 313 \ref{startHelpChild1} to 316 \ref{endHelpChild1}.
+\end{corollary}
+
+\it{How I can make this proof coming precise?}
+\begin{lemma}\label{superRange} If $\nf{n.blocks[b].super} \neq \nf{null}$ then, the superblock of \nf{n.blocks[b]} is in \nf{n.parent.blocks[b.super-1..b.super+1]}.
+\end{lemma}
+\begin{proof}
+  From the previous corollary, \nf{n.blocks[h].super} might be set while \nf{n.blocks[b]} is appended which is going to be one place behind the real super block, or it might set after appending which means one block behind the real value. Let us explain the possible cases on block \nf{b} in node \nf{n}.
+
+\nf{super} of the block field is set by the same process that appended the block. There are two possibilities that \nf{n.parent[hp]} is \nf{null} or not which \nf{hp} is the value of \nf{n.parent.head}/ In this case that \nf{super} field is the parent's \nf{head=hp} and when a block is going to be appended to the the \nf{hp+2} index of the parent it is going to contain the \nf{b}. One may wonder why, becuase it has read the parent's \nf{head} value \nf{hp+2} which is greater than \nf{hp+1} and it has to be incremented after \nf{n.bocks.TryAppend(new,h)}.
+
+The \nf{super} field is set by some process doing a \nf{Refresh} on \nf{n} after appending \nf{b}. In this case also the \nf{super} value is going to be behind the index of the real superblock index in parent if the \nf{n.parent.blocks[hp]}  is already not \nf{null} and so the next of the next block appended to the parent is going to absolutely contain \nf{b} if the next block appending to \nf{n.parent} did not contain \nf{b} (Lemma \ref{trueRefresh}). One might wonder why the next block appended to the parent might not contain \nf{b} because it may read the blocks it was going to append before appending \nf{b} to \nf{n.blocks}.
+
+The \nf{super} field is set by the process doing the \nf{Refresh} on the parent. In this case if the \nf{Refresh} is successful then position of the superblock of \nf{b} is exactly equal to the \nf{super} value. But if it was failure it might be one bit before the real value.
+
+\end{proof}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\pagebreak
 \begin{lemma}[Computing SuperBlock]\label{superBlock}
 For the \nf{superblock} value computed in line \ref{computeSuper} of \nf{n.IndexDEQ(b,i)} we have \nf{n.parent.blocks[superblock]} contains $D_{n,b,i}$.
 \end{lemma}

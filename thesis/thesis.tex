@@ -718,18 +718,18 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}} \label{startHelpChild1}
 \State \tt{h\sub{dir}= dir.\head} \label{readChildHead}
 \If{\nf{dir.blocks[h\sub{dir}]!=null}}
-\State \tt{CAS(dir.blocks[h\sub{dir}].super, null, h)}
-\State \tt{CAS(dir.head, h\sub{dir}, h\sub{dir}+1)}
+\State \tt{dir.blocks[h\sub{dir}].super.CAS(null, h)}
+\State \tt{dir.head.CAS(h\sub{dir}, h\sub{dir}+1)}
 \EndIf
 \EndFor \label{endHelpChild1}
 \State \tt{new= \Call{CreateBlock}{h}} \label{invokeCreateBlock}
 \If{\tt{new.num==0}} \Return{\tt{true}} \label{addOP} 
 %\cmt{Created block contains nothing.}
 \EndIf
-\State{\tt{result= blocks.tryAppend(new, h)}} \label{cas}
+\State{\tt{result= blocks[h].CAS(null, new)}} \label{cas}
 \State \tt{hp= parent.\head} \label{readParentHead}
-\State \tt{\Call{CAS}{n.blocks[h].super, null, hp}} \label{setSuper1}
-\State \tt{\Call{CAS}{\head, h, h+1}} 
+\State \tt{n.blocks[h].super.\Call{CAS}{null, hp}} \label{setSuper1}
+\State \tt{\head.\Call{CAS}{h, h+1}} 
 %\cmt{Even if another process wins, help to increase the \tt{\head}. The winner might have fallen sleep before increasing \tt{\head}.} \label{incrementHead2}
 \State \Return{ \tt{result}}
 
@@ -1330,9 +1330,9 @@ First Lines of the \nf{Refresh} routine(Lines \ref to \ref{}) helps the left chi
 %\end{corollary}
 
 
-\begin{corollary}
-  After a successful \nf{TryAppend(new,h)}, \nf{n.blocks[h].super} is set before the next succseful \nf{n.Refresh} or the second next succesful \nf{n.parent.Refresh()}.
-\end{corollary}
+\begin{lemma}
+  After a successful \nf{TryAppend(new,h)}, \nf{n.blocks[h].super} is set before the next succseful \nf{n.Refresh} or the second next succesful \nf{n.parent.Refresh()}. Superblock of \nf{b} is in \nf{n.parent.blocks[b.super-1..b.super+2]}.
+\end{lemma}
 \begin{proof}
 \nf{n.TryAppend(h+1)}cannot happen unless \nf{n.head} is incremented from \nf{h} to \nf{h+1}. The latter case is explained in the next page.  
 \end{proof}
@@ -1341,10 +1341,10 @@ First Lines of the \nf{Refresh} routine(Lines \ref to \ref{}) helps the left chi
 \begin{definition} We say \nf{R1} an instance of \nf{Refresh} is before \nf{R2} another instance of \nf{Refresh}. If \nf{R1}'s \nf{TryAppend} happens before \nf{R2}'s \nf{TryAppend}. We knew that \nf{CAS} objects are linearizable.
 \end{definition}
 
-\begin{lemma}\label{superRange} If $\nf{b.super} \neq \nf{null}$ then, the superblock of \nf{b} is in \nf{n.parent.blocks[b.super-1..b.super+2]}.
+\begin{lemma}\label{superRange}  
 \end{lemma}
 \begin{proof}
-Let us explain the possible cases of setting \nf{super} of block \nf{b} in node \nf{n}.
+Let us explain the possible cases of setting \nf{super} of block \nf{b} in node \nf{n}. \nf{b.super} is set by an instance of \nf{n.Refresh} or \nf{n.parent.Refresh}. Since Lines \ref{} setting the \nf{super} is done before incrementing the \nf{head}, so if we know \nf{head} has advanced the super has to be set before.
 
 First case is that the \nf{super} field of \nf{b} is set by the same process that appended \nf{b}. There are two possibilities that \nf{n.parent[hp]} is already \nf{null} or not, when the value \nf{hp} is read from \nf{n.parent.head}. We argue how distant is the superblock of \nf{b} from \nf{n.parent.blocks[hp=b.super]}. If the successful \nf{Refresh} that does \nf{n.parent.TryAppend(new,hp+1)}, creates its \nf{new} block after \nf{n.head.CAS(h,h+1)} (Line \ref{}) then \nf{new} contains the not yet propagated established blocks from \nf{n}, including \nf{b} (blocks in \nf{n} with smaller index than \nf{h+1}). Otherwise, the next \nf{Refresh} on \nf{n.parent} which has read \nf{head=hp+2} contains \nf{b}. Because $\nf{t\sub{n.blocks.TryAppend(b,h)}} < \nf{t\sub{n.head.CAS(h,h+1)}} < \nf{t\sub{hp+2=read n.parent.head}} < \nf{t\sub{n.parent.head.CAS{hp+1,hp+2}}}$. See Lemma \ref{lem::trueRefresh}. In the case that \nf{n.parent.blocks[hp]!=null}, when a block is going to be appended to the the \nf{hp+1} index of the parent it is going to contain the \nf{b}. One may wonder why, becuase it has read the parent's \nf{head} value \nf{hp+2} which is greater than \nf{hp+1} and it has to be incremented after \nf{n.bocks.TryAppend(new,h)}. The other case \nf{n.parent[hp]==null} is the same but one bit closer.
 

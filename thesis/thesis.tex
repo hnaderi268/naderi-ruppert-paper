@@ -965,13 +965,18 @@ The invariant is true initially since 1 is assigned to \nf{n.head} and \nf{n.blo
 In the algorithm, some value is appended to \nf{n.blocks[]} by writing into \nf{n.blocks[head]} only in Line 313. Writing into \nf{n.blocks[head]} preserves the invariant, since the claim does not talk about \nf{n.blocks[head]}. The value of \nf{n.head} is modified only in lines \ref{incrementHead1} and \ref{incrementHead2}. Depending on whether the \nf{TryAppend()} in Line~\ref{cas} succeeded or not, we show that the claim holds after the increment of \nf{n.head} in either case. If \nf{n.head} is incremented to $h$ it is sufficient to show \nf{n.blocks[h]}$\neq$\nf{null} to prove the invariant still holds. In the first case the process applied a successful \nf{TryAppend(new,h)} in line \ref{okcas}, which means \nf{n.blocks[h]} is not null anymore. Note that whether \ref{incrementHead1} or \ref{incrementHead1} return true or false,  after they finish we know  that \nf{n.head} has been incremented from the value read in Line \ref{readHead} (Lemma \ref{lem::headInc}). The failure case is also the same since it means some non-null value has been written into \nf{n.blocks[head]} by some process.
 %At the end of every \nf{n.Refresh()} with a block  with \head greater than 0 returned by \nf{CreateBlock()} \nf{n.head} is incremented (Lines \ref{incrementHead1}, \ref{incrementHead2}). If a process went to sleep before incrementing the \nf{established} (line \ref{incrementHead1}), nothing can be appended to \nf{n.blocks} until another process increments \nf{n.establsihed} (Line \ref{incrementHead2}).
 \end{proof}
-\it{Explain More}
+
+\begin{observation} \label{nonDecreasingHead}
+  \nf{n.head} is non-decreasing over time.
+\end{observation}
+\begin{proof}
+  The claim follows trivially from the code since \nf{n.head} is only incremented in Line \ref{incrementHead} of \nf{Refresh()} .
+\end{proof}
 
 \begin{lemma}[headProgress] \label{lem::headProgress}
-\nf{n.head} is non-decreasing over time. If \nf{n.blocks[i]$\neq$null} and \nf{i$.$0} then $\nf{n.blocks[i].end\sub{left}} \geq \nf{n.blocks[i-1].end\sub{left}}$ and $\nf{n.blocks[i].end\sub{right}} \geq \nf{n.blocks[i-1].end\sub{right}}$.
+ If \nf{n.blocks[i]$\neq$null} and \nf{i$.$0} then $\nf{n.blocks[i].end\sub{left}} \geq \nf{n.blocks[i-1].end\sub{left}}$ and $\nf{n.blocks[i].end\sub{right}} \geq \nf{n.blocks[i-1].end\sub{right}}$.
 \end{lemma}
 \begin{proof}
-The first claim follows trivially from the pseudocode since \nf{n.head} is only incremented in the pseudocode in lines \ref{incrementHead1} and \ref{incrementHead2} of \nf{Refresh()} .
 
 Consider the block \nf{b} written into \nf{n.blocks[i]} by \nf{TryAppend()} at Line \ref{cas}. It is created by the \nf{CreateBlock(i)} called at Line \ref{invokeCreateBlock}. Prior to this call to \nf{CreateBlock(i)}, \nf{n.head=i} at Line \ref{readHead}, so \nf{n.blocks[i-1]} is already a non-null value \nf{b}$^\prime$ by Invariant \ref{lem::headPosition}. Thus the \nf{CreateBlock(i-1)} that creates  \nf{b}$^\prime$ terminates before \nf{CreateBlock(i)} that creates \nf{b} is invoked. The value written into \nf{b.end\sub{left}} at Line \ref{endDefLine} of \nf{CreateBlock(i)}  was read from \nf{n.left.head-1} at Line \ref{lastLine} of \nf{CreateBlock(i)}. Similarly, the value in \nf{n.blocks[i-1].end\sub{left}} was read from \nf{n.left.head-1} during the call to \nf{CreateBlock(i-1)}. Since \nf{n.left.head} is non-decreasing \nf{b}$^\prime$\nf{.end\sub{left}} $\leq$ \nf{b.end\sub{left}}. The proof for \nf{end\sub{right}} is similar.
 \end{proof}
@@ -1322,8 +1327,12 @@ Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\si
 %Show preconditions are satisfied and the range is $p$.  
 %\end{proof}
 
+\begin{definition}\label{orderRefresh}  A Refresh is \it{successful} if it performs a successful \nf{CAS} on Line \ref{cas}. If \nf{Refresh} instance \nf{R\sub{1}} does its \nf{CAS} at Line \ref{cas} sooner than \nf{Refresh} instance \nf{R\sub{2}} we say \nf{R\sub{1}}  \it{happened} before \nf{R\sub{2}}.
+\end{definition}
 
- Let \nf{h} be the value read  from \nf{n.head} when a successful instance of \nf{Refresh()} is called on the node \nf{n}, the instance is supposed to do a \nf{CAS(null, new)} into \nf{n.blocks[h]}. We call the appended block \nf{b}. Despite other fields of a block that are set while creating the block, because we do not know the exact index of the superblock of the block we  can not set the \nf{super} field of a block while appending it to the blocklist. One approach is to set the super of a block when it is porpagated but this is not efficent because there might be $p$ blocks propagating together in a \nf{Refresh()} step. However we know that once a block is installed its stuperblock is going to be close to \nf{n.parent.head} at the time of installation. \nf{super} field is supposed to show the approximate index of the superblock of a block, so we want \nf{super} to be as close to the index of the superblock of the block in the parent. We set the \nf{super} value to \nf{n.parent.head} right after appending the block (Line \ref{}), since \nf{b}'s superblock comes after that in near future. Maybe the process goes to sleep at sometime after appending \nf{b} to \nf{n.blocks} and before setting the super. In this case we use help from the next \nf{Refresh}es on \nf{n} and \nf{n.parent}.
+ Let \nf{i} be the value \nf{R\sub{n}}, a successful instance of \nf{Refresh()} on the node \nf{n}, reads from \nf{n.head}. \nf{R\sub{n}} does a successful \nf{CAS(null, new)} into \nf{n.blocks[h]}, where \nf{b} is the \nf{new}. Without loss of generality for the rest of this section assume \nf{n} is the left child of \nf{n.parent}. From now on we say \nf{p} as an abbreviation for \nf{n.parent}. Let \nf{R\sub{p}} be the first successful \nf{p.Refresh()} that reads some value greater than \nf{i} for \nf{left.head} and is contains \nf{b} in its created block \nf{s} in Line \ref{invokeCreateBlock}. From Lemma \ref{lem::appendExactlyOnce} we know there could be only one \nf{p.Refresh()} propagating \nf{b}. \nf{R\sub{p}} does a successful \nf{CAS(null, new)} into \nf{p.blocks[j]}, where \nf{s} is the \nf{new}.
+
+Although other fields of \nf{b} are set while creating it, because the index of the superblock of \nf{b} is not known until it is propagated, \nf{R\sub{n}} cannot set the \nf{super} field of a \nf{b} while creating it. One approach is to set the \nf{super} field of \nf{b} after it is propagated by \nf{R\sub{b}} but this would not be efficient because there might be $p$ subblocks in \nf{s}. However, once \nf{b} is installed, its superblock is going to be close to \nf{n.parent.head} at the time of installation. One idea is that if we know the aproximate position of the superblock of \nf{b} then we can search for the real superblock when we wished to know the superblock of \nf{b} i.e. \nf{b.super} does not have to be the exact location of  the superblock of \nf{b}, but we want it to be close to \nf{j}. We can set \nf{b.super} to \nf{n.parent.head} while creating \nf{b}, but the problem is that there might be many \nf{p.Refresh}es could happen that contain blocks from the right child of \nf{p} and \nf{j} could be arbitrarily (right word?) greater than \nf{b.super}. We set \nf{b.super} to \nf{p.head} after appending \nf{b} to \nf{n.blocks} (Line \ref{setSuper1}). Maybe \nf{R\sub{n}} goes to sleep at some time after installing \nf{b} and before setting \nf{b.super}. In this case the next \nf{Refresh}es on \nf{n} and \nf{n.parent} help fill in the value of \nf{b.super}.
   
 %    By Invariant \ref{lem::headPosition}, \nf{n.parent.blocks[hp]} may be \nf{null} or not \nf{null}, if \nf{hp} is the value read from \nf{n.parent.head} (Line \ref{}). 
 %First Lines of the \nf{Refresh} routine(Lines \ref to \ref{}) helps the left child and the right child to fill their \nf{super} field. A process may go to sleep, after Line \ref{cas} of its \nf{Refresh} and before Line \ref{setSuper}. So when a block is going to be appended to \nf{n.parent.blocks} we help the children so the super field in the last block of the children does not differ very much form its real value. After this step we are assured for all the blocks in the children that their index is less than the child's \nf{head}, the \nf{super} field is set. Since we first help to fill the \nf{super} and then increment the \nf{head} (Lines \ref{}). From Lemma \ref{lem::trueRefresh} we knwo that blocks whose index are less than \nf{head} are propagated to the parent in a \nf{Refresh} instance. To summarize Line \ref{endHelpChild1} of \nf{n.Refresh()}, \nf{super} field of all the established blocks in \nf{n.left,n.right} is set and $\neq \nf{null}$.
@@ -1342,8 +1351,7 @@ Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\si
 %\end{proof}
 
 
-\begin{definition}  A Refresh is successful if it reaches Line \ref{cas} and returns true. If \nf{Refresh ()} instance \nf{R1} does its \nf{CAS} at Line \ref{cas} sooner than \nf{Refresh} instance \nf{R2} we say \nf{R1} has happened before \nf{R2}. We knew that \nf{CAS} objects are linearizable.
-\end{definition}
+
 %
 %\begin{lemma}\label{superRange}  
 %\end{lemma}
@@ -1358,49 +1366,49 @@ Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\si
 %
 %\end{proof}
 
-Block \nf{b} is appended to \nf{n.blocks[h]} on Line \ref{cas}. After appending \nf{b}, \nf{super} field of \nf{b} is set on Line \ref{setSuper1} by the same process or another \nf{n.Refresh()} or  maybe an \nf{n.parent.Refresh()}. We want to argue how far \nf{b.super} is from the index of \nf{b}'s super block, which is created by a successful \nf{n.parent.Refresh()} that propagates \nf{b}.
+Block \nf{b} is appended to \nf{n.blocks[h]} on Line \ref{cas}. After appending \nf{b}, \nf{b.super} is set on Line \ref{setSuper1} of a call to \nf{Advance} by the same process or another process's \nf{n.Refresh()} or  maybe an \nf{n.parent.Refresh()}. We want to bound how far \nf{b.super} is from the index of \nf{b}'s superblock, which is created by a successful \nf{n.parent.Refresh()} that propagates \nf{b}.
 
-WLOG for the rest of this section assume \nf{n} is the left child of \nf{n.parent}. The first successful \nf{n.parent.Refresh()} that read some value
-greater than \nf{h} for \nf{left.head} is going to contain \nf{b} in its created block in Line \ref{invokeCreateBlock}. We call \nf{n.Refresh()} that added \nf{b} the \nf{R\sub{n}} and \nf{n.parent.Refresh()} that propagated \nf{b} to \nf{p}  the \nf{R\sub{p}} and we use \nf{p} instead of \nf{n.parent}. We also sometimes use \nf{n[h]} instead of \nf{n.blocks[h]}(maybe a good idea for the whole document?).
 
-\begin{lemma}
-After n blocks[h].CAS(null,b) succeeds an head cannot increase from h to h+1 unless be super is set.
-\end{lemma}
+
+\begin{observation} \label{setSupBeforeIncHead}
+After \nf{n.blocks[i].CAS(null, b)} succeeds, \nf{n.head} cannot increase from \nf{i} to \nf{i+1} unless \nf{b.super} is set.
+\end{observation}
 \begin{proof}
-If an instance of n.Refresh() increments n.head on Line \ref{324}, then n.blocks[head].super was set at Line \ref{323}.
+From the Observation \ref{nonDecreasingHead} we know the only change to \nf{n.head} is on Line \ref{incrementHead} which is incrementing. Before an instance of \nf{Advance()} increments \nf{n.head} on Line \ref{incrementHead}, Line \ref{setSuper1} ensures that \nf{n.blocks[head].super} was set at Line \ref{setSuper1}.
 \end{proof}
 
 \begin{corollary}
-  If n.blocks[i].super is null, then n.blocks[i+1] is null.
+  If \nf{n.blocks[i].super} is \nf{null}, then $\nf{n.head}<\nf{i}$ and \nf{n.blocks[i+1]} is \nf{null}.
 \end{corollary}
-
-As per previous corollary, b.super has to be set before the next successful Refresh() on n after the Refresh() that put b into n. Because if b.super=null then the n head cannot advance and then the next n.Refresh() is going to fail. Now Let us talk about how the n.parent.Refresh()es that took place after the putting b into n, will help to set b.super.
+\begin{proof}If \nf{b.super} is \nf{null} then \nf{n.head} cannot advance so the next \nf{n.Refresh()} will fail. By the previous corollary, \nf{b.super} has to be set before the next successful Refresh() on n after \nf{R\sub{n}}.  
+\end{proof}
+Now let us talk about how the \nf{p.Refresh}es that took place after the putting \nf{b} into \nf{n}, will help to set \nf{b.super} and propagate \nf{b}.
 
 \begin{lemma}
-  If b$\in$n.parent.blocks[i] then b.super$\leq$i.
+  If $\nf{b}\in\nf{n.parent.blocks[i]}$ then $\nf{b.super}\leq\nf{i}$.
 \end{lemma}
 \begin{proof}
-  I did not quite understand the way Eric told me to prove this.
+For \nf{R\sub{p}} to contain block \nf{b}, it has to read \nf{n.head} greater than \nf{h} (see Line \ref{lastLine}). For \nf{n.head} to be greater than \nf{h} it means \nf{n.head} is incremented in Line \ref{incrementHead} which means \nf{b.super} was already set in Line \ref{setSuper1} (see Observation \ref{setSupBeforeIncHead}). So if \nf{R\sub{p}} propagates \nf{b} it means \nf{b.super} was already set. Let \nf{j} be the value written in \nf{b.super}. \nf{j} has been read in Line \ref{readHead} or Line \ref{readParentHead} which both are before calling \nf{Advance} that sets \nf{b.super}. From Observation \ref{nonDecreasingHead} we know \nf{p.Head} is non-decreasing so $\nf{j}\leq\nf{i}$. The reader may wonder when the case $\nf{j}=\nf{i}$ happens, it happens when \nf{p.blocks[j]=null} while \nf{j} is read and \nf{R\sub{p}} puts its created block into \nf{n.blocks[j]}.
 \end{proof}
 
 \begin{lemma}
-If Rn=n.Refresh() puts b in n[h] at $t_{321}^{Rn}$, then the block created by the next successful P.Refresh() or the second next successful p.Refresh() contains b and b.super is set before the second next successful p.Refresh() after $t_{321}^{Rn}$.
+If \nf{R\sub=n.Refresh()} puts \nf{b} in \nf{n.blocks[h]} at Line \ref{cas}, then the block created by one of the next two successful \nf{p.Refresh}es according to the Definition \ref{orderRefresh} contains \nf{b} and \nf{b.super} is set before Line \ref{invokeCreateBlock} of the the second successful \nf{p.Refresh()}.
 \end{lemma}
 
 \begin{proof}
-b.super could be set by helping of some n.Refresh() instance before the second next successful p.Refresh(), but even if no one helped it we prove the second next  successful p.Refresh() will help n to advance in Line \ref{setSuper} called by Line \ref{helpAdvance}.
+It is sufficient to prove one of the two successful \nf{p.Refresh()}es propagate \nf{b}. If the first successful \nf{p.Refresh()} propagated \nf{b} then the claim is true, so in the remaining part we assume the first \nf{p.Refresh()} did not propagate \nf{b} and prove the second \nf{p.Refresh()} propagates \nf{b}.
+
+\nf{b.super} is set by some instance of \nf{Refresh()} on \nf{n} or \nf{p} showed by \nf{R'} and \nf{n.head} is incremented by some \nf{Refresh()} called \nf{R"}. We want to know how great $\nf{j}-\nf{b.super}$ can be. \nf{p.head} is \nf{hp} when \nf{R'} reads it. From Lemma \ref{lem::headProgress} \nf{p.head} could only increase from \nf{hp} to \nf{hp+1} if $\nf{p[hp]}\neq\nf{null}$. In other words there should be a successful \nf{p.Refresh()} for \nf{p.head} to increase. We claim there cannot be another successful \nf{p.Refresh()} after \nf{R'} reads \nf{p.head} and before \nf{R\sub{p}} performs Line \ref{lastLine}.
 
 \begin{figure}[hbt]  
   \center\includegraphics[width=7in]{pics/timeLineSuper1.png}
-  \caption{b.super is set by some instance of Refresh() on n or n.parent showed by \nf{R'} and \nf{n.head} is incremented by some \nf{Refresh()} called \nf{R"}.}
+  \caption{Time relations between \nf{R\sub{n},R\sub{p},R',R"}}
   \label{fig::timeLine1}
 \end{figure}
 
-\nf{Rp} is the first successful \nf{p.Refresh()} instance that has propagated \nf{b} into \nf{p.blocks[x]}. We want to know how great $\nf{x}-\nf{b.super}$ can be? \nf{p.head} is \nf{hp} when \nf{R'} reads it. From Lemma \ref{lem::headProgress} \nf{p.head} could only increase from \nf{hp} to \nf{hp+1} if $\nf{p[hp]}\neq\nf{null}$. In other words there should be a successful \nf{p.Refresh()} in order to \nf{p.head} advance. We claim there cannot be more than one \nf{p.Refresh()} after \nf{R'} reads \nf{p.head} and before $t_{\ref{lastLine}}^{Rp}$.
-
-Assume the first successful \nf{p.Refresh()} after $t_{\ref{cas}}^{Rn}$ did not set \nf{b.super}. It might happen maybe because the value read for $h_{left}$ in Line \ref{readChildHead} is less than \nf{h} or maybe $\nf{h}=\nf{h\sub{left}}$ and $\nf{left.blocks[h\sub{left}]}=\nf{null}$, which means \nf{n.head} is advanced but \nf{b} is still not installed in \nf{n[h]} which means \nf{R\sub{n}} has not reached to the Line \ref{cas}.
+Assume the first successful \nf{p.Refresh()} after $t_{\ref{cas}}^{Rn}$ did not set \nf{b.super}. It might happen maybe because the value read for $h_{left}$ in Line \ref{readChildHead} is less than \nf{i} or maybe $\nf{i}=\nf{h\sub{left}}$ and $\nf{left.blocks[h\sub{left}]}=\nf{null}$, which means \nf{n.head} is advanced but \nf{b} is still not installed in \nf{n.blocks[i]} which means \nf{R\sub{n}} has not reached to the Line \ref{cas}.
   
-Let the first successful \nf{p.Refresh()} be \nf{Rp1} and the second next successful \nf{p.Refresh()} be \nf{Rp2}. If \nf{Rp1} reads \nf{i} in Line \ref{readHead}, then \nf{Rp2} has to read \nf{i+1} in Line \ref{readHead}. See the timeline in Figure \ref{fig::timeLine2} for two consecutive successful \nf{Refresh()} instances \nf{Rp1, Rp2} on \nf{p}.
+Let the first successful \nf{p.Refresh()} be \nf{Rp1} and the second next successful \nf{p.Refresh()} be \nf{Rp2}. If \nf{Rp1} reads \nf{x} in Line \ref{readHead}, then \nf{Rp2} has to read \nf{x+1} in Line \ref{readHead} (iduced from \ref{lem::headProgress}, \ref{nonDecreasingHead}). See the timeline in Figure \ref{fig::timeLine2} for two consecutive successful \nf{Refresh()} instances \nf{Rp1, Rp2} on \nf{p}.
 
 \begin{figure}[hbt]  
   \center\includegraphics[width=6in]{pics/timeLineSuper2.png}
@@ -1409,16 +1417,16 @@ Let the first successful \nf{p.Refresh()} be \nf{Rp1} and the second next succes
 \end{figure}
 
 \begin{figure}[hbt]  
-  \center\includegraphics[width=5in]{pics/timeLineSuper3.png}
-  \caption{ The second Refresh on p contains b and reads head>h.}
+  \center\includegraphics[width=6in]{pics/timeLineSuper3.png}
+  \caption{ The second Refresh on \nf{p} contains \nf{b} and reads $\nf{n.head}>\nf{i}$.}
   \label{fig::timeLine3}
 \end{figure}
 
-So \nf{b.super} has set by some process before the second next successful \nf{p.Refresh()} on Line \ref{setSuper1}. Since \nf{h} is read in the Line \ref{readHead} then the \nf{CreateBlock()} in Line \ref{invokeCreateBlock} is going to read  some value fo \nf{left.head} greater than \nf{h} and propagates \nf{b} to \nf{p}. So if \nf{b} was not propagated already we are sure the second next successful \nf{p.Refresh()} propagates \nf{b}.
+So \nf{b.super} has set by some process before the second next successful \nf{p.Refresh()} on Line \ref{setSuper1}. Since \nf{i} is read in the Line \ref{readHead} then the \nf{CreateBlock()} in Line \ref{invokeCreateBlock} is going to read  some value fo \nf{left.head} greater than \nf{h} and propagates \nf{b} to \nf{p}. So if \nf{b} was not propagated already we are sure the second next successful \nf{p.Refresh()} propagates \nf{b}.
 \end{proof}
 
 \begin{corollary}
-If $\nf{b.super} \neq \nf{null}$, then it has at most 1 difference with the index of the superblock of \nf{b} in \nf{p}.
+If \nf{b} has propagated to \nf{f}, then \nf{b.super} has at most 1 difference with the index of the superblock of \nf{b} in \nf{p}.
 \end{corollary}
 
 

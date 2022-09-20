@@ -864,157 +864,136 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 
 \section{Proof of Correctness}
 
-\framebox[1.1\width]{TEST} Fix the logical order of definitions (cyclic refrences).
+To prove a shared data structure works correctly it is sufficient to show it is linearizable. In our case which we create the linearization ordering in the root, we need to prove the ordering is legal i.e for every execution on our queue if operation $op_1$ terminates before operation $op_2$ then $op_1$ is linearized before operation $op_2$ and if we do the linearization ordering created on a sequential queue we get the same results as our queue. The proof is structured like this. First we define and prove some facts about blocks and node's head properties. Then we introduce  the linearization ordering formally. Then we prove double \nf{Refresh} on a node is enough to propagate children's new operations up to the node. After this we prove some claims about the size of each block. Having propagates working  in a wait-free manner then we prove the correctness of \nf{DSearch()} and \nf{GetENQ()} and \nf{IndexDEQ}. Having these two main methods we prove the way we compute the response of a dequeue is correct and finally we prove the linearizability.
 
-%\framebox[1.1\width]{Questions} When I write the lemmas since every claim in my mind is correct maybe I miss some fact that need proof or maybe I refer to some lemmas that are generally correct but not needed for the linearizability proof. Is lemma 7 necessary? Is lemma 13 induced trivially from lemma 8?
+%\framebox[1.1\width]{TEST} Fix the logical order of definitions (cyclic refrences).
+%
+%%\framebox[1.1\width]{Questions} When I write the lemmas since every claim in my mind is correct maybe I miss some fact that need proof or maybe I refer to some lemmas that are generally correct but not needed for the linearizability proof. Is lemma 7 necessary? Is lemma 13 induced trivially from lemma 8?
+%
+%\framebox[1.1\width]{TEST} Is it better to show \nf{ops(EST\sub{n, t})} with \nf{EST\sub{n, t}}?
+%
+%%\framebox[1.1\width]{TEST} How to merge notions of blocks and operations? block b $\sqsubseteq$ block c means b is subblock of c. block b $\in$ set B means b is in B. Merge these two to have shorter formulaes.
+%
+%\framebox[1.1\width]{Question} A good notation for \it{the index of the \nf{b}}?
+%
+%\framebox[1.1\width]{Question} How to remove the notion of time? To say pre(n,i) contains n.blocks[0..i] instead of EST(n,t) which head=i at time t. Is it good? Furthermore, can we remove the notion of established blocks?
 
-\framebox[1.1\width]{TEST} Is it better to show \nf{ops(EST\sub{n, t})} with \nf{EST\sub{n, t}}?
-
-%\framebox[1.1\width]{TEST} How to merge notions of blocks and operations? block b $\sqsubseteq$ block c means b is subblock of c. block b $\in$ set B means b is in B. Merge these two to have shorter formulaes.
-
-\framebox[1.1\width]{Question} A good notation for \it{the index of the \nf{b}}?
-
-\framebox[1.1\width]{Question} How to remove the notion of time? To say pre(n,i) contains n.blocks[0..i] instead of EST(n,t) which head=i at time t. Is it good? Furthermore, can we remove the notion of established blocks?
-
-\begin{definition}[Block]
-A block is an object storing some statistics, as described in Algorithm Queue. A block in a node's blocklist implicitly represents a set of operations. If \nf{n.blocks[i]==b}  we call \nf{i} the \emph{index} of block \nf{b}. Block \nf{b} is before block \nf{b$^\prime$} in node \nf{n} if and only if the index of the \nf{b} is smaller than the index of the \nf{b$^\prime$}'s. For a \tt{block} in a \tt{BlockList} we define \it{the prefix for the block} to be the blocks in the \tt{BlockList} up to and including the \tt{block}.
+A block is an object storing some statistics, as described in Algorithm Queue. A block in a node's blocklist implicitly represents a set of operations.
+\begin{definition}[Ordering of a block in a node]
+Let $b$ be \nf{n.blocks[$i$]} and $b^\prime$ be \nf{n.blocks[$j$]}. We call $i$ the \emph{index} of block $b$. Block $b$ is \it{before} block $b^\prime$ in node \nf{n} if and only if $i<j$. We define \it{the prefix for} $b$, to be the blocks in the \tt{n.blocks[0..$i$]}.
 \end{definition}
 
+Next we show that \nf{head} in a node can only be increased and when a \nf{Refresh} terminates \nf{head} is incremented by the process itself or maybe helped by another process.
+\begin{observation} \label{nonDecreasingHead}
+  \nf{head} is non-decreasing over time.
+\end{observation}
+\begin{proof}
+  The claim follows trivially from the code since \nf{head} is only changed by incrementing in Line \ref{incrementHead} of \nf{Advance()} .
+\end{proof}
 \begin{lemma}[head Increment] \label{lem::headInc}
-Let \nf{R} be an instance of \nf{Refresh} on node \nf{n} that reaches Line \ref{cas}. After \nf{R} terminates \nf{n.head} is greater than h, the value read  in line \ref{readHead} of \nf{R}.
+Let $R$ be an instance of \nf{Refresh} on node \nf{n}. After $R$ terminates \nf{n.head} is greater than the value read in line \ref{readHead} of $R$.
 \end{lemma}
 \begin{proof}
-If Line \ref{incrementHead1} or \ref{incrementHead2} are successful then the claim holds, otherwise another process has incremented the head from \nf{h} to \nf{h+1}.
+If the \nf{CAS} in Line \ref{incrementHead} is successful then the claim holds. Otherwise it has changed from the value that was read in Line \ref{readHead}, which by Observation \ref{nonDecreasingHead} it means another process has incremented the head.
 \end{proof}
 
-\begin{invariant}[headPosition] \label{lem::headPosition} If the value of \nf{n.head} is \nf{h} then, \nf{n.blocks[i]=null} for \nf{i>h} and \nf{n.blocks[i]$\neq$null} for \nf{i<h}.
+Now we show \nf{n.blocks[n.head]} is the last  block written into \nf{n} or the first empty block in \nf{n}.
+
+\begin{invariant}[headPosition] \label{lem::headPosition} If the value of \nf{n.head} is $h$ then $\nf{n.blocks[$i$]}=\nf{null}$ for ${i>h}$ and $\nf{n.blocks[i]}\neq\nf{null}$ for ${i<h}$.
 \end{invariant}
 \begin{proof}
-The invariant is true initially since 1 is assigned to \nf{n.head} and \nf{n.blocks[x]} is null for every \nf{x}. The truth of the invariant may be affected by writing into \nf{n.blocks} or incrementing \nf{n.head}. We show the invariant still holds after these two changes.
+The invariant is true initially since 1 is assigned to \nf{n.head} and \nf{n.blocks[}$x$\nf{]} is null for every $x>0$. The truth of the invariant may be affected by writing into \nf{n.blocks} or incrementing \nf{n.head}. We show the invariant still holds after these two changes.
 
-In the algorithm, some value is appended to \nf{n.blocks[]} by writing into \nf{n.blocks[head]} only in Line 313. Writing into \nf{n.blocks[head]} preserves the invariant, since the claim does not talk about \nf{n.blocks[head]}. The value of \nf{n.head} is modified only in lines \ref{incrementHead1} and \ref{incrementHead2}. Depending on whether the \nf{TryAppend()} in Line~\ref{cas} succeeded or not, we show that the claim holds after the increment of \nf{n.head} in either case. If \nf{n.head} is incremented to $h$ it is sufficient to show \nf{n.blocks[h]}$\neq$\nf{null} to prove the invariant still holds. In the first case the process applied a successful \nf{TryAppend(new,h)} in line \ref{okcas}, which means \nf{n.blocks[h]} is not null anymore. Note that whether \ref{incrementHead1} or \ref{incrementHead1} return true or false,  after they finish we know  that \nf{n.head} has been incremented from the value read in Line \ref{readHead} (Lemma \ref{lem::headInc}). The failure case is also the same since it means some non-null value has been written into \nf{n.blocks[head]} by some process.
-%At the end of every \nf{n.Refresh()} with a block  with \head greater than 0 returned by \nf{CreateBlock()} \nf{n.head} is incremented (Lines \ref{incrementHead1}, \ref{incrementHead2}). If a process went to sleep before incrementing the \nf{established} (line \ref{incrementHead1}), nothing can be appended to \nf{n.blocks} until another process increments \nf{n.establsihed} (Line \ref{incrementHead2}).
+In the algorithm, \nf{n.blocks} is modified only on Line \ref{cas} which updates \nf{n.blocks[$h$]} for $h$ read from \nf{n.head} in Line \ref{readHead}.Note that since the \nf{CAS} in Line \ref{cas} is successful it means \nf{n.head} has not changed from $h$ till doing the \nf{CAS}. Writing into \nf{n.blocks[n.head]} preserves the invariant, since the claim does not talk about the content of \nf{n.blocks[n.head]}.
+
+The value of \nf{n.head} is modified only in Line \ref{incrementHead}. If \nf{n.head} is incremented to $h+1$ it is sufficient to show \nf{n.blocks[$h$]}$\neq$\nf{null}. When a process does Line \ref{incrementHead} it means Line \ref{cas} was finished which either case it is successful or not it means \nf{n.blocks[$h$]} is not \nf{null} anymore. %At the end of every \nf{n.Refresh()} with a block  with \head greater than 0 returned by \nf{CreateBlock()} \nf{n.head} is incremented (Lines \ref{incrementHead1}, \ref{incrementHead2}). If a process went to sleep before incrementing the \nf{established} (line \ref{incrementHead1}), nothing can be appended to \nf{n.blocks} until another process increments \nf{n.establsihed} (Line \ref{incrementHead2}).
 \end{proof}
 
-\begin{observation} \label{nonDecreasingHead}
-  \nf{n.head} is non-decreasing over time.
-\end{observation}
-\begin{proof}
-  The claim follows trivially from the code since \nf{n.head} is only incremented in Line \ref{incrementHead} of \nf{Refresh()} .
-\end{proof}
 
+The next lemma is used to prove the subblocks of two blocks in a node are disjoint. (I can't say its use without mentioning subblocks)
 \begin{lemma}[headProgress] \label{lem::headProgress}
- If \nf{n.blocks[i]$\neq$null} and \nf{i$.$0} then $\nf{n.blocks[i].end\sub{left}} \geq \nf{n.blocks[i-1].end\sub{left}}$ and $\nf{n.blocks[i].end\sub{right}} \geq \nf{n.blocks[i-1].end\sub{right}}$.
+ If $\nf{n.blocks[}i\nf{]}\neq\nf{null}$ and $i>0$ then $\nf{n.blocks[$i$].end\sub{left}} \geq \nf{n.blocks[$i-1$].end\sub{left}}$ and $\nf{n.blocks[$i$].end\sub{right}} \geq \nf{n.blocks[$i-1$].end\sub{right}}$.
 \end{lemma}
 \begin{proof}
 
-Consider the block \nf{b} written into \nf{n.blocks[i]} by \nf{TryAppend()} at Line \ref{cas}. It is created by the \nf{CreateBlock(i)} called at Line \ref{invokeCreateBlock}. Prior to this call to \nf{CreateBlock(i)}, \nf{n.head=i} at Line \ref{readHead}, so \nf{n.blocks[i-1]} is already a non-null value \nf{b}$^\prime$ by Invariant \ref{lem::headPosition}. Thus the \nf{CreateBlock(i-1)} that creates  \nf{b}$^\prime$ terminates before \nf{CreateBlock(i)} that creates \nf{b} is invoked. The value written into \nf{b.end\sub{left}} at Line \ref{endDefLine} of \nf{CreateBlock(i)}  was read from \nf{n.left.head-1} at Line \ref{lastLine} of \nf{CreateBlock(i)}. Similarly, the value in \nf{n.blocks[i-1].end\sub{left}} was read from \nf{n.left.head-1} during the call to \nf{CreateBlock(i-1)}. Since \nf{n.left.head} is non-decreasing \nf{b}$^\prime$\nf{.end\sub{left}} $\leq$ \nf{b.end\sub{left}}. The proof for \nf{end\sub{right}} is similar.
+Consider the block $b$ written into \nf{n.blocks[$i$]} by \nf{CAS} at Line \ref{cas}. $b$ is created by the \nf{CreateBlock($i$)} called at Line \ref{invokeCreateBlock}. Prior to this call to \nf{CreateBlock($i$)}, $\nf{n.head}=i$ at Line \ref{readHead}, so \nf{n.blocks[$i-1$]} is already a non-null value \nf{b}$^\prime$ by Invariant \ref{lem::headPosition}. Thus, the \nf{CreateBlock($i-1$)} that created  $b^\prime$ terminated before the \nf{CreateBlock($i$)} that creates $b$ is invoked. The value written into \nf{$b$.end\sub{left}} at Line \ref{endDefLine} of \nf{CreateBlock($i$)}  was minus one of the value read at Line \ref{lastLine} of \nf{CreateBlock($i$)}. Similarly, the value in \nf{n.blocks[$i-1$].end\sub{left}} was minus one of the value read from $\nf{n.left.head}-1$ during the call to \nf{CreateBlock($i-1$)}. As by Observation \ref{nonDecreasingHead} \nf{n.left.head} is non-decreasing, $b^\prime\nf{.end\sub{left}} \leq \nf{$b$.end\sub{left}}$. The proof for \nf{end\sub{right}} is similar.
 \end{proof}
 
+We define the subblocks of a block recursively.
 \begin{definition}[Subblock]\label{def::subblock}
-Block \texttt{b} is a \emph{direct subblock} of \texttt{n.blocks[i]} if it is in \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]} . Block \texttt{b} is a subblock of \texttt{n.blocks[i]} if \nf{b} is a direct subblock of \texttt{n.blocks[i]} or a subblock of a direct subblock of \texttt{n.blocks[i]}. 
+A block is a \emph{direct subblock} of $i$th block in node $n$ if it is in \texttt{n.left.blocks[n.blocks[$i-1$].end\textsubscript{left}+1..n.blocks[$i$].end\textsubscript{left}]} or in \texttt{n.right.blocks[n.blocks[$i-1$].end\textsubscript{right}+1..n.blocks[$i$].end\textsubscript{right}]} . Block $b$ is a \emph{subblock} of block $c$ if $b$ is a direct subblock of $c$ or a subblock of a direct subblock of $c$.  We say block $b$ is \it{propagated to node} node $n$ if $b$ is in $n.blocks$ or is a subblock of a block in $n.blocks$.
 \end{definition}
 
-\begin{corollary}[No Duplicates]\label{append}
-If \nf{op} is in \nf{n.blocks[i]} then there is no \nf{j$\neq$i} such that \nf{op}$\in$\nf{ops(n.blocks[j])}.
-\end{corollary}
+\begin{lemma} \label{lem::subblocksDistinct}
+Subblocks of any two blocks in node $n$ does not overlap.  
+\end{lemma}
 \begin{proof}
-  Operation \nf{op} is invoked only one time in an execution because every operations invoked is distinct. Since there is node \nf{n} which \nf{op} is in two different blocks of \nf{n}, there is node \nf{n}$^\prime$ that is the lowest height node in the tree that contains \nf{op} in two of its blocks \nf{b1,b2}. By Definition \ref{def::subblock}, \nf{b1} and \nf{b2} have  distinct subblocks(not only direct subblocks) and since \nf{op} is in only one leaf block, then it cannot be in both \nf{b1} and \nf{b2}.
+We are going to prove by contradiction. Assume subblocks of $n.blocks[i]$ and $n.blocks[j]$ overlap which $i< j$. Without loss of generality assume left child subblocks of $n.blocks[i]$ overlap with the left child subblocks of $n.blocks[j]$. Direct left subblocks of $n.blocks[i]$ and $n.blocks[j]$ cannot overlap. Because of Lemma \ref{lem::headProgress} we have $\nf{n.blocks[$i-1$].end\sub{left}} \leq \nf{n.blocks[$i$].end\sub{left}} \leq \nf{n.blocks[$j-1$].end\sub{left}} \leq \nf{n.blocks[$j$].end\sub{left}}$. Since the tree height is finite we can go lower in the tree to reach a node that direct subblcoks of two different blocks in a node overlap.
 \end{proof}
 
-%(The \nf{end\sub{left}, end\sub{right}} fields are written in \ref{endDefLine} of \nf{CreateBlock()})
+We define the operations of a block using the definition of subblocks.
+\begin{definition}[Operations of a block]\label{def::ops}
+A block $b$ in a leaf represents an \nf{Enqueue(e)} if $b.element=e\neq\nf{null}$ otherwise, if $b.element=\nf{null}$, $b$ represents a \nf{Dequeue()}. The set of operations of block \nf{b} is the union set of the operations in subblocks of \nf{b}. We denote the set of operations of block \nf{b} by \nf{ops(b)}.  We also say \nf{b} contains \nf{op} if \nf{op}$\in$\nf{ops(b)}.
+\end{definition}
 
 \begin{definition}[Superblock]
-  Block \nf{b} is   \it{direct superblock} of block \nf{c} if c is a direct subblock of b.   Block \nf{b} is \it{superblock} of block \nf{c} if \nf{c} is a subblock of \nf{b}.
+  Block \nf{b} is \it{superblock} of block \nf{c} if c is a direct subblock of b.
 \end{definition}
+\begin{corollary}
+Every block has at most one superblock.
+\end{corollary}
+\begin{proof}
+A block having more than one superblock is contradictory with Lemma \ref{lem::subblocksDistinct}.
+\end{proof}
 
-\begin{definition}[Operations of a block]\label{def::ops}
-A leaf block \nf{b} in a leaf represents \nf{enqueue(x)} if \tt{b.element=x$\neq$null}. Else if \tt{b.element=null} b represents a \nf{dequeue()}. The set of operations of block \nf{b} are the operations in the subblocks of \nf{b}. We denote the set of operations of block \nf{b} by \nf{ops(b)}.
-
-We say block \nf{b} is \it{propagated to node} \nf{n} if \nf{b} is in \nf{n.blocks} or is a subblock of a block in \nf{n.blocks}. We also say \nf{b} contains \nf{op} if \nf{op}$\in$\nf{ops(b)}.
-\end{definition}
-
-
-%\begin{definition}
-%  Block \nf{b} in node \nf{n} is new if \nf{b} is not a subblock of any block in \nf{n.parent.blocks[]}.
-%\end{definition}
+Operations are distinct \nf{Enqueue(e)} or \nf{Dequeue()}s invoked by processes. Next lemma proves that each operation appears once in the blocks of a node.
+\begin{lemma}[No Duplicates]\label{append}
+If $op$ is in $n.blocks[i]$ then there is no $j\neq i$ such that $op$ is in $ops(n.blocks[j])$.
+\end{lemma}
+\begin{proof}
+We prove this claim using Corollary \ref{lem::subblocksDistinct}. Assume $op$ is in the subblocks of both $n.blocks[i]$ and $n.blocks[j]$. From Corollary \ref{lem::subblocksDistinct} we know these blocks are different. So the leaf blocks containing $op$ are different, but since we assumed operations are distinctive it means one operation cannot be invoked two times. This leads us to contradictory with the hypothesis.
+\end{proof}
 
 \begin{definition}
- A block \nf{b} in \nf{n.blocks} is \emph{established} at time $t$ if \nf{n.head}$>$ index of \nf{b} at time $t$. \emph{EST\sub{n, t}} is the set of established blocks  of node \nf{n} at time $t$.
+$n.blocks[i]$ is \emph{established} at time $t$ if $n.head>i$. \emph{EST\sub{n, t}} is the set of established blocks  of node \nf{n} at time $t$.
 \end{definition}
 
 
-\begin{observation}\label{head}
-Once a block \nf{b} is written in \nf{n.blocks[i]} then \nf{n.blocks[i]} never changes.
-\end{observation}
-
-
-\begin{lemma}
-Every block has at most one direct superblock.
-\end{lemma}
+Now we want to say block of a node grow over time.
+\begin{corollary}[Growing blocks]\label{lem::blocksOrder}
+  If  time $t<$ time $t^\prime$, then $ops(n.blocks)$ at time $t$ $\subseteq$ $ops(n.blocks)$ at time $t^\prime$.
+\end{corollary}
 \begin{proof}
-To show this we are going to refer to the way \nf{n.blocks[]} is partitioned while propagating blocks up to \nf{n.parent}. \nf{n.CreateBlock(i)} merges the blocks in \nf{n.left.blocks[n.blocks[i-1].end\sub{left}..n.blocks[i].end\sub{left}]} and \nf{n.right.blocks[n.blocks[i-1].end\sub{right}..n.blocks[i].end\sub{right}]} (Lines \ref{lastLine}, \ref{prevLine}). Since \nf{end\sub{left},end\sub{right}} are non-decreasing (\nf{n.blocks[i].end\sub{left|right}>n.blocks[i-1].end\sub{left|right}}), so the range of the subblocks of \nf{n.blocks[i]} which is \nf{(n.blocks[i-1].end\sub{dir}+1..n.blocks[i].end\sub{dir})} does not overlap with the range of the subblocks of \nf{n.blocks[i-1]}.
+Blocks are only appended (not modified) with \nf{CAS} to $n.blocks[n.head]$ and $n.head$ is non-decreasing, so the set of blocks of a node contains the the set of blocks before the \nf{CAS}.
 \end{proof}
 
-
-%\begin{proof}
-%\nf{Append(op)} adds \nf{op} to \nf{l\textsubscript{p}.blocks}(Line~\ref{addOP}) and \nf{Propagate()} recursively propagates \nf{op} up to the root.
-%By lemma \ref{doublyRefresh} we know that operation \nf{op} propagates from child to parent at each level.
-%\end{proof}
-
-%\begin{lemma}[oldnewOrder] \label{lem::oldnewOrder}
-%  If block \nf{b} in node \nf{n} is established, then all the blocks in \nf{n.blocks[]} before \nf{b} are established. If block \nf{b} in node \nf{n} is not new then all the blocks in \nf{n.blocks[]} before \nf{b} are not new.
-%\end{lemma}
-%\begin{proof}
-%  Note that blocks are only appended to a node in the algorithm. \textsf{CIRCLE REFERENCE PROBLEM. Shall we use induction to say older blocks are already appended to parent?}
-%\end{proof}
-
-\begin{lemma}[establishedOrder]\label{lem::establishedOrder}
+\begin{corollary}[establishedOrder]\label{lem::establishedOrder}
   If  time $t<$ time $t^\prime$, then \nf{ops(EST\sub{n, t})}$\subseteq$ \nf{ops(EST\sub{n, t$^\prime$})}.
-\end{lemma}
-\begin{proof}
-Blocks are only appended (not modified) with CAS to \nf{n.blocks[n.head]} and \nf{n.head} is non-decreasing, so the set of operations in established blocks of a node can only grow.
-\end{proof}
+\end{corollary}
 
-
-%\begin{lemma}[createBlock] \label{lem::createBlock}
-%  If \nf{n.CreateBlock(i)} is invoked at time $t$ and returns block $new$, then \nf{ops(EST\sub{n.left, t})} $\cup$ \nf{ops(EST\sub{n.right, t})} - \nf{ops(EST\sub{n, t})} $\subseteq$ \nf{ops(new)}.
-%\end{lemma}
-%\begin{proof}
-%From lemmas 7,8 we know that \nf{n.blocks[i-1]} is full and assume it is invoked at $t^\prime$. 
-%We want to prove every block $b$ that is $\in$ \nf{EST\sub{n.left,t}} $\cup$ \nf{EST\sub{n.right,t}} is also $\in$ \nf{EST\sub{n,t}}$^\prime$ $\cup$ \nf{new}. It is easy to see \nf{EST\sub{n.left,t}} $\cap$ \nf{EST\sub{n.right,t}} is $\emptyset$. If $b$ is $\in$ \nf{EST\sub{n.left,t$^\prime$}} it is simple to see. Else we can see from the code of the \nf{CreateBlock} that \nf{new} contains it. Right child is the same.
-%% WLOG we prove the claim for the left child. Blocks in \nf{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} are established at time $t$.  Since the head is only increasing (Lemma~\ref{lem::headProgress}) the  claim holds after $t$. See Figure~\ref{fig::createBlock}. The right child is the same.
-%\end{proof}
-%
-%\nf{CreateBlock()} aggregates the established blocks in the children that are not already established in the parent into one block. If a \nf{Refresh()} procedure returns true it means it has appended the block created by \nf{CreateBlock()} into the parent node's sequence. So suppose two \nf{Refresh}es fail. Since the first \nf{Refresh()} was not successful, it means another CAS operation by a \nf{Refresh}, concurrent to the first \nf{Refresh()}, was successful before the second \nf{Refresh()}. So it means the second failed \nf{Refresh} is concurrent with another successful \nf{Refresh()} that assuredly has read block before the mentioned line \nf{35}. After all it means if any of the \nf{Refresh()} attempts were successful the claim is true, and also if both fail the mentioned claim still holds.
-%\text
 \pagebreak
-
 
 \begin{figure}[hbt]
   \center\includegraphics[width=5.5in]{pics/tree}
-  \caption{Order of elements in b: elements in leaves are ordered with numerical order in the drawing.}
+  \caption{Order of operations in b: operations in leaves are ordered with numerical order in the drawing.}
 \end{figure}
 
-$\blacktriangleright$ Processes are numbered from 1 to $p$ and leaves of the tree are assigned from left to right. We will show in Lemma \ref{blockSize} that there is at most one operation from each process in a given block.
+Now we define the ordering store in each node. In the non-root nodes we only need ordering of operations of a type among themselves. Processes are numbered from 1 to $p$ and leaves of the tree are assigned from left to right. We will show in Lemma \ref{blockSize} that there is at most one operation from each process in a given block.
 \begin{definition} [Ordering of operations inside the nodes] \label{ordering}
 
-
-
 \begin{itemize}
-\item The prefix of an operation $op$ in the sequence of operations $S$ is the sequence of operations strictly before $op$.
-  \item $E(n,b)$ is the sequence of enqueue operations in \nf{ops(n.blocks[b])} defined recursively as follows. $E(leaf,b)$ is the single enqueue operation in \nf{ops(leaf.blocks[b])} or an empty sequence if \nf{leaf.blocks[b].num\sub{enq}=0}. If \nf{n} is an internal node, then
+  \item $E(n,b)$ is the sequence of enqueue operations in $ops(n.blocks[b])$ defined recursively as follows. $E(leaf,b)$ is the single enqueue operation in $ops(leaf.blocks[b])$ or an empty sequence if $leaf.blocks[b].num_{enq}=~0$. If $n$ is an internal node, then
 \begin{align*} 
-E(n,b) =&  E(n.left,n.blocks[b-1].end\sub{left}+1)\cdot E(n.left,n.blocks[b-1].end\sub{left}+2)\cdots E(n.left,n.blocks[b].end\sub{left})\cdot \\ 
-&E(n.right,n.blocks[b-1].end\sub{right}+1)\cdot E(n.right,n.blocks[b-1].end\sub{right}+2)\cdots E(n.right,n.blocks[b].end\sub{right})
+E(n,b) =&  E(n.left,n.blocks[b-1].end_{left}+1)\cdot E(n.left,n.blocks[b-1].end_{left}+2)\cdots E(n.left,n.blocks[b].end_{left})\cdot \\ 
+&E(n.right,n.blocks[b-1].end_{right}+1)\cdot E(n.right,n.blocks[b-1].end_{right}+2)\cdots E(n.right,n.blocks[b].end_{right})
 \end{align*}
   \item $E_i(n,b)$ is the $i$th enqueue in $E(n,b)$.
 \item The order of the enqueue operations in the node $n$ is $E(n)=E(n,1)\cdot E(n,2)\cdot E(n,3)\cdots$
 \item $E_i(n)$ is the $i$th enqueue in $E(n)$.
-  \item $D(n,b)$ is the sequence of dequeue operations in \nf{ops(n.blocks[b])} defined recursively as follows. $D(leaf,b)$ is the single dequeue operation in \nf{ops(leaf.blocks[b])} or an empty sequence if \nf{leaf.blocks[b].num\sub{deq}=0}. If \nf{n} is an internal node, then
+  \item $D(n,b)$ is the sequence of dequeue operations in $ops(n.blocks[b])$ defined recursively as follows. $D(leaf,b)$ is the single dequeue operation in $ops(leaf.blocks[b])$ or an empty sequence if $leaf.blocks[b].num\sub{deq}=~0$. If $n$ is an internal node, then
 \begin{align*} 
-D(n,b) =&  D(n.left,n.blocks[b-1].end\sub{left}+1)\cdot D(n.left,n.blocks[b-1].end\sub{left}+2)\cdots D(n.left,n.blocks[b].end\sub{left})\cdot \\ 
-&D(n.right,n.blocks[b-1].end\sub{right}+1)\cdot D(n.right,n.blocks[b-1].end\sub{right}+2)\cdots D(n.right,n.blocks[b].end\sub{right})
+D(n,b) =&  D(n.left,n.blocks[b-1].end_{left}+1)\cdot D(n.left,n.blocks[b-1].end_{left}+2)\cdots D(n.left,n.blocks[b].end_{left})\cdot \\ 
+&D(n.right,n.blocks[b-1].end_{right}+1)\cdot D(n.right,n.blocks[b-1].end_{right}+2)\cdots D(n.right,n.blocks[b].end_{right})
 \end{align*}
     \item $D_i(n,b)$ is the $i$th enqueue in $D(n,b)$.
 \item The order of the dequeue operations in the node $n$: $D(n)=D(n,1)\cdot D(n,2)\cdot D(n,3)...$
@@ -1025,12 +1004,7 @@ D(n,b) =&  D(n.left,n.blocks[b-1].end\sub{left}+1)\cdot D(n.left,n.blocks[b-1].e
 \begin{definition}[Linearization] \label{def::lin}
  $L=E(root,1).D(root,1).E(root,2).D(root,2).E(root,3).D(root,3)...$
 \end{definition}
-$\blacktriangleright$ In the non-root nodes, we only need ordering of enqueues and dequeues among the operations of their own type. Since \nf{GetENQ()} only searches among enqueues and \nf{IndexDEQ()} works with dequeues.
 \pagebreak
-
-
-
-
 
 
 \begin{definition}

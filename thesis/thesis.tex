@@ -1038,10 +1038,14 @@ Let $^{op}t$ be the time $op$ is invoked and $t^{op}$ be the time $op$ terminate
   $_{l}t$ is the immediate time before running Line $l$.   $t_{l}$ is the immediate time after running Line $l$. $^{op}t_{l}$ is the immediate time before running Line $l$ of operation $op$.   $t_{l}^{op}$ is the immediate time after running Line $l$ of operation $op$. $v_l$ is the value of \nf{v} immediately before line $l$ for the process we are talking about.
 \end{definition} 
 
+\begin{definition}
+  An instance of \nf{Refresh()} is \it{successful} if its \nf{CAS} in Line \ref{cas} returns \nf{true}. If a successful instance of \nf{Refresh()} terminates, we say it is \it{complete.}
+\end{definition}
+
 In the next Lemmas we show for every \nf{Refresh()} that has has succesuful \nf{CAS} in Line \ref{cas}, all the established operations in the children before the \nf{Refresh} are going to be established in the parent after the \nf{Refresh}.
 
 \begin{lemma}[trueRefresh] \label{lem::trueRefresh}
-If \nf{CAS} in Line \ref{cas} of instance $R$ of \nf{n.Refresh()} returns \nf{true}, we have $ops(EST_{\nf{n.left}, ^Rt}) \; \cup \; ops(EST_{\nf{n.right}, ^Rt}) \subseteq 
+If $R$ is a succesful instance \nf{n.Refresh()}, then we have $ops(EST_{\nf{n.left}, ^Rt}) \; \cup \; ops(EST_{\nf{n.right}, ^Rt}) \subseteq 
  ops(n.blocks_{t_{\ref{cas}}^R})$.
 \end{lemma}
 \begin{proof}
@@ -1050,7 +1054,7 @@ If \nf{CAS} in Line \ref{cas} of instance $R$ of \nf{n.Refresh()} returns \nf{tr
 We show $ops(EST_{\nf{n.left}, ^Rt})= ops(\nf{n.left.blocks[0..$n.left.head_{309}-1$]}) \subseteq ops(n.blocks_{\ref{cas}}) = ops(\nf{n.blocks[0..}n.head_{\ref{readParentHead}}])$. %Let $h$ be the value \nf{n.Refresh()} reads from \nf{n.head} at Line \ref{readHead} and $h_{left}$ be the value read from \nf{n.left.head} at Line \ref{lastLine}. 
 As \nf{CAS} in Line \ref{cas} returns \nf{true} the block \nf{new} is written into \nf{n.blocks[$n.head_{\ref{readHead}}$]}. By the Definition \ref{def::subblock} for the Subblock  the block \nf{new} contains \nf{n.left.blocks[n.blocks[$n.head_{\ref{readHead}}-1$].end\sub{left}+1..$n.left.head_{\ref{lastLine}}-1$]} (see Lines \ref{prevLine} and \ref{lastLine}).
 % \nf{ops(EST\sub{n.left, t\sub{i}})}$\subseteq$\nf{ops(n.left.blocks [0..h\sub{left,read}])}.
-After the successful \nf{CAS} in Line \ref{cas} we know all blocks in \nf{n.left.blocks[0..$n.left.head_{\ref{lastLine}}-1$]} are subblocks of \nf{n.blocks[0..$n.head_{\ref{readHead}}$]}. Because of the Lemma \ref{nonDecreasingHead} we have, $n.left.head_{309}-1<n.left.head_{\ref{lastLine}}-1$ and $n.head_{\ref{readHead}}<n.head_{\ref{readParentHead}}$. From Lemma \ref{lem::establishedOrder} the inequality we proved is stronger than what we wanted to prove (TODO: make the lemma claim more general).  The proof for the right child is the same.
+After the successful \nf{CAS} in Line \ref{cas} we know all blocks in \nf{n.left.blocks[0..$n.left.head_{\ref{lastLine}}-1$]} are subblocks of \nf{n.blocks[0..$n.head_{\ref{readHead}}$]}. Because of the Lemma \ref{nonDecreasingHead} we have, $n.left.head_{309}-1<n.left.head_{\ref{lastLine}}-1$ and $n.head_{\ref{readHead}}<n.head_{\ref{readParentHead}}$. From Lemma \ref{lem::establishedOrder} the inequality we proved is stronger than what we wanted to prove (TODO: make the lemma 13 claim more general, if time passes n.blocks grows).  The proof for the right child is the same.
 
 
 
@@ -1066,16 +1070,14 @@ After the successful \nf{CAS} in Line \ref{cas} we know all blocks in \nf{n.left
 \end{figure}
 
 \begin{corollary}[Weak True Refresh] \label{lem::prectrueRefresh}
-If \nf{CAS} in Line \ref{cas} of instance $R$ of \nf{n.Refresh()} returns \nf{true}, we have $ops(EST_{\nf{n.left}, ^Rt}) \; \cup \; ops(EST_{\nf{n.right}, ^Rt}) \subseteq 
+If $R$ is a complete instance \nf{n.Refresh()}, then we have $ops(EST_{\nf{n.left}, ^Rt}) \; \cup \; ops(EST_{\nf{n.right}, ^Rt}) \subseteq 
  ops(EST_{\nf{n}, t^R})$.
 \end{corollary}
 \begin{proof}
 The left side is the same as the Lemma \ref{lem::trueRefresh}, so it is sufficient to show when \nf{R} terminates established blocks in \nf{n} are super set of \nf{n.blocks} after the Line \ref{cas}.    Because of Lemma \ref{lem::headInc}  we are sure that the \nf{n.head} is incremented after line \ref{incrementHead}. So the \nf{new} block appended to \nf{n} is established at $t^R$. 
 \end{proof}
 
-\begin{definition}
-  An instance of \nf{Refresh()} is \it{successful} if its \nf{CAS} in Line \ref{cas} returns \nf{true}. If a successful instance of \nf{Refresh()} terminates, we say it is \it{complete.}
-\end{definition}
+
 %\it{Mention this new block is establish in t\sub{t}. last sentece is not complete}
 
 %\begin{lemma}[falseRefresh] \label{lem:falseRefresh}

@@ -10,7 +10,7 @@
 \makeatother
 \usepackage{graphicx}
 \usepackage{subcaption}
-\usepackage{showkeys}
+%\usepackage{showkeys}
 \usepackage{amsmath}
 
 
@@ -163,20 +163,20 @@ Ellen and Woelfel introduced an implementation of a Fetch\&Inc object with step 
 \pagebreak
 
 \pagebreak
-\section{Our work}
-Jayanti and Petrovic introduced a wait-free polylogarithmic multi-enqueuer single-dequeuer queue~\cite{DBLP:conf/fsttcs/JayantiP05}. We are going to design a polylogarithmic multi-enqueuer multi-dequeuer queue using some of their ideas. But we do not use \texttt{CAS} operations with big words and do not put a limit on the number of concurrent operations. We apply two ideas from their work to create a new shared data structure which enables processes to agree on the linearization ordering of the processes.   We use the shared tournament tree among $p$ processes (see Figure~\ref{fig::blocktree}) to agree on one total ordering on the operations invoked by processes. Each process has a leaf which the order of operations invoked by the process is stored in it. When the process wishes to do an operation it appends the operation to its leaf's sequence and after that, the process tries to propagate its new operation up to the tree's root. An ordering of operations propagated up to a node is stored in that node. All processes agree on the sequence stored in the root that is used as the linearization ordering. 
+\section{Our Queue}
+Jayanti and Petrovic introduced a wait-free polylogarithmic multi-enqueuer single-dequeuer queue~\cite{DBLP:conf/fsttcs/JayantiP05}. We benefit from some ideas of their work to design a a polylogarithmic multi-enqueuer multi-dequeuer queue. Our algorithm despite them does not use \texttt{CAS} operations with big words and does not put a limit on the number of concurrent operations. I our model there are $p$ procesess doing \nf{Enqueue(),Dequeue()} operations concurrently. We use a shared tree among the processes (see Figure~\ref{fig::blocktree}) to agree on one total ordering on the operations invoked by processes. Each process has a leaf which the order of operations invoked by the process is stored in it. When a process wishes to do an operation it appends the operation to its leaf and then tries to propagate its new operation up to the tree's root. In each node the ordering of operations propagated up to it is stored. All processes agree on the sequence stored in the root and it is defined to be the linearization ordering. 
 \begin{figure}[hbt]
 \begin{center}
 \Tree [ [ [ $P_1$ $P_2$ ] [ $P_3$ $P_4$ ] ]
           [ [ $P_5$ $P_6$ ] [ $P_7$ $P_8$ ] ] ]
 \end{center}
-\caption{ّ\label{fig::blocktree}Each process has a leaf and in each node there is an ordering of operations stored. Each node tries to propagate its operations up to the root, which stores the totall ordering of all operations.}  
+\caption{ّ\label{fig::blocktree}Each process has a leaf and in each node there is an ordering of operations stored. Each node tries to propagate its operations up to the root, which stores the total ordering of all operations.}  
 \end{figure}
 
+\it{Add sequence to nodes}
 
-
-As we said in  each node the sequence of operations is stored. We implement the sequence using an array and appending to the sequence by doing \tt{CAS} operations on the first null element in the array. In each propagate step, our algorithm uses a subroutine \textsc{Refresh}($n$) that aggregates new operations from node $n$'s both children (that have not already been propagated to $n$) and tries to append them into $n$. The general idea is that if we call \textsc{Refresh}($n$) twice, the operations in $n$'s children before the first \textsc{Refresh}($n$) are guaranteed to be in $n$.
-Because if both of the \nf{Refresh()}es fail there is another instance of \nf{Refresh()} in between which has succeeded to do \nf{CAS} and has already appended the operations the first \nf{Refresh} was trying to append. This mechanism makes us to do \nf{TryAppend}s twice instead of \nf{Append}ing to the array. From the next paragraph we explain our ideas which are different from Jayanti.
+We could implement the sequence stored in each node using an array of the queue operations and append some operations to the sequence by doing \tt{k-CAS} operation on the end of the array. To do a propagate step on node $n$ in the tree, we aggregate the operations from node $n$'s both children (that have not already been propagated to $n$) and try to append them into $n$. We call this procedure \sc{Refresh}$(n)$. The main idea is that if we call \sc{Refresh}$(n)$ twice, the operations in $n$'s children before the first \sc{Refresh}$(n)$ are guaranteed to be in $n$.
+Because if both of the \sc{Refresh}$(n)$s fail to do \nf{k-CAS} then there is another instance of \nf{Refresh()} in between which has succeeded to do \nf{CAS} and has already appended the operations that the first \nf{Refresh} was trying to append. This mechanism makes us overcome the \nf{CAS} Retry Problem.
 
 \begin{figure}[hbt]
 \begin{center}
@@ -184,9 +184,9 @@ Because if both of the \nf{Refresh()}es fail there is another instance of \nf{Re
   \centering
   \resizebox{\columnwidth}{!}{
   \begin{tikzpicture}[level 1/.style={level distance=1.4cm,sibling distance=0.5cm}]
-\Tree [.{\begin{tabular}{|c|c|c|c|c|c|}  \hline $op_{l_1}$ & $op_{l_2}$ & $op_{r_1}$ & $op_{l_3}$ & $op_{r_2}$ \\ \hline \end{tabular}}
-{\begin{tabular}{|c|c|c||c|c|}  \hline $op_{l_1}$ & $op_{l_2}$ & $op_{l_3}$ & $op_{l_4}$ & $op_{l_5}$ \\ \hline \end{tabular}}
-{\begin{tabular}{|c|c||c|c|}  \hline $op_{r_1}$ & $op_{r_2}$ & $op_{r_3}$ & $op_{r_4}$\\ \hline \end{tabular}} ]
+\Tree [.{\begin{tabular}{|c|c|c|c|c|c|}  \hline $r_1$ & $l_1$ & $r_2$ & $l_2$ & $l_3$ \\ \hline \end{tabular}}
+{\begin{tabular}{|c|c|c||c|c|}  \hline $l_1$ & $l_2$ & $l_3$ & $l_4$ & $l_5$ \\ \hline \end{tabular}}
+{\begin{tabular}{|c|c||c|c|}  \hline $r_1$ & $r_2$ & $r_3$ & $r_4$\\ \hline \end{tabular}} ]
 \end{tikzpicture}}
   \caption{Operations after $||$ are new.}
 \end{subfigure}
@@ -195,18 +195,16 @@ Because if both of the \nf{Refresh()}es fail there is another instance of \nf{Re
   \centering
   \resizebox{\columnwidth}{!}{
   \begin{tikzpicture}[level 1/.style={level distance=1.4cm,sibling distance=0.5cm}]
-\Tree [.{\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}  \hline $op_{l_1}$ & $op_{l_2}$ & $op_{r_1}$ & $op_{l_3}$ & $op_{r_2}$ & $op_{l_4}$ & $op_{l_5}$ & $op_{r_3}$ & $op_{r_4}$  \\ \hline \end{tabular}}
-{\begin{tabular}{|c|c|c|c|c||}  \hline $op_{l_1}$ & $op_{l_2}$ & $op_{l_3}$ & $op_{l_4}$ & $op_{l_5}$ \\ \hline \end{tabular}}
-{\begin{tabular}{|c|c|c|c||}  \hline $op_{r_1}$ & $op_{r_2}$ & $op_{r_3}$ & $op_{r_4}$\\ \hline \end{tabular}} ]
+\Tree [.{\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}  \hline $r_1$ & $l_1$ & $r_2$ & $l_2$ & $l_3$ & $l_4$ & $l_5$ & $r_3$ & $r_4$  \\ \hline \end{tabular}}
+{\begin{tabular}{|c|c|c|c|c||}  \hline $l_1$ & $l_2$ & $l_3$ & $l_4$ & $l_5$ \\ \hline \end{tabular}}
+{\begin{tabular}{|c|c|c|c||}  \hline$r_1$ & $r_2$ & $r_3$ & $r_4$\\ \hline \end{tabular}} ]
 \end{tikzpicture}}
   \caption{New operations are added to the parent node.}
 \end{subfigure}
-\caption{\label{fig::propagstep} Successful \texttt{Refresh}, operations in children after $||$ are new.}
+\caption{\label{fig::propagstep} Before and after of a \sc{Refresh}$(n)$ with successful \nf{CAS}. Operations propagating from the left child are numbered with $l$ and from the right child by $r$ and the operations in children after $||$ are new.}
 \end{center}
 \end{figure}
-
-Instead of storing operations explicitly in the nodes, we are going to keep track of some statistics of them. This allows us to \texttt{CAS} fixed-size objects in each \textsc{Refresh}($n$).To do that, we introduce blocks that only contain the number of operations from the left and the right child in a \texttt{Refresh}() procedure and only propagate the statistics block of the new operations. In each \nf{Refresh()} there is at most one operation from  each process trying to be propagated. Since one operation cannot invoke two operations concurrently. Also as the operations in a \textsc{Refresh()} step are concurrent we can linearize them  among themselves in any order we wish. Note that if two operations are in one \nf{Porpagate()} step in a node they are going to be propagated up to the root together. From now on instead of propagating sequence of operations in  \nf{Refresh} steps we propagate \nf{block}s of operations. The idea is that we can describe a blocks contents only using some numbers. Our choice is to put the operations propagated from the left child before the operations propagated from the right child. In this way if we know the number of total operations in a block and the number of operations from the left child we can order the operations in a unique way which is a complete ordering. We can instead keep track of sets of concurrent operations and create the total ordering of all operations at the root (see Figure~\ref{fig::set}). In the next paragraphs we explain the reason behind our choice of ordering.
-
+\it{fix $||$}
 \begin{figure}[h]
 \begin{center}
 \begin{tikzpicture}
@@ -219,15 +217,13 @@ Instead of storing operations explicitly in the nodes, we are going to keep trac
 \end{center}
 \end{figure}
 
-Previously we talked about storing the sequence of operations in the nodes of the tree. A process may wish to know information about the root ordering. Two functionalities are to get the $i$th propagated operation and compute the rank of a propagated operation in the linearization. Since our algorithm is aimed for a queue, we make some assumptions here that we one wish only to know the order of a dequeue and one only tries to get an enqueue. We will explain in detail in the next but for now let's say \nf{enqueue}s and \nf{dequeue}s are appended to the tree and when one wants to find the response to a dequeu, it computes the order of the dequeue in linearization and using this information it computes which eneueue is the answer to the dequeue or if the answer is null. If the answer was some enqueue we find the enqueue using \texttt{DSearch(i)} and \nf{GetENQ(n,b,i)}. \texttt{DSearch(i)} finds the block containing the $i$th enqueue in the root and \nf{GetENQ(n,b,i)} finds its sub-block recursively to reach a leaf. \texttt{Index()} is similar but more complicated, finding super-blocks from a leaf to the root. The main challenge in each level of \texttt{Get(i)} and \texttt{Index(op)} is that it should take polylogarithmic steps with respect to $p$. After appending operation \texttt{op} to the root, processes can find out information about the linearization ordering using \texttt{Get(i)} and \texttt{Index(op)}. Each block stores an extra constant amount of information (like prefix sums) to allow binary searches to find the required block in a node quickly.
+The solution for  implementing the orderings in the tree told above is not efficient, because there are big \nf{CAS}es and operations information are copied all the way up to the root.
+Instead of storing operations explicitly in the nodes, we can keep track of some statistics of them. This allows us to \texttt{CAS} fixed-size objects in each \textsc{Refresh}($n$). To do that, we introduce blocks that only contain the number of operations from the left and the right child in a \texttt{Refresh}() procedure and only propagate the statistics block of the new operations. In each \nf{Refresh()} there is at most one operation from each process trying to be propagated, because one operation cannot invoke two operations concurrently. Furthermore since the operations in a \textsc{Refresh()} step are concurrent we can linearize them  among themselves in any order we wish. Note that if two operations are in read one \textsc{Refresh()} step in a node they are going to be propagated up to the root together. Our choice is to put the operations propagated from the left child before the operations propagated from the right child. In this way if we know the number of operations from the left child and the number of operations from the right child in a block  we have a complete ordering on the operations.
 
- \pagebreak
- 
- 
+A process may wish to know the $i$th propagated operation or the rank of a propagated operation in the linearization. In our case of implementing a queue, we can make an assumption that one process only wishes to know the rank of a dequeue and one tries to get an enqueue with its rank. \nf{enqueue}s and \nf{dequeue}s are appended to the tree and when we want to find the response to a \nf{dequeue}, we compute the place of the dequeue in the linearization and using the rank of the dequeue among deqeueues and some information stored in the root we compute which enqueue is the answer to the dequeue or if the answer is null. If the answer was some enqueue we find the enqueue using \texttt{DSearch(i)} and \nf{GetENQ(n,b,i)}. \texttt{DSearch(i)} finds the block containing the $i$th enqueue in the root and \nf{GetENQ(n,b,i)} finds its sub-block recursively to reach a leaf. \texttt{Index()} is similar but more complicated, finding super-blocks from a leaf to the root. The main challenge in each level of \texttt{Get(i)} and \texttt{Index(op)} is that it should take polylogarithmic steps with respect to $p$. After appending operation \texttt{op} to the root, processes can find out information about the linearization ordering using \texttt{Get(i)} and \texttt{Index(op)}. Each block stores an extra constant amount of information (like prefix sums) to allow binary searches to find the required block in a node quickly.
 
-
-
-The definition of linearizability allows concurrent operations to be reordered arbitrarily. Thus, a group of concurrent operations can be appended to our root sequence as one block without specifying the order among the operations.
+\paragraph{Implementing Queue using Block Tree}
+In this work, we design a queue with $O(\log^2 p +\log n)$ steps per operation, where $n$ is the number of total operations invoked. We avoid the $\Omega(p)$ worst-case step complexity of existing shared queues based on linked lists or arrays (CAS Retry Problem). A queue stores a sequence of elements and supports two operations, enqueue and dequeue. \texttt{Enqueue(e)} appends element \texttt{e} to the sequence stored.\texttt{Dequeue()} removes and returns the first element among in the sequence. If the queue is empty it returns \texttt{null}. Knowing index $i$ is the tail of the queue, we can return the dequeue response using \texttt{Get(i)}.  So in the rest we modify block tree to compute \texttt{i} for each \texttt{Dequeue()} to achieve a FIFO queue.
 
 \begin{figure}
 
@@ -247,24 +243,9 @@ The definition of linearizability allows concurrent operations to be reordered a
 
 \end{tikzpicture}
 \end{center}
-\caption{\label{fig:block} Showing concurrent operation sets with blocks. Each block consists of a pair(left, right) indicating the number of operations from the left and the right child, respectively. Block (12,6) in the root contains blocks (10,2) from the left child and (6,0) from the right child. Blocks between two lines $||$ are propagated together to the parent. For example, Blocks (2,3) and (4,1) from the leftmost leaf and (0,2) from its sibling are propagated together into the block (10,2) in their parent. The number underneath a group of blocks in a node indicates which block in the node's parent those blocks were propagated to.}
+\caption{\label{fig:block} Showing concurrent operation sets with blocks. Each block consists of a pair(left, right) indicating the number of operations from the left and the right child, respectively. Block (12,6) in the root contains blocks (10,2) from the left child and (6,0) from the right child. Blocks between two lines $||$ are propagated together to the parent. For example, Blocks (2,3) and (4,1) from the leftmost leaf and (0,2) from its sibling are propagated together into the block (10,2) in their parent. The number underneath a group of blocks in a node indicates which block in the node's parent those blocks were propagated to. Each block $b$ in node $n$ is the aggregation of blocks in the  children of $n$ that are newly read by the\textsc{Propagate}() step that created block $b$. For example, the third block in the root (8,36) is created by merging block (5,3) from the left child and (14,6) and (0,16) from the right child. Block (5,3) also points to elements from blocks (0,5) and (1,2). We choose to linearize operations in a block from the left child before those from the right child as a convention. Operations within a block of the root can be ordered in any way that is convenient. In effect, this means that if there are concurrent new blocks in a \textsc{Refresh}() step from several processes we linearize them in the order of their process ids. So for example  operations aggregated in block (10,2) are in the order (2,3),(4,1),(0,2). All blocks from the left child with come before the right child and the order of blocks of each child is preserved among themselves.
+}
 \end{figure}
-
-In the original algorithm  we differ between the enqueues and the dequeues in a block. Later we discuss about the reason.
-
-Each block $b$ in node $n$ is the aggregation of blocks in the  children of $n$ that are newly read by the\textsc{Propagate}() step that created block $b$. For example, the third block in the root (8,36) is created by merging block (5,3) from the left child and (14,6) and (0,16) from the right child. Block (5,3) also points to elements from blocks (0,5) and (1,2). 
-
-
-\paragraph{}
-We choose to linearize operations in a block from the left child before those from the right child as a convention. Operations within a block of the root can be ordered in any way that is convenient. In effect, this means that if there are concurrent new blocks in a \textsc{Refresh}() step from several processes we linearize them in the order of their process ids. So for example  operations aggregated in block (10,2) are in the order (2,3),(4,1),(0,2). All blocks from the left child with come before the right child and the order of blocks of each child is preserved among themselves.
-
-
-\pagebreak
-
-
-\paragraph{}
-In a \textsc{Propagate}() invocation path from a leaf to root, there will be \textsc{Refresh}() steps with merges from $2, 4, 8, ..., p$ processes. So in a complete propagation, at most $2p$ blocks are merged into one block. \texttt{(maybe useful for analysis)}
-
 
 \paragraph{}
 \textsc{GetIndex}($i$) returns the $i$th operation stored in the block tree sequence. We do that by finding the block $b_i$ containing $i$th element in the root, and then recursively finding the subblock of $b_i$ which contains $i$th element. To make this recursive search faster, instead of iterating over all elements in sequence of blocks we store prefix sum of number of elements in the blocks sequence and pointers to make BSearch faster.
@@ -291,29 +272,10 @@ Furthermore, in each block, we store the prefix sum of left and right elements. 
   \caption{Block have pointers to the starting block of theirs for each child. \label{fig::pointer}}
 \end{figure}
 
-\pagebreak
 
 \paragraph{}
 Starting from the root, \textsc{GetIndex}($i$) BSearches $i$ in the prefix sum array to find block containing $i$th operation, then continues recursively calling \textsc{GetElement}($b,i$) to find $i$th element of block $b$. From lemma $\ref{lem:block_size}$ we know a block size is at most $p$. So BSearch takes at most \textsc(O)$(\log p)$, since  with knowing pointers of a block and its previous block we can determine the base \texttt{(domain ?)} to search and its size is \textsc{O}$(p)$.
 
-
-\paragraph{Design of a Queue}
-
-Each process is assigned to a leaf in a shared tournament tree. Thus, for example, the leaf node for process $p_i$ contains an array of elements by $p_i$ in the order they were invoked.
-Each internal node of the tree contains an array of blocks of elements.
-Block $b$ in node $n$ is created in a \textsc{Propagate}() step and is merged block of new blocks at the time of \textsc{Propagate}() reading $n$'s children blocks. Each block consists of pointers left and right, to the last block merged into itself from left and right child in that order. Moreover, two numbers, left and right, indicate the count of elements in the blocks from the left and right child consecutively. Furthermore, prefix left, and right can be computed from the prefix sum of left and right values.
-Elements of block $b$ can be determined recursively (\textsc{GetElements($b$)}).
-The $i$th element in the sequence can be determined in \textsc{O}($\log^2 p$) steps by recursively finding $i$th element in block $b$ (\textsc{GetElement($i$)})
-After element $e$ is propagated (appended to a block int the root), its index can be computed with \textsc{GetIndex}($op$).
-
-
-In order to compute elements of a block faster we store prefix-sum blocks(block i has tuple(right-sum=$\#$right ops in previous block, left-sum=$\#$left ops in previous blocks)[See Figure \ref{fig:prefix}]. Here is the algorithm to get elements of a block.
-
-\paragraph{Specification}
-A Queue is a shared data structure that stores a sequence of elements. It has two methods \texttt{Enqueue(e)} and \texttt{Dequeue()}. \texttt{Enqueue(e)} adds \texttt{e} to the end of the sequence. \texttt{Dequeue()} returns the first element stored in the sequence and removes it from the sequence.
-
-
-\pagebreak
 
 
 \paragraph{\texttt{CreateBlock()}} \texttt{CreateBlock(n)} returns a block containing new operations of \texttt{n}'s children. \texttt{b\textsuperscript{$\prime$}.end\textsubscript{left}} stores the index of the rightmost subblock of left child of \texttt{b}'s previous block. Other attributes are assigned values followed by definition.
@@ -322,52 +284,21 @@ A Queue is a shared data structure that stores a sequence of elements. It has tw
   \caption{\label{fig::createBlock}Snapshot of a CreateBlock()}
 \end{figure}
 
-%\textsf{Is it necessary to say \texttt{CreateBlock()} is doing what it's supposed to do by definition? Or \texttt{Append()} for example?}
-
-
 \begin{figure}[hbt]
   \center\includegraphics[width=4in]{pics/doublerefresh.png}
   \caption{The second failed Refresh is assuredly concurrent to a Successful \texttt{Refresh()} with \texttt{CreateBlock} line after first failed \texttt{Refresh}'s \texttt{CreateBlock()}.}
 \end{figure}
 
-
-\pagebreak
-
-
 \paragraph{Computing \texttt{Get(n, b, i)}}
-To find the \texttt{i}th element in block \texttt{b} of node \texttt{n}, we search among subblocks of \texttt{b} that is bounded by $p$. Subblocks of a block are within the start and end block of the \texttt{CreateBlock()} procedure of it.
 
 \paragraph{How \texttt{Refresh(n)} works.}
-\begin{enumerate}
-  \item Read n's counter and head
-  \item Create block b
-  \item CAS b into n
-  \item If previous succeed:
-  \begin{enumerate}
-  \item Update sup of b's ending subblocks
-  \item Increment children's counters
-  \end{enumerate}
-\end{enumerate}
-
-
-
-\begin{figure}[hbt]
-  \center\includegraphics[width=6in]{pics/super}
-  \caption{\texttt{Sup} and \texttt{timer} in a node, numbers on blocks are their \texttt{time} values.}
-\end{figure}
-
-
-\pagebreak
 
 \paragraph{Computing superblock}
 
 
-\paragraph{Implementing Queue using Block Tree}
-In this work, we design a queue with $O(\log^2 p +\log n)$ steps per operation, where $n$ is the number of total operations invoked. We avoid the $\Omega(p)$ worst-case step complexity of existing shared queues based on linked lists or arrays (CAS Retry Problem). A queue stores a sequence of elements and supports two operations, enqueue and dequeue. \texttt{Enqueue(e)} appends element \texttt{e} to the sequence stored.\texttt{Dequeue()} removes and returns the first element among in the sequence. If the queue is empty it returns \texttt{null}. Knowing index $i$ is the tail of the queue, we can return the dequeue response using \texttt{Get(i)}.  So in the rest we modify block tree to compute \texttt{i} for each \texttt{Dequeue()} to achieve a FIFO queue.
-%
 %\subsection{What should a \texttt{Dequeue()} return, regarding history of operations?}
 \paragraph{}
-Next, we describe how to use block tree to implement queues. The block tree, maintains the history of all operations, not only the current state of the queue. Now consider the following history of operations. What should each \texttt{Dequeue()} return? We can implement Enqueue and Dequeue using our block tree. An \texttt{Enqueue(e)} appends an operation with input argument \texttt{e} in the block tree. To do a \texttt{Dequeue()}, process $p$ first appends a \texttt{DEQ} operation to the tree. Then $p$ finds the rank of the \texttt{DEQ} using \texttt{Index()}, the rank of the \texttt{DEQ} and the information stored in the root about the queue $p$ computes the rank of  the \texttt{ENQ} having the answer of the \texttt{DEQ}. Finally $p$ returns the argument of that \texttt{ENQ} using \texttt{Get(i)}.
+Now, we describe how to use the tree to implement a queue. Consider the following execution of operations. \texttt{Enqueue(e)} appends an operation with input argument \texttt{e} in the block tree. What should a \texttt{Dequeue()} return? To compute the response of a \texttt{Dequeue()}, process $p$ first appends a \texttt{DEQ} operation to the tree. Then $p$ finds the rank of the \texttt{DEQ} using \texttt{Index()}, the rank of the \texttt{DEQ} and the information stored in the root about the queue $p$ computes the rank of  the \texttt{ENQ} having the answer of the \texttt{DEQ}. Finally $p$ returns the argument of that \texttt{ENQ} using \texttt{Get(i)}.
 
 \begin{table}[hbt]
 \centering
@@ -378,7 +309,6 @@ Next, we describe how to use block tree to implement queues. The block tree, mai
 \end{table}
 
 
-\pagebreak
 
 \paragraph{}
 A non-null dequeue is one that returns a non-null value. In the example above, \texttt{Dequeue()} operations return \texttt{5, 2, 3, null, 4} in order. Before \texttt{ENQ(4)} the queue gets empty so the last \texttt{DEQ()} returns null. If the queue is non-empty and $r$ \texttt{Dequeue()} operations have returned a non-null response, then $i$th \texttt{Dequeue()} returns the input of the $r+1$th \texttt{Enqueue()}. So, in order to answer a Dequeue, it's sufficent to know the size of the queue and the number of previous non-null dequeues.
@@ -399,7 +329,7 @@ In the Block Tree, we did not store the sequence of operations explicitly but in
   \caption{An example history of operation blocks on the queue}
 \end{table}
 
-\pagebreak
+
 \paragraph{}
 Now, we claimed that by knowing the current size of the queue and the number of non-null dequeue operations before the current dequeue, we could compute the index of the resulting \texttt{Enqueue()}. We apply this approach to blocks; if we store the size of the queue after each block of operations happens and the number of non-null dequeues dequeues till a block, we can compute each dequeue's index of result in \textsc{O}$(1)$ steps.
 
@@ -437,10 +367,10 @@ Given \texttt{DEQ} is in block \texttt{b}, \texttt{response(DEQ)} would be:\\
 \end{figure}
 
 
-
-\pagebreak
-
 \subsection{Pseudocode description}
+
+\paragraph{Specification}
+A Queue is a shared data structure that stores a sequence of elements. It has two methods \texttt{Enqueue(e)} and \texttt{Dequeue()}. \texttt{Enqueue(e)} adds \texttt{e} to the end of the sequence. \texttt{Dequeue()} returns the first element stored in the sequence and removes it from the sequence.
 
 \paragraph{Tree}
 In order to reach an agreement on the order of operations among $p$ processes, we use a Tournament Tree. Leaf \texttt{l\textsubscript{i}} is assigned to a process \texttt{i}. Each process adds $op$ to its leaf. In each internal node an ordering of operations in its subtree is stored. All processes agree on the total ordering of all operations stored in the root. This ordering will be the linearization of the operations.
@@ -932,7 +862,7 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 
 \clearpage
 
-\subsection{Proof of Correctness}
+\section{Proof of Correctness}
 
 \framebox[1.1\width]{TEST} Fix the logical order of definitions (cyclic refrences).
 
@@ -1045,7 +975,7 @@ To show this we are going to refer to the way \nf{n.blocks[]} is partitioned whi
 \begin{proof}
 Blocks are only appended (not modified) with CAS to \nf{n.blocks[n.head]} and \nf{n.head} is non-decreasing, so the set of operations in established blocks of a node can only grow.
 \end{proof}
-\textit{useless?}
+
 
 %\begin{lemma}[createBlock] \label{lem::createBlock}
 %  If \nf{n.CreateBlock(i)} is invoked at time $t$ and returns block $new$, then \nf{ops(EST\sub{n.left, t})} $\cup$ \nf{ops(EST\sub{n.right, t})} - \nf{ops(EST\sub{n, t})} $\subseteq$ \nf{ops(new)}.
@@ -1099,15 +1029,30 @@ $\blacktriangleright$ In the non-root nodes, we only need ordering of enqueues a
 \pagebreak
 
 
+
+
+
+
+\begin{definition}
+Let $^{op}t$ be the time $op$ is invoked and $t^{op}$ be the time $op$ terminates.
+  $_{l}t$ is the immediate time before running Line $l$.   $t_{l}$ is the immediate time after running Line $l$. $^{op}t_{l}$ is the immediate time before running Line $l$ of operation $op$.   $t_{l}^{op}$ is the immediate time after running Line $l$ of operation $op$. $v_l$ is the value of \nf{v} immediately before line $l$ for the process we are talking about.
+\end{definition} 
+
+In the next Lemmas we show for every \nf{Refresh()} that has has succesuful \nf{CAS} in Line \ref{cas}, all the established operations in the children before the \nf{Refresh} are going to be established in the parent after the \nf{Refresh}.
+
 \begin{lemma}[trueRefresh] \label{lem::trueRefresh}
-  Let $t_i$ be the time an instance \nf{R} of \nf{n.Refresh()} is invoked and $t_t$ be the time it terminates. If the \nf{TryAppend(new, s)} of \nf{R}  returns \nf{true}, then \nf{ops(EST\sub{n.left, t\sub{i}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{t}})}.
+If \nf{CAS} in Line \ref{cas} of instance $R$ of \nf{n.Refresh()} returns \nf{true}, we have $ops(EST_{\nf{n.left}, ^Rt}) \; \cup \; ops(EST_{\nf{n.right}, ^Rt}) \subseteq 
+ ops(n.blocks_{t_{\ref{cas}}^R})$.
 \end{lemma}
 \begin{proof}
-Since \nf{TryAppend} returns true a block \nf{new} is written into \nf{n.blocks[h]} in Line \ref{cas}.
 %So it remains to show the operations of \nf{ops(EST\sub{n.left, t\sub{i}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}})} - \nf{ops(EST\sub{n, t\sub{i}})}, which we call \it{new operations}, are all in \nf{ops(EST\sub{n, t\sub{t}})}. 
 
-We show \nf{ops(EST\sub{n.left, t\sub{i}})}$\subseteq$\nf{ops(EST\sub{n, t\sub{t}})}.  Let \nf{h} be the value \nf{n.Refresh()} reads from \nf{n.head} at line \ref{readHead}, \nf{h\sub{left,i}} be the value of \nf{n.left.head} at \nf{t\sub{i}} and \nf{h\sub{left,read}} be the value read from \nf{n.left.head-1} at line \ref{lastLine}. \nf{end\sub{left}} field of the block returned by \nf{CreateBlock(i)} is \nf{h\sub{left,read}}. By lines \ref{prevLine} and \ref{lastLine} the \nf{new} block in \nf{n.blocks[h]} contains \nf{n.left.blocks[n.blocks[h-1].end\sub{left}+1..h\sub{left,read}]}. Since \nf{left.head} is read after \nf{t\sub{i}} then \nf{h\sub{left,read}>h\sub{left,i}} which means \nf{ops(EST\sub{n.left, t\sub{i}})}$\subseteq$\nf{ops(n.left.blocks [0..h\sub{left,read}])}.
-After the successful \nf{TryAppend} in line \ref{cas} we know all blocks in \nf{n.left.blocks[0..h\sub{left,read}-1} are subblocks of \nf{n.blocks[0..h]} by the definition of subblock. At \nf{t\sub{t}} we have \nf{n.head>h} by Lemma \ref{lem::headProgress}. So \nf{n.blocks[1..h]} are in \nf{EST\sub{n,t\sub{t}}} by definition of \nf{EST}.  Note that after line \ref{incrementHead2} we are sure that the \nf{head} is incremented by Lemma\ref{lem::headInc}) which means \nf{n.head=h+1} at $t_t$ so the new block is established at $t_t$ and the new block contains the new operations which is what we wanted to show. The proof for \nf{ops(EST\sub{n.right, t\sub{i}})}$\subseteq$\nf{ops(EST\sub{n, t\sub{t}})}is the same.
+We show $ops(EST_{\nf{n.left}, ^Rt})= ops(\nf{n.left.blocks[0..$n.left.head_{309}-1$]}) \subseteq ops(n.blocks_{\ref{cas}}) = ops(\nf{n.blocks[0..}n.head_{\ref{readParentHead}}])$. %Let $h$ be the value \nf{n.Refresh()} reads from \nf{n.head} at Line \ref{readHead} and $h_{left}$ be the value read from \nf{n.left.head} at Line \ref{lastLine}. 
+As \nf{CAS} in Line \ref{cas} returns \nf{true} the block \nf{new} is written into \nf{n.blocks[$n.head_{\ref{readHead}}$]}. By the Definition \ref{def::subblock} for the Subblock  the block \nf{new} contains \nf{n.left.blocks[n.blocks[$n.head_{\ref{readHead}}-1$].end\sub{left}+1..$n.left.head_{\ref{lastLine}}-1$]} (see Lines \ref{prevLine} and \ref{lastLine}).
+% \nf{ops(EST\sub{n.left, t\sub{i}})}$\subseteq$\nf{ops(n.left.blocks [0..h\sub{left,read}])}.
+After the successful \nf{CAS} in Line \ref{cas} we know all blocks in \nf{n.left.blocks[0..$n.left.head_{\ref{lastLine}}-1$]} are subblocks of \nf{n.blocks[0..$n.head_{\ref{readHead}}$]}. Because of the Lemma \ref{nonDecreasingHead} we have, $n.left.head_{309}-1<n.left.head_{\ref{lastLine}}-1$ and $n.head_{\ref{readHead}}<n.head_{\ref{readParentHead}}$. From Lemma \ref{lem::establishedOrder} the inequality we proved is stronger than what we wanted to prove (TODO: make the lemma claim more general).  The proof for the right child is the same.
+
+
 
 
 % From the code of the \nf{CreateBlock()} this block includes the established blocks in n's children at $t_i$. Since the head in \nf{CreateBlock()} is read after $t_i$. So the new operations are in the block appended to $n$.
@@ -1117,13 +1062,19 @@ After the successful \nf{TryAppend} in line \ref{cas} we know all blocks in \nf{
 \end{proof}
 \begin{figure}[hbt]
   \center\includegraphics[width=5in]{pics/trueRefresh}
-  \caption{New established operations of the left child are in the new block.}
+  \caption{New established operations of the left child are in the new block. (TO UPDATE)}
 \end{figure}
-\begin{lemma}[Stronger True Refresh] \label{lem::prectrueRefresh}
-  Let $t_i$ be the time an instance of \nf{n.Refresh()} read the head (Line \ref{readHead}) and $t_t$ be the time its \nf{TryAppend(new, s)} terminates with  and returns \nf{true} (Line \ref{cas}). We have \nf{ops(EST\sub{n.left, t\sub{i}})} $\cup$ \nf{ops(EST\sub{n.right, t\sub{i}})} $\subseteq$ \nf{ops(n.blocks)}.
-\end{lemma}
+
+\begin{corollary}[Weak True Refresh] \label{lem::prectrueRefresh}
+If \nf{CAS} in Line \ref{cas} of instance $R$ of \nf{n.Refresh()} returns \nf{true}, we have $ops(EST_{\nf{n.left}, ^Rt}) \; \cup \; ops(EST_{\nf{n.right}, ^Rt}) \subseteq 
+ ops(EST_{\nf{n}, t^R})$.
+\end{corollary}
+\begin{proof}
+The left side is the same as the Lemma \ref{lem::trueRefresh}, so it is sufficient to show when \nf{R} terminates established blocks in \nf{n} are super set of \nf{n.blocks} after the Line \ref{cas}.    Because of Lemma \ref{lem::headInc}  we are sure that the \nf{n.head} is incremented after line \ref{incrementHead}. So the \nf{new} block appended to \nf{n} is established at $t^R$. 
+\end{proof}
+
 \begin{definition}
-  An instance of \nf{Refresh()} is successful iff its \nf{TryAppend(new, s)} terminates with  and returns \nf{true}.
+  An instance of \nf{Refresh()} is \it{successful} if its \nf{CAS} in Line \ref{cas} returns \nf{true}. If a successful instance of \nf{Refresh()} terminates, we say it is \it{complete.}
 \end{definition}
 %\it{Mention this new block is establish in t\sub{t}. last sentece is not complete}
 
@@ -1136,11 +1087,6 @@ After the successful \nf{TryAppend} in line \ref{cas} we know all blocks in \nf{
 %\end{proof}
 
 \pagebreak
-
-\begin{definition}
-Let $_{R_1}t$ be the time $R_1$ is invoked and $t_{R_2}$ be the time $R_2$ terminates.
-  $_{line}t$ is the immediate time before running Line $line$.   $t_{line}$ is the immediate time after running Line $line$. $_{line}t^{op}$ is the immediate time before running Line $line$ of operation $op$.   $t_{line}^{op}$ is the immediate time after running Line $line$ of operation $op$.
-\end{definition} 
 
 \begin{lemma}[Double Refresh] \label{doubleRefresh}
   Consider two consecutive instances $R_1$, $R_2$ of \nf{Refresh()} on internal node \nf{n} by a process $p$. If $R_1$ and $R_2$ both fail and return false, then we have \nf{ops(EST\sub{n.left, \sub{R1}t})} $\cup$ \nf{ops(EST\sub{n.right, \sub{R1}t})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{R2}})}.

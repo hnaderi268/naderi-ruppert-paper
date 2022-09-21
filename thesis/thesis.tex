@@ -682,7 +682,7 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 
 To prove a shared data structure works correctly, it is sufficient to show it is linearizable. In our case, where we create the linearization ordering in the root, we need to prove (1) the ordering is legal i.e for every execution on our queue if operation $op_1$ terminates before operation $op_2$ then $op_1$ is linearized before operation $op_2$ and (2) if we do operations sequentially in their the linearization operations get the same results as in our queue. The proof is structured like this. First, we define and prove some facts about blocks and the node's \nf{head} field. Then, we introduce  the linearization ordering formally. Next, we prove double \nf{Refresh} on a node is enough to propagate its children's new operations up to the node, which is used to prove (1). After, this we prove some claims about the size and operation of each block which we use to prove the correctness of \nf{DSearch()}, \nf{GetEnq()} and \nf{IndexDeq()}. Finally (2) is followed by proving the correctness of the way we compute the response of a dequeue.
 
-A block is an object storing some statistics, as described in Algorithm Queue. A block in a node's blocklist implicitly represents a set of operations.
+A block is an object storing some statistics, as described in Algorithm Queue. A block in a node implicitly represents a set of operations.
 \begin{definition}[Ordering of a block in a node]
 Let $b$ be \nf{$n$.blocks[$i$]} and $b^\prime$ be \nf{$n$.blocks[$j$]}. We call $i$ the \emph{index} of block $b$. Block $b$ is \it{before} block $b^\prime$ in node \nf{n} if and only if $i<j$. We define \it{the prefix for} $b$ to be the blocks in \tt{n.blocks[0..$i$]}.
 \end{definition}
@@ -787,7 +787,7 @@ From Observations \ref{nonDecreasingHead},\ref{lem::blocksOrder}.
 
 Now we define the ordering of operatiobs stored in each node. In the non-root nodes we only need ordering of operations of a type among themselves. Processes are numbered from 1 to $p$ and leaves of the tree are assigned from left to right. We will show in Lemma \ref{blockSize} that there is at most one operation from each process in a given block.
 \begin{definition} [Ordering of operations inside the nodes] \label{ordering}
-
+\end{definition}
 \begin{itemize}
   \item $E(n,b)$ is the sequence of enqueue operations in $ops(n\nf{.blocks[}b\nf{]})$ defined recursively as follows. $E(leaf,b)$ is the single enqueue operation in $ops(leaf\nf{.blocks[}b\nf{]})$ or an empty sequence if $leaf\nf{.blocks[}b\nf{].num\sub{enq}}=0$. If $n$ is an internal node, then
 \begin{align*} 
@@ -799,14 +799,14 @@ E(n,b) =&  E(n\nf{.left},n\nf{.blocks[}b-1\nf{].end\sub{left}}+1)\cdot E(n\nf{.l
 \item $E_i(n)$ is the $i$th enqueue in $E(n)$.
   \item $D(n,b)$ is the sequence of dequeue operations in $ops(n\nf{.blocks[}b\nf{]})$ defined recursively as follows. $D(leaf,b)$ is the single dequeue operation in $ops(leaf\nf{.blocks[}b\nf{]})$ or an empty sequence if $leaf\nf{.blocks[}b\nf{].num\sub{deq}}=~0$. If $n$ is an internal node, then
 \begin{align*} 
-D(n,b) =&  D(n\nf{.left],n\nf{.blocks[}b-1\nf{].end\sub{left}}+1)\cdot D(n\nf{.left}, n\nf{.blocks[}b-1\nf{].end\sub{left}}+2)\cdots D(n\nf{.left}, n\nf{.blocks[}b\nf{].end\sub{left}})\cdot \\ 
+D(n,b) =&  D(n\nf{.left},n\nf{.blocks[}b-1\nf{].end\sub{left}}+1)\cdot D(n\nf{.left}, n\nf{.blocks[}b-1\nf{].end\sub{left}}+2)\cdots D(n\nf{.left}, n\nf{.blocks[}b\nf{].end\sub{left}})\cdot \\ 
 &D(n\nf{.right},n\nf{.blocks[}b-1\nf{].end\sub{right}}+1)\cdot D(n\nf{.right},n\nf{.blocks[}b-1\nf{].end\sub{right}}+2)\cdots D(n\nf{.right},n\nf{.blocks[}b\nf{].end\sub{right}})
 \end{align*}
     \item $D_i(n,b)$ is the $i$th enqueue in $D(n,b)$.
 \item The order of the dequeue operations in the node $n$: $D(n)=D(n,1)\cdot D(n,2)\cdot D(n,3)...$
 \item $D_i(n)$ is the $i$th dequeue in $D(n)$.
 \end{itemize}
-\end{definition}
+
 
 \begin{definition}[Linearization] \label{def::lin}
  $L=E(root,1).D(root,1).E(root,2).D(root,2).E(root,3).D(root,3)...$
@@ -1036,16 +1036,6 @@ If \nf{b} has propagated to \nf{f}, then \nf{b.super} has at most 1 difference w
 
 
 
-
-
-
-
-
-
-
-
-
-
 \pagebreak
 \begin{lemma}[Computing SuperBlock]\label{superBlock}
 For the \nf{superblock} value computed in line \ref{computeSuper} of \nf{n.IndexDEQ(b,i)} we have \nf{n.parent.blocks[superblock]} contains $D_{n,b,i}$.
@@ -1055,7 +1045,6 @@ First we show the value read for \nf{super[b.group]} in line 418 is not null.
   Values \nf{np\textsubscript{dir}} read in lines \ref{setNP}, \nf{super} are set before incrementing in lines \ref{setSuper},\ref{incNP}. So before incrementing \nf{num\sub{propagated}, super[num\sub{propagated}]} is set so it cannot be null while reading. Then by Lemma \ref{superRange}if we search in the range $p$, we can find the superblock.
 
 \end{proof}
-
 
 \begin{lemma}[Index correctness]
  If $\nf{n.blocks[b].num\sub{deq}}\geq\nf{i}$ then \nf{n.IndexDEQ(b,i)} returns the rank in $D(root)$ of $D_{n,b,i}$.
@@ -1075,20 +1064,6 @@ We will prove this by induction on the distance of \nf{n} from the \nf{root}. We
 
 \pagebreak
 
-
-
-%\begin{lemma}[Search Ranges]\label{search}
-%  Preconditions of all invocation of \nf{BSearch} are satisfied.
-%\end{lemma}
-%\begin{proof}
-%  
-%Line 83: \nf{Get(i)} is called if the result of a dequeue is not null. The search is among all blocks in the root.
-%
-%Line 88: This search tries to find the ith enqueue, knowing that it is in the left child. Search is done over the left subblocks. The start and end of the range are followed by definition. Line 92 is the same.
-%
-%Line 101: Here, the goal is to find the superblock. We know the distance between answer and the \nf{super[i]} is at most $p$, since at most $p$ processes could die.
-%
-%\end{proof}
 \begin{definition}
    Assume the operations in $L$ are applied on an empty queue. If element of \nf{enqueue e} is the response to  \nf{dequeue d} then we say \nf{R(d)=e}. If \nf{d} 's response id \nf{null} (queue is empty) then \nf{R(d)=null}.
 \end{definition}

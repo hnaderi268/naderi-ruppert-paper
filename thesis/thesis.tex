@@ -413,7 +413,7 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 \Statex $\blacktriangleright$ \tt{\sl{Node}}
 \begin{itemize}
 \item \tt{\sl{*Node} left, right, parent} \textsf{: Initialized  when creating the tree.}
-\item \tt{\sl{blocks}} \textsf{: Initially \tt{blocks[0]} contains an empty block with all fields equal to 0.}
+\item \tt{\sl{Block[]} blocks} \textsf{: Initially \tt{blocks[0]} contains an empty block with all fields equal to 0.}
 \item \tt{\sl{int} \head= 1}\textsf{: \#\tt{block}s in \tt{blocks}. \tt{blocks[0]} is a block with all integer fields equal to zero.}
 \end{itemize}
 
@@ -541,7 +541,6 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 \setcounter{ALG@line}{600}
 
 \Function{void}{Append}{\sl{block} blk} \cmt{Append is only called by the owner of the leaf.}
-\State \tt{blk.group= \head} \label{appendStart} 
 \State \tt{blocks[\head]= blk} 
 \State \tt{\head+=1} \label{appendEnd} 
 \State \tt{parent.}\Call{Propagate()}{} 
@@ -737,7 +736,7 @@ We are going to prove by contradiction. Consider the lowest \nf{node} $n$ in the
 
 Now we can define the operations of a block using the definition of subblocks.
 \begin{definition}[Operations of a block]\label{def::ops}
-A block $b$ in a leaf represents an \nf{Enqueue()} if $b\nf{.element}\neq\nf{null}$ otherwise, if $b\nf{.element}=\nf{null}$, $b$ represents a \nf{Dequeue()}. The set of operations of block \nf{b} is the union set of the operations in leaf subblocks of $b$. We denote the set of operations of block $b$ by ${ops(b)}$.  We also say ${b}$ contains ${op}$ if $\nf{op}\in\nf{ops(b)}$.
+A block $b$ in a leaf represents an \nf{Enqueue()} if $b\nf{.element}\neq\nf{null}$ otherwise, if $b\nf{.element}=\nf{null}$, $b$ represents a \nf{Dequeue()}. The set of operations of block \nf{b} is the union set of the operations in leaf subblocks of $b$. We denote the set of operations of block $b$ by ${ops(b)}$ and the union set of operations of set of blocks $B$ by $ops(B)$.  We also say ${b}$ contains ${op}$ if $\nf{op}\in\nf{ops(b)}$.
 \end{definition}
 
 \begin{definition}[Superblock]
@@ -759,23 +758,23 @@ We prove this claim using Lemma \ref{lem::subblocksDistinct}. Assume $op$ is in 
 \end{proof}
 
 \begin{definition}
-$n\nf{.blocks[}i\nf{]}$ is \emph{established} at time $t$ if $n\nf{.head}>i$. \emph{EST\sub{n, t}} is the set of established blocks of node $n$ at time $t$.
+$n\nf{.blocks[}i\nf{]}$ is \emph{established} at time $t$ if $n\nf{.head}>i$. An operation is \it{established} if it is in an established block. $EST^n_t$ is the set of established operations in node $n$ at time $t$.
 \end{definition}
 
 
 Now we want to say block of a node grow over time.
 \begin{observation}\label{lem::blocksOrder}
-  If  time $t<$ time $t^\prime$, then $ops(n.blocks)$ at time $t$ $\subseteq$ $ops(n.blocks)$ at time $t^\prime$.
+  If  time $t<$ time $t^\prime$ ($t$ is before $t^\prime$), then $ops(n.blocks)$ at time $t$ is a subset of $ops(n.blocks)$ at time $t^\prime$.
 \end{observation}
 \begin{proof}
 Blocks are only appended (not modified) with \nf{CAS} to $n\nf{.blocks[}n\nf{.head]}$, so the set of blocks of a node after the \nf{CAS} contains the the set of blocks before the \nf{CAS}.
 \end{proof}
 
 \begin{corollary}\label{lem::establishedOrder}
-  If  time $t<$ time $t^\prime$, then \nf{ops(EST\sub{n, t})}$\subseteq$ \nf{ops(EST\sub{n, t$^\prime$})}.
+  If  time $t<$ time $t^\prime$, then $EST_n^t\subseteq EST_n^{t^\prime}$.
 \end{corollary}
 \begin{proof}
-From Observations \ref{nonDecreasingHead},\ref{lem::blocksOrder}.  
+From Observations \ref{nonDecreasingHead}, \ref{lem::blocksOrder}.  
 \end{proof}
 
 \pagebreak
@@ -785,7 +784,7 @@ From Observations \ref{nonDecreasingHead},\ref{lem::blocksOrder}.
   \caption{Order of operations in b. Operations in the leaves are ordered with numerical order shown in the drawing.}
 \end{figure}
 
-Now we define the ordering of operatiobs stored in each node. In the non-root nodes we only need ordering of operations of a type among themselves. Processes are numbered from 1 to $p$ and leaves of the tree are assigned from left to right. We will show in Lemma \ref{blockSize} that there is at most one operation from each process in a given block.
+Now we define the ordering of operations stored in each node. In the non-root nodes we only need ordering of operations of a type among themselves. Processes are numbered from 1 to $p$ and leaves of the tree are assigned from left to right. We will show in Lemma \ref{blockSize} that there is at most one operation from each process in a given block.
 \begin{definition} [Ordering of operations inside the nodes] \label{ordering}
 \end{definition}
 \begin{itemize}
@@ -814,55 +813,51 @@ D(n,b) =&  D(n\nf{.left},n\nf{.blocks[}b-1\nf{].end\sub{left}}+1)\cdot D(n\nf{.l
 \pagebreak
 
 \begin{definition}
-Let $^{op}t$ be the time $op$ is invoked and $t^{op}$ be the time $op$ terminates.
-  $_{l}t$ is the immediate time before running Line $l$.   $t_{l}$ is the immediate time after running Line $l$. $^{op}t_{l}$ is the immediate time before running Line $l$ of operation $op$.   $t_{l}^{op}$ is the immediate time after running Line $l$ of operation $op$. $v_l$ is the value of \nf{v} immediately before line $l$ for the process we are talking about.
+Let $t^{op}$ be the time $op$ is invoked and $^{op}t$ be the time $op$ terminates.
+  Let $t_{l}$ be the time immediately before executing Line $l$ and $_{l}t$ be the time immediately after executing Line $l$. Let $^{op}_{l}t$ is the time immediately before running Line $l$ of operation $op$ and   $t_{l}^{op}$ is the immediate time after running Line $l$ of operation $op$. In the text $v_l$ is the value of variable \nf{v} immediately after line $l$ for the process we are talking about and $v_t$ is the value of variable \nf{v} at time $t$.
 \end{definition} 
 
-\begin{definition}
+\begin{definition} [Successful Refresh]
   An instance of \nf{Refresh()} is \it{successful} if its \nf{CAS} in Line \ref{cas} returns \nf{true}. If a successful instance of \nf{Refresh()} terminates, we say it is \it{complete.}
 \end{definition}
 
-In the next Lemmas we show for every \nf{Refresh()} that has has succesuful \nf{CAS} in Line \ref{cas}, all the established operations in the children before the \nf{Refresh} are going to be established in the parent after the \nf{Refresh}.
+In the next two results we show for every successful \nf{Refresh()}, all the operations established  in the children before the \nf{Refresh} are established in the parent after the \nf{Refresh}'s succesful \nf{CAS} at Line \ref{cas}.
 
-\begin{lemma}[trueRefresh] \label{lem::trueRefresh}
-If $R$ is a succesful instance \nf{n.Refresh()}, then we have $ops(EST_{\nf{n.left}, ^Rt}) \; \cup \; ops(EST_{\nf{n.right}, ^Rt}) \subseteq 
- ops(n.blocks_{t_{\ref{cas}}^R})$.
+\begin{lemma} \label{lem::trueRefresh}
+If $R$ is a successful instance of \nf{$n$.Refresh()}, then we have $EST_{n\nf{.left}}^{t^R} \; \cup \; EST_{n\nf{.right}}^{t^R} \subseteq ops(n.blocks_{\ref{cas}})$.
 \end{lemma}
 \begin{proof}
 
-We show $ops(EST_{\nf{n.left}, ^Rt})= ops(\nf{n.left.blocks[0..$n.left.head_{309}-1$]}) \subseteq ops(n.blocks_{\ref{cas}}) = ops(\nf{n.blocks[0..}n.head_{\ref{readParentHead}}])$. As \nf{CAS} in Line \ref{cas} returns \nf{true} the block \nf{new} is written into \nf{n.blocks[$n.head_{\ref{readHead}}$]}. By the Definition \ref{def::subblock} for the Subblock  the block \nf{new} contains \nf{n.left.blocks[n.blocks[$n.head_{\ref{readHead}}-1$].end\sub{left}+1..$n.left.head_{\ref{lastLine}}-1$]} (see Lines \ref{prevLine} and \ref{lastLine}).
-
-After the successful \nf{CAS} in Line \ref{cas} we know all blocks in \nf{n.left.blocks[0..$n.left.head_{\ref{lastLine}}-1$]} are subblocks of \nf{n.blocks[0..$n.head_{\ref{readHead}}$]}. Because of the Lemma \ref{nonDecreasingHead} we have, $n.left.head_{309}-1<n.left.head_{\ref{lastLine}}-1$ and $n.head_{\ref{readHead}}<n.head_{\ref{readParentHead}}$. From Lemma \ref{lem::establishedOrder} the inequality we proved is stronger than what we wanted to prove (TODO: make the lemma 13 claim more general, if time passes n.blocks grows).  The proof for the right child is the same.
-
+We show $EST_{n\nf{.left}}^{t^R}= ops(n\nf{.left.blocks[0..n.left.head$_{309}-1$]}) \subseteq ops(n.blocks_{\ref{cas}}) = ops(n\nf{.blocks[0..}n.head_{\ref{cas}}\nf{]})$.
+%As \nf{CAS} in Line \ref{cas} returns \nf{true} the block \nf{new} is written into \nf{n.blocks[$n.head_{\ref{readHead}}$]}. By the Definition \ref{def::subblock} for the Subblock  the block \nf{new} contains \nf{n.left.blocks[n.blocks[$n.head_{\ref{readHead}}-1$].end\sub{left}+1..$n.left.head_{\ref{lastLine}}-1$]} (see Lines \ref{prevLine} and \ref{lastLine}).
+Line \ref{cas} stores a block \nf{new} in $n$ that has $\nf{end\sub{left}}=n.left.head_{\ref{lastLine}}-1$. Therefore by Definition \ref{def::subblock}, after the successful \nf{CAS} in Line \ref{cas} we know all blocks in \nf{n.left.blocks[1..$n.left.head_{\ref{lastLine}}-1$]} are subblocks of \nf{n.blocks[1..$n.head_{\ref{readHead}}$]}. Because of Lemma \ref{nonDecreasingHead} we have $n.left.head_{309}-1<n.left.head_{\ref{lastLine}}-1$ and $n.head_{\ref{readHead}}<n.head_{\ref{cas}}$. From Observation \ref{lem::blocksOrder} the claim follows.  The proof for the right child is the same.
 \end{proof}
 \begin{figure}[hbt]
   \center\includegraphics[width=5in]{pics/trueRefresh}
   \caption{New established operations of the left child are in the new block. (TO UPDATE)}
 \end{figure}
 
-\begin{corollary}[Weak True Refresh] \label{lem::prectrueRefresh}
-If $R$ is a complete instance \nf{n.Refresh()}, then we have $ops(EST_{\nf{n.left}, ^Rt}) \; \cup \; ops(EST_{\nf{n.right}, ^Rt}) \subseteq 
- ops(EST_{\nf{n}, t^R})$.
+\begin{corollary}\label{lem::prectrueRefresh}
+If $R$ is a complete instance \nf{$n$.Refresh()}, then we have $EST_{n\nf{.left}}^{t^R} \; \cup \; EST_{n\nf{.right}}^{t^R} \subseteq EST_{n}^{^Rt}$.
 \end{corollary}
 \begin{proof}
-The left side is the same as the Lemma \ref{lem::trueRefresh}, so it is sufficient to show when \nf{R} terminates established blocks in \nf{n} are super set of \nf{n.blocks} after the Line \ref{cas}.    Because of Lemma \ref{lem::headInc}  we are sure that the \nf{n.head} is incremented after line \ref{incrementHead}. So the \nf{new} block appended to \nf{n} is established at $t^R$. 
+The left hand side is the same as Lemma \ref{lem::trueRefresh}, so it is sufficient to show when \nf{R} terminates the established blocks in $n$ are a superset of $n$\nf{.blocks} after Line \ref{cas}.    Because of Lemma \ref{lem::headInc}  we are sure that $n$\nf{.head} is incremented after line \ref{incrementHead}. So the block \nf{new} appended to \nf{n} at Line \ref{cas} is established at $^Rt$. 
 \end{proof}
 
 \pagebreak
 
-In the next lemma we show that if a process consecutively fails to do two instances of \nf{Refresh()} on node $n$, the established blocks in the children of $n$ before the first \nf{Refresh()} are going to be in $n$ after the second \nf{Refresh()}.
-\begin{lemma}[Double Refresh] \label{doubleRefresh}
-  Consider two consecutive instances $R_1$, $R_2$ of \nf{Refresh()} on internal node $n$ by a process $p$. If none of $R_1$ and $R_2$ is a succesful \nf{Refresh()}, then we have $ops(EST_{n.left, ^{R_1}t}) \cup ops(EST_{n.right, ^{R_1}t}) \subseteq ops(EST_{n, t^{R_2}})$.
+In the next lemma we show that if two consecutive instances of \nf{Refresh()} by the same process on node $n$ fail, then the established blocks in the children of $n$ before the first \nf{Refresh()} are guaranteed to be in $n$ after the second \nf{Refresh()}.
+
+\begin{lemma} \label{doubleRefresh}
+  Consider two consecutive terminating instances $R_1$, $R_2$ of \nf{Refresh()} on internal node $n$ by process $p$. If neither $R_1$ nor $R_2$ is a successful \nf{Refresh()}, then we have $EST_{n\nf{.left}}^{t^R{_1}} \; \cup \; EST_{n\nf{.right}}^{t^R{_1}} \subseteq EST_{n}^{^R{_2}t}$.
 \end{lemma}
 \begin{proof}
+Let $R_1$ read $i$ from $n\nf{.head}$ at Line \ref{readHead}. Note that by Lemma \ref{lem::headInc} $R_1$ and $R_2$ both cannot read the same value $i$. By Observation \ref{nonDecreasingHead} $R_2$ reads larger value of $n$\nf{.head} than $R_1$.
 
-Let $R_1$ read $i$ from $n\nf{.head}$ at Line \ref{readHead}.   If $R_2$ reads some value greater than $i+1$ in Line \ref{readHead} it means $n\nf{.head}$ is incremented  more than two times after $t_{\ref{readHead}}^{R_1}$. By Lemma \ref{lem::headPosition} when \nf{head} is incremented from $i$ a  successful \nf{CAS} in $n\nf{.blocks[i]}$ is done. Let $R_3$ be the \nf{Refresh()} on $n$ that has put the block in $n\nf{.blocks[}i+1\nf{]}$. $R_3$ has read $n\nf{.head}=i+1$ at Line \ref{readHead} and has put its block before $R_2$'s \nf{CAS} at Line \ref{cas}. So we have $^{R_1}t<t_{\ref{readHead}}^{R_m}<t_{\ref{cas}}^{R_m}<^{R_2}t_{\ref{readHead}}$. From \ref{lem::blocksOrder} and \ref{lem::trueRefresh} the claim holds.
+Consider the case where $R_1$ reads $i$ and $R_2$ reads $i+1$ from Line \ref{readHead}. As $R_2$'s \nf{CAS} in Line \ref{cas} returns \nf{false}, there is another successful instance $R_2^\prime$ of \nf{n.Refresh()} that has done \nf{CAS} successfully into \nf{n.blocks[i+1]} before $R_2$ tries to \nf{CAS}. $R_2^\prime$ creates its block \nf{new} after reading the value $i+1$ from $n$\nf{.head} (Line \ref{readHead}) and $R_1$ reads the value $i$ from $n$\nf{.head}. By Observation \ref{nonDecreasingHead} we have $^{R_1}t<t^{R_1}_{\ref{readHead}}< t^{R2^\prime}_{\ref{readHead}}$ (see Figure \ref{fig::doubleRefresh}). By Lemma \ref{lem::prectrueRefresh} we have 
+$EST^{n.\nf{left}}_{^{R_2^\prime}_{\ref{readHead}}t} \cup EST^{n.\nf{right}}_{^{R_2^\prime}_{\ref{readHead}}t} \subseteq ops(n.\nf{blocks}_{t_{\ref{cas}}^{R_2^\prime}})$. Also by Lemma \ref{lem::headInc} on $R_2$ the value  of \nf{n.head} is more than $i+1$ after $R_2$ terminates, so the block appended by $R_2^\prime$ to \nf{n} is established by the time $R_2$ terminates. To summarize, $^{R_1}t$ is before $R_2^\prime$'s read of \nf{n.head} ($t_{\ref{readHead}}^{R_2^\prime}$) and $R_2^\prime$'s successful \nf{CAS} ($t^{R2^\prime}_{\ref{cas}}$) is before $R_2$'s termination ($t^{R_2}$), so by Observation \ref{lem::blocksOrder} $ops(EST_{n.\nf{left}, t^{R_1}}) \cup ops(EST_{n.\nf{right}, t^{R_1}}) \subseteq ops(n.\nf{blocks}_{t^{R_2}})$
 
-Now consider $R_1$ reads $i$ and $R_2$ reads $i+1$ from Line \ref{readHead}. As $R_2$'s \nf{CAS} in Line \ref{cas} returns \nf{false} then there is another successful instance $R_2^\prime$ of \nf{n.Refresh()} that has done \nf{CAS} successfully into \nf{n.blocks[i+1]} before $R_2$ tries to \nf{CAS}. $R_2^\prime$ creates its block \nf{new} after reading the value $i+1$ from \nf{n.head} (Line \ref{readHead}) and $R_1$ reads the value $i$ from \nf{n.head}. By Observation \ref{nonDecreasingHead} we have $^{R_1}t<t^{R_1}_{\ref{readHead}}< t^{R2^\prime}_{\ref{readHead}}$ (see Figure \ref{fig::doubleRefresh}). By Lemma \ref{lem::prectrueRefresh} we have 
-$ops(EST_{n.\nf{left}, t^{R_2^\prime}_{\ref{readHead}}}) \cup ops(EST_{n.\nf{right}, t^{R_2^\prime}_{\ref{readHead}}}) \subseteq ops(n.\nf{blocks}_{t_{\ref{cas}}^{R_2^\prime}})$
-. Also by Lemma \ref{lem::headInc} on $R_2$ the value  of \nf{n.head}  head is more than $i+1$ after $R_2$ terminates, so the block appended by $R_2^\prime$ to \nf{n} is established by the time $R_2$ terminates. To summarize, $^{R_1}t$ is before $R_2^\prime$'s read of \nf{n.head} ($t_{\ref{readHead}}^{R_2^\prime}$) and $R_2^\prime$'s successful \nf{CAS} ($t^{R2^\prime}_{\ref{cas}}$) is before $R_2$'s termination ($t^{R_2}$), so by Lemma \ref{lem::blocksOrder} $ops(EST_{n.\nf{left}, t^{R_1}}) \cup ops(EST_{n.\nf{right}, t^{R_1}}) \subseteq ops(n.\nf{blocks}_{t^{R_2}})$
-
-Note that by Lemma \ref{lem::headInc} $R_1$ and $R_2$ both cannot read the same value $i$.
+   If $R_2$ reads some value greater than $i+1$ in Line \ref{readHead} it means $n\nf{.head}$ has been incremented  more than two times since $_{\ref{readHead}}^{R_1}t$. By Lemma \ref{lem::headPosition}, when $n.$\nf{head} is incremented from $i+1$ to $i+2$, $n\nf{.blocks[i+1]}$ is non-null. Let $R_3$ be the \nf{Refresh()} on $n$ that has put the block in $n\nf{.blocks[}i+1\nf{]}$. $R_3$ read $n\nf{.head}=i+1$ at Line \ref{readHead} and has put its block in $n\nf{.blocks[}i+1\nf{]}$ before $R_2$'s read of $n.$\nf{head} at Line \ref{readHead}. So we have $t^{R_1}<_{\ref{readHead}}^{R_3}t<_{\ref{cas}}^{R_3}t<t^{R_2}_{\ref{readHead}}<^R_{2}t$. From Observation \ref{lem::blocksOrder} on the operations before and after $R_3$'s \nf{CAS} and Lemma \ref{lem::trueRefresh} on $R_3$ the claim holds.
 \end{proof}
 
 \begin{figure}[hbt]
@@ -874,40 +869,42 @@ Note that by Lemma \ref{lem::headInc} $R_1$ and $R_2$ both cannot read the same 
   \nf{ops(EST\sub{n.left, \sub{\ref{firstRefresh}}t})} $\cup$ \nf{ops(EST\sub{n.right, \sub{\ref{firstRefresh}}t})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{\ref{secondRefresh}})}}
 \end{corollary}
 \begin{proof}
-  If the first \nf{Refresh()} in line \ref{firstRefresh} returns \nf{true} then by Lemma \ref{lem::prectrueRefresh} the claim holds. Else if first \nf{Refresh()} failed and the second \nf{Refresh()} succeeded the claim still holds by Lemma \ref{lem::prectrueRefresh}. Otherwise even if both failed, the claim is satisfied by Lemma \ref{doubleRefresh}.
+  If the first \nf{Refresh()} in line \ref{firstRefresh} returns \nf{true} then by Lemma \ref{lem::prectrueRefresh} the claim holds. If the first \nf{Refresh()} failed and the second \nf{Refresh()} succeeded the claim still holds by Lemma \ref{lem::prectrueRefresh}. Otherwise both failed and the claim is satisfied by Lemma \ref{doubleRefresh}.
 \end{proof}
 
-Now we say after \nf{Append($b$)} finishes, $b$ will be established in $root$.
+Now we show that after \nf{Append($b$)} on a leaf finishes, $b$ will be established in \nf{root}.
 
 \begin{corollary}
-For $A=\nf{Append(}b\nf{)}$ we have ${ops(b)} \subseteq ops(EST_{\nf{root}, t^A})$.
+For $A=\nf{Append(}b\nf{)}$ we have ${ops(b)} \subseteq ops(EST_{\nf{n}, t^A})$ where $n\in\{\text{nodes in the path from the leaf to the root}\}$.
 \end{corollary}
 \begin{proof}
-$A$ adds $b$ to the assigned leaf of the process, establishes it and then calls \nf{Propagate()} on the parent of the leaf it appended $b$. For every node $n$, $n.$\nf{Propagate()} appends $b$ to $n$, establishes it by Corollary \ref{lem::propagateStep} and then calls $n.$\nf{parent.Propagate()} till $n$ is \nf{root}.
-\end{proof}
-
-\begin{corollary}\label{lem::appendExactlyOnce}
- After \nf{Append($b$)} finishes $b$ is in \nf{root.blocks[$x$]} for exactly one $x$.
-\end{corollary}
-\begin{proof}
-  Previous Corollary proves shows the claim for some $x$. By Lemma \ref{lem::appendExactlyOnce}
+$A$ adds $b$ to the assigned leaf of the process, establishes it at Line \ref{appendEnd} and then calls \nf{Propagate()} on the parent of the leaf where it appended $b$. For every node $n$, $n.$\nf{Propagate()} appends $b$ to $n$, establishes it by Corollary \ref{lem::propagateStep} and then calls $n.$\nf{parent.Propagate()} utill $n$ is \nf{root}.
 \end{proof}
 
 \pagebreak
-Now we prove some claims about the size and operations of a block. These lemmas will be used for analysis and correctness of \nf{GetEnq()} and \nf{IndexDeq()}.
 
-\begin{lemma}[Block Size Upper Bound]\label{blockSize}
-Each block contains at most one operation of each processs.
-\end{lemma}
+\begin{corollary}\label{lem::appendExactlyOnce}
+ After \nf{Append($b$)} finishes, $b$ is in the nodes the path from the leaf to the root for exactly one time.
+\end{corollary}
 \begin{proof}
-To derive a contradiction, assume there are two operations $op_1$ and $op_2$ of process $p$ in block $b$ in node $n$. Without loss of generality $op_1$ is invoked earlier than $op_2$. Process $p$ cannot invoke more than one operations concurrently, so $op_1$ has to be finished before $op_2$. By Corollary \ref{lem::appendExactlyOnce} before appending $op_2$, $op_1$ exists in every node of the tree on the path from $p$'s leaf to the root. This means there is some block $b^\prime$ before $b$ in $n$ containing $op_1$.  Existence of $op_1$ in $b$ and $b^\prime$ contradicts with Lemma \ref{lem::noDuplicates}.
+By the previous corollary and Lemma \ref{lem::appendExactlyOnce} there is exactly one block in each node containing $b$.
 \end{proof}
 
-\begin{lemma}[Subblocks Upperbound]\label{subBlocksBound}
+
+Now we prove some claims about the size and operations of a block. These lemmas will be used for analysis and correctness of \nf{GetEnq()} and \nf{IndexDeq()}.
+
+\begin{lemma}\label{blockSize}
+Each block contains at most one operation of each process.
+\end{lemma}
+\begin{proof}
+To derive a contradiction, assume there are two operations $op_1$ and $op_2$ of process $p$ in block $b$ in node $n$. Without loss of generality $op_1$ is invoked earlier than $op_2$. Process $p$ cannot invoke more than one operations concurrently, so $op_1$ has to be finished before $op_2$ begins. By Corollary \ref{lem::appendExactlyOnce} before $op_2$ calls \nf{Append()}, $op_1$ exists in every node of the tree on the path from $p$'s leaf to the root. This means there is some block $b^\prime$ before $b$ in $n$ containing $op_1$. The Existence of $op_1$ in $b$ and $b^\prime$ contradicts Lemma \ref{lem::noDuplicates}.
+\end{proof}
+
+\begin{lemma}\label{subBlocksBound}
 Each block has at most $p$ direct subblocks.
 \end{lemma}
 \begin{proof}
-The claim follows directly from Lemma \ref{blockSize} and the observation that each block appended to the tree contains at least one operation, due to the test on Line~\ref{addOP}. We can also see the blocks in the leaves have exactly one operation in the \nf{Enqueue()} and \nf{Dequeue()} routines.
+The claim follows directly from Lemma \ref{blockSize} and the observation that each block appended to an initial node contains at least one operation, due to the test on Line~\ref{addOP}. We can also see the blocks in the leaves have exactly one operation in the \nf{Enqueue()} and \nf{Dequeue()} routines.
 \end{proof}
 
 \pagebreak

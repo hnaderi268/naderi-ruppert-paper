@@ -527,8 +527,8 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 \State \tt{start= end-1} \label{dsearchStart}
 \While{\tt{root.blocks[start].sum\sub{enq}}$\geq$\tt{e}}
 \State \tt{start= max(start-(end-start), 0)} \label{doubling}
-\EndWhile
-\State \tt{b= root.BSearch(sum\sub{enq}, e, start, end)} \label{dsearchEnd}
+\EndWhile \label{dsearchEnd}
+\State \tt{b= root.BSearch(sum\sub{enq}, e, start, end)} \label{dsearchBSearch}
 \State \tt{i= e- root.blocks[b-1].sum\sub{enq}} \label{DSearchComputei}
 \State\Return \tt{<b,i>}
 \EndFunction{DSearch}
@@ -616,8 +616,8 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 \State \tt{block\sub{last}= dir.blocks[index\sub{last}]}
 \State \tt{block\sub{prev}= dir.blocks[index\sub{prev}]}
 \State \cmt{\tt{newBlock} includes \tt{dir.blocks[index\sub{prev}+1..index\sub{last}]}.}
-\State \tt{newBlock.sum\sub{enq-dir}= blocks[i-1].sum\sub{enq-dir} + block\sub{last}.sum\sub{enq} - block\sub{prev}.sum\sub{enq}}
-\State \tt{newBlock.sum\sub{deq-dir}= blocks[i-1].sum\sub{deq-dir} + block\sub{last}.sum\sub{deq} - block\sub{prev}.sum\sub{deq}}
+\State \tt{newBlock.sum\sub{enq-dir}= blocks[i-1].sum\sub{enq-dir} + block\sub{last}.sum\sub{enq} - block\sub{prev}.sum\sub{enq}} \label{setSumEnqLeft}
+\State \tt{newBlock.sum\sub{deq-dir}= blocks[i-1].sum\sub{deq-dir} + block\sub{last}.sum\sub{deq} - block\sub{prev}.sum\sub{deq}} \label{setSumEnqRight}
 \EndFor
 \If{\tt{this} \bf{is} \tt{root}}
 \State \tt{newBlock.\size= max(root.blocks[i-1].\size { }+ newBlock.num\sub{enq} - newBlock.num\sub{deq}, 0)}\label{computeLength}
@@ -912,27 +912,23 @@ The claim follows directly from Lemma \ref{blockSize} and the observation that e
 
 \pagebreak
 
-\begin{lemma}[DSearch correctness] \label{dsearch}
-If $\nf{root.blocks[end].sum\sub{enq}} \geq \nf{e}$, \nf{DSearch(e, end)} returns \nf{<b, i>} such that $E_i(root,b)= E_e(root)$.
+In the next two lemmas we analyze and prove the correctness of the doubling search we use to find the block containing $i$th \nf{Enqueue} in the root. Correctness is pretty staightforward from the hypothesis. For the time analysis we use the semantics of queue operations.
+\begin{lemma}[\nf{DSearch} Correctness]\label{dsearch}
+If $\nf{root.blocks[$end$].sum\sub{enq}} \geq e$, \nf{DSearch($e$, $end$)} returns \nf{<$b$, $i$>} such that $E_i(root,b)= E_e(root)$.
 \end{lemma}
 \begin{proof}
-\nf{DSearch} performs a doubling search from \nf{root.blocks[end]} to \nf{root.blocks[0]} to find $E_e(root)$. From Lemma we know \nf{sum\sub{enq}} fields of nf{root.blocks[]} are sorted in a non-decreasing order. Since \nf{root.blocks[0].sum\sub{enq}=0} and there is a \nf{block} in the root with \nf{sum\sub{enq}} value greater than \nf{e}, so there is a \nf{b} that $\nf{root.blocks[b].sum\sub{enq}} \geq e$ but $\nf{root.blocks[b-1].sum\sub{enq}} < e$. This block contains $E_i(root,b)$ and  the search on Line \ref{dsearchStart}-\ref{dsearchEnd} will eventually reach the \nf{b}.
-
+\nf{DSearch} performs a doubling search from \nf{root.blocks[end]} to \nf{root.blocks[0]} to find $E_e(root)$. From Lines \ref{setSumEnqLeft}, \ref{setSumEnqRight} we know \nf{sum\sub{enq-left}}, \nf{sum\sub{enq-right}} fields of \nf{blocks} in each node are sorted in non-decreasing order. Since $\nf{sum\sub{enq}}=\nf{sum\sub{enq-left}}+ \nf{sum\sub{enq-right}}$, $\nf{sum\sub{enq}}$ field of \nf{root.block[$0\cdot\cdot end$]} is  also non-decreasing. Furthermore, since $\nf{root.blocks[$0$].sum\sub{enq}}=0$ and $\nf{root.blocks[$end$].sum\sub{enq}} \geq e$, there is a \nf{b} such that $\nf{root.blocks[$b$].sum\sub{enq}} \geq e$ and $\nf{root.blocks[b-1].sum\sub{enq}} < e$. Block \nf{root.blocks[$b$]} contains $E_i(root,b)$. The doubling search on Lines \ref{dsearchStart}-\ref{dsearchEnd} doubles its search range in Line \ref{doubling} and will eventually reach \nf{start} such that $\nf{root.blocks[start].sum\sub{enq}}\leq e \leq\nf{root.blocks[start+1].sum\sub{enq}}$. In Line \ref{dsearchBSearch} Binary Search finds $b$ in the range mentioned. Finally $i$ is computed from the definition of \nf{sum\sub{enq}}.
 \end{proof}
-\begin{lemma}[DSearch Analysis]\label{dsearchTime}
-  Assume $\nf{root.blocks[end].sum\sub{enq}} \geq \nf{e}$ and $E_e(root)$'s \nf{element} is the response to some \nf{Dequeue()} operation in \nf{root.blocks[end]}, then  \nf{DSearch(e, end)} takes $\Theta(\log$\nf{root.blocks[b].\size+ root.blocks[end].\size}$)$ steps.
+
+\begin{lemma}[\nf{DSearch} Analysis]\label{dsearchTime}
+If $E_i(root,b)=E_e(root)$\nf{.element} is the response to some \nf{Dequeue()} operation in \nf{root.blocks[end]}, then \nf{DSearch($e$, $end$)} takes $\Theta(\log$ \nf{root.blocks[$b$].size+ root.blocks[$end$].size}$)$ steps.
 \end{lemma}
 \begin{proof}
-First we show $\nf{end} - \nf{b} \leq 2 \times \big(\nf{root.blocks[b].\size}+\nf{root.blocks[end].\size}+1 \big)$. From line \ref{addOP}, we know that \nf{num} field of the every block in the tree is greater than 0. So, each block in \nf{root.blocks[b..end]} contains at least one \nf{Enqueue} or at least one \nf{Dequeue}. Suppose there were more than \nf{root.blocks[b].\size}\nf{Dequeue}s in \nf{root.blocks[b+1..end-1]}. Then the element in the queue which is the response to the \nf{Dequeue()} would become dequeued at some point after \nf{blocks[b]}'s last operations and before \nf{root.blocks[end]}'s first operation. Which means the response to to a \nf{Dequeue} in \nf{root.blocks[end]} could not be in $E(n,b)$. Furthermore since the size of the queue would become \nf{root.blocks[end].\size} after the operations of \nf{root.blocks[end]}, there cannot be more than \nf{root.blocks[b].\size + root.blocks[end-1].\size} \nf{Enqueue}s in \nf{root.blocks[b+1..end-1]}., because there can be at most \nf{root.blocks[b].\size}\nf{Dequeue}s and the final size of the queue is \nf{root.blocks[end-1].\size}. Overall there can be at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} operations in \nf{root.blocks[b+1..end-1]} and since each block size is $\geq 1$ thus there are at most $2 \times$\nf{root.blocks[b].\size+ root.blocks[end].\size} blocks in between \nf{root.blocks[b]} and \nf{root.blocks[end]}. So $\nf{end-b}\leq 2 \times\nf{root.blocks[b].\size}+\nf{root.blocks[end].\size}+1$. See Figure \ref{fig::doubling}.
-
-Now that we know there are at most \nf{root.blocks[b].\size+root.blocks[end].\size} blocks in between \nf{root.blocks[b]} and \nf{root.blocks[end]} then with doubling search in $\Theta \big(\log($\nf{root.blocks[b].\size+root.blocks[end].\size}$)\big)$ steps we reach \nf{start=c} that the \nf{root.blocks[c].sum\sub{enq}} is less than \nf{e} and \nf{end-c} is not more than $2 \times 2 \times \big(\nf{root.blocks[b].\size+root.blocks[end].\size}\big)$. Beause otherwise, then \nf{(end-c)/2} satisfied the $\nf{root.blocks[(end-c)/2].sum\sub{enq}}<\nf{e}$. In line \ref{doubling} the difference between \nf{end} and \nf{start} is doubled. See Figure \ref{fig::doubling}.
-
- After computing \nf{b}, the value \nf{i} is computed via the definition of \nf{sum\sub{enq}} in constant time (Line \ref{DSearchComputei}). So the whole \nf{DSearch} routine takes $\Theta\big(\log(\nf{root.blocks[b].\size+root.blocks[end].\size})\big)$ steps.
-
+First we show $end - b \leq 2 \times \big(\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size} \big)$. From line \ref{addOP}, we know that \nf{num} field of the every block in the tree is greater than 0. So, each block in \nf{root.blocks[b..end]} contains at least one \nf{Enqueue} or at least one \nf{Dequeue}. Suppose there were more than \nf{root.blocks[b].size} \nf{Dequeue}s in \nf{root.blocks[$b+1 \cdots end-1$]}. Then the element in the queue which is the response to the \nf{Dequeue()} would become dequeued at some point before \nf{root.blocks[$end$]}'s first \nf{Dequeue()}. Furthermore in the execution of queue operations with the linearization ordering the size of the queue becomes \nf{root.blocks[$end$].size} after the operations of \nf{root.blocks[end]}. There can be at most \nf{root.blocks[b].\size}\nf{Dequeue}s and the final size of the queue is \nf{root.blocks[end-1].size}. Therefore there cannot be more than \nf{root.blocks[$b$].size + root.blocks[$end-1$].size} \nf{Enqueue}s in \nf{root.blocks[$b+1\cdots end-1$]}. Overall there can be at most $2 \times\nf{root.blocks[$b$].size+ root.blocks[$end$].size}$ operations in \nf{root.blocks[$b+1\cdots end-1$]} and since each block has at least one operation thus there are at most $2 \times$\nf{root.blocks[$b$].size+ root.blocks[$end$].size} blocks in between \nf{root.blocks[$b$]} and \nf{root.blocks[$end$]}. So $end-b\leq 2 \times\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size}$. So the doubling search reaches \nf{start} such that the \nf{root.blocks[start].sum\sub{enq}} is less than $e$ in $\Theta \big(\log(\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size})\big)$ steps. See Figure \ref{fig::doubling}.After Line \ref{dsearchEnd}, Binary Search that finds \nf{b} also takes $\Theta\big(\log(\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size})\big)$. Next, \nf{i} is computed via the definition of \nf{sum\sub{enq}} in constant time (Line \ref{DSearchComputei}). So the claim is proved.
 \end{proof}
 \begin{figure}[hbt]  
   \center\includegraphics[width=6in]{pics/doubling.png}
-  \caption{Distance relations between $b,c,end$}
+  \caption{Distance relations between \nf{start}$,b,end$. \nf{start} is shown with $c$.}
   \label{fig::doubling}
 \end{figure}
 

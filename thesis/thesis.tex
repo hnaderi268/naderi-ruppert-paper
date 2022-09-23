@@ -248,7 +248,7 @@ In this work, we design a queue with $O(\log^2 p +\log n)$ steps per operation, 
 \end{figure}
 
 \paragraph{}
-\textsc{GetIndex}($i$) returns the $i$th operation stored in the block tree sequence. We do that by finding the block $b_i$ containing $i$th element in the root, and then recursively finding the subblock of $b_i$ which contains $i$th element. To make this recursive search faster, instead of iterating over all elements in sequence of blocks we store prefix sum of number of elements in the blocks sequence and pointers to make BSearch faster.
+\textsc{GetIndex}($i$) returns the $i$th operation stored in the block tree sequence. We do that by finding the block $b_i$ containing $i$th element in the root, and then recursively finding the subblock of $b_i$ which contains $i$th element. To make this recursive search faster, instead of iterating over all elements in sequence of blocks we store prefix sum of number of elements in the blocks sequence and pointers to make BinarySearch faster.
 
 Furthermore, in each block, we store the prefix sum of left and right elements. Moreover, for each block, we store two pointers to the last left and right subblock of it (see fig \ref{fig::pointer} and \ref{fig:prefix}).
 
@@ -274,7 +274,7 @@ Furthermore, in each block, we store the prefix sum of left and right elements. 
 
 
 \paragraph{}
-Starting from the root, \textsc{GetIndex}($i$) BSearches $i$ in the prefix sum array to find block containing $i$th operation, then continues recursively calling \textsc{GetElement}($b,i$) to find $i$th element of block $b$. From lemma $\ref{lem:block_size}$ we know a block size is at most $p$. So BSearch takes at most \textsc(O)$(\log p)$, since  with knowing pointers of a block and its previous block we can determine the base \texttt{(domain ?)} to search and its size is \textsc{O}$(p)$.
+Starting from the root, \textsc{GetIndex}($i$) BinarySearches $i$ in the prefix sum array to find block containing $i$th operation, then continues recursively calling \textsc{GetElement}($b,i$) to find $i$th element of block $b$. From lemma $\ref{lem:block_size}$ we know a block size is at most $p$. So BinarySearch takes at most \textsc(O)$(\log p)$, since  with knowing pointers of a block and its previous block we can determine the base \texttt{(domain ?)} to search and its size is \textsc{O}$(p)$.
 
 
 
@@ -381,7 +381,7 @@ Block $b$ contains subblocks in the left and right children. WLOG left subblocks
 
 We store ordering among \texttt{operation}s in the tournament tree constructed by \texttt{node}s. In each \texttt{node} we store pointers to its relatives, an array of \texttt{block}s and an index to the first empty \texttt{block}. Furthermore in \texttt{leaf} nodes there is an array of \texttt{operations} where each \texttt{operation} is stored in one cell with the same index in \texttt{blocks}. There is a \texttt{counter} in each \texttt{node} incrementing after a successful \texttt{Refresh()} step. It means after that some bunch of \texttt{block}s in a node have propagated into the parent then the \texttt{counter} increases. Each new \texttt{block} added to a node sets its \texttt{time} regarding \texttt{counter}. This helps us to know which blocks have aggregated together to a block, not precisely though. We also store the index of the aggregated \texttt{block} of a \texttt{block} with \texttt{time} $i$ in \texttt{super[i]}. 
 
-In each \texttt{block} we store 4 essential stats that implicitly summarize which operations are in the block \texttt{num\textsubscript{enq-left}}, \texttt{num\textsubscript{deq-left}}, \texttt{num\textsubscript{enq-right}}, \texttt{num\textsubscript{deq-right}}. In order to make \texttt{BSearch()}es faster we store prefix sums as well and there are some more general stats that help to make pseudocode more readable but not necessary.
+In each \texttt{block} we store 4 essential stats that implicitly summarize which operations are in the block \texttt{num\textsubscript{enq-left}}, \texttt{num\textsubscript{deq-left}}, \texttt{num\textsubscript{enq-right}}, \texttt{num\textsubscript{deq-right}}. In order to make \texttt{BinarySearch()}es faster we store prefix sums as well and there are some more general stats that help to make pseudocode more readable but not necessary.
 
 To compute the head of the \texttt{queue} before a \texttt{dequeue} two more fields are stored in the root \texttt{size} and \texttt{sum\textsubscript{non-null deq}}. \texttt{size} in a \texttt{block} shows the number of elements after the \texttt{block} has finished and \texttt{sum\textsubscript{non-null deq}} is the total number of non-null dequeues till the \texttt{block}.
 
@@ -528,7 +528,7 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 \While{\tt{root.blocks[start].sum\sub{enq}}$\geq$\tt{e}}
 \State \tt{start= max(start-(end-start), 0)} \label{doubling}
 \EndWhile \label{dsearchEnd}
-\State \tt{b= root.BSearch(sum\sub{enq}, e, start, end)} \label{dsearchBSearch}
+\State \tt{b= root.BinarySearch(sum\sub{enq}, e, start, end)} \label{dsearchBinarySearch}
 \State \tt{i= e- root.blocks[b-1].sum\sub{enq}} \label{DSearchComputei}
 \State\Return \tt{<b,i>}
 \EndFunction{DSearch}
@@ -597,11 +597,11 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 
 \pagebreak
 \Statex $\leadsto$ \textsf{Precondition: \tt{blocks[start..end]} contains a block with field \tt{f} $\geq$ \tt{i}}
-\Function{int}{BSearch}{\sl{field} f, \sl{int} i, \sl{int} start, \sl{int} end}
+\Function{int}{BinarySearch}{\sl{field} f, \sl{int} i, \sl{int} start, \sl{int} end}
 
 \Statex \cmt{\textmd{Does binary search for~the value \tt{i} of the given prefix sum \tt{field}. Returns the index of the leftmost block in \tt{blocks[start..end]} whose \sl{field} \tt{f} is $\geq$ \tt{i}}.}
 %\State \Return \tt{result block's index}
-\EndFunction{BSearch}
+\EndFunction{BinarySearch}
 
 \Statex
 
@@ -641,11 +641,11 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 \If{\tt{this} \bf{is} \tt{leaf}}
 \State\Return \tt{blocks[b].element} \label{getBaseCase}
 \ElsIf{\tt{i $\leq$ blocks[b].num\sub{enq-left}}} \label{leftOrRight} \cmt{$E_i(this,b)$ is in the left child of this node.}
-\State \tt{subBlock= left.\Call{BSearch}{sum\sub{enq}, i+blocks[b-1].sum\sub{enq-left}, blocks[b-1].end\sub{left}+1, blocks[b].end\sub{left}}} \label{leftChildGet}
+\State \tt{subBlock= left.\Call{BinarySearch}{sum\sub{enq}, i+blocks[b-1].sum\sub{enq-left}, blocks[b-1].end\sub{left}+1, blocks[b].end\sub{left}}} \label{leftChildGet}
 \State \Return\tt{left.}\Call{GetEnq}{subBlock, i} 
 \Else
 \State \tt{i= i-blocks[b].num\sub{enq-left}}
-\State\tt{subBlock= right.\Call{BSearch}{sum\sub{enq}, i+right.blocks[b-1].sum\sub{enq-right}, blocks[b-1].end\sub{right}+1, blocks[b].end\sub{right}}} \label{rightChildGet}
+\State\tt{subBlock= right.\Call{BinarySearch}{sum\sub{enq}, i+right.blocks[b-1].sum\sub{enq-right}, blocks[b-1].end\sub{right}+1, blocks[b].end\sub{right}}} \label{rightChildGet}
 \State \Return\tt{right.}\Call{GetEnq}{subBlock, i} 
 \EndIf
 \EndFunction{GetEnq}
@@ -657,7 +657,7 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 \State\Return \tt{<b, i>} \label{indexBaseCase}
 \Else
 \State \tt{dir= (parent.left==n)? left: right} \cmt{check if this node is a left or a right child}
-\State \tt{superBlock= parent.\Call{BSearch}{sum\sub{deq-dir}, i+blocks[b-1].sum\sub{deq}, blocks[b].super-2, blocks[b].super+2}} \label{computeSuper}
+\State \tt{superBlock= parent.\Call{BinarySearch}{sum\sub{deq-dir}, i+blocks[b-1].sum\sub{deq}, blocks[b].super-2, blocks[b].super+2}} \label{computeSuper}
 \Statex\cmt{superblock's group has at most $p$ difference with the value stored in \tt{super[]}.}
 
 \If{\tt{dir {\keywordfont is} left}}
@@ -914,7 +914,7 @@ In the next two lemmas we analyze and prove the correctness of the doubling sear
 If $\nf{root.blocks[$end$].sum\sub{enq}} \geq e$, \nf{DSearch($e$, $end$)} returns \nf{<$b$, $i$>} such that $E_i(root,b)= E_e(root)$.
 \end{lemma}
 \begin{proof}
-\nf{DSearch} performs a doubling search from \nf{root.blocks[end]} to \nf{root.blocks[0]} to find $E_e(root)$. From Lines \ref{setSumEnqLeft}, \ref{setSumEnqRight} we know \nf{sum\sub{enq-left}}, \nf{sum\sub{enq-right}} fields of \nf{blocks} in each node are sorted in non-decreasing order. Since $\nf{sum\sub{enq}}=\nf{sum\sub{enq-left}}+ \nf{sum\sub{enq-right}}$, $\nf{sum\sub{enq}}$ field of \nf{root.block[$0\cdot\cdot end$]} is  also non-decreasing. Furthermore, since $\nf{root.blocks[$0$].sum\sub{enq}}=0$ and $\nf{root.blocks[$end$].sum\sub{enq}} \geq e$, there is a \nf{b} such that $\nf{root.blocks[$b$].sum\sub{enq}} \geq e$ and $\nf{root.blocks[b-1].sum\sub{enq}} < e$. Block \nf{root.blocks[$b$]} contains $E_i(root,b)$. The doubling search on Lines \ref{dsearchStart}-\ref{dsearchEnd} doubles its search range in Line \ref{doubling} and will eventually reach \nf{start} such that $\nf{root.blocks[start].sum\sub{enq}}\leq e \leq\nf{root.blocks[start+1].sum\sub{enq}}$. In Line \ref{dsearchBSearch} Binary Search finds $b$ in the range mentioned. Finally $i$ is computed from the definition of \nf{sum\sub{enq}}.
+\nf{DSearch} performs a doubling search from \nf{root.blocks[end]} to \nf{root.blocks[0]} to find $E_e(root)$. From Lines \ref{setSumEnqLeft}, \ref{setSumEnqRight} we know \nf{sum\sub{enq-left}}, \nf{sum\sub{enq-right}} fields of \nf{blocks} in each node are sorted in non-decreasing order. Since $\nf{sum\sub{enq}}=\nf{sum\sub{enq-left}}+ \nf{sum\sub{enq-right}}$, $\nf{sum\sub{enq}}$ field of \nf{root.block[$0\cdot\cdot end$]} is  also non-decreasing. Furthermore, since $\nf{root.blocks[$0$].sum\sub{enq}}=0$ and $\nf{root.blocks[$end$].sum\sub{enq}} \geq e$, there is a \nf{b} such that $\nf{root.blocks[$b$].sum\sub{enq}} \geq e$ and $\nf{root.blocks[b-1].sum\sub{enq}} < e$. Block \nf{root.blocks[$b$]} contains $E_i(root,b)$. The doubling search on Lines \ref{dsearchStart}-\ref{dsearchEnd} doubles its search range in Line \ref{doubling} and will eventually reach \nf{start} such that $\nf{root.blocks[start].sum\sub{enq}}\leq e \leq\nf{root.blocks[start+1].sum\sub{enq}}$. In Line \ref{dsearchBinarySearch} Binary Search finds $b$ in the range mentioned. Finally $i$ is computed from the definition of \nf{sum\sub{enq}}.
 \end{proof}
 
 \begin{lemma}[\nf{DSearch} Analysis]\label{dsearchTime}
@@ -932,16 +932,16 @@ First we show $end - b \leq 2 \times \big(\nf{root.blocks[$b$].size}+\nf{root.bl
 \pagebreak
 
 \begin{lemma}[Get correctness] \label{get}
-If $\nf{n.blocks[b].num\sub{enq}} \geq \nf{i}$ then \nf{n.GetENQ(b,i)} returns the \nf{element} enqueued by $E_i(n,b)$.
+If $\nf{$n$.blocks[$b$].num\sub{enq}} \geq i$ then \nf{$n$.GetENQ($b$, $i$)} returns $E_i(n,b)$\nf{.element}.
 \end{lemma}
 \begin{proof}
-We are going to prove this lemma by induction on the height of node \nf{n}. For the base case, \nf{n} is a leaf. Leaf blocks each contain exactly one operation, so by the hypothesis, only \nf{n.GetENQ(b,1)} can be called and only when \nf{n.blocks[b]} contains an enqueue. At Line \ref{getBaseCase}, \nf{n.GetENQ(b,1)} returns the \nf{element} of the \nf{enqueue} operation stored in the $b$th block of leaf \nf{n} .
+We are going to prove this lemma by induction on the height of node \nf{n}. For the base case, $n$ is a leaf. Leaf blocks each contain exactly one operation, so only \nf{n.GetENQ(b,1)} can be called when $n$ is a leaf. Line \ref{getBaseCase} of \nf{$n$.GetENQ($b$, $1$)} returns the \nf{element} of the \nf{enqueue} operation stored in the $b$th block of leaf \nf{n} .
 
-For the induction step we prove \nf{n.GetENQ(b, i)} returns $E_i(n,b)$, assuming \nf{n.child.GetENQ(subblock, i)} returns $E_i(n.child,b)$. We argue that  Line \ref{leftOrRight} correctly decides whether the \nf{i}th enqueue in  \nf{b}th block  of internal node \nf{n} is in the  left child or right child subblocks of \nf{n.blocks[b]}. From Definition  \ref{ordering} of $E(n,b)$ we know enqueue operations in a block are ordered from left to right and since the leaves of the tree are ordered by process id from left to right, thus operations from the left subblocks come before operations from the right subblocks in a block (See Figure \ref{figGet}). Furthermore the \nf{num\sub{enq-left}} field  in \nf{n.blocks[b]} stores the number of \nf{enqueue()} operations from the blocks's subblocks in the left child of \nf{n}. So the $i$th enqueue operation is propagated from the right child if \nf{i} is greater than \nf{b.num\sub{enq-left}}. Otherwise we should search for the $i$th enqueue in the left child. By definition \ref{def::subblock} and \ref{def::ops} we need to search in subblocks of \nf{n.blocks[b]} from the range \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} $\cup$ \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}.
+For the induction step we prove if \nf{$n$.child.GetENQ($sb$, i)} returns $E_i(n.child, sb)$ then \nf{$n$.GetENQ($b$, $i$)} returns $E_i(n,b)$.  From Definition  \ref{ordering} of $E(n,b)$ operations from the left subblocks come before the operations from the right subblocks in a block (See Figure \ref{figGet}). \nf{num\sub{enq-left}} field  in \nf{$n$.blocks[$b$]} stores the number of \nf{Enqueue()} operations from the blocks's subblocks in the left child of \nf{n}. So the $i$th enqueue operation is propagated from the right child if and only if $i$ is greater than \nf{$b$.num\sub{enq-left}}. Line \ref{leftOrRight} decides whether the \nf{i}th enqueue in  \nf{b}th block  of internal node \nf{n} is in the  left child or right child subblocks of \nf{n.blocks[b]}. By definition \ref{def::ops} to find an operation in subblocks of \nf{$n$.blocks[$i$]} we need to search in the range \texttt{$n$.left.blocks[$n$.blocks[$i$-1].end\textsubscript{left}+1..$n$.blocks[$i$].end\textsubscript{left}]} $\cup$ \texttt{$n$.right.blocks[$n$.blocks[$i$-1].end\textsubscript{right}+1..$n$.blocks[$i$].end\textsubscript{right}]}.
+ 
+ There are $eb=n.blocks[b-1].sum_{enq-left}$ enqueues in the blocks before the left subblocks of $n$\nf{.blocks[$b$]}, so $E_i(n,b)$ is $E_{i+eb}(n.left)$ which is $E_{i^\prime}(n.left,b^\prime)$ for some $b^\prime$ and $i^\prime$. We can compute $b^\prime$ and then search for $i+eb$th enqueue in \tt{n.left}, where $i^\prime$ is \tt{i+eb-n.left.blocks[}$b^\prime-1$\tt{].sum\sub{enq}}. The parameters in Line \ref{leftChildGet} are for searching $E_{i+eb}(n.left)$ in \nf{n.left.block} in the expected range of blocks, so this \nf{BinarySearch} returns the index of the subblock containing $E_i(n,b)$.
 
-If the $i$th \nf{enqueue} of \nf{n.blocks[b]} is in the left child it would be $i$th enqueue in \texttt{n.left.blocks[n.blocks[i-1].end\textsubscript{left}+1..n.blocks[i].end\textsubscript{left}]} by Definition \ref{def::subblock}. Also, we know there are $eb=n.blocks[b-1].sum_{enq-left}$ enqueues in the blocks before this range, so $E_i(n,b)$ is $E_{i+eb}(n.left)$ which is $E_{i^\prime}(n.left,b^\prime)$ for some $b^\prime$ and $i^\prime$. We can compute $b^\prime$ and then search for $i+eb$th enqueue in \tt{n.left}, where $i^\prime$ is \tt{i+eb-n.left.blocks[}$b^\prime-1$\tt{].sum\sub{enq}}. The parameters in Line \ref{leftChildGet} are for searching $E_{i+eb}(n.left)$ in \nf{n.left.block} in the expected range of blocks, so this \nf{BSearch} returns the index of the subblock containing $E_i(n,b)$.
-
-Otherwise the enqueue we are looking for is in the right child. Then, there are \nf{n.blocks[b].num\sub{enq-left}} enqueues ahead of it in \nf{n.blocks[b]} but not in \texttt{n.right.blocks[n.blocks[i-1].end\textsubscript{right}+1..n.blocks[i].end\textsubscript{right}]}. So we need to search for \nf{i-n.blocks[b].num\sub{enq-left}+ n.blocks[b-1].sum\sub{enq-right}} (Line \ref{rightChildGet}). Other parameters for the left child are chosen similarly to the way they were chosen for the right child. 
+Otherwise the enqueue we are looking for is in the right child. Because left \nf{Enqueue}s are before the right \nf{Enqueues}, there are \nf{n.blocks[b].num\sub{enq-left}} enqueues ahead from the left child. So we need to search for \nf{i-n.blocks[b].num\sub{enq-left}+ n.blocks[b-1].sum\sub{enq-right}} (Line \ref{rightChildGet}). Other parameters for the left child are chosen similar to the right child. 
 
 
 So, in both cases the direct subblock containing $E_i(n,b)$ is computed in Lines \ref{leftChildGet} and \ref{rightChildGet}.
@@ -1046,7 +1046,7 @@ First we show the value read for \nf{super[b.group]} in line 418 is not null.
 We will prove this by induction on the distance of \nf{n} from the \nf{root}. We can see the base case where \nf{n} is root is trivial (Line \ref{indexBaseCase}).
   In the non-root nodes \nf{n.IndexDEQ(b,i)} computes the superblock of the $i$th Dequeue in the $b$th block of \nf{n} in \nf{n.parent} by Lemma \ref{superBlock} (Line \ref{computeSuper}). After that the order in $D(n.parent, superblock)$ is computed. Note that by Lemma \ref{blockSize} in each block there is at most one operation from each process and operations of one type are ordered based on the order in the subblocks (See Figure \ref{fig::orderFromSubblocks}). Finally \nf{index()} is called on \nf{n.parent} recursively and it returns the correct response from induction hypothesis. If the operation was propagated from the right child the number of dequeues from the left child are added to it (Line \ref{considerRight}), because the left child operations come before the right child operations (Definition \ref{ordering}).
 \end{proof}
-\textit{Make sure to show preconditions of all invocation of \nf{BSearch} are satisfied.}
+\textit{Make sure to show preconditions of all invocation of \nf{BinarySearch} are satisfied.}
 
 \begin{figure}[hbt]  
   \center\includegraphics[width=4in]{pics/orderFromSubblocks.png}

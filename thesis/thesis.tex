@@ -657,17 +657,17 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 \State\Return \tt{<b, i>} \label{indexBaseCase}
 \Else
 \State \tt{dir= (parent.left==n)? left: right} \cmt{check if this node is a left or a right child}
-\State \tt{superBlock= parent.\Call{BinarySearch}{sum\sub{deq-dir}, i+blocks[b-1].sum\sub{deq}, blocks[b].super-2, blocks[b].super+2}} \label{computeSuper}
+\State \tt{superBlock= parent.\Call{BinarySearch}{sum\sub{deq-dir}, i+blocks[b-1].sum\sub{deq}, blocks[b].super, blocks[b].super+1}} \label{computeSuper}
 \Statex\cmt{superblock's group has at most $p$ difference with the value stored in \tt{super[]}.}
 
-\If{\tt{dir {\keywordfont is} left}}
+\If{\tt{dir {\keywordfont is} left}} \label{computeISuperStart}
 \State \tt{i+= blocks[b-1].sum\sub{enq}-blocks[superBlock-1].sum\sub{enq-left}} \cmt{consider the enqueues in the previous blocks from the left child} \label{considerPreviousLeft}
 \EndIf
 
-\If{\tt{dir {\keywordfont is} right}}
+\If{\tt{dir {\keywordfont is} right}} \label{considerRight}
 \State \tt{i+= blocks[b-1].sum\sub{enq}-blocks[superBlock-1].sum\sub{enq-right}} \cmt{consider the enqueues in the previous blocks from the right child} \label{considerPreviousRight}
 \State \tt{i+= blocks[superBlock].num\sub{deq-left}} \cmt{consider the dequeues from the right child} \label{considerLeftBeforeRight}
-\EndIf
+\EndIf \label{computeISuperEnd}
 \State \Return\tt{this.parent.}\Call{IndexDeq}{superBlock, i}
 \EndIf
 \EndFunction{IndexDeq}
@@ -1009,37 +1009,30 @@ Let the first successful \nf{p.Refresh()} be \nf{Rp1} and the second next succes
 So \nf{b.super} has set by some process before the second next successful \nf{p.Refresh()} on Line \ref{setSuper1}. Since \nf{i} is read in the Line \ref{readHead} then the \nf{CreateBlock()} in Line \ref{invokeCreateBlock} is going to read  some value fo \nf{left.head} greater than \nf{h} and propagates \nf{b} to \nf{p}. So if \nf{b} was not propagated already we are sure the second next successful \nf{p.Refresh()} propagates \nf{b}.
 \end{proof}
 
-\begin{corollary}
-If \nf{b} has propagated to \nf{f}, then \nf{b.super} has at most 1 difference with the index of the superblock of \nf{b} in \nf{p}.
+\begin{corollary} \label{superRelation}
+If \nf{$n$.blocks[$b$]} is propagated to $n.parent$, then \nf{$n$.blocks[$b$].super} is equal to or one less than the index of the superblock of \nf{$n$.blocks[$b$]}.
 \end{corollary}
 
 
 
-\pagebreak
-\begin{lemma}[Computing SuperBlock]\label{superBlock}
-For the \nf{superblock} value computed in line \ref{computeSuper} of \nf{n.IndexDEQ(b,i)} we have \nf{n.parent.blocks[superblock]} contains $D_{n,b,i}$.
+%\pagebreak
+%\begin{lemma}[Computing SuperBlock]\label{superBlock}
+%For the \nf{superblock} value computed in line \ref{computeSuper} of \nf{n.IndexDEQ(b,i)} we have \nf{n.parent.blocks[superblock]} contains $D_{n,b,i}$.
+%\end{lemma}
+%\begin{proof}
+%First we show the value read for \nf{super[b.group]} in line 418 is not null.
+%  Values \nf{np\textsubscript{dir}} read in lines \ref{setNP}, \nf{super} are set before incrementing in lines \ref{setSuper},\ref{incNP}. So before incrementing \nf{num\sub{propagated}, super[num\sub{propagated}]} is set so it cannot be null while reading. Then by Lemma \ref{superRange}if we search in the range $p$, we can find the superblock.
+%
+%\end{proof}
+Now using Corollary \ref{superRelation} on each step of the \nf{IndexDEQ} we prove its correctness.
+
+\begin{lemma}[\nf{IndexDEQ} correctness]
+ If $1\leq i \leq\nf{$n$.blocks[$b$].num\sub{deq}}$ then \nf{$n$.IndexDEQ($b$,$i$)} returns the rank in $D(root)$ of $D_i(n,b)$.
 \end{lemma}
 \begin{proof}
-First we show the value read for \nf{super[b.group]} in line 418 is not null.
-  Values \nf{np\textsubscript{dir}} read in lines \ref{setNP}, \nf{super} are set before incrementing in lines \ref{setSuper},\ref{incNP}. So before incrementing \nf{num\sub{propagated}, super[num\sub{propagated}]} is set so it cannot be null while reading. Then by Lemma \ref{superRange}if we search in the range $p$, we can find the superblock.
-
+We will prove this by induction on the distance of $n$ from the \nf{root}. The base case where $n$ is \nf{root} is trivial (Line \ref{indexBaseCase}).
+For the non-root nodes \nf{n.IndexDEQ(b,i)} computes the superblock of the $b$th block of $n$ in Line \ref{computeSuper} by Corollary \ref{superRelation}. So preconditions of the invocation of \nf{BinarySearch} is satisfied. After that the order of $D_i(n,b)$ in $D(n.parent, superblock)$ is computed in Lines \ref{computeISuperStart}--\ref{computeISuperEnd}. Note that by Lemma \ref{blockSize} in each block there is at most one \nf{Dequeue} from each process and by Definition \ref{ordering} \nf{Dequeue}s in a block are ordered based on the order of its subblocks  from left to right. Then if $D_i(n,b)$ was propagated from the right child, the number of dequeues in the subblocks from the left child is considered to be ahead of the computed index (Line \ref{considerRight}). Finally \nf{IndexDEQ} is called on \nf{$n$.parent} recursively and it returns the response from induction hypothesis. 
 \end{proof}
-
-\begin{lemma}[Index correctness]
- If $\nf{n.blocks[b].num\sub{deq}}\geq\nf{i}$ then \nf{n.IndexDEQ(b,i)} returns the rank in $D(root)$ of $D_{n,b,i}$.
-\end{lemma}
-\begin{proof}
-We will prove this by induction on the distance of \nf{n} from the \nf{root}. We can see the base case where \nf{n} is root is trivial (Line \ref{indexBaseCase}).
-  In the non-root nodes \nf{n.IndexDEQ(b,i)} computes the superblock of the $i$th Dequeue in the $b$th block of \nf{n} in \nf{n.parent} by Lemma \ref{superBlock} (Line \ref{computeSuper}). After that the order in $D(n.parent, superblock)$ is computed. Note that by Lemma \ref{blockSize} in each block there is at most one operation from each process and operations of one type are ordered based on the order in the subblocks (See Figure \ref{fig::orderFromSubblocks}). Finally \nf{index()} is called on \nf{n.parent} recursively and it returns the correct response from induction hypothesis. If the operation was propagated from the right child the number of dequeues from the left child are added to it (Line \ref{considerRight}), because the left child operations come before the right child operations (Definition \ref{ordering}).
-\end{proof}
-\textit{Make sure to show preconditions of all invocation of \nf{BinarySearch} are satisfied.}
-
-\begin{figure}[hbt]  
-  \center\includegraphics[width=4in]{pics/orderFromSubblocks.png}
-  \caption{Relation of ordering of operations of a block from its subblocks}
-  \label{fig::orderFromSubblocks}
-\end{figure}
-
 
 \pagebreak
 

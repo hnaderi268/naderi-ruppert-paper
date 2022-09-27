@@ -1031,108 +1031,95 @@ Now using Corollary \ref{superRelation} on each step of the \nf{IndexDEQ} we pro
 \end{lemma}
 \begin{proof}
 We will prove this by induction on the distance of $n$ from the \nf{root}. The base case where $n$ is \nf{root} is trivial (Line \ref{indexBaseCase}).
-For the non-root nodes \nf{n.IndexDEQ(b,i)} computes the superblock of the $b$th block of $n$ in Line \ref{computeSuper} by Corollary \ref{superRelation}. So preconditions of the invocation of \nf{BinarySearch} is satisfied. After that the order of $D_i(n,b)$ in $D(n.parent, superblock)$ is computed in Lines \ref{computeISuperStart}--\ref{computeISuperEnd}. Note that by Lemma \ref{blockSize} in each block there is at most one \nf{Dequeue} from each process and by Definition \ref{ordering} \nf{Dequeue}s in a block are ordered based on the order of its subblocks  from left to right. Then if $D_i(n,b)$ was propagated from the right child, the number of dequeues in the subblocks from the left child is considered to be ahead of the computed index (Line \ref{considerRight}). Finally \nf{IndexDEQ} is called on \nf{$n$.parent} recursively and it returns the response from induction hypothesis. 
+For the non-root nodes \nf{$n$.IndexDEQ($b$, $i$)} computes the superblock of the $b$th block of $n$ in Line \ref{computeSuper} by Corollary \ref{superRelation}. So preconditions of the invocation of \nf{BinarySearch} is satisfied. After that the order of $D_i(n,b)$ in $D(n.parent, superblock)$ is computed in Lines \ref{computeISuperStart}--\ref{computeISuperEnd}. Note that by Lemma \ref{blockSize} in each block there is at most one \nf{Dequeue} from each process and by Definition \ref{ordering} \nf{Dequeue}s in a block are ordered based on the order of its subblocks  from left to right. Then if $D_i(n,b)$ was propagated from the right child, the number of dequeues in the subblocks from the left child is considered to be ahead of the computed index (Line \ref{considerRight}). Finally \nf{IndexDEQ} is called on \nf{$n$.parent} recursively and it returns the response from induction hypothesis. 
 \end{proof}
 
 \pagebreak
+We have explained the picture of proof in the first paragraph of proof section. Should I repeat here?
 
-\begin{definition}
-   Assume the operations in $L$ are applied on an empty queue. If element of \nf{enqueue e} is the response to  \nf{dequeue d} then we say \nf{R(d)=e}. If \nf{d} 's response id \nf{null} (queue is empty) then \nf{R(d)=null}.
+\begin{lemma}[satisfiability] \label{linearSat}
+$L$ can be a linearization ordering.
+\end{lemma}
+\begin{proof}
+A linearization for an execution is legal if, $op_{1}$ terminates before $op_{2}$ starts in execution then $op_{1}$ is before $op_{2}$ in the linearization. If $op_{1}$ terminates before $op_{2}$ starts,$op_{1}$\nf{.Append()} has terminated before $op_{2}$\nf{.Append()} started. From Lemma \ref{append} $op_{1}$ is in \nf{root.blocks} before $op_{2}$ starts to propagate. By definition of $L$, $op_{1}$ is linearized before $op_{2}$.
+\end{proof}
+Once some operations are aggregated in one block they will get propagated up to the root together and they can linearized in any order among themselves. The way we have chosen to order the operations in a block makes \nf{GetENQ}, \nf{FindResponse} efficent.
+
+\begin{definition}\label{defNullDeq}
+If a \nf{Dequeue} operation returns null it is called \it{null dequeue}, otherwise it is called \it{non-null dequeue}.
 \end{definition}
 
-\begin{definition}
-In an execution on a queue, the dequeue operations that return some value are called \it{non-null dequeues}.  
-\end{definition}
 \begin{observation} \label{responseToADeq}
 In a sequential execution on a queue, $k$th non-null dequeue returns the \nf{element} of $k$th enqueue.
 \end{observation}
 
+\begin{definition}
+   Assume the operations in \nf{root.blocks} are applied on an empty queue in order of $L$.  If element of \nf{Enqueue} $e$ is the response to \nf{Dequeue} $d$, we say ${Resp(d)=e}$, otherwise if ${d}$ is null dequeue then ${Resp(d)=\nf{null}}$. 
+\end{definition}
+
+\begin{observation}\label{enqBeforeDeq}
+By Definition \ref{ordering} enqueue operations come before dequeue operations in a block.  
+\end{observation}
+
+
+In the next Lemma we talk about what the \nf{size} field in \nf{root} blocks store.
 \begin{lemma}\label{sizeCorrectness}
-  \nf{root.blocks[b].\size}is the \size of the queue if the operations in the prefix for the $b$th block in the root are applied with the order of $L$.  
+  \nf{root.blocks[$b$].\size}is the \size of the queue if the operations in \nf{root.blocks[$0\cdots b$]} are applied in order of~$L$.  
 \end{lemma}
 \begin{proof}
- need to say? :: If the \size of a queue is greater than 0 then a \nf{Dequeue()} would decrease the \size of the queue, otherwise the \size of the queue remains 0. By definition \ref{ordering} enqueue operations come before dequeue operations in a block in $L$.
 
-We prove the claim by induction on \nf{b}. Base case \nf{b=0} is trivial since the queue is initialy empty and \nf{root.blocks[0].size=0}. For \nf{b=i} we are going to use the hypothesis for \nf{b=i-1}. If there are more than \nf{root.blocks[i-1].size+ root.blocks[i].sum\sub{enq}} dequeue operations in \nf{root.blocks[i]} then the queue would become empty after \nf{root.blocks[i]}. Otherwise we can compute the size of the queue after $b$th block using with this equality \nf{root.blocks[b].size= root.blocks[b-1].size+ root.blocks[b].sum\sub{enq}- root.blocks[b].sum\sub{deq}} (Line \ref{computeLength}). See Table \ref{qhistory} for an example of running some blocks of operations on an empty queue.
+
+We prove the claim by induction on $b$. Base case ${b=0}$ is trivial since the queue is initially empty and $\nf{root.blocks[}0\nf{].size}=0$. We are going to show the correctness of case $b=i$ assuming the correctness of $b=i-1$. By \ref{enqBeforeDeq} If there are more than $\nf{root.blocks[}i-1\nf{].size}+\nf{root.blocks[}i\nf{].sum\sub{enq}}$ dequeue operations in \nf{root.blocks[$i$]} then the queue would become empty after \nf{root.blocks[$i$]}, otherwise size of the queue after $b$th block in root is $\nf{root.blocks[}b-1\nf{].size}+ \nf{root.blocks[}b\nf{].sum\sub{enq}}- \nf{root.blocks[}b\nf{].sum\sub{deq}}$  which is same as the assignment on Line \ref{computeLength}.
 \end{proof}
 
-\begin{lemma}[Duality of \#non-null dequeues and \nf{block.size}] \label{numberOfNND}
-If the operations are applied with the order of $L$, the number of non-null dequeues in the prefix for a block \nf{b} is \nf{b.sum\sub{enq}-b.\size}
+Next Lemma is about the relation between \#enqueues, \#non-null dequeues and size.
+\begin{lemma} \label{numberOfNND}
+If operations in the root are applied with the order of $L$, the number of non-null dequeues in $\nf{root.blocks[}0\cdots b\nf{]}$ is \nf{root.blocks[$b$].sum\sub{enq} $-$ root.blocks[$b$].\size}
 \end{lemma}
 \begin{proof}
-There are \nf{b.sum\sub{enq}} enqueue operations in the prefix for \nf{b}, then the size of the queue after the prefix for \nf{b} is \nf{\#enqs - \#non-null dequeues} in the prefix for \nf{b}, by Observation 35. So \nf{\#non-null dequeues} is \nf{b.sum\sub{enq}-b.\size}. The correctness of the \nf{block.\size}field is shown in Lemma \ref{sizeCorrectness}.
+There are \nf{root.blocks[$b$]}\nf{.sum\sub{enq}} enqueue operations in $\nf{root.blocks[}0\cdots b\nf{]}$. Size of the queue after doing $\nf{root.blocks[}0\cdots b\nf{]}$ in order $L$ is  ${\#\it{enqueues }- \#\it{non-null dequeues}}$ in $\nf{root.blocks[}0\cdots b\nf{]}$. By correctness of \nf{size} field from Lemma \ref{sizeCorrectness} $\it{\#non-null dequeues}$ is \nf{root.blocks[$b$]}\nf{.sum\sub{enq}} $-$ \nf{root.blocks[$b$]}\nf{.size}. 
 \end{proof}
+
+\begin{corollary}\label{numNullDeqBlock}
+  If operations in the root are applied with the order of $L$, the number of non-null dequeues in $\nf{root.blocks[}b\nf{]}$ is \nf{root.blocks[$b$].num\sub{enq} $-$ root.blocks[$b$].\size $+$ root.blocks[$b-1$].\size}
+\end{corollary}
+
 
 \begin{lemma}\label{nullReturn}
 \nf{R(D\sub{root,b,i})} is \nf{null} iff \nf{root.blocks[b-1].\size+ root.blocks[b].num\sub{enq}- i <0}.
 \end{lemma}
-
+\begin{proof}
+From \ref{numNullDeqBlock}, \ref{defNullDeq} and \ref{enqBeforeDeq}.
+\end{proof}
 
 \begin{lemma}[Computing Response] \label{computeHead}
-\nf{FindResponse(b,i)} returns \nf{R(D\sub{root,b,i}).element}.
+\nf{FindResponse($b$, $i$)} returns $Resp(D_i(root,b))$\nf{.element}.
 \end{lemma}
 \begin{proof}
-First note that by Definition \ref{ordering} the linearization ordering  of operations will not change as new operations come so instead of talking about the linearization of operations before the $E_i(root, b)$ we talk about what if the whole operation in the linearization are applied on a queue.
+Note that by Definition \ref{ordering} the linearization ordering  of operations will not change as new operations come so instead of talking about the linearization of operations before the $E_i(root, b)$ we talk about what if the whole operation in the linearization are applied on a queue.
 
-$D_{root,b,i}$ is $D_{root,root.blocks[b-1].sum_{deq}+i}$ from the definition \ref{ordering} and \it{$sum_{enq}$}.  $D_{root,b,i}$ returns \nf{null} if \nf{root.blocks[b-1].\size+ root.blocks[b].num\sub{enq}- i <0} by Lemma \ref{nullReturn} (Line \ref{checkEmpty}). Otherwise if it is $d^\prime$th non-null dequeue in $L$ it returns $d^\prime$th enqueue by Observation \ref{responseToADeq} . By Lemma \ref{numberOfNND} there are \nf{root.blocks[b-1].sum\sub{enq} - root.blocks[b-1].\size} non-null dequeue operations before prefix for \nf{root.blocks[b-1]}. Note that the dequeues in \nf{root.blocks[b]} before the $i$th dequeue are non-null dequeues. So the response is $E_{i - root.blocks[b-1].size + root.blocks[b-1].sum\sub{deq}}(root)$ (Line \ref{computeE}). See figure \ref{computeResponseDetail}.
+$D_i(root,b)$ is $D_{root.blocks[b-1].sum_{deq}+i}(root)$ from the Definitions \ref{ordering} and \it{$sum_{deq}$}.  $D_i(root,b)$ returns \nf{null} if $\nf{root.blocks[}$b-1$\nf{].size}+ \nf{root.blocks[}b\nf{].num\sub{enq}}- i <0$ by Lemma \ref{nullReturn} (Line \ref{checkEmpty}). Otherwise if it is $k$th non-null dequeue in $L$ it returns $k$th enqueue by Observation \ref{responseToADeq}. By Lemma \ref{numberOfNND} there are \nf{root.blocks[$b-1$].sum\sub{enq} $-$ root.blocks[$b-1$].\size} non-null dequeue operations in $\nf{root.blocks[}0\cdots b-1\nf{]}$. Note that the dequeues in \nf{root.blocks[$b$]} before $D_i(root,b)$ are non-null dequeues. So the response is $E_{i - root.blocks[b-1].size + root.blocks[b-1].sum\sub{deq}}(root)$ (Line \ref{computeE}). See figure \ref{computeResponseDetail}.
 
-After computing \nf{e} we can find \nf{b,i} such that $E_i(root,b)=E_e(root)$ using \nf{DSearch} and then find its \nf{element} using \nf{GetEnq} (Line \ref{findAnswer}).
+After computing \nf{e}, the code finds \nf{$b$,$i$} such that $E_i(root,b)=E_e(root)$ by \nf{DSearch} and then finds its \nf{element} using \nf{GetEnq} (Line \ref{findAnswer}).
 \end{proof}
 
 \begin{figure}[hbt]  
-  \center\includegraphics[width=2in]{pics/computeResponseDetail.png}\caption{The position of $E_i(root,b)$.}
+  \center\includegraphics[width=2in]{pics/computeResponseDetail.png}\caption{The position of $D_i(root,b)$.}
 \label{computeResponseDetail}
 \end{figure}
 
-\begin{table}[hbt]
-\centering
-  \begin{tabular}{c|c|c|c|c}
-    \hline &\texttt{DEQ()} & \texttt{ENQ(5)}, \texttt{ENQ(2)}, \texttt{ENQ(1)}, \texttt{DEQ()}& \texttt{ENQ(3)}, \texttt{DEQ()}&  \texttt{ENQ(4)}, \texttt{DEQ()}, \texttt{DEQ()}, \texttt{DEQ()}, \texttt{DEQ()}\\ \hline
-    \#enqueues & 0 & 3 & 1 & 1 \\ \hline
-        \#dequeues & 1 & 1 & 1 & 4 \\ \hline
-            \#non-null dequeues & 0 & 1 & 2 & 5 \\ \hline
-                size & 0 & 2 & 2 & 0 \\ \hline
-  \end{tabular}
-  \caption{An example of root blocks fields. Blocks are from left to right and operations in the blocks are also from the left to right.}\label{qhistory}
-\end{table}
-
-
-%\begin{proof}
-%  \nf{head} is incremented in lines 51, 54 after trying to append a block to the index of the last \nf{head} read. If it was successful, we have to do this, but if it was unsuccessful, it means it has appended to the index before, so we have to update the \nf{head}. If a process dies before line 51, another process will increment \nf{head} in line 54.
-%\end{proof} 
-
-\pagebreak
+\begin{lemma}[correctness]\label{linearCorrect}
+  If operations are applied as $L$ on a sequential queue, the sequence of the responses would be the same as our algorithm.
+\end{lemma}
+\begin{proof}
+Enqueue operations do not return any value so they are fine. Response of a dequeue in sequential execution of $L$ is same as our algorithm from \ref{computeHead}.  
+\end{proof}
 
 \begin{theorem}[Main]
 The queue implementation is linearizable.
 \end{theorem}
 \begin{proof}
-  We choose $L$ in Definition \ref{ordering} to be linearization ordering of operations and prove if we linearize operations as $L$ the queue works consistently.
-\end{proof}
-%\begin{lemma}
-%Operations in a block have a time point in common (There is a time $t$ all the operations are running).
-%\end{lemma}
-
-\begin{lemma}[satisfiability]
-$L$ can be a linearization ordering.
-\end{lemma}
-\begin{proof}
-To show this we need to say if in an execution, \nf{op\sub{1}} terminates before \nf{op\sub{2}} starts then \nf{op\sub{1}} is linearized before \nf{op\sub{2}}. If \nf{op\sub{1}} terminates before \nf{op\sub{2}} starts it means \nf{op\sub{1}.Append()} is terminated before \nf{op\sub{2}.Append()} starts. From Lemma \ref{append} \nf{op\sub{1}} is in \nf{root.blocks} before \nf{op\sub{2}} propagates so \nf{op\sub{1}} is linearized before \nf{op\sub{2}} by Definition \ref{ordering}.
-
-Once some operations are aggregated in one block they will be propagated together up to the root and we can linearize them in any order among themselves. Furthermore in L we arbitrary choose the order to be by process id, since it makes computations in the blocks faster .
-\end{proof}
-
-\begin{lemma}[correctness]
-  If operations are applied as $L$ on a sequential queue, the sequence of the responses would be the same as our algorithm.
-\end{lemma}
-
-\begin{proof}
-\it{Old parts to review}
-  We show that the ordering $L$ stored in the root, satisfies the properties of a linearizable ordering.
-  \begin{enumerate}
-    \item If $op_1$ ends before $op_2$ begins in $E$, then $op_1$ comes before $op_2$ in $T$.\\$\blacktriangleright$ This is followed by Lemma \ref{append}. The time $op_1$ ends it is in root, before $op_2$, by Definition \ref{ordering} $op_1$ is before $op_2$.
-    \item Responses to operations in $E$ are same as they would be if done sequentially in order of $L$. \\$\blacktriangleright$ Enqueue operations do not have any response so it does no matter how they are ordered. It remains to prove  Dequeue $d$ returns the correct response according to the linearization order. By Lemma \ref{computeHead} it is deduced that the head of the queue at time of the linearization of $d$ is computed properly. If the Queue is not empty by Lemma \ref{get} we know that the returning response is the computed index element.
-  \end{enumerate} 
+From \ref{linearSat}, \ref{linearCorrect}.
 \end{proof}
 
 \pagebreak

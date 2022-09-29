@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE ipe SYSTEM "ipe.dtd">
 <ipe version="70218" creator="Ipe 7.2.24">
-<info created="D:20220525113452" modified="D:20220530093249"/>
+<info created="D:20220525113452" modified="D:20220928195007"/>
 <ipestyle name="basic">
 <symbol name="arrow/arc(spx)">
 <path stroke="sym-stroke" fill="sym-stroke" pen="sym-pen">
@@ -338,11 +338,11 @@ h
 <use matrix="1 0 0 1 -16 0" name="mark/disk(sx)" pos="320 672" size="normal" stroke="black"/>
 <use name="mark/disk(sx)" pos="368 672" size="normal" stroke="black"/>
 <use name="mark/disk(sx)" pos="400 720" size="normal" stroke="black"/>
-<text matrix="1 0 0 1 -32 0" transformations="translations" pos="96 768" stroke="black" type="label" width="64.785" height="6.918" depth="0" valign="baseline">i= read n.head</text>
-<text matrix="1 0 0 1 -80 0" transformations="translations" pos="240 768" stroke="black" type="label" width="161.699" height="6.919" depth="0.83" valign="baseline">n.head has been incremented: i$\rightarrow$i+1</text>
-<text matrix="1 0 0 1 -64 16" transformations="translations" pos="432 752" stroke="black" type="label" width="174.43" height="6.919" depth="0.83" valign="baseline">n.head has been incremented: i+1$\rightarrow$i+2</text>
-<text matrix="1 0 0 1 -32 0" transformations="translations" pos="304 624" stroke="black" type="label" width="77.515" height="6.919" depth="0.83" valign="baseline">i+1= read n.head</text>
-<text matrix="1 0 0 1 -64 0" transformations="translations" pos="368 592" stroke="black" type="label" width="156.552" height="7.473" depth="2.49" valign="baseline">successful TryAppend(i+1) attempt</text>
+<text matrix="1 0 0 1 -32 0" transformations="translations" pos="96 768" stroke="black" type="label" width="68.8" height="6.918" depth="0" valign="baseline">$i$= read $n$\texttt{.head}</text>
+<text matrix="1 0 0 1 -80 0" transformations="translations" pos="240 768" stroke="black" type="label" width="196.019" height="6.919" depth="0.83" valign="baseline">$n$\texttt{.head} has been incremented from $i$ to $i+1$</text>
+<text matrix="1 0 0 1 -64 16" transformations="translations" pos="432 752" stroke="black" type="label" width="213.176" height="6.919" depth="0.83" valign="baseline">$n$\texttt{.head} has been incremented from $i+1$  to $i+2$</text>
+<text matrix="1 0 0 1 -32 0" transformations="translations" pos="304 624" stroke="black" type="label" width="85.958" height="6.919" depth="0.83" valign="baseline">$i+1$= read $n$\texttt{.head}</text>
+<text matrix="1 0 0 1 -64 0" transformations="translations" pos="368 592" stroke="black" type="label" width="139.839" height="6.919" depth="0.83" valign="baseline">successful $n$\texttt{.blocks[}$i+1$\texttt{].CAS}</text>
 <path stroke="black" arrow="normal/normal">
 144 720 m
 144 752
@@ -374,8 +374,8 @@ h
 </path>
 <use name="mark/disk(sx)" pos="128 576" size="normal" stroke="black"/>
 <use name="mark/disk(sx)" pos="432 576" size="normal" stroke="black"/>
-<text transformations="translations" pos="128 560" stroke="black" type="label" width="8.856" height="6.42" depth="0" valign="baseline">t1</text>
-<text transformations="translations" pos="432 560" stroke="black" type="label" width="8.856" height="6.42" depth="0" valign="baseline">t2</text>
+<text transformations="translations" pos="128 560" stroke="black" type="label" width="13.986" height="6.128" depth="2.49" valign="baseline">$_{R_1}t$</text>
+<text transformations="translations" pos="432 560" stroke="black" type="label" width="13.986" height="6.128" depth="2.49" valign="baseline">$t_{R_2}$</text>
 <path stroke="black">
 480 656 m
 288 656 l

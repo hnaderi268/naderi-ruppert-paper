@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE ipe SYSTEM "ipe.dtd">
 <ipe version="70218" creator="Ipe 7.2.24">
-<info created="D:20220713134906" modified="D:20220928224237"/>
+<info created="D:20220928201710" modified="D:20220928201710"/>
 <ipestyle name="basic">
 <symbol name="arrow/arc(spx)">
 <path stroke="sym-stroke" fill="sym-stroke" pen="sym-pen">
@@ -312,109 +312,24 @@ h
 <page>
 <layer name="alpha"/>
 <view layers="alpha" active="alpha"/>
-<path layer="alpha" stroke="black">
-128 720 m
-128 704 l
-448 704 l
-448 720 l
-h
+<path layer="alpha" stroke="black" arrow="normal/normal">
+32 512 m
+560 512 l
 </path>
-<path stroke="black">
-432 720 m
-432 704 l
-448 704 l
-448 720 l
-h
-</path>
-<path stroke="black">
-320 720 m
-320 704 l
-336 704 l
-336 720 l
-h
-</path>
-<path stroke="black">
-256 720 m
-256 704 l
-272 704 l
-272 720 l
-h
-</path>
-<path stroke="black">
-240 720 m
-240 704 l
-256 704 l
-256 720 l
-h
-</path>
-<path stroke="black">
-208 704 m
-208 720 l
-192 720 l
-192 704 l
-h
-</path>
-<text transformations="translations" pos="192 688" stroke="black" type="label" width="21.903" height="6.128" depth="0" valign="baseline" style="math">start</text>
-<text matrix="1 0 0 1 0 -16" transformations="translations" pos="240 688" stroke="black" type="label" width="21.433" height="6.919" depth="0.83" valign="baseline" style="math">b-1</text>
-<text matrix="1 0 0 1 0 16" transformations="translations" pos="256 672" stroke="black" type="label" width="9.81" height="6.918" depth="0" valign="baseline" style="math">\;\;b</text>
-<text matrix="1 0 0 1 -16 0" transformations="translations" pos="320 688" stroke="black" type="label" width="45.019" height="8.771" depth="3.43" valign="baseline" style="math">\;\;\frac{end-start}{2}</text>
-<text transformations="translations" pos="432 688" stroke="black" type="label" width="15.804" height="6.918" depth="0" valign="baseline" style="math">end</text>
-<text transformations="translations" pos="432 736" stroke="black" type="label" width="120.597" height="7.472" depth="2.85" valign="baseline" style="math">root.blocks[end].sum_{enq}\geq i</text>
-<text matrix="1 0 0 1 16 16" transformations="translations" pos="256 736" stroke="black" type="label" width="109.068" height="7.472" depth="2.85" valign="baseline" style="math">root.blocks[b].sum_{enq}\geq i</text>
-<text matrix="1 0 0 1 -48 32" transformations="translations" pos="240 752" stroke="black" type="label" width="126.226" height="7.472" depth="2.85" valign="baseline" style="math">root.blocks[b-1].sum_{enq}&lt;i</text>
-<path stroke="black">
-448 720 m
-448 704 l
-480 704 l
-480 720 l
-h
-</path>
-<path stroke="black">
-240 720 m
-224 752
-240 784 c
-</path>
-<path stroke="black">
-256 720 m
-256 736
-272 752 c
-</path>
-<path stroke="black">
-432 720 m
-432 736 l
-</path>
-<path stroke="black">
-240 704 m
-224 688
-240 672 c
-</path>
-<path stroke="black" fill="lightgreen">
-272 720 m
-272 704 l
-256 704 l
-256 720 l
-h
-</path>
-<path stroke="black" fill="red">
-208 720 m
-208 704 l
-192 704 l
-192 720 l
-h
-</path>
-<path stroke="black" fill="red">
-256 720 m
-256 704 l
-240 704 l
-240 720 l
-h
-</path>
-<path stroke="black" fill="green">
-448 720 m
-448 704 l
-432 704 l
-432 720 l
-h
-</path>
+<use matrix="1 0 0 1 -16 0" name="mark/disk(sx)" pos="80 512" size="5" stroke="black"/>
+<use name="mark/disk(sx)" pos="144 512" size="5" stroke="black"/>
+<use name="mark/disk(sx)" pos="272 512" size="5" stroke="black"/>
+<use name="mark/disk(sx)" pos="368 512" size="5" stroke="black"/>
+<use name="mark/disk(sx)" pos="496 512" size="5" stroke="black"/>
+<text matrix="1 0 0 1 -16 -48" transformations="translations" pos="80 544" stroke="black" type="label" width="16.009" height="9.2" depth="2.65" valign="baseline">$t^{R_n}_{310}$</text>
+<text transformations="translations" pos="144 496" stroke="black" type="label" width="16.009" height="9.2" depth="2.65" valign="baseline">$t^{R_n}_{321}$</text>
+<text transformations="translations" pos="272 496" stroke="black" type="label" width="16.009" height="9.392" depth="2.47" valign="baseline">$t^{R&apos;}_{326}$</text>
+<text transformations="translations" pos="368 496" stroke="black" type="label" width="18.99" height="9.277" depth="2.65" valign="baseline">$t^{R&quot;_n}_{327}$</text>
+<text transformations="translations" pos="496 496" stroke="black" type="label" width="16.009" height="10.169" depth="2.65" valign="baseline">$t^{R_p}_{334}$</text>
+<text matrix="1 0 0 1 -16 0" transformations="translations" pos="64 528" stroke="black" type="label" width="48.388" height="6.918" depth="0" valign="baseline">$n$\texttt{.head}$=h$</text>
+<text matrix="1 0 0 1 -32 -48" transformations="translations" pos="128 528" stroke="black" type="label" width="120.602" height="6.922" depth="1.38" valign="baseline">$n$\texttt{.blocks[$h$].CAS(null,$b$)}</text>
+<text matrix="1 0 0 1 -96 64" transformations="translations" pos="288 464" stroke="black" type="label" width="163.692" height="6.922" depth="2.21" valign="baseline">$n$\texttt{.blocks[$h$].super.CAS(null, $hp$)}</text>
+<text matrix="1 0 0 1 -48 -48" transformations="translations" pos="368 528" stroke="black" type="label" width="102.612" height="6.922" depth="1.38" valign="baseline">$n$\texttt{.head.CAS($h$, $h+1$)}</text>
+<text matrix="1 0 0 1 -16 64" transformations="translations" pos="480 464" stroke="black" type="label" width="68.186" height="6.923" depth="1.49" valign="baseline">\texttt{new.end\textsubscript{left}}$ &gt; h$</text>
 </page>
 </ipe>

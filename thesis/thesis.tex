@@ -722,7 +722,7 @@ Initially the invariant is true since $n.\nf{head}=1$, $n.\nf{blocks[0]}\neq\nf{
 
 In the algorithm, $n.\nf{blocks}$ is modified only on Line \ref{cas}, which updates $n.\nf{blocks[$h$]}$ where $h$ is the value read from $n.\nf{head}$ in Line \ref{readHead}. Since the \nf{CAS} in Line \ref{cas} is successful it means $n.\nf{head}$ has not changed from $h$ before doing the \nf{CAS}: if $n$\nf{.head} had changed before the \nf{CAS} then it would be greater than $h$ by Observation \ref{nonDecreasingHead} and hence $n$\nf{.blocks[}$h$\nf{]}$\neq$\nf{null} and by the induction hypothesis, so the \nf{CAS} would fail. Writing into \nf{$n$.blocks[$h$]} when $h=n$\nf{.head} preserves the invariant, since the claim does not talk about the content of \nf{$n$.blocks[$n$.head]}.
 
-The value of \nf{n.head} is modified only in Line \ref{incrementHead} of \nf{Advance()}. If $n$\nf{.head} is incremented to $h+1$ it is sufficient to show \nf{n.blocks[$h$]}$\neq$\nf{null}. \nf{Advance()} is called  in Lines \ref{helpAdvance} and \ref{advance}. For Line \ref{helpAdvance}, $n.\nf{blocks[h]}\neq\nf{null}$ because of the \nf{if} condition in Line \ref{ifHeadnotNull}. For Line \ref{advance}, Line \ref{cas} was finished  before doing \ref{advance} whether Line \ref{cas} is successful or not, $n.\nf{blocks[h]}\neq\nf{null}$ after the $n$\nf{.blocks[$h$].CAS}. 
+The value of \nf{n.head} is modified only in Line \ref{incrementHead} of \nf{Advance()}. If $n$\nf{.head} is incremented to $h+1$ it is sufficient to show \nf{n.blocks[$h$]}$\neq$\nf{null}. \nf{Advance()} is called  in Lines \ref{helpAdvance} and \ref{advance}. For Line \ref{helpAdvance}, $n.\nf{blocks[h]}\neq\nf{null}$ because of the \nf{if} condition in Line \ref{ifHeadnotNull}. For Line \ref{advance}, Line \ref{cas} was finished  before doing \ref{advance}. Whether Line \ref{cas} is successful or not, $n.\nf{blocks[h]}\neq\nf{null}$ after the $n$\nf{.blocks[$h$].CAS}. 
 \end{proof}
 
 We define the subblocks of a block recursively.
@@ -743,7 +743,7 @@ Consider the block $b$ written into \nf{n.blocks[$i$]} by \nf{CAS} at Line \ref{
 Subblocks of any two blocks in node $n$ do not overlap.  
 \end{lemma}
 \begin{proof}
-We are going to prove the lemma by contradiction. Consider the lowest \nf{node} $n$ in the tree that violates the claim. Then subblocks of $n\nf{.blocks[}i\nf{]}$ and $n\nf{.blocks[}j\nf{]}$ overlap for some $i<j$. Since $n$ is the lowest node in the tree violating the claim, direct subblocks of blocks of $n\nf{.blocks[}i\nf{]}$ and $n\nf{.blocks[}j\nf{]}$ have to overlap. Without loss of generality assume left child subblocks of $n\nf{.blocks[}i\nf{]}$ overlap with the left child subblocks of $n\nf{.blocks[}j\nf{]}$. By Lemma \ref{lem::headProgress} we have $ \nf{$n$.blocks[$i$].end\sub{left}} \leq \nf{$n$.blocks[$j-1$].end\sub{left}}$, so the ranges $[\nf{$n$.blocks[$i-1$].end\sub{left}}+1 \cdots \nf{$n$.blocks[$i$].end\sub{left}}]$ and $[\nf{$n$.blocks[$j-1$].end\sub{left}}+1 \cdots \nf{$n$.blocks[$j$].end\sub{left}}]$ cannot overlap. Therefore, direct subblocks of $n.blocks[i]$ and $n.blocks[j]$ cannot overlap.
+We are going to prove the lemma by contradiction. Consider the lowest \nf{node} $n$ in the tree that violates the claim. Then subblocks of $n\nf{.blocks[}i\nf{]}$ and $n\nf{.blocks[}j\nf{]}$ overlap for some $i<j$. Since $n$ is the lowest node in the tree violating the claim, direct subblocks of blocks of $n\nf{.blocks[}i\nf{]}$ and $n\nf{.blocks[}j\nf{]}$ have to overlap. Without loss of generality assume left child subblocks of $n\nf{.blocks[}i\nf{]}$ overlap with the left child subblocks of $n\nf{.blocks[}j\nf{]}$. By Lemma \ref{lem::headProgress} we have $ \nf{$n$.blocks[$i$].end\sub{left}} \leq \nf{$n$.blocks[$j-1$].end\sub{left}}$, so the ranges $[\nf{$n$.blocks[$i-1$].end\sub{left}}+1 \cdots \nf{$n$.blocks[$i$].end\sub{left}}]$ and $[\nf{$n$.blocks[$j-1$].end\sub{left}}+1 \cdots \nf{$n$.blocks[$j$].end\sub{left}}]$ cannot overlap. Therefore, direct subblocks of \nf{$n$.blocks[$i$]} and \nf{$n$.blocks[$j$]} cannot overlap.
 \end{proof}
 
 \begin{definition}[Superblock]
@@ -829,81 +829,80 @@ D(n,b) =&  D(n\nf{.left},n\nf{.blocks[}b-1\nf{].end\sub{left}}+1)\cdots D(n\nf{.
 In this section we explain why two \nf{Refresh}es are enough to propagate a nodes operations to its parent.
 
 \begin{definition}
-Let $t^{op}$ be the time $op$ is invoked and $^{op}t$ be the time $op$ terminates.
-  Let $t_{l}$ be the time immediately before executing Line $l$ and $_{l}t$ be the time immediately after executing Line $l$. Let $^{op}_{l}t$ is the time immediately before running Line $l$ of operation $op$ and   $t_{l}^{op}$ is the immediate time after running Line $l$ of operation $op$. In the text $v_l$ is the value of variable \nf{v} immediately after line $l$ for the process we are talking about and $v_t$ is the value of variable \nf{v} at time $t$.
+Let $t^{op}$ be the time $op$ is invoked, $^{op}t$ be the time $op$ terminates, $t_{l}^{op}$ be the time immediately before running Line $l$ of operation $op$ and $^{op}_{l}t$ be the time immediately after running Line $l$ of operation $op$. We sometimes suppress $op$ and write $t_{l}$ or $_l t$ if $op$ is clear in the context. In the text $v_l$ is the value of variable \nf{v} immediately after line $l$ for the process we are talking about and $v_t$ is the value of variable \nf{v} at time $t$.
 \end{definition} 
 
 \begin{definition} [Successful Refresh]
   An instance of \nf{Refresh()} is \it{successful} if its \nf{CAS} in Line \ref{cas} returns \nf{true}. If a successful instance of \nf{Refresh()} terminates, we say it is \it{complete.}
 \end{definition}
 
-In the next two results we show for every successful \nf{Refresh()}, all the operations established  in the children before the \nf{Refresh} are established in the parent after the \nf{Refresh}'s succesful \nf{CAS} at Line \ref{cas}.
+In the next two results we show for every successful \nf{Refresh()}, all the operations established  in the children before the \nf{Refresh} are in the parent after the \nf{Refresh}'s successful \nf{CAS} at Line \ref{cas}.
 
 \begin{lemma} \label{lem::trueRefresh}
-If $R$ is a successful instance of \nf{$n$.Refresh()}, then we have $EST_{n\nf{.left}}^{t^R} \; \cup \; EST_{n\nf{.right}}^{t^R} \subseteq ops(n.blocks_{\ref{cas}})$.
+If $R$ is a successful instance of \nf{$n$.Refresh()}, then we have $EST_{n\nf{.left}}^{t^R} \; \cup \; EST_{n\nf{.right}}^{t^R} \subseteq ops(n\nf{.blocks}_{\ref{cas}})$.
 \end{lemma}
 \begin{proof}
 
 We show 
-\begin{align*}
+\vspace{-2em}\begin{align*}
 EST_{n\nf{.left}}^{t^R}&= ops(n\nf{.left.blocks[0..n.left.head$_{309}-1$]}) \\
-&\subseteq ops(n.blocks_{\ref{cas}}) = ops(n\nf{.blocks[0..}n.head_{\ref{cas}}\nf{]}).
+&\subseteq ops(n\nf{.blocks}_{\ref{cas}}) = ops(n\nf{.blocks[0..}n\nf{.head}_{\ref{cas}}\nf{]}).
 \end{align*}
 
-Line \ref{cas} stores a block \nf{new} in $n$ that has $\nf{end\sub{left}}=n.left.head_{\ref{lastLine}}-1$. Therefore by Definition \ref{def::subblock}, after the successful \nf{CAS} in Line \ref{cas} we know all blocks in \nf{$n$.left.blocks[$1\cdots n.left.head_{\ref{lastLine}}-1$]} are subblocks of \nf{n.blocks[$1\cdots n.head_{\ref{readHead}}$]}. Because of Lemma \ref{nonDecreasingHead} we have $n.left.head_{309}-1<n.left.head_{\ref{lastLine}}-1$ and $n.head_{\ref{readHead}}<n.head_{\ref{cas}}$. From Observation \ref{lem::blocksOrder} the claim follows.  The proof for the right child is the same.
+Line \ref{cas} stores a block \nf{new} in $n$ that has $\nf{end\sub{left}}=n\nf{.left.head}_{\ref{lastLine}}-1$. Therefore, by Definition \ref{def::subblock}, after the successful \nf{CAS} in Line \ref{cas} we know all blocks in \nf{$n$.left.blocks[$1\cdots n\nf{.left.head}_{\ref{lastLine}}-1$]} are subblocks of \nf{n.blocks[$1\cdots n\nf{.head}_{\ref{readHead}}$]}. Because of Lemma \ref{nonDecreasingHead} we have $n\nf{.left.head}_{309}-1<n\nf{.left.head}_{\ref{lastLine}}-1$ and $n\nf{.head}_{\ref{readHead}}<n\nf{.head}_{\ref{cas}}$. From Observation \ref{lem::blocksOrder} the claim follows.  The proof for the right child is the same.
 \end{proof}
 
-\begin{figure}[hbt]
-  \center\includegraphics[width=5in]{pics/trueRefresh}
-  \caption{TODO :: Is this picture good or should I remove it? New established operations of the left child are in the new block.(TO UPDATE)}
-\end{figure}
+% \begin{figure}[hbt]
+%   \center\includegraphics[width=5in]{pics/trueRefresh}
+%   \caption{TODO :: Is this picture good or should I remove it? New established operations of the left child are in the new block.(TO UPDATE)}
+% \end{figure}
 
 \begin{corollary}\label{lem::prectrueRefresh}
 If $R$ is a complete instance \nf{$n$.Refresh()}, then we have $EST_{n\nf{.left}}^{t^R} \; \cup \; EST_{n\nf{.right}}^{t^R} \subseteq EST_{n}^{^Rt}$.
 \end{corollary}
 \begin{proof}
-The left hand side is the same as Lemma \ref{lem::trueRefresh}, so it is sufficient to show when \nf{R} terminates the established blocks in $n$ are a superset of $n$\nf{.blocks} after Line \ref{cas}.    Because of Lemma \ref{lem::headInc}  we are sure that $n$\nf{.head} is incremented after line \ref{incrementHead}. So the block \nf{new} appended to \nf{n} at Line \ref{cas} is established at $^Rt$. 
+The left hand side is the same as Lemma \ref{lem::trueRefresh}, so it is sufficient to show when $R$ terminates the established blocks in $n$ are a superset of $n$\nf{.blocks}$_{\ref{cas}}$. Line \ref{cas} writes the block \nf{new} in $n$\nf{.blocks[$h$]} where $h$ is value of $n$\nf{.head} read at Line \ref{readHead}.  Because of Lemma \ref{lem::headInc}  we are sure that $n\nf{.head}>h$ when $R$ terminates. So the block \nf{new} appended to $n$ at Line \ref{cas} is established at $^Rt$. 
 \end{proof}
 
 \pagebreak
 
-In the next lemma we show that if two consecutive instances of \nf{Refresh()} by the same process on node $n$ fail, then the established blocks in the children of $n$ before the first \nf{Refresh()} are guaranteed to be in $n$ after the second \nf{Refresh()}.
+In the next lemma we show that if two consecutive instances of \nf{Refresh()} by the same process on node $n$ fail, then the blocks established in the children of $n$ before the first \nf{Refresh()} are guaranteed to be in $n$ after the second \nf{Refresh()}.
 
 \begin{lemma} \label{doubleRefresh}
-  Consider two consecutive terminating instances $R_1$, $R_2$ of \nf{Refresh()} on internal node $n$ by process $p$. If neither $R_1$ nor $R_2$ is a successful \nf{Refresh()}, then we have $EST_{n\nf{.left}}^{t^R{_1}} \; \cup \; EST_{n\nf{.right}}^{t^R{_1}} \subseteq EST_{n}^{^R{_2}t}$.
+  Consider two consecutive terminating instances $R_1$, $R_2$ of \nf{Refresh()} on internal node $n$ by process $p$. If neither $R_1$ nor $R_2$ is a successful \nf{Refresh()}, then we have $EST_{n\nf{.left}}^{t^{R{_1}}} \; \cup \; EST_{n\nf{.right}}^{t^{R{_1}}} \subseteq EST_{n}^{^{R{_2}}t}$.
 \end{lemma}
 \begin{proof}
-Let $R_1$ read $i$ from $n\nf{.head}$ at Line \ref{readHead}. Note that by Lemma \ref{lem::headInc} $R_1$ and $R_2$ both cannot read the same value $i$. By Observation \ref{nonDecreasingHead} $R_2$ reads larger value of $n$\nf{.head} than $R_1$.
+Let $R_1$ read $i$ from $n\nf{.head}$ at Line \ref{readHead}. By Lemma \ref{lem::headInc}, $R_1$ and $R_2$ both cannot read the same value $i$. By Observation \ref{nonDecreasingHead}, $R_2$ reads a larger value of $n$\nf{.head} than $R_1$.
 
-Consider the case where $R_1$ reads $i$ and $R_2$ reads $i+1$ from Line \ref{readHead}. As $R_2$'s \nf{CAS} in Line \ref{cas} returns \nf{false}, there is another successful instance $R_2^\prime$ of \nf{n.Refresh()} that has done \nf{CAS} successfully into \nf{n.blocks[i+1]} before $R_2$ tries to \nf{CAS}. $R_2^\prime$ creates its block \nf{new} after reading the value $i+1$ from $n$\nf{.head} (Line \ref{readHead}) and $R_1$ reads the value $i$ from $n$\nf{.head}. By Observation \ref{nonDecreasingHead} we have $^{R_1}t<t^{R_1}_{\ref{readHead}}< t^{R2^\prime}_{\ref{readHead}}$ (see Figure \ref{fig::doubleRefresh}). By Lemma \ref{lem::prectrueRefresh} we have 
-$EST^{n.\nf{left}}_{^{R_2^\prime}_{\ref{readHead}}t} \cup EST^{n.\nf{right}}_{^{R_2^\prime}_{\ref{readHead}}t} \subseteq ops(n.\nf{blocks}_{t_{\ref{cas}}^{R_2^\prime}})$. Also by Lemma \ref{lem::headInc} on $R_2$ the value  of \nf{n.head} is more than $i+1$ after $R_2$ terminates, so the block appended by $R_2^\prime$ to \nf{n} is established by the time $R_2$ terminates. To summarize, $^{R_1}t$ is before $R_2^\prime$'s read of \nf{n.head} ($t_{\ref{readHead}}^{R_2^\prime}$) and $R_2^\prime$'s successful \nf{CAS} ($t^{R2^\prime}_{\ref{cas}}$) is before $R_2$'s termination ($t^{R_2}$), so by Observation \ref{lem::blocksOrder} $ops(EST_{n.\nf{left}, t^{R_1}}) \cup ops(EST_{n.\nf{right}, t^{R_1}}) \subseteq ops(n.\nf{blocks}_{t^{R_2}})$
+Consider the case where $R_1$ reads $i$ and $R_2$ reads $i+1$ from Line \ref{readHead}. As $R_2$'s \nf{CAS} in Line \ref{cas} returns \nf{false}, there is another successful instance $R_2^\prime$ of \nf{$n$.Refresh()} that has done a \nf{CAS} successfully into \nf{$n$.blocks[$i+1$]} before $R_2$ tries to \nf{CAS}. $R_2^\prime$ creates its block \nf{new} after reading the value $i+1$ from $n$\nf{.head} (Line \ref{readHead}) and $R_1$ reads the value $i$ from $n$\nf{.head}. By Observation \ref{nonDecreasingHead} we have $^{R_1}t<t^{R_1}_{\ref{readHead}}< t^{R2^\prime}_{\ref{readHead}}$ (see Figure \ref{fig::doubleRefresh}). By Lemma \ref{lem::prectrueRefresh} we have 
+$EST^{n.\nf{left}}_{^{R_2^\prime}_{\ref{readHead}}t} \cup EST^{n.\nf{right}}_{^{R_2^\prime}_{\ref{readHead}}t} \subseteq ops(n.\nf{blocks}_{t_{\ref{cas}}^{R_2^\prime}})$. Also by Lemma \ref{lem::headInc} on $R_2$, the value  of \nf{n.head} is more than $i+1$ after $R_2$ terminates, so the block appended by $R_2^\prime$ to \nf{n} is established by the time $R_2$ terminates. To summarize, $^{R_1}t$ is before $R_2^\prime$'s read of \nf{$n$.head} ($t_{\ref{readHead}}^{R_2^\prime}$) and $R_2^\prime$'s successful \nf{CAS} ($t^{R_2^\prime}_{\ref{cas}}$) is before $R_2$'s termination ($t^{R_2}$), so by Observation and Lemma \ref{lem::headInc} we have \ref{lem::blocksOrder} $EST_{n.\nf{left}}^{t^{R_1}} \cup EST_{n.\nf{right}}^{t^{R_1}} \subseteq ops(n.\nf{blocks}_{t^{R_2^\prime}_{\ref{cas}}}) \subseteq EST_{n.\nf{left}}^{^{R_2}t}$. 
 
-   If $R_2$ reads some value greater than $i+1$ in Line \ref{readHead} it means $n\nf{.head}$ has been incremented  more than two times since $_{\ref{readHead}}^{R_1}t$. By Lemma \ref{lem::headPosition}, when $n.$\nf{head} is incremented from $i+1$ to $i+2$, $n\nf{.blocks[i+1]}$ is non-null. Let $R_3$ be the \nf{Refresh()} on $n$ that has put the block in $n\nf{.blocks[}i+1\nf{]}$. $R_3$ read $n\nf{.head}=i+1$ at Line \ref{readHead} and has put its block in $n\nf{.blocks[}i+1\nf{]}$ before $R_2$'s read of $n.$\nf{head} at Line \ref{readHead}. So we have $t^{R_1}<_{\ref{readHead}}^{R_3}t<_{\ref{cas}}^{R_3}t<t^{R_2}_{\ref{readHead}}<^R_{2}t$. From Observation \ref{lem::blocksOrder} on the operations before and after $R_3$'s \nf{CAS} and Lemma \ref{lem::trueRefresh} on $R_3$ the claim holds.
+   If $R_2$ reads some value greater than $i+1$ in Line \ref{readHead} it means $n\nf{.head}$ has been incremented  more than two times since $_{\ref{readHead}}^{R_1}t$. By Lemma \ref{lem::headPosition}, when $n.$\nf{head} is incremented from $i+1$ to $i+2$, $n\nf{.blocks[i+1]}$ is non-null. Let $R_3$ be the \nf{Refresh()} on $n$ that has put the block in $n\nf{.blocks[}i+1\nf{]}$. $R_3$ read $n\nf{.head}=i+1$ at Line \ref{readHead} and has put its block in $n\nf{.blocks[}i+1\nf{]}$ before $R_2$'s read of $n.$\nf{head} at Line \ref{readHead}. So we have $t^{R_1}<_{\ref{readHead}}^{R_3}t<_{\ref{cas}}^{R_3}t<t^{R_2}_{\ref{readHead}}<^R_{2}t$. From Observation \ref{lem::blocksOrder}  on the operations before and after $R_3$'s \nf{CAS} and Lemmas \ref{lem::trueRefresh}, \ref{lem::headInc} on $R_3$ the claim holds.
 \end{proof}
 
 \begin{figure}[hbt]
   \center\includegraphics[width=6in]{pics/compactdouble.png}
-  \caption{\label{fig::doubleRefresh}$_{R_1}t<$ $t_{\ref{readHead}}^{R_1}$ $<$ incrementing \nf{n.head} from $i$ to $i+1$ $<$ $t_{\ref{readHead}}^{R_2^\prime}$ $<$ $t_{\ref{cas}}^{R_2^\prime}$ $<$ incrementing \nf{n.head} from $i+1$ to $i+2$ $<t_{R_2}$} 
+  \caption{\label{fig::doubleRefresh}$_{R_1}t<$ $t_{\ref{readHead}}^{R_1}$ $<$ incrementing \nf{$n$.head} from $i$ to $i+1$ $<$ $t_{\ref{readHead}}^{R_2^\prime}$ $<$ $t_{\ref{cas}}^{R_2^\prime}$ $<$ incrementing \nf{$n$.head} from $i+1$ to $i+2$ $<t_{R_2}$} 
 \end{figure}
 
 \begin{corollary} \label{lem::propagateStep}
-  \nf{ops(EST\sub{n.left, \sub{\ref{firstRefresh}}t})} $\cup$ \nf{ops(EST\sub{n.right, \sub{\ref{firstRefresh}}t})} $\subseteq$ \nf{ops(EST\sub{n, t\sub{\ref{secondRefresh}})}}
+  $EST_{n\nf{.left}}^{_{\ref{firstRefresh}}t} \cup EST_{n\nf{.right}}^ {_{\ref{firstRefresh}}t} \subseteq EST_{n}^{t_{\ref{secondRefresh}}}$
 \end{corollary}
 \begin{proof}
   If the first \nf{Refresh()} in line \ref{firstRefresh} returns \nf{true} then by Lemma \ref{lem::prectrueRefresh} the claim holds. If the first \nf{Refresh()} failed and the second \nf{Refresh()} succeeded the claim still holds by Lemma \ref{lem::prectrueRefresh}. Otherwise both failed and the claim is satisfied by Lemma \ref{doubleRefresh}.
 \end{proof}
 
-Now we show that after \nf{Append($b$)} on a leaf finishes, $b$ will be established in \nf{root}.
+Now we show that after \nf{Append($b$)} on a leaf finishes, the operation contained in $b$ will be established in \nf{root}.
 
 \begin{corollary}\label{lem::append}
-For $A=\nf{Append(}b\nf{)}$ we have ${ops(b)} \subseteq ops(EST_{\nf{n}, t^A})$ where $n\in\{\text{nodes in the path from the leaf to the root}\}$.
+For $A=l\nf{.Append(}b\nf{)}$ we have ${ops(b)} \subseteq EST_{n}^{t^A}$ for each node $n$ in the path from $l$ to \nf{root}.
 \end{corollary}
 \begin{proof}
-$A$ adds $b$ to the assigned leaf of the process, establishes it at Line \ref{appendEnd} and then calls \nf{Propagate()} on the parent of the leaf where it appended $b$. For every node $n$, $n.$\nf{Propagate()} appends $b$ to $n$, establishes it by Corollary \ref{lem::propagateStep} and then calls $n.$\nf{parent.Propagate()} utill $n$ is \nf{root}.
+$A$ adds $b$ to the assigned leaf of the process, establishes it at Line \ref{appendEnd} and then calls \nf{Propagate()} on the parent of the leaf where it appended $b$. For every node $n$, $n.$\nf{Propagate()} appends $b$ to $n$, establishes it in $n$ by Corollary \ref{lem::propagateStep} and then calls $n.$\nf{parent.Propagate()} untill $n$ is \nf{root}.
 \end{proof}
 
 \begin{corollary}\label{lem::appendExactlyOnce}
- After \nf{Append($b$)} finishes, $b$ is in the nodes the path from the leaf to the root for exactly one time.
+ After $l$\nf{.Append($b$)} finishes, $b$ is subblock of exactly one block in each node along the path from $l$ to the \nf{root}.
 \end{corollary}
 \begin{proof}
 By the previous corollary and Lemma \ref{lem::appendExactlyOnce} there is exactly one block in each node containing $b$.

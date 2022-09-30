@@ -274,7 +274,7 @@ Furthermore, in each block, we store the prefix sum of left and right elements. 
 
 
 \paragraph{}
-Starting from the root, \textsc{GetIndex}($i$) BinarySearches $i$ in the prefix sum array to find block containing $i$th operation, then continues recursively calling \textsc{GetElement}($b,i$) to find $i$th element of block $b$. From lemma $\ref{lem:block_size}$ we know a block size is at most $p$. So BinarySearch takes at most \textsc(O)$(\log p)$, since  with knowing pointers of a block and its previous block we can determine the base \texttt{(domain ?)} to search and its size is \textsc{O}$(p)$.
+Starting from the root, \textsc{GetIndex}($i$) BinarySearches $i$ in the prefix sum array to find block containing $i$th operation, then continues recursively calling \textsc{GetElement}($b,i$) to find $i$th element of block $b$. From lemma $\ref{blockSize}$ we know a block size is at most $p$. So BinarySearch takes at most \textsc(O)$(\log p)$, since  with knowing pointers of a block and its previous block we can determine the base \texttt{(domain ?)} to search and its size is \textsc{O}$(p)$.
 
 
 
@@ -325,7 +325,7 @@ A non-null dequeue is one that returns a non-null value. In the example above, \
 %\subsection{What should a \texttt{Dequeue()} return, regarding history of blocks of operations?}
 
 \paragraph{}
-In the Block Tree, we did not store the sequence of operations explicitly but instead stored blocks of concurrent operations to optimize \texttt{Propagate()} steps and increase parallelism. So now the problem is to find the result of each Dequeue. From lemma \ref{lem:block_size} we know we can linearize operations in a block in any order; here, we choose to decide to put Enqueue operations in a block before Dequeue operations. In the next example, operations in a cell are concurrent. \texttt{DEQ()} operations return \texttt{null, 5, 2, 1, 3, 4, null} respectively. We will next describe how these values can be computed efficiently.
+In the Block Tree, we did not store the sequence of operations explicitly but instead stored blocks of concurrent operations to optimize \texttt{Propagate()} steps and increase parallelism. So now the problem is to find the result of each Dequeue. From lemma \ref{blockSize} we know we can linearize operations in a block in any order; here, we choose to decide to put Enqueue operations in a block before Dequeue operations. In the next example, operations in a cell are concurrent. \texttt{DEQ()} operations return \texttt{null, 5, 2, 1, 3, 4, null} respectively. We will next describe how these values can be computed efficiently.
 
 \begin{table}[hbt]
 \centering
@@ -823,6 +823,33 @@ D(n,b) =&  D(n\nf{.left},n\nf{.blocks[}b-1\nf{].end\sub{left}}+1)\cdots D(n\nf{.
 \begin{definition}[Linearization] \label{def::lin}
  $$L=E(root,1)\cdot D(root,1)\cdot E(root,2)\cdot D(root,2)\cdot E(root,3)\cdot D(root,3)\cdots$$
 \end{definition}
+
+The next two observations are correct for both enqueues and deqeueues.
+
+\begin{observation}
+  $n\nf{.blocks[}b\nf{]}\nf{.num\sub{enq}}$ is the size of $E(n,b)$.
+\end{observation}
+
+
+\begin{observation}\label{lem::sumDeq}
+$\sum_{i=1}^{b} {E(n,i)}=n\nf{.blocks[}i\nf{].sum\sub{enq}}$.
+\end{observation}
+
+
+
+The next observation is correct for both directions.
+
+\begin{observation}\label{lem::numEnqLeft}
+Let $B$ be $n\nf{.blocks[}b\nf{]}$. $B\nf{.num\sub{enq-left}}$ is the number of \nf{Enqueue} operations in the direct subblocks of $B$ in $n$\nf{.left}.
+\end{observation}
+\begin{proof}
+Let $B^\prime$ be $n\nf{.blocks[}b-1\nf{]}$. We prove the claim by induction on height of node $n$. 
+\begin{align*}
+    B\nf{.num\sub{enq-left}}=&B.\nf{sum\sub{enq-left}}-B^\prime.\nf{sum\sub{enq-left}}& \text{Definition of }\nf{num\sub{x}}\\
+    =&B^\prime.\nf{sum\sub{enq-left}}+n\nf{.left.blocks[}B\nf{.end\sub{left}].sum\sub{enq}}\\&-n\nf{.left.blocks[}B^\prime\nf{.end\sub{left}].sum\sub{enq}}-B^\prime.\nf{sum\sub{enq-left}} & \nf{CreateBlock} \text{ code}\\
+    =&\sum_{i=B^\prime\nf{.end\sub{left}}+1}^{B\nf{.end\sub{left}}}  n\nf{.left.blocks[}i\nf{].num\sub{enq}}
+\end{align*}
+\end{proof}
 \pagebreak
 
 \subsection{Propagating Operations to the Root}
@@ -912,7 +939,7 @@ By the previous corollary and Lemma \ref{lem::appendExactlyOnce} there is exactl
 
 \subsection{Correctness of GetEnqueue}
 
-Now we prove some claims about the size and operations of a block. These lemmas will be used for analysis and correctness of \nf{GetEnqueue()}.
+First we prove some claims about the size and operations of a block. These lemmas will be used later for correctness and analysis of \nf{GetEnqueue()}.
 
 \begin{lemma}\label{blockSize}
 Each block contains at most one operation of each process.
@@ -943,7 +970,7 @@ If $1\leq i \leq \nf{$n$.blocks[$b$].num\sub{enq}}$ then \nf{$n$.GetEnqueue($b$,
 \begin{proof}
 We are going to prove this lemma by induction on the height of node \nf{n}. For the base case, suppose $n$ is a leaf. Leaf blocks each contain exactly one operation, so only \nf{$n$.GetEnqueue(b,1)} can be called when $n$ is a leaf. Line \ref{getBaseCase} of \nf{$n$.GetEnqueue($b$, $1$)} returns the \nf{element} of the \nf{Enqueue} operation stored in the $b$th block of leaf ${n}$.
 
-For the induction step we prove if \nf{$n$.child.GetEnqueue($sb$, i)} returns $E_i(n.child, sb)$ then \nf{$n$.GetEnqueue($b$, $i$)} returns $E_i(n,b)$.  From Definition \ref{ordering} of $E(n,b)$, operations from the left subblocks come before the operations from the right subblocks in a block (see Figure \ref{figGet}). \nf{num\sub{enq-left}} field  in \nf{$n$.blocks[$b$]} is the number of \nf{Enqueue()} operations from the blocks's subblocks in the left child of \nf{n}. So the $i$th enqueue operation is propagated from the right child if and only if $i$ is greater than \nf{$b$.num\sub{enq-left}}. Line \ref{leftOrRight} decides whether the \nf{i}th enqueue in  $b$th block  of internal node \nf{n} is in the  left child or right child subblocks of \nf{n.blocks[b]}. By Definitions \ref{def::ops}, \ref{def::subblock} to find an operation in subblocks of \nf{$n$.blocks[$i$]} we need to search in the range
+For the induction step we prove if \nf{$n$.child.GetEnqueue($sb$, i)} returns $E_i(n.child, sb)$ then \nf{$n$.GetEnqueue($b$, $i$)} returns $E_i(n,b)$.  From Definition \ref{ordering} of $E(n,b)$, operations from the left subblocks come before the operations from the right subblocks in a block (see Figure \ref{figGet}). By Observation \ref{lem::numEnqLeft}, the \nf{num\sub{enq-left}} field  in \nf{$n$.blocks[$b$]} is the number of \nf{Enqueue()} operations from the blocks's subblocks in the left child of \nf{n}. So the $i$th enqueue operation is propagated from the right child if and only if $i$ is greater than \nf{$b$.num\sub{enq-left}}. Line \ref{leftOrRight} decides whether the \nf{i}th enqueue in  $b$th block  of internal node \nf{n} is in the  left child or right child subblocks of \nf{n.blocks[b]}. By Definitions \ref{def::ops}, \ref{def::subblock} to find an operation in subblocks of \nf{$n$.blocks[$i$]} we need to search in the range
 \begin{align*}
 &\texttt{$n$.left.blocks[$n$.blocks[$i$-1].end\textsubscript{left}+1..$n$.blocks[$i$].end\textsubscript{left}]}  \cup \\
 &\texttt{$n$.right.blocks[$n$.blocks[$i$-1].end\textsubscript{right}+1..$n$.blocks[$i$].end\textsubscript{right}]}.
@@ -1135,7 +1162,7 @@ If we split \nf{DSearch} time cost between the corresponding \nf{Enqueue}, \nf{D
 An \nf{Enqueue()} or \nf{Dequeue()} operation, does at most $4\log p$ \nf{CAS} operations.
 \end{lemma}
 \begin{proof}
-  In each height of the tree at most 2 times \nf{Refresh()} is invoked and  every \nf{Refresh()} has 2 \nf{CAS}es, one in Line \ref{cas} and one in Lines \ref{incrementHead1} or \ref{incrementHead2}.
+  In each height of the tree at most 2 times \nf{Refresh()} is invoked and  every \nf{Refresh()} invokes at most 3 \nf{CAS}es, one in Line \ref{cas} and two from \nf{Advance} in Line \ref{incrementHead}.
 \end{proof}
 
 \begin{lemma}[\nf{DSearch} Analysis]\label{dsearchTime}

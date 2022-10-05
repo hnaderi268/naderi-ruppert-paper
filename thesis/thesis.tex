@@ -674,7 +674,7 @@ We only want to know the \texttt{element} of \texttt{enqueue} operations and com
 
 \If{\tt{dir {\keywordfont is} right}} \label{considerRight}
 \State \tt{i+= blocks[b-1].sum\sub{deq}-parent.blocks[sb-1].sum\sub{deq-right}}  \label{considerPreviousRight}
-\State \tt{i+= blocks[sb].num\sub{deq-left}}  \label{considerLeftBeforeRight}
+\State \tt{i+= parent.blocks[sb].num\sub{deq-left}}  \label{considerLeftBeforeRight}
 \EndIf \label{computeISuperEnd}
 \State \Return\tt{this.parent.}\Call{IndexDequeue}{sb, i}
 \EndIf
@@ -1043,14 +1043,20 @@ Let $R_{p1}$ be the first successful \nf{$n$.parent.Refresh} after $R_n$ and $R_
 
 Since $R_{p2}$'s created block does not contain $B$, by Observation \ref{lem::createBlockHead} the value $R_{p2}$ reads from $n$\nf{.head} in Line \ref{lastLine} is $\leq b$. From Observation \ref{nonDecreasingHead} the value $R_{p2}$ reads in Line \ref{readChildHead} is also $\leq b$.
 
-$R_n$ puts $B$ into $n$\nf{.blocks[}$b$\nf{]} so ${R_n}$ reads value $b$ for $n.$\nf{head}. Since $R_{p2}$'s \nf{CAS} into $n$\nf{parent.blocks} is successful there should be a \nf{Refresh} instance $R_p^\prime$ on $n$\nf{.parent} that increments $n$\nf{.parent} after $R_{p1}$'s \ref{cas} and before $R_{p2}$'s \ref{readHead}. We assumed $t^{R_n}_{\ref{cas}}<t^{R_{p1}}_{\ref{cas}}<t^{R_{p2}}_{\ref{cas}}$. Finally, since \ref{readChildHead} is after \ref{readHead} and $R_{p2}$'s \ref{readHead} is after $R_p^\prime$'s \ref{incrementHead}, $R_{p2}$ reads a value $\geq b$ for $n.\nf{head}$.
-
-$$_{\ref{cas}}^{R_n}t<_{\ref{cas}}^{R_p1}<_{\ref{incrementHead}}^{R_p^\prime}t<_{\ref{cas}}^{R_p2}t<_{\ref{readChildHead}}^{R_p2}$$
-TODO: draw figure
+$R_n$ puts $B$ into $n$\nf{.blocks[}$b$\nf{]} so ${R_n}$ reads value $b$ for $n.$\nf{head}. Since $R_{p2}$'s \nf{CAS} into $n$\nf{.parent.blocks} is successful there should be a \nf{Refresh} instance $R_p^\prime$ on $n$\nf{.parent} that increments $n$\nf{.parent} (Line \ref{incrementHead}) after $R_{p1}$'s \ref{cas} and before $R_{p2}$'s \ref{readHead}. We assumed $t^{R_n}_{\ref{cas}}<t^{R_{p1}}_{\ref{cas}}<t^{R_{p2}}_{\ref{cas}}$ by Definition \ref{orderRefresh}. Finally, since \ref{readChildHead} is after \ref{readHead} and $R_{p2}$'s \ref{readHead} is after $R_p^\prime$'s \ref{incrementHead}, which is after ${R_n}$'s $n$\nf{.blocks.CAS}. So $R_{p2}$ reads a value $\geq b$ for $n.\nf{head}$ by Lemma \ref{nonDecreasingHead}.
+\begin{align*}
+\left.
+\begin{array}{r}
+ _{\ref{cas}}^{R_n}t<_{\ref{cas}}^{R_{p1}}t\\
+_{\ref{cas}}^{R_{p1}}<_{\ref{incrementHead}}^{R_{p^\prime}}t<_{\ref{readHead}}^{R_{p2}}t\\
+_{\ref{readHead}}^{R_{p2}}t<_{\ref{readChildHead}}^{R_{p2}}t\\
+\end{array}
+\right\} &\Longrightarrow  _{\ref{cas}}^{R_n}t<_{\ref{readChildHead}}^{R_{p2}}t
+\end{align*}
 
 So $R_{p2}$ reads $n\nf{.head}=b$. After Line \ref{helpAdvance} of $R_{p2}$, $n$\nf{.head} is incremented from $b$. So the value $R_{p2}$ reads in Line \ref{lastLine} of \nf{CreateBlock} is greater than $b$ and $R_{p2}$'s created block contains $B$. This is contradiction with our hypothesis.
 
-Furthermore, if $B$\nf{.super} is not set earlier it is set by $R_{p2}$ in Line \ref{setSuper1} invoked from \ref{helpAdvance}.
+Furthermore, if $B$\nf{.super} was not set earlier it is set by $R_{p2}$ in Line \ref{setSuper1} invoked from \ref{helpAdvance}.
 
 % \nf{$b$.super} is set by some instance of \nf{Refresh} on $n$ or \nf{$n$.parent} showed by $R^\prime$ and \nf{$n$.head} is incremented by some \nf{Refresh} called $R^\prime\prime$. Let \nf{$n$.parent.head} value be $hp$ when $R^\prime$ reads it. From Lemma \ref{lem::headProgress} \nf{$n$.parent.head} could only increase from ${hp}$ to ${hp+1}$ if $\nf{$n$.parent.blocks[$hp$]}\neq\nf{null}$. In other words there should be a successful \nf{$n$.parent.Refresh} for \nf{$n$.parent.head} to be increased. Let $R_p$ be \nf{$n$.parent.Refresh} that propagated $b$ to \nf{$n$.parent}. We claim there cannot be another successful \nf{$n$.parent.Refresh} after $R^\prime$ reads \nf{$n$.parent.head} and before $R_p$ performs Line \ref{lastLine}.
 
@@ -1091,9 +1097,18 @@ Now using Corollary \ref{superRelation} on each step of the \nf{IndexDequeue} we
 \end{lemma}
 \begin{proof}
 We will prove this by induction on the distance of $n$ from the \nf{root}. The base case where $n$ is \nf{root} is trivial (Line \ref{indexBaseCase}).
-For the non-root nodes \nf{$n$.IndexDequeue($b$, $i$)} computes $sb$, index of the superblock of the $b$th block in $n$, in Line \ref{computeSuper} by Corollary \ref{superRelation}. After that the position of $D_i(n,b)$ in $D(n.\nf{parent}, sb)$ is computed in Lines \ref{computeISuperStart}--\ref{computeISuperEnd}. By Definition \ref{ordering} \nf{Dequeue}s in a block are ordered based on the order of its subblocks  from left to right. If $D_i(n,b)$ was propagated from the left child, the number of dequeus in the left subblocks of \nf{$n$.parent.blocks[$sb$]} before \nf{$n$.blocks[$b$]} is considered in Line \ref{considerPreviousLeft}. Else if $D_i(n,b)$ was propagated from the right child, the number of dequeues in the subblocks from the left child is considered to be ahead of the computed index (Line \ref{considerRight}). Finally \nf{IndexDequeue} is called on \nf{$n$.parent} recursively and it returns the response from induction hypothesis. 
+For the non-root nodes \nf{$n$.IndexDequeue($b$, $i$)} computes $sb$, index of the superblock of the $b$th block in $n$, in Line \ref{computeSuper} by Corollary \ref{superRelation}. After that the position of $D_i(n,b)$ in $D(n.\nf{parent}, sb)$ is computed in Lines \ref{computeISuperStart}--\ref{computeISuperEnd}. By Definition \ref{ordering} \nf{Dequeue}s in a block are ordered based on the order of its subblocks  from left to right. If $D_i(n,b)$ was propagated from the left child, the number of dequeus in the left subblocks of \nf{$n$.parent.blocks[$sb$]} before \nf{$n$.blocks[$b$]} is considered in Line \ref{considerPreviousLeft} (see Figure \ref{fig::blockSumDeqLeft}). Else if $D_i(n,b)$ was propagated from the right child, the number of dequeues in the subblocks from the left child is considered to be ahead of the computed index (Line \ref{considerRight}) (see Figure \ref{fig::blockSumDeqRight}). Finally \nf{IndexDequeue} is called on \nf{$n$.parent} recursively and it returns the response from induction hypothesis. 
 \end{proof}
-TODO: add figure
+\begin{figure}[hbt]  
+  \center\includegraphics[width=6in]{pics/blockSumDeqLeft.png}
+  
+  \caption{The number of \nf{dequeue} operations before $E_i(n,b)$ shown in the case where $n$ is a left child.}\label{fig::blockSumDeqLeft}
+\end{figure}
+\begin{figure}[hbt]  
+  \center\includegraphics[width=6in]{pics/blockSumDeqRight.png}
+  
+  \caption{The number of \nf{dequeue} operations before $E_i(n,b)$ shown in the case where $n$ is a right child.}\label{fig::blockSumDeqRight}
+\end{figure}
 
 \pagebreak
 \subsection{Linearizability}

@@ -216,10 +216,9 @@ $r_1,r_2,r_3,r_4$ ]
 \end{figure}
 
 \begin{figure}[hbt]
-  \center\includegraphics[width=4in]{pics/doublerefresh.png}
+  \center\includegraphics[width=4in]{pics/doublyrefresh.drawio.png}
   \caption{The second failed Refresh is assuredly concurrent with a successful \texttt{Refresh}.}
 \end{figure}
-\it{TODO::simplify the Figure, remove code invocations}
 
 \paragraph{Introduce CAS} We use \nf{CAS} (Compare \& Swap) instructions to implement the \nf{Refresh}'s Try to Append mechanism in described in the previous paragraph. After a process appends its operation into its leaf it can call \nf{Refresh} on the path up to root two times on each node. So with $O(\log p)$ \nf{CAS}es per operations we can have a tree agreeing on the linearization. This cooperative solution allows us to overcome the CAS Retry Problem.
 

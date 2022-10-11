@@ -103,7 +103,7 @@ The standard safety condition is called \textit{linearizability}, which ensures 
 
 There are various progress properties; the strongest is wait-freedom, and the more common is lock-freedom. An algorithm is \textit{wait-free} if each operation terminates after a finite number of its own steps. We call an algorithm \textit{lock-free} if, after a sufficient number of steps, one operation terminates. A wait-free algorithm is also lock-free but not vice versa; in an infinite run of a lock-free algorithm there might be an operation that takes infinitely many steps but never terminates.
 
-In section 2 we talk about previous queues and their common problems. We also talk about polylogarithmic construction of shared objects.
+A queue stores a sequence of elements and supports two operations, enqueue and dequeue. \texttt{Enqueue(e)} appends element \texttt{e} to the sequence stored. \texttt{Dequeue()} removes and returns the first element among in the sequence. If the queue is empty it returns \texttt{null}. In section 2 we talk about previous queues and their common problems. We also talk about polylogarithmic construction of shared objects.
 
 Jayanti~\cite{DBLP:conf/podc/Jayanti98a} proved an $\Omega(\log p)$ lower bound on the worst-case shared-access time complexity of $p$-process universal constructions. He also introduced~\cite{DBLP:conf/podc/ChandraJT98} a construction that achieves $\textsc{O}(\log^2 p)$ shared accesses. Here, we first introduce a universal construction using $\textsc{O}(\log p)$ CAS operations~\cite{DBLP:conf/fsttcs/JayantiP05}. In section 3 we introduce a polylogarithmic step wait-free universal construction. Our main ideas in of the universal construction also appear in our Queue Algorithm (\ref{algQ}). The main short come of our universal construction is using big CAS objects. We use the universal construction as a stepping stone towards our queue algorithm, so we will not explain it in too much detail.
 
@@ -166,26 +166,26 @@ Ellen and Woelfel introduced an implementation of a Fetch\&Inc object with step 
 \pagebreak
 
 \pagebreak
-\section{Our Queue}
+\section{Queue Implementation}
 Paragraph titles will be removed after polishing.
 
-\paragraph{What is a Queue} In this work, we design a queue with $O(\log^2 p +\log n)$ steps per operation, where $n$ is the number of total operations invoked. We avoid the $\Omega(p)$ worst-case step complexity of existing shared queues based on linked lists or arrays (CAS Retry Problem). A queue stores a sequence of elements and supports two operations, enqueue and dequeue. \texttt{Enqueue(e)} appends element \texttt{e} to the sequence stored.\texttt{Dequeue()} removes and returns the first element among in the sequence. If the queue is empty it returns \texttt{null}.
+\paragraph{What is a Queue} In our model there are $p$ processes doing \nf{Enqueue} and \nf{Dequeue} operations on a queue concurrently. We design a queue with $O(\log^2 p +\log q)$ steps per operation, where $q$ is the number of elements in the queue at the time of invocation. We avoid the $\Omega(p)$ worst-case step complexity of existing shared queues based on linked lists or arrays, which suffer from the CAS Retry Problem. 
 
-\paragraph{How we use Jayanti and why we are better} Jayanti and Petrovic introduced a wait-free poly-logarithmic multi-enqueuer single-dequeuer queue~\cite{DBLP:conf/fsttcs/JayantiP05}. We use their idea of using a tournament tree among processes to agree on the linearization of operations to design a a polylogarithmic multi-enqueuer multi-dequeuer queue. Despite their work, our algorithm them does not use \texttt{CAS} operations with big words and does not put a limit on the number of concurrent operations. In our model there are $p$ processes doing \nf{Enqueue(),Dequeue()} operations concurrently.
+\paragraph{How we use Jayanti and why we are better} Jayanti and Petrovic introduced a wait-free poly-logarithmic multi-enqueuer single-dequeuer queue~\cite{DBLP:conf/fsttcs/JayantiP05}. We use their idea of having a tournament tree among processes to agree on the linearization of operations to design a a polylogarithmic multi-enqueuer multi-dequeuer queue. Unlike their work, our algorithm does not use \texttt{CAS} operations with big words and does not put a limit on the number of concurrent operations. 
 
-\paragraph{Introduce tree} There is a shared tree among the processes (see Figure~\ref{fig::blocktree}) to agree on one total ordering of the operations invoked by processes. Each process has a leaf which the order of operations invoked by the process is stored in it. When a process wishes to do an operation it appends the operation to its leaf and tries to propagate its new operation up to the tree's root. In each node of the tree the ordering of operations propagated up to it is stored. All processes agree on the sequence stored in the root and it is defined to be the linearization ordering. 
+\paragraph{Introduce tree} There is a shared tree among the processes (see Figure~\ref{fig::blocktree}) to agree on one total ordering of the operations invoked by processes. Each process has a leaf in which the operations invoked by the process are stored in order. When a process wishes to do an operation it appends the operation to its leaf and tries to propagate its new operation up to the tree's root. Each node of the tree keeps an ordering of operations propagated up to it. All processes agree on the sequence of operations in the root and this ordering is used as linearization ordering. 
 \begin{figure}[hbt]
 \begin{center}
 \Tree [ [ [ $P_1$ $P_2$ ] [ $P_3$ $P_4$ ] ]
           [ [ $P_5$ $P_6$ ] [ $P_7$ $P_8$ ] ] ]
 \end{center}
-\caption{\label{fig::blocktree}Each process has a leaf and in each node there is an ordering of operations stored. Each node tries to propagate its operations up to the root, which stores the total ordering of all operations.}  
+\caption{\label{fig::blocktree}Each of the processes $P_1,P_2...P_p$ has a leaf and in each node there is an ordering of operations stored. Each process tries to propagate its operations up to the root, which stores a total ordering of all operations.}  
 \end{figure}
 \it{TODO::Add sequence to nodes}
 
 
-\paragraph{Introduce Double Refresh} To do a propagate step on node $n$ in the tree, we can read the operations from node $n$'s both children that are not already in $n$, and then try to append them to the sequence stored in $n$. We call this procedure \tt{Refresh($n$)}. The main idea is that if a process invokes \tt{Refresh} on a node two times and in both times fail to append the new operations to $n$, the operations in $n$'s children before the first \tt{Refresh} are guaranteed to be in the node after the second failed \tt{Refresh}.
-Because if both of the \tt{Refresh}$(n)$s fail to append then there is another instance of \nf{Refresh} in between which has succeeded to do append and has already appended the operations that the first \nf{Refresh} was trying to append.
+\paragraph{Introduce Double Refresh} To do a propagate step on node $n$ in the tree, a process observes the operations in both of $n$'s children that are not already in $n$, and then tries to append them to the sequence stored in $n$. We call this procedure \tt{$n$.Refresh()}. A process doing a \nf{Refresh} on $n$ with successful append helps other processes doing \nf{Refresh} on $n$ concurrently to propagate their operations up to the parent. The key idea is that if a process invokes \tt{Refresh} on the node $n$ two times and fails to append the new operations to $n$ both times, the operations that were in $n$'s children before the first \tt{Refresh} are guaranteed to be in the node after the second failed \tt{Refresh}.
+This is because if both of the \tt{Refresh}es on $n$ fail to append then there is another instance of \nf{Refresh} in between which has gathered its new operations after the first failed \nf{Refresh} and succeeded to do an append. This \nf{Refresh} appends the operations that the first failed \nf{Refresh} was trying to append.
 
 \begin{figure}[hbt]
 \begin{center}
@@ -211,32 +211,31 @@ $r_1,r_2,r_3,r_4$ ]
   \caption{New operations are appended.}
 \end{subfigure}
 \hspace{6em}
-\caption{\label{fig::propagstep} Before and after of a \sc{Refresh}$(n)$ with successful \nf{CAS}. Operations propagating from the left child are numbered with $l$ and from the right child by $r$.}
+\caption{\label{fig::propagstep} Before and after of a \nf{$n$.Refresh} with successful append. Operations propagating from the left child are numbered with $l$ and from the right child by $r$.}
 \end{center}
 \end{figure}
 
 \begin{figure}[hbt]
   \center\includegraphics[width=4in]{pics/doublerefresh.png}
-  \caption{The second failed Refresh is assuredly concurrent to a Successful \texttt{Refresh} with \texttt{CreateBlock} line after first failed \texttt{Refresh}'s \texttt{CreateBlock}.}
+  \caption{The second failed Refresh is assuredly concurrent with a successful \texttt{Refresh}.}
 \end{figure}
 \it{TODO::simplify the Figure, remove code invocations}
 
-\paragraph{Introduce CAS} We do not intend to get into our implementation but just for information we use \nf{CAS} (Compare \& Swap) operations to implement the Try to Append mechanism told in the previous paragraph. After a process appended its operation into its leaf it can call \nf{Refresh} on the path up to root two times on each node. So with poly-logarithmic \nf{CAS}es we can have a tree agreeing on the linearization. This solution makes us overcome the \nf{CAS} Retry Problem.
+\paragraph{Introduce CAS} We use \nf{CAS} (Compare \& Swap) instructions to implement the \nf{Refresh}'s Try to Append mechanism in described in the previous paragraph. After a process appends its operation into its leaf it can call \nf{Refresh} on the path up to root two times on each node. So with $O(\log p)$ \nf{CAS}es per operations we can have a tree agreeing on the linearization. This cooperative solution allows us to overcome the CAS Retry Problem.
 
 \begin{figure}[h]
 \begin{center}
 \begin{tikzpicture}
   
 \Tree [.{$\big\{op_2^1,op_2^2,op_3^1\big\},\big\{op_4^1$, $op_3^2\big\},\big\{op_1^1, op_4^2\big\},\big\{op_1^2\big\}...$ }  [.{ $\big\{op_2^1, op_2^2\big\},\big\{op_1^1\big\},\big\{op_1^2\big\}...$ }
-      {\begin{tabular}{|l|c|c|c}  \hline $op_1^1$ & $op_1^2$ & ... \\ \hline\end{tabular}} {\begin{tabular}{|l|c|c|c}  \hline $op_2^1$ & $op_2^2$ & ... \\ \hline\end{tabular}} ] [.{ $\big\{op_3^1\big\},\big\{op_4^1$, $op_3^2\big\},\big\{op_4^2\big\},...$ } {\begin{tabular}{|l|c|c|c}  \hline $op_3^1$ & $op_3^2$ & ... \\ \hline\end{tabular}} {\begin{tabular}{|l|c|c|c} \hline $op_4^1$ & $op_4^2$ & ... \\ \hline\end{tabular}} ] ]
-
+      {\begin{tabular}{|l|c|c|c}  \hline $op_1^1$ & $op_1^2$ & ... \\ \hline\end{tabular}} {\begin{tabular}{|l|c|c|c}  \hline $op_2^1$ & $op_2^2$ & ... \\ \hline \end{tabular}} ] [.{ $\big\{op_3^1\big\},\big\{op_4^1$, $op_3^2\big\},\big\{op_4^2\big\},...$ } {\begin{tabular}{|l|c|c|c}  \hline $op_3^1$ & $op_3^2$ & ... \\ \hline\end{tabular}} {\begin{tabular}{|l|c|c|c} \hline $op_4^1$ & $op_4^2$ & ... \\ \hline\end{tabular}} ] ]
 \end{tikzpicture}
-\caption{\label{fig::set} In each internal node, we store the set of all the operations propagated together, and one can arbitrarily linearize the sets of concurrent operations among themselves.}
+\caption{\label{fig::set} Leaves are for processes $P_1$ to $P_4$ from left to right. In each internal node and one can arbitrarily linearize the sets of concurrent operations  propagated together in a \nf{Refresh} among themselves. For example $op_4^1$ and $op_3^2$ have propagated  together in one \nf{Propagate} step and they will be propagated up to the root together. Since their execution time window have range in common they can be linearized in any order between themselves.}
 \end{center}
 \end{figure}
 
-\paragraph{Introduce Blocks} It is not efficient to store the sequence of operations in each node explicitly because each operation's information is copied all the way up to the root.
-Instead we can keep track of some statistics of the operations propagated together. This allows us to \texttt{CAS} fixed-size objects in each \tt{Refresh}. To do that, we introduce \it{blocks} that contain the number of operations from the left and the right child in a \texttt{Refresh} procedure and only propagate the statistics block of the new operations, and we store arrays of blocks in each node of the tree In each \nf{Refresh} there is at most one operation from each process trying to be propagated, because one operation cannot invoke two operations concurrently. Furthermore since the operations in a \textsc{Refresh} step are concurrent we can linearize them  among themselves in any order we wish, because if two operations are in read one \textsc{Refresh} step in a node they are going to be propagated up to the root together. Our choice is to put the operations propagated from the left child before the operations propagated from the right child. In this way if we know the number of operations from the left child and the number of operations from the right child in a block  we have a complete ordering on the operations.
+\paragraph{Introduce Blocks} It is not efficient to store the sequence of operations in each node explicitly because each operation would have to be copied all the way up to the root; doing this would no be poly-logarithmic time.
+Instead we use implicit representation of the operations propagated together. Furthermore we do not need to maintain an ordering on operations propagated together in a node until they have reached the root. We can only keep track of set of operations in each \nf{Refresh} and then define the linearization only in root (see Figure \ref{fig::set}). Achieving a constant sized implicit representation of operations in a \nf{Refresh} allows us to \texttt{CAS} fixed-size objects in each \tt{Refresh}. To do that, we introduce \it{block}, a piece of information about the operations in a \nf{Refresh} step. A block contain the number of operations from the left and the right child in a \texttt{Refresh} procedure. A node stores an array of blocks of operations propagted up to it. A propagate step  aggregates the new blocks in children into a new block and puts it in the parent.  In each \nf{Refresh} there is at most one operation from each process trying to be propagated, because one operation cannot invoke two operations concurrently. Furthermore, since the operations in a \textsc{Refresh} step are concurrent we can linearize them  among themselves in any order we wish, because if two operations are read in one successful \tt{Refresh} step in a node they are going to be propagated up to the root together. Our choice is to put the operations propagated from the left child before the operations propagated from the right child. In this way if we know the number of operations from the left child and the number of operations from the right child in a block  we have a complete ordering on the operations.
 
 \begin{figure}
 \begin{center}
@@ -258,16 +257,14 @@ Instead we can keep track of some statistics of the operations propagated togeth
 }
 \end{figure}
 
-\paragraph{Introduce Get and Index} With what told till now we have a shared tree among procesess which they agree on the  implicit ordering stored in its root. Having an agreement by itself is not enough.
-A process may wish to know the $i$th propagated operation (1) or the rank of a propagated operation in the linearization (2). With these two queries we can design a universal construction. Let us do not focus on th universal construction and focus on how to use (1) and (2) to construct a queue.
-
-\paragraph{Introduce how to create Queue using Get and Index} In our case of implementing a queue, we can make an assumption that one process only wishes to know the rank of a dequeue and one tries to get an enqueue with an specific rank. \nf{Enqueue}s and \nf{Dequeue}s are appended to the tree and when we want to find the response to a \nf{Dequeue}, we compute the place of the dequeue in the linearization and using the rank of the dequeue among deqeueues and some information stored in the root we compute which enqueue is the answer to the dequeue or if the answer is null. 
+\paragraph{Introduce Get and Index} So far, we have a shared tree that processes use to agree on the implicit ordering stored in its root. With this agreement on linearization ordering we can design a universal construction; for given object $O$ and operation $op$ we can apply all the operations till $op$ in the root on a sequential instance of the object and then return the response. But Having this agreement by itself is not enough for an efficient queue.
+A process may wish to know (1) the $i$th propagated operation or (2) the rank of a propagated operation in the linearization. We will explain how to use (1) and (2) to construct a queue in the next paragraph.
 
 \paragraph{Explain pieces of a block helping to do Get and Index}
-After appending operation \texttt{op} to the root, processes can find out information about the linearization ordering using \texttt{Get(i)} and \texttt{Index(op)}. Each block stores an extra constant amount of information (like prefix sums) to allow binary searches to find the required block in a node quickly.
+After propagating an operation \texttt{op} to the root, processes can find out information about the linearization ordering using (1) and (2). Each block stores an extra constant amount of information (like prefix sums) to allow binary searches to find the required block in a node quickly.
 
 
-To get the $i$th enqueue in the root, we can find the block $b_i$ containing $i$th element in the root, and then recursively finding the subblock of $b_i$ which contains $i$th element. To make this recursive search faster, instead of iterating over all elements in sequence of blocks we store prefix sum of number of elements in the blocks sequence and pointers to determine the range of subblocks of a block to make binary search faster. In each block, we store the prefix sum of left and right elements. Moreover, for each block, we store two pointers to the last left and right subblock of it (see Figures \ref{fig::pointer} and \ref{fig:prefix}). We know a block size is at most $p$, so binary search takes at most \textsc(O)$(\log p)$, since  with knowing pointers of a block and its previous block we can determine the search range which its size is \textsc{O}$(p)$.
+To get the $i$th enqueue in the root, we can find the block $B$ containing $i$th element in the root, and then recursively find the subblock of $B$ that contains $i$th element. To make this recursive search faster, instead of iterating over all blocks in the node, we store the prefix sum of the number of elements in the blocks sequence to permit a binary search. We also store pointers to determine the range of subblocks of a block to make binary search faster. In each block, we store the prefix sum of operations from the left child and the right child. Moreover, for each block, we store two pointers to the last left and right subblock of it (see Figures \ref{fig:prefix} and \ref{fig::pointer}). We know a block size is at most $p$, so binary search takes at most \textsc{O}$(\log p)$ time, since the pointers of a block and its previous block reduce the search range size to \textsc{O}$(p)$.
 
 
 \begin{figure}
@@ -289,61 +286,52 @@ To get the $i$th enqueue in the root, we can find the block $b_i$ containing $i$
   \caption{Block have pointers to the starting block of theirs for each child. \label{fig::pointer}}
 \end{figure}
 
-\paragraph{Queue from tree}
-Now, we describe how to use the tree to implement a queue. Consider the following execution of operations. \texttt{Enqueue(e)} appends an operation with input argument \texttt{e} in the block tree. What should a \texttt{Dequeue()} return? To compute the response of a \texttt{Dequeue()}, process $p$ first appends a \texttt{DEQ} operation to the tree. Then $p$ finds the rank of the \texttt{DEQ} using \texttt{Index()}, the rank of the \texttt{DEQ} and the information stored in the root about the queue $p$ computes the rank of  the \texttt{ENQ} having the answer of the \texttt{DEQ}. Finally $p$ returns the argument of that \texttt{ENQ} using \texttt{Get(i)}.
 
-\begin{table}[hbt]
-\centering
-  \begin{tabular}{c|c|c|c|c|c|c|c|c|c}
-    \hline \texttt{ENQ(5)}& \texttt{ENQ(2)}& \texttt{DEQ()}& \texttt{ENQ(3)}&\texttt{DEQ()}& \texttt{DEQ()}& \texttt{DEQ()}& \texttt{ENQ(4)}& \texttt{ENQ(6)}& \texttt{DEQ()}\\ \hline
-  \end{tabular}
-  \caption{An example histoy of operations on the queue}
-\end{table}
+\paragraph{Introduce how to create Queue using Get and Index} In our case of implementing a queue, we can make an assumption that one process only wishes to know the rank of a \nf{Dequeue} and one tries to get an \nf{Enqueue} with an specific rank. \nf{Enqueue}s and \nf{Dequeue}s are appended to the tree and when we want to find the response to a \nf{Dequeue}, we compute the place of the \nf{dequeue} in the linearization. Then, using the rank of the \nf{Dequeue} among \nf{Deqeueue}s and the information about the size of the queue stored in the root we compute which \nf{Enqueue} is the answer to the \nf{Dequeue} or if the answer is null. 
 
 
 
 \paragraph{}
-A non-null dequeue is one that returns a non-null value. In the example above, \texttt{Dequeue()} operations return \texttt{5, 2, 3, null, 4} in order. Before \texttt{ENQ(4)} the queue gets empty so the last \texttt{DEQ()} returns null. If the queue is non-empty and $r$ \texttt{Dequeue()} operations have returned a non-null response, then $i$th \texttt{Dequeue()} returns the input of the $r+1$th \texttt{Enqueue()}. So, in order to answer a Dequeue, it's sufficent to know the size of the queue and the number of previous non-null dequeues.
-
-%\texttt{DEQ[i] = (size>0) ? ENQ[r+1] : null;}
-
-
-%\subsection{What should a \texttt{Dequeue()} return, regarding history of blocks of operations?}
+A non-null \nf{Dequeue} is one that returns a non-null value.
+If the queue is non-empty and $r$ \texttt{Dequeue} operations have returned a non-null response, then $i$th \texttt{Dequeue} returns the input of the $r+1$th \texttt{Enqueue}. So in order to answer a \nf{Dequeue}, it iss sufficient to know whether the queue is empty or not and the number of previous non-null \nf{dequeue}s.
 
 \paragraph{}
-In the Block Tree, we did not store the sequence of operations explicitly but instead stored blocks of concurrent operations to optimize \texttt{Propagate} steps and increase parallelism. So now the problem is to find the result of each Dequeue. From lemma \ref{blockSize} we know we can linearize operations in a block in any order; here, we choose to decide to put Enqueue operations in a block before Dequeue operations. In the next example, operations in a cell are concurrent. \texttt{DEQ()} operations return \texttt{null, 5, 2, 1, 3, 4, null} respectively. We will next describe how these values can be computed efficiently.
+We know we can linearize operations in a block in any order; here, we choose to decide to put \nf{Enqueue} operations in a block before \nf{Dequeue} operations. In the next example, operations in a cell are concurrent. \texttt{Dequeue()} operations return \texttt{null, 5, 2, 1, 3, 4, null} respectively. We will next describe how these values can be computed efficiently.
 
 \begin{table}[hbt]
 \centering
-  \begin{tabular}{c|c|c|c}
-    \hline \texttt{DEQ()} & \texttt{ENQ(5)}, \texttt{ENQ(2)}, \texttt{ENQ(1)}, \texttt{DEQ()}& \texttt{ENQ(3)}, \texttt{DEQ()}&  \texttt{ENQ(4)}, \texttt{DEQ()}, \texttt{DEQ()}, \texttt{DEQ()}, \texttt{DEQ()}\\ \hline
+\begin{small}
+\begin{tabular}{c|c|c|c}
+    \hline \texttt{DEQ} & \texttt{ENQ(5)}, \texttt{ENQ(2)}, \texttt{ENQ(1)}, \texttt{DEQ}& \texttt{ENQ(3)}, \texttt{DEQ}&  \texttt{ENQ(4)}, \texttt{DEQ}, \texttt{DEQ}, \texttt{DEQ}, \texttt{DEQ}\\ \hline
   \end{tabular}
-  \caption{An example history of operation blocks on the queue}
+\end{small}
+  
+  \caption{An example history of operation blocks on the queue. \nf{Enqueue}s are shown with \nf{ENQ} and \nf{Dequeue}s are shown with \nf{DEQ}.}
 \end{table}
 
 
 \paragraph{}
-Now, we claimed that by knowing the current size of the queue and the number of non-null dequeue operations before the current dequeue, we could compute the index of the resulting \texttt{Enqueue()}. We apply this approach to blocks; if we store the size of the queue after each block of operations happens and the number of non-null dequeues dequeues till a block, we can compute each dequeue's index of result in \textsc{O}$(1)$ steps.
+Now, we claimed that by knowing the size of the queue, we can compute the rank of the resulting \texttt{Enqueue()}. We apply this approach to blocks; if we store the size of the queue after each block of operations happens, we can compute each \nf{Dequeue}'s index of result in \textsc{O}$(1)$ steps.
 
 \begin{table}[hbt]
 \centering
+\begin{small}
   \begin{tabular}{c|c|c|c|c}
-    \hline &\texttt{DEQ()} & \texttt{ENQ(5)}, \texttt{ENQ(2)}, \texttt{ENQ(1)}, \texttt{DEQ()}& \texttt{ENQ(3)}, \texttt{DEQ()}&  \texttt{ENQ(4)}, \texttt{DEQ()}, \texttt{DEQ()}, \texttt{DEQ()}, \texttt{DEQ()}\\ \hline
-    \#enqueues & 0 & 3 & 1 & 1 \\ \hline
-        \#dequeues & 1 & 1 & 1 & 4 \\ \hline
-            \#non-null dequeues & 0 & 1 & 2 & 5 \\ \hline
-                size & 0 & 2 & 2 & 0 \\ \hline
+    \hline &\texttt{DEQ} & \texttt{ENQ(5)}, \texttt{ENQ(2)}, \texttt{ENQ(1)}, \texttt{DEQ}& \texttt{ENQ(3)}, \texttt{DEQ}&  \texttt{ENQ(4)}, \texttt{DEQ}, \texttt{DEQ}, \texttt{DEQ}, \texttt{DEQ}\\ \hline
+    \tt{\#ENQs} & 0 & 3 & 1 & 1 \\ \hline
+    \tt{\#DEQs} & 1 & 1 & 1 & 4 \\ \hline
+    \tt{size} & 0 & 2 & 2 & 0 \\ \hline
   \end{tabular}
+\end{small}
   \caption{Augmented history of operation blocks on the queue}
 \end{table}
 
 
-Size and the number of non-null dequeues for $b$th block could be computed this way:\\
-\texttt{size[b]= max(size[b-1] +enqueues[b] -dequeues[b], 0)}\\
-\texttt{non-null dequeues[b]= non-null dequeues[b-1] +dequeues[b] -size[b-1] -enqueues[b]}
+Size of the queue the $b$th block could be computed using these equations.
+$$\texttt{size[b] = max(size[b-1] + enqueues[b] - dequeues[b], 0)}$$
+$$\texttt{non-null dequeues[b] = enqueues[b] - size[b]}$$
 
-Given \texttt{DEQ} is in block \texttt{b}, \texttt{response(DEQ)} would be:\\
-\texttt{(size[b-1]- index of DEQ in the block's dequeus >=0) ? ENQ[non-null dequeus[b-1]+ index of DEQ in the block's dequeus] : null;}
+Given \texttt{DEQ} is in block $B$, response of \nf{DEQ}  is the \tt{Enqueue} with index \nf{non-null Dequeus[b-1]+ index of DEQ in the block's Dequeus} in the root, if \texttt{(size[b-1]- index of DEQ in the $B$'s Dequeus >=0)}. Otherwise it would be \nf{ null}
 
 
 \begin{figure}[hbt]
@@ -356,9 +344,9 @@ Given \texttt{DEQ} is in block \texttt{b}, \texttt{response(DEQ)} would be:\\
 \subsection{Details of Implementation}
 
 \paragraph{Block}
-Block $b$ contains subblocks in the left and right children. WLOG left subblocks of $b$ are some consecutive blocks in the left child starting from where previous block of $b$ has ended to the the end of $b$. See Figure \ref{fig::createBlock} .
+Block $b$ contains subblocks in the left and right children. The left subblocks of $b$ are some consecutive blocks in the left child starting from where the block prior to $b$ ended. See Figure \ref{fig::createBlock} .
 
-We store ordering among \texttt{operation}s in the tournament tree constructed by \texttt{node}s. In each \texttt{node} we store pointers to its relatives, an array of \texttt{block}s and an index to the first empty \texttt{block}. Furthermore in \texttt{leaf} nodes there is an array of \texttt{operations} where each \texttt{operation} is stored in one cell with the same index in \texttt{blocks}. There is a \texttt{counter} in each \texttt{node} incrementing after a successful \texttt{Refresh} step. It means after that some bunch of \texttt{block}s in a node have propagated into the parent then the \texttt{counter} increases. Each new \texttt{block} added to a node sets its \texttt{time} regarding \texttt{counter}. This helps us to know which blocks have aggregated together to a block, not precisely though. We also store the index of the aggregated \texttt{block} of a \texttt{block} with \texttt{time} $i$ in \texttt{super[i]}. 
+We store ordering among \texttt{operation}s in the tournament tree constructed by \texttt{node}s. In each \texttt{node} we store pointers to its parent and children, an array of \texttt{block}s and the index \nf{head} of the first empty entry in \texttt{blocks}. Furthermore, in \texttt{leaf} nodes there is an array of \texttt{operations} where each \texttt{operation} is stored in one cell with the same index in \texttt{blocks}. There is a \texttt{counter} in each \texttt{node} incrementing after a successful \texttt{Refresh} step. It means after that some bunch of \texttt{block}s in a node have propagated into the parent then the \texttt{counter} increases. Each new \texttt{block} added to a node sets its \texttt{time} regarding \texttt{counter}. This helps us to know which blocks have aggregated together to a block, not precisely though. We also store the index of the aggregated \texttt{block} of a \texttt{block} with \texttt{time} $i$ in \texttt{super[i]}. 
 
 In each \texttt{block} we store 4 essential stats that implicitly summarize which operations are in the block \texttt{num\textsubscript{enq-left}}, \texttt{num\textsubscript{deq-left}}, \texttt{num\textsubscript{enq-right}}, \texttt{num\textsubscript{deq-right}}. In order to make \texttt{BinarySearch()}es faster we store prefix sums as well and there are some more general stats that help to make pseudocode more readable but not necessary.
 

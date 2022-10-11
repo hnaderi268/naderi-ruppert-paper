@@ -355,7 +355,7 @@ Given \texttt{DEQ} is in block \texttt{b}, \texttt{response(DEQ)} would be:\\
 
 \subsection{Details of Implementation}
 
-\paragraph{\tt{Block}}
+\paragraph{Block}
 Block $b$ contains subblocks in the left and right children. WLOG left subblocks of $b$ are some consecutive blocks in the left child starting from where previous block of $b$ has ended to the the end of $b$. See Figure \ref{fig::createBlock} .
 
 We store ordering among \texttt{operation}s in the tournament tree constructed by \texttt{node}s. In each \texttt{node} we store pointers to its relatives, an array of \texttt{block}s and an index to the first empty \texttt{block}. Furthermore in \texttt{leaf} nodes there is an array of \texttt{operations} where each \texttt{operation} is stored in one cell with the same index in \texttt{blocks}. There is a \texttt{counter} in each \texttt{node} incrementing after a successful \texttt{Refresh} step. It means after that some bunch of \texttt{block}s in a node have propagated into the parent then the \texttt{counter} increases. Each new \texttt{block} added to a node sets its \texttt{time} regarding \texttt{counter}. This helps us to know which blocks have aggregated together to a block, not precisely though. We also store the index of the aggregated \texttt{block} of a \texttt{block} with \texttt{time} $i$ in \texttt{super[i]}. 
@@ -364,21 +364,44 @@ In each \texttt{block} we store 4 essential stats that implicitly summarize whic
 
 To compute the head of the \texttt{queue} before a \texttt{dequeue} two more fields are stored in the root \texttt{size} and \texttt{sum\textsubscript{non-null deq}}. \texttt{size} in a \texttt{block} shows the number of elements after the \texttt{block} has finished and \texttt{sum\textsubscript{non-null deq}} is the total number of non-null dequeues till the \texttt{block}.
 
-\paragraph{\texttt{Enqueue(e)}}
-\paragraph{\texttt{Dequeue()}}
-\paragraph{\texttt{FindResponse(b,i)}}
-\paragraph{\tt{Append(blk)}}
-\paragraph{\texttt{Refresh(n)}}
-\paragraph{\tt{Propagate()}}
-\paragraph{\texttt{CreateBlock}} \texttt{CreateBlock(n)} returns a block containing new operations of \texttt{n}'s children. \texttt{b\textsuperscript{$\prime$}.end\textsubscript{left}} stores the index of the rightmost subblock of left child of \texttt{b}'s previous block. Other attributes are assigned values followed by definition.
+\paragraph{Enqueue(e)}
+An \nf{Enqueue} operation does not return a response, so to do an \nf{enqueue} operation in our algorithm it is sufficient to just append the \nf{Enqueue} operation to the root, then use its position in the linearization for future \nf{Dequeue} operations. \nf{Enqueue($e$)} creates a \nf{LeafBlock} with $\nf{element}=e$, sets its \nf{sum\sub{enq}} and \nf{sum\sub{deq}} fields and then appends it to the tree.
+
+\it{I believe the code is readable and we do not need references to code.}
+
+\paragraph{Dequeue()}
+\nf{Dequeue($e$)} creates a \nf{LeafBlock}, sets its \nf{sum\sub{enq}} and \nf{sum\sub{deq}} fields, appends it to the tree. Then computes the position of the appended \nf{dequeue} operation in the root and after that finds the response of the \nf{dequeue} calling \nf{FindResponse}.
+
+\paragraph{FindResponse(b,i)}
+To compute the response of the $i$th \nf{dequeue} in $b$th block of the root Line \ref{checkEmpty} computes whether the queue is empty or not. If there are more dequeues than enqueues the queue would become empty before the requeusted dequeue. If the queue was not empty, Line \ref{ki} 222 computes the position of the eqneueue which is response to the dqeueue. Knowing the response is the $e$th enqueue in the root which is before the $b$th block we find the block and position contaiing the qnueue operation using \nf{DSearch} and after that \nf{GetEnqueue} finds its \nf{element}.
+
+\paragraph{Append(blk)}
+\nf{head} field is the index of the first empty index in \nf{blocks} array in a \nf{LeafBlock}. \nf{Append($B$)} adds $B$ to the end of the \nf{blocks} in the leaf, increments \nf{head} and then calls \nf{Propagate} on the leaf's \nf{parent}. When \nf{Propagate} terminates it is guaranteed that the appended block is subblock of a block in the \nf{root}. There are no multiple write accesses on \nf{head} and \nf{blocks} in a leaf because only the process that the leaf belongs to appends to it. 
+
+\paragraph{n.Propagate()}
+\nf{Propagate($n$)} uses the double refresh idea and invokes two \nf{Refresh}es on $n$ in Lines \ref{firstRefresh} and \ref{secondRefresh}. Then invokes the \nf{Propagate} on \nf{$n$.parent} recursivly till it reaches the root. 
+
+\paragraph{n.Refresh()}
+\nf{$n$.Refresh} goal is to  create a block of $n$'s children new blocks and append it to $n$\nf{.blocks}. From Lines 311 to 316 \ref{li} \nf{$n$.Refresh} helps to \nf{Advance} $n$'s children. \nf{Advance} increments the children's \nf{head} and set the \nf{super} field of the last block in $n$. The reason behind helping \nf{super} field is explained later in \nf{IndexDequeue} paragraph. After helping to \nf{Advance} children, the value $h$ from $n$\nf{.head} is read at Line \ref{readHead} and \nf{new} block is created in Line \ref{invokeCreateBlock}. \nf{new} is going to be inserted into $n\nf{.block[h]}$. The reason why reading \nf{head} and \nf{CreateBlock} are in two lines is that maybe the \nf{head} value changes from reading it till creating a block to be inserted to \nf{head}. Then if \nf{new} is empty \nf{Refresh} returns \nf{true} because there is no new operations to propagate  an it is unnecessary to add an empty block to the tree. Later we will assume all blocks contain at least one operation. Line \ref{cas} tries to install \nf{new}, if it was succsuful all is good, if not it means someone else has put a block earlier into \nf{head} or maybe the \nf{head} was not empty at first point. Anyway \nf{Refresh} tries to update the \nf{head} and \nf{super} field of $n$\nf{.blocks[h]} at Line \ref{advance}.
+
+
+\paragraph{CreateBlock} \texttt{$n$.CreateBlock(h)} returns a block containing new operations of \texttt{n}'s children.
+The \nf{new} block created in Line 333's fields are filled with symmtery for both left and right directions. \nf{index\sub{last}} is the index of the last subblock in the direction and \nf{index\sub{prev}} is the index of the prvious block of the first direct subblock to be aggregated into \nf{new}. With this said, \texttt{$n$.blocks[$i$\textsuperscript{$\prime$}].end\textsubscript{dir}} stores the index of the rightmost direct subblock of direction \nf{dir} child of \texttt{$n$.blocks[$i-1$]}. Then \nf{sum\sub{enq-dir}} is computed with the sum of the  from computing the number of enqueue operations in the \nf{new} block and the value stored in \texttt{$n$.blocks[$i-1$].sum\sub{enq-dir}}. \nf{sum\sub{deq-dir}} is also the same. Then if \nf{new} block is going to be installed in the \nf{root}, the \nf{size} field is computed.
+
+\it{should I get into details of computing size and sumenq?}
+
 \begin{figure}[hbt]
   \center\includegraphics[width=5.5in]{pics/createblock}
   \caption{\label{fig::createBlock}Snapshot of a CreateBlock}
 \end{figure}
 
-\paragraph{\texttt{DSearch(e,end)}}
-\paragraph{\texttt{GetEnqueue(b,i)}}
-\paragraph{\tt{IndexDequeue(b,i)}}
+\paragraph{DSearch(e,end)}
+We can show an operation in a node in two formats, the rank of the operation among all the operations in the node or the index of the block containing the operation in the node and the rank of the operation in that block. If we know tuple of block and rank in the block of an operation ($E$) we can find the this tuple in the subblock containig the operation in poly log time. To find the response of a dequeue, the information we know about the response enquue is like the first way of showing the operation in the root ($E_i(\nf{root})$). So we have to find the block in the root containing the \nf{e}th enqueue in the root. We also know \nf{end} which the \nf{e}th enqueu is before or in the \nf{root.blocks[end]}. \nf{DSearch} uses the Doubling idea to find the range that the answer block is there (Lines \ref{dsearchStart}-\ref{dsearchEnd}) and then tries to find the response with binary search (Line 806\ref{lo}).
+
+\paragraph{GetEnqueue(b,i)}
+\nf{$n$.GetEnqueue(b,i)} returns the \nf{element} of \nf{i}th enqueue in $b$ th block of $n$. The range of subblocks of a block can be determined with \nf{end\sub{dir}} fields of the block and its previous block. Then the subblock can be found usig binary search on \nf{sum\sub{enq}} field.
+
+\paragraph{IndexDequeue(b,i)}
 
  Let $i$ be the value $R_n$, a successful instance of \nf{Refresh} on node \nf{n} reads from \nf{$n$.head}. $R_n$ does a successful \nf{CAS(null, $b$)} into \nf{n.blocks[$i$]}. Let $p$ be $n$\nf{}.parent. Without loss of generality for the rest of this section assume ${n}$ is the left child of $p$. From Lemma \ref{lem::appendExactlyOnce} we know there could be only one \nf{p.Refresh} propagating $b$. Let $R_p$ be the first successful \nf{p.Refresh} that reads some value greater than ${i}$ for \nf{left.head} and contains ${b}$ in its created block in Line \ref{invokeCreateBlock}. Let the index of the block $R_p$ put in $p$\nf{.blocks} be $j$.
  
@@ -565,13 +588,13 @@ Block $b$ is appended to \nf{n.blocks[h]} on Line \ref{cas}. After appending $b$
 \Statex
 
 \Function{boolean}{Refresh()}{}
-\State \tt{h= \head} \label{readHead}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}} \label{startHelpChild1}
 \State \tt{h\sub{dir}= dir.\head} \label{readChildHead}
 \If{\nf{dir.blocks[h\sub{dir}]!=null}} \label{ifHeadnotNull}
 \State{\tt{dir.\Call{Advance}{h\sub{dir}}}} \label{helpAdvance}
 \EndIf
 \EndFor \label{endHelpChild1}
+\State \tt{h= \head} \label{readHead}
 \State \tt{new= \Call{CreateBlock}{h}} \label{invokeCreateBlock}
 \If{\tt{new.num==0}} \Return{\tt{true}} \label{addOP} 
 \EndIf

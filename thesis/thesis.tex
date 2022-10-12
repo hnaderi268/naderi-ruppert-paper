@@ -1206,21 +1206,25 @@ So the doubling search reaches \nf{start} such that the \nf{root.blocks[start].s
 \end{figure}
 
 \pagebreak
-\subsection{Garbage Collection or Getting rid of the infinite Arrays}
+\section{Future directions}
+\paragraph{Infinite Sized Arrays}
+Our queue algorithm's usage of memory has two places to improve. First, we assumed arrays in the nodes are infinite sized. Second we do not handle garbage collection, dequeued operations are still remain in the nodes. We can use list to arrays to resolve the infinite sized arrays issue. To implement an infinite shared array we can create a small array of pointers called \nf{arr}. When a process wishes to write into \nf{head} it checks whether \nf{arr[$\lfloor\log $ head$\rfloor]$]} points to an array or not. If not it creates a shared array with size $2^i$ and tries to \nf{CAS} it to the created array. After \nf{CAS} terminates whether it is successful or not \nf{arr[$\lfloor\log $ head$\rfloor]$]} points to an array. When a process wishes to access to $i$th element it looks upto \nf{arr[$\lfloor\log i\rfloor]$][$i-2^{\lfloor\log i\rfloor]}$]} Note that CAS Retry Problem does not happen here because if $n$ elements are appended to the array then only $O(p\times\log n)$ times \nf{CAS} has happened. And if the size of the all shared memory is $k$, \nf{arr} can be initialized to a $\log k$ sized array.
 
-\pagebreak
-\section{Using Queues to Implement Vectors}
-Supporting Append, Read, Write in PolyLog time by modifying Get(Enq) Method. Create a Universal Construction Using our vector
+\begin{figure}[hbt]  
+  \center\includegraphics[width=6.5in]{pics/doublingArray.png}
+  \caption{Infinite sized Arrays}
+  \label{fig::doublingArray}
+\end{figure}
 
-\pagebreak
-\section{Conclusion}
-possible directions for work
+\paragraph{Garbage Collection}
+To garbage collect we can keep track of the index of the most recent \nf{block} in the \nf{root} that has been term and then split the blocks from that \nf{block}. We can use Persistent Red Black Trees because they support split in an efficient method.
 
-Maybe Stacks
+\paragraph{Poly-logarithmic Wait-free Vectors}
+If we do not distinct between \nf{Enqueue}s and \nf{Dequeue}s and replace \nf{DSearch} with Binary Search on all the \nf{root} in our algorithm, we achieve a list with poly-logarithmic \nf{Append}, \nf{Get} and \nf{Index} methods with respect to the number of \nf{Append}s done.
 
-Characterize what datastructure can be used for this approach, we already know: queue, fetch \& Inc, Vectors
+\paragraph{Stacks or maybe other objects that store sequences}
+The reason behind why our \nf{tree} worked well to implement a queue was two things. First, we can compute the index of the \nf{Enqueue} that is response of a \nf{Dequeue} fast. Two, the response of the \nf{Dequeue} is not very far from it (size of the queue). We think we can create wait-free poly-logarithmic version of other objects which their operations satisfy these two conditions. 
 
-\section*{References}
 \bibliography{main.bib} 
 \bibliographystyle{plain}
 

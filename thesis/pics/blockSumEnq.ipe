@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE ipe SYSTEM "ipe.dtd">
 <ipe version="70218" creator="Ipe 7.2.24">
-<info created="D:20220624164416" modified="D:20221004092340"/>
+<info created="D:20220624164416" modified="D:20221013150529"/>
 <ipestyle name="basic">
 <symbol name="arrow/arc(spx)">
 <path stroke="sym-stroke" fill="sym-stroke" pen="sym-pen">
@@ -333,18 +333,6 @@ h
 592 608 l
 h
 </path>
-<path stroke="black">
-352 672 m
-352 640
-176 608
-176 608
-176 608 c
-</path>
-<path stroke="black">
-352 672 m
-384 624
-496 608 c
-</path>
 <text matrix="1 0 0 1 -32 -16" transformations="translations" pos="160 560" stroke="black" type="label" width="108.387" height="6.923" depth="3.04" valign="baseline">$n$\texttt{.blocks[}$b$\texttt{].num\textsubscript{enq-left}}</text>
 <text matrix="1 0 0 1 -16 -16" transformations="translations" pos="480 560" stroke="black" type="label" width="112.092" height="6.923" depth="3.04" valign="baseline">$n$\texttt{.blocks[}$b$\texttt{].num\textsubscript{enq-right}}</text>
 <path stroke="black">
@@ -420,5 +408,22 @@ h
 448 504 l
 </path>
 <text matrix="1 0 0 1 -8 0" transformations="translations" pos="192 688" stroke="black" type="label" width="107.021" height="6.923" depth="3.04" valign="baseline">$n$\texttt{.blocks[}$b-1$\texttt{].sum\textsubscript{enq}}</text>
+<path stroke="black">
+348 672 m
+348 652
+244 640
+188 636
+180 620
+180 608
+180 608 c
+</path>
+<path stroke="black">
+348 672 m
+348 656
+452 648
+504 636
+504 616
+504 608 c
+</path>
 </page>
 </ipe>

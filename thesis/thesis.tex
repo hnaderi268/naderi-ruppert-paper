@@ -313,7 +313,7 @@ Pseudocode for the queue implementation is given in Section \ref{algQ}.
  In each \texttt{Node} we store pointers to its parent and children, an array of \nf{Block}s called \texttt{block}s and the index \nf{head} of the first empty entry in \texttt{blocks}.
 
 \paragraph{Block}
- The information stores in a \nf{Block} depends on whether  the \nf{Block} is in an internal node or a leaf. If it is in a leaf, we use a \nf{LeafBlock} which simply stores one operation. If a block $B$ is in an internal node $n$, then it contains subblocks in the left and right children of $n$. The left subblocks of $B$ are some consecutive blocks in the left child of $n$ starting from where the block prior to $B$ ended. In each \texttt{block} we store four essential fields that implicitly summarize which operations are in the block \texttt{sum\textsubscript{enq-left}}, \texttt{sum\textsubscript{deq-left}}, \texttt{sum\textsubscript{enq-right}}, \texttt{sum\textsubscript{deq-right}}. \texttt{sum\textsubscript{enq-left}} is the total number of \nf{Enqueue} operations in theblocks before the last subblock of $B$ in the left child child, other fields semantics is also similar. The \nf{end\sub{left}} and \nf{end\sub{right}} field store the last subblock of a block in the left and the right child, respectively. The \texttt{size} field in a block in the root node stores the size of the queue after the operations in the block have been performed. 
+ The information stores in a \nf{Block} depends on whether  the \nf{Block} is in an internal node or a leaf. If it is in a leaf, we use a \nf{LeafBlock} which simply stores one operation. If a block $B$ is in an internal node $n$, then it contains subblocks in the left and right children of $n$. The left subblocks of $B$ are some consecutive blocks in the left child of $n$ starting from where the block prior to $B$ ended. In each \texttt{block} we store four essential fields that implicitly summarize which operations are in the block \texttt{sum\textsubscript{enq-left}}, \texttt{sum\textsubscript{deq-left}}, \texttt{sum\textsubscript{enq-right}}, \texttt{sum\textsubscript{deq-right}}. \texttt{sum\textsubscript{enq-left}} is the total number of \nf{Enqueue} operations in theblocks before the last subblock of $B$ in the left child child, other fields semantics is also similar. The \nf{end\sub{left}} and \nf{end\sub{right}} field store the last subblock of a block in the left and the right child, respectively. The approximate index of the superblock of non-root blocks is stored in their \nf{super} field. The \texttt{size} field in a block in the root node stores the size of the queue after the operations in the block have been performed. 
 
 \paragraph{\tt{Enqueue($e$)}}
 An \nf{Enqueue} operation does not return a response, so it is sufficient to just propagate the \nf{Enqueue} operation to the root and then use its position in the linearization for future \nf{Dequeue} operations. \nf{Enqueue($e$)} creates a \nf{LeafBlock} with $\nf{element}=e$, sets its \nf{sum\sub{enq}} and \nf{sum\sub{deq}} fields and then appends it to the tree.
@@ -331,32 +331,24 @@ The \nf{head} field is the index of the first empty slot in \nf{blocks} in a \nf
 \nf{Propagate} on node $n$ uses the double refresh idea described in Section \ref{DescriptQ} and invokes two \nf{Refresh}es on $n$ in Lines \ref{firstRefresh} and \ref{secondRefresh}. Then, it invokes \nf{Propagate} on \nf{$n$.parent} recursively untill it reaches the root. 
 
 \paragraph{\tt{Refresh()}}
-The goal of a \nf{Refresh} on node $n$ is to create a block of $n$'s children's new blocks and append it to $n$\nf{.blocks}. The value $h$ from $n$\nf{.head} is read at Line \ref{readHead}. The new block created by \nf{Refresh} qill be inserted into $n\nf{.block[h]}$. Lines \ref{startHelpChild1}--\ref{endHelpChild1} of \nf{$n$.Refresh} help to \nf{Advance} $n$'s children. \nf{Advance} increments the children's \nf{head} if necessary and sets the \nf{super} field of their most recent appended blocks. The reason behind this helping is explained later when we discuss \nf{IndexDequeue}. After helping to \nf{Advance} children, \nf{new} block is created in Line \ref{invokeCreateBlock}.  The reason why reading \nf{head} and \nf{CreateBlock} are in two lines is that maybe the \nf{head} value changes from reading it till creating a block to be inserted to \nf{head}. Then if \nf{new} is empty \nf{Refresh} returns \nf{true} because there is no new operations to propagate  an it is unnecessary to add an empty block to the tree. Later we will assume all blocks contain at least one operation. Line \ref{cas} tries to install \nf{new}, if it was succsuful all is good, if not it means someone else has put a block earlier into \nf{head} or maybe the \nf{head} was not empty at first point. Anyway \nf{Refresh} tries to update the \nf{head} and \nf{super} field of $n$\nf{.blocks[h]} at Line \ref{advance}.
+The goal of a \nf{Refresh} on node $n$ is to create a block of $n$'s children's new blocks and append it to $n$\nf{.blocks}. The variable \nf{h} is read from $n$\nf{.head} at Line \ref{readHead}. The new block created by \nf{Refresh} will be inserted into $n\nf{.blocks[h]}$. Lines \ref{startHelpChild1}--\ref{endHelpChild1} of \nf{$n$.Refresh} help to \nf{Advance} $n$'s children. \nf{Advance} increments the children's \nf{head} if necessary and sets the \nf{super} field of their most recent appended blocks. The reason behind this helping is explained later when we discuss \nf{IndexDequeue}. After helping to \nf{Advance} children, \nf{new} block is created in Line \ref{invokeCreateBlock}. Then, if \nf{new} is empty, \nf{Refresh} returns \nf{true} because there is no new operations to propagate and it is unnecessary to add an empty block to the tree. Later we will use the fact that all blocks contain at least one operation. Line \ref{cas} tries to install \nf{new}. If it was successful all is good. If not, it means someone else has already put a block in $n$\nf{.blocks[h]}. In this case, \nf{Refresh} helps update $n$\nf{.head} and the \nf{super} field of $n$\nf{.blocks[h]} at Line \ref{advance}.
 
 
-\paragraph{\tt{CreateBlock()}} \texttt{$n$.CreateBlock(h)} returns a block containing new operations of \texttt{n}'s children.
-The \nf{new} block created in Line 333's fields are filled with symmtery for both left and right directions. \nf{index\sub{last}} is the index of the last subblock in the direction and \nf{index\sub{prev}} is the index of the prvious block of the first direct subblock to be aggregated into \nf{new}. With this said, \texttt{$n$.blocks[$i$\textsuperscript{$\prime$}].end\textsubscript{dir}} stores the index of the rightmost direct subblock of direction \nf{dir} child of \texttt{$n$.blocks[$i-1$]}. Then \nf{sum\sub{enq-dir}} is computed with the sum of the  from computing the number of enqueue operations in the \nf{new} block and the value stored in \texttt{$n$.blocks[$i-1$].sum\sub{enq-dir}}. \nf{sum\sub{deq-dir}} is also the same. Then if \nf{new} block is going to be installed in the \nf{root}, the \nf{size} field is computed.
+\paragraph{\tt{CreateBlock()}} \texttt{$n$.CreateBlock($h$)} is used by \nf{Refresh} to construct a block containing new operations of $n$'s children.
+The \nf{new} block is created in Line 333 and its fields are filled similarly for both left and right directions. The variable  \nf{index\sub{prev}} is the index of the block preceding the first direct subblock in direction \nf{dir} aggregated into \nf{new}. Field \texttt{new.end\textsubscript{dir}} stores the index of the rightmost subblock of \nf{new} in \nf{dir} child. Then \nf{sum\sub{enq-dir}} is computed from sum of the the number of \nf{Enqueue} operations in the \nf{new} block from direction \nf{dir} and the value stored in \texttt{$n$.blocks[h-1].sum\sub{enq-dir}}. The field \nf{sum\sub{deq-dir}} is computed similarly. Then, if \nf{new} block is going to be installed in the \nf{root}, the \nf{size} field is also computed.
 
-\it{Should I get into details of computing size and sumenq?}
-
-%\begin{figure}[hbt]
-%  \center\includegraphics[width=5.5in]{pics/createblock}
-%  \caption{\label{fig::createBlock}Snapshot of a CreateBlock}
-%\end{figure}
-
-\paragraph{\tt{DSearch($e,end$)}}
-We can show an operation in a node in two formats, the rank of the operation among all the operations in the node or the index of the block containing the operation in the node and the rank of the operation in that block. If we know tuple of block and rank in the block of an operation ($E$) we can find the this tuple in the subblock containig the operation in poly log time. To find the response of a dequeue, the information we know about the response enquue is like the first way of showing the operation in the root ($E_i(\nf{root})$). So we have to find the block in the root containing the \nf{e}th enqueue in the root. We also know \nf{end} which the \nf{e}th enqueu is before or in the \nf{root.blocks[end]}. \nf{DSearch} uses the Doubling idea to find the range that the answer block is there (Lines \ref{dsearchStart}-\ref{dsearchEnd}) and then tries to find the response with binary search (Line \ref{dsearchBinarySearch}).
-
-\paragraph{\tt{GetEnqueue($b,i$)}}
-\nf{$n$.GetEnqueue(b,i)} returns the \nf{element} of \nf{i}th enqueue in $b$ th block of $n$. The range of subblocks of a block can be determined with \nf{end\sub{dir}} fields of the block and its previous block. Then the subblock can be found usig binary search on \nf{sum\sub{enq}} field.
+\paragraph{\tt{GetEnqueue($b,i$)} and \tt{DSearch($e, end$)}}
+We can show an operation in a node in two ways: the rank of the operation among all the operations in the node or the index of the block containing the operation in the node and the rank of the operation in that block. If we know the block and rank within the block of an operation we can find the subblock containig the operation and the operation's rank within that subblock in poly-log time. To find the response of a \nf{Dequeue}, we know about the  rank of the response \nf{Enqueue} in the root (\nf{e} in Line \ref{computeE}).
+We also know the \nf{e}th \nf{Enqueue} is in \nf{root.blocks[1..end]}. \nf{DSearch} uses doubling to find the range that contains the answer block (Lines \ref{dsearchStart}--\ref{dsearchEnd}) and then tries to find the required indices with a binary search (Line \ref{dsearchBinarySearch}).
+A call to \nf{$n$.GetEnqueue(b,i)} returns the \nf{element} of the \nf{i}th enqueue in \nf{b}th the block of $n$. The range of subblocks of a block is determined using the \nf{end\sub{left}} and \nf{end\sub{right}} fields of the block and its previous block. Then, the subblock is found using binary search on the \nf{sum\sub{enq}} field (Lines \ref{leftChildGet} and \ref{rightChildGet}).
 
 \paragraph{\tt{IndexDequeue($b,i$)}}
 
- Let $i$ be the value $R_n$, a successful instance of \nf{Refresh} on node \nf{n} reads from \nf{$n$.head}. $R_n$ does a successful \nf{CAS(null, $b$)} into \nf{n.blocks[$i$]}. Let $p$ be $n$\nf{}.parent. Without loss of generality for the rest of this section assume ${n}$ is the left child of $p$. From Lemma \ref{lem::appendExactlyOnce} we know there could be only one \nf{p.Refresh} propagating $b$. Let $R_p$ be the first successful \nf{p.Refresh} that reads some value greater than ${i}$ for \nf{left.head} and contains ${b}$ in its created block in Line \ref{invokeCreateBlock}. Let the index of the block $R_p$ put in $p$\nf{.blocks} be $j$.
+$n$\nf{.IndexDequeue($b,i$)} computes the block and the rank within the block of the $i$th \nf{Dequeue} of $b$th block of $n$ in the root. Let $R_n$ be the successful  \nf{Refresh} on node $n$ that did a successful \nf{CAS(null, $B$)} into \nf{n.blocks[$b$]}. Let $n$\nf{.parent} be $n$\nf{.parent}. Without loss of generality assume for the rest of this section a ${n}$ is the left child of $n$\nf{.parent}. Let $R_p$ be the first successful \nf{p.Refresh} that reads some value greater than ${b}$ for \nf{left.head} therefore contains ${B}$ in its created block in Line \ref{invokeCreateBlock}. Let the index of the block $R_p$ put in $n$\nf{.parent}\nf{.blocks} be $j$.
  
-Since the index of the superblock of ${b}$ is not known until $b$ is propagated, $R_n$ cannot set the \nf{super} field of ${b}$ while creating it. One approach is to set the \nf{super} field of ${b}$ by $R_n$ after propagating $b$ to $p$. This solution would not be efficient because there might be $p$ subblocks in the block $R_p$ propagated needing to update the \nf{super} field. However intuitively, once $b$ is installed, its superblock is going to be close to \nf{$n$.parent.head} at the time of installation. One idea is that if we know the approximate position of the superblock of $b$ then we can search for the real superblock when we wished to know the superblock of $b$ i.e. \nf{b.super} does not have to be the exact location of  the superblock of $b$, but we want it to be close to \nf{j}. We can set \nf{$b$.super} to \nf{$n$.parent.head} while creating $b$, but the problem is that there might be many \nf{$p$.Refresh}es that could happen after reading $p$\nf{.head} by $R_n$ and before propagating $b$ to $p$. If we set \nf{$b$.super} to \nf{$p$.head} after appending $b$ to \nf{$n$.blocks} (Line \ref{setSuper1}), $R_n$ might go to sleep at some time after installing $b$ and before setting \nf{$b$.super}. In this case the next \nf{Refresh}es on $n$ and \nf{n.parent} help fill in the value of \nf{$b$.super}.
+Since the index of the superblock of ${B}$ is not known until $B$ is propagated, $R_n$ cannot set the \nf{super} field of ${B}$ while creating it. One approach for $R_n$ is to set the \nf{super} field of ${B}$ after propagating $B$ to $n$\nf{.parent}. This solution would not be efficient because there might be $n$\nf{.parent} subblocks in the block $R_p$ propagated needing updates their \nf{super} field. However, intuitively, once $B$ is installed, its superblock is going to be close to \nf{$n$.parent.head} at the time of installation. If we know the approximate position of the superblock of $B$ then we can search for the real superblock when we it is needed. Thus, \nf{$B$.super} does not have to be the exact location of  the superblock of $B$, but we want it to be close to $j$. We can set \nf{$B$.super} to \nf{$n$.parent.head} while creating $B$, but the problem is that there might be many \nf{$n$\nf{.parent}.Refresh}es that could happen after $R_n$ reads $n$\nf{.parent}\nf{.head} and before propagating $B$ to $n$\nf{.parent}. If $R_n$ sets \nf{$B$.super} to \nf{$n$\nf{.parent}.head} after appending $B$ to \nf{$n$.blocks} (Line \ref{setSuper1}), $R_n$ might go to sleep at some time after installing $B$ and before setting \nf{$B$.super}. In this case, the next \nf{Refresh}es on $n$ and \nf{n.parent} help fill in the value of \nf{$B$.super}.
 
-Block $b$ is appended to \nf{n.blocks[h]} on Line \ref{cas}. After appending $b$, \nf{b.super} is set on Line \ref{setSuper1} of a call to \nf{Advance} from \nf{$n$.Refresh} by the same process or another process or  maybe an \nf{$n$.parent.Refresh}. We want to bound how far \nf{b.super} is from the index of $b$'s superblock, which is created by a successful \nf{n.parent.Refresh} that propagates $b$.
+Block $B$ is appended to \nf{$n$.blocks[i]} on Line \ref{cas}. After appending $B$, \nf{$B$.super} is set on Line \ref{setSuper1} of a call to \nf{Advance} from \nf{$n$.Refresh} by the same process or another process or by Line \ref{helpAdvance} of a \nf{$n$.parent.Refresh}. We bound how far \nf{b.super} is from the index of $b$'s superblock by 1.
 
 \pagebreak
 \newpage
@@ -471,12 +463,12 @@ Block $b$ is appended to \nf{n.blocks[h]} on Line \ref{cas}. After appending $b$
 
 \Statex
 
-\Function{<int, int>}{FindResponse}{\sl{int} b, \sl{int} i}\cmt{Returns the response to $D_{root,b,i}$.}
+\Function{element}{FindResponse}{\sl{int} b, \sl{int} i}\cmt{Returns the response to $D_i(root,b)$, the \nf{i}th \nf{Dequeue} in \nf{root.blocks[b]}.}
 \If{\tt{ root.blocks[b-1].\size}\tt{ + root.blocks[b].num\sub{enq} - i $<$ 0}} \label{checkEmpty}\cmt{Check if the queue is empty.}
 \State \Return \tt{null} \label{returnNull}
 \Else
 \State \tt{e= i - root.blocks[b-1].size + root.blocks[b-1].sum\sub{enq}} \label{computeE}
-\cmt{$E_e(root)$ is the response.}
+\cmt{The response is $E_e(root)$, the \nf{e}th \nf{Enqueue}in the root.}
 \State \Return \tt{root.GetEnqueue(root.\Call{DSearch}{e, b})}\label{findAnswer}
 \EndIf
 \EndFunction{FindResponse}
@@ -484,14 +476,18 @@ Block $b$ is appended to \nf{n.blocks[h]} on Line \ref{cas}. After appending $b$
 \end{algorithmic}
 \end{algorithm}
 
+\pagebreak
+
+
 \begin{algorithm}
 \caption{Root}
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{800}
 \Statex
 \Statex $\leadsto$ \textsf{Precondition: \tt{root.blocks[end].sum\sub{enq} $\geq$ \tt{e}}}
+\Statex $\triangleright$ \textmd{Returns \tt{<b,i>} such that $E_e(root)=E_i(root,b)$,i.e. , the \nf{e}th \nf{Enqueue} in the \nf{root} is the \nf{i}th \nf{Enqueue} within block \nf{b} of the \nf{root}.}
+
 \Function{<int, int>}{DSearch}{\sl{int} e, \sl{int} end}
-\cmt{Returns \tt{<b,i>} such that $E_e(root)=E_i(root,b)$.}
 \State \tt{start= end-1} \label{dsearchStart}
 \While{\tt{root.blocks[start].sum\sub{enq}}$\geq$\tt{e}}
 \State \tt{start= max(start-(end-start), 0)} \label{doubling}
@@ -517,6 +513,7 @@ Block $b$ is appended to \nf{n.blocks[h]} on Line \ref{cas}. After appending $b$
 \end{algorithmic}
 \end{algorithm}
 
+
 \pagebreak
 
 \begin{algorithm}
@@ -525,6 +522,7 @@ Block $b$ is appended to \nf{n.blocks[h]} on Line \ref{cas}. After appending $b$
 \setcounter{ALG@line}{300}
 \begin{multicols}{2}
 
+\Statex $\triangleright$ \textmd{\nf{$n$.Propagate} propagates operations  in \nf{this}.children up to \nf{this} when it terminates.}
 \Function{void}{Propagate()}{}
 \If{\bf{not} \Call{Refresh()}{}} \label{firstRefresh}
 \State \Call{Refresh()}{} \label{secondRefresh}
@@ -536,6 +534,7 @@ Block $b$ is appended to \nf{n.blocks[h]} on Line \ref{cas}. After appending $b$
 
 \Statex
 
+\Statex $\triangleright$ \textmd{Creates a block containig new operations of \nf{this.}children, and then tries to append it to \nf{this}.}
 \Function{boolean}{Refresh()}{}
 \State \tt{h= \head} \label{readHead}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}} \label{startHelpChild1}
@@ -574,11 +573,10 @@ Block $b$ is appended to \nf{n.blocks[h]} on Line \ref{cas}. After appending $b$
 \Function{Block}{CreateBlock}{\sl{int} i} 
 \State \tt{block new= \Call{new}{\sl{block}}}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}}
-\State \tt{index\sub{last}= dir.\head-1} \label{lastLine}
 \State \tt{index\sub{prev}= blocks[i-1].end\sub{dir}} \label{prevLine}
-\State \tt{new.end\sub{dir}= index\sub{last}} \label{endDefLine}
-\State \tt{block\sub{last}= dir.blocks[index\sub{last}]}
+\State \tt{new.end\sub{dir}= dir.\head-1} \label{lastLine}
 \State \tt{block\sub{prev}= dir.blocks[index\sub{prev}]}
+\State \tt{block\sub{last}= dir.blocks[new.end\sub{dir}]}
 \State \tt{new.sum\sub{enq-dir}= blocks[i-1].sum\sub{enq-dir} + }
 \Statex \hspace{10.7em}\tt{block\sub{last}.sum\sub{enq} - block\sub{prev}.sum\sub{enq}} \label{setSumEnqLeft}
 \State \tt{new.sum\sub{deq-dir}= blocks[i-1].sum\sub{deq-dir} + }
@@ -596,7 +594,7 @@ Block $b$ is appended to \nf{n.blocks[h]} on Line \ref{cas}. After appending $b$
 \end{algorithmic}
 \end{algorithm}
 
-%##########################################
+\pagebreak
 
 \begin{algorithm}
 \caption{Node}
@@ -612,7 +610,7 @@ Block $b$ is appended to \nf{n.blocks[h]} on Line \ref{cas}. After appending $b$
 \State \Return\tt{left.}\Call{GetEnqueue}{subBlock, i} 
 \Else
 \State \tt{i= i-blocks[b].num\sub{enq-left}}
-\State\tt{subBlock= right.\Call{BinarySearch}{sum\sub{enq}, i+right.blocks[b-1].sum\sub{enq-right}, blocks[b-1].end\sub{right}+1, blocks[b].end\sub{right}}} \label{rightChildGet}
+\State\tt{subBlock= right.\Call{BinarySearch}{sum\sub{enq}, i+blocks[b-1].sum\sub{enq-right}, blocks[b-1].end\sub{right}+1, blocks[b].end\sub{right}}} \label{rightChildGet}
 \State \Return\tt{right.}\Call{GetEnqueue}{subBlock, i} 
 \EndIf
 \EndFunction{GetEnqueue}
@@ -670,7 +668,7 @@ Let $R$ be an instance of \nf{Refresh} on a node $n$. After $R$ terminates, \nf{
 If the \nf{CAS} in Line \ref{incrementHead} is successful then the claim holds. Otherwise $n.\nf{head}$ has changed from the value that was read in Line \ref{readHead}. By Observation \ref{nonDecreasingHead} this means another process has incremented $n.\nf{head}$.
 \end{proof}
 
-Now we show \nf{$n$.blocks[$n$.head]} is either the last block written into node $n$ or the first empty block in $n$.
+Now we show \nf{$n$.blocks[$n$.head]} is either the last block written into node $n$ or the first empty block in~$n$.
 
 \begin{invariant}[headPosition] \label{lem::headPosition} If the value of $n.\nf{head}$ is $h$ then $\nf{$n$.blocks[$i$]}=\nf{null}$ for ${i>h}$ and $\nf{$n$.blocks[$i$]}\neq\nf{null}$ for ${0\leq i<h}$.
 \end{invariant}
@@ -693,7 +691,7 @@ The next lemma is used to prove the subblocks of two blocks in a node are disjoi
  If $n\nf{.blocks[}i\nf{]}\neq\nf{null}$ and $i>0$ then $\nf{$n$.blocks[$i$].end\sub{left}} \geq \nf{$n$.blocks[$i-1$].end\sub{left}}$ and $\nf{$n$.blocks[$i$].end\sub{right}} \geq \nf{$n$.blocks[$i-1$].end\sub{right}}$.
 \end{lemma}
 \begin{proof}
-Consider the block $b$ written into \nf{n.blocks[$i$]} by \nf{CAS} at Line \ref{cas}. Block $b$ is created by the \nf{CreateBlock($i$)} called at Line \ref{invokeCreateBlock}. Prior to this call to \nf{CreateBlock($i$)}, $\nf{n.head}=i$ at Line \ref{readHead}, so \nf{n.blocks[$i-1$]} is already a non-null value $b$$^\prime$ by Invariant \ref{lem::headPosition}. Thus, the \nf{CreateBlock($i-1$)} that created  $b^\prime$ terminated before the \nf{CreateBlock($i$)} that creates $b$ is invoked. The value written into \nf{$b$.end\sub{left}} at Line \ref{endDefLine} of \nf{CreateBlock($i$)}  was one less than the value read at Line \ref{lastLine} of \nf{CreateBlock($i$)}. Similarly, the value in \nf{n.blocks[$i-1$].end\sub{left}} was one less than the value read from $\nf{n.left.head}$ during the call to \nf{CreateBlock($i-1$)}. By Observation \ref{nonDecreasingHead}, $n\nf{.left.head}$ is non-decreasing, so $b^\prime\nf{.end\sub{left}} \leq \nf{$b$.end\sub{left}}$. The proof for \nf{end\sub{right}} is similar.
+Consider the block $b$ written into \nf{n.blocks[$i$]} by \nf{CAS} at Line \ref{cas}. Block $b$ is created by the \nf{CreateBlock($i$)} called at Line \ref{invokeCreateBlock}. Prior to this call to \nf{CreateBlock($i$)}, $\nf{n.head}=i$ at Line \ref{readHead}, so \nf{n.blocks[$i-1$]} is already a non-null value $b$$^\prime$ by Invariant \ref{lem::headPosition}. Thus, the \nf{CreateBlock($i-1$)} that created  $b^\prime$ terminated before the \nf{CreateBlock($i$)} that creates $b$ is invoked. The value written into \nf{$b$.end\sub{left}} at Line \ref{lastLine} of \nf{CreateBlock($i$)}  was one less than the value read at Line \ref{lastLine} of \nf{CreateBlock($i$)}. Similarly, the value in \nf{n.blocks[$i-1$].end\sub{left}} was one less than the value read from $\nf{n.left.head}$ during the call to \nf{CreateBlock($i-1$)}. By Observation \ref{nonDecreasingHead}, $n\nf{.left.head}$ is non-decreasing, so $b^\prime\nf{.end\sub{left}} \leq \nf{$b$.end\sub{left}}$. The proof for \nf{end\sub{right}} is similar.
 \end{proof}
 
 \begin{lemma} \label{lem::subblocksDistinct}
@@ -1194,24 +1192,34 @@ So the doubling search reaches \nf{start} such that the \nf{root.blocks[start].s
 \end{figure}
 
 \pagebreak
-\section{Future directions}
-\paragraph{Infinite Sized Arrays}
-Our queue algorithm's usage of memory has two places to improve. First, we assumed arrays in the nodes are infinite sized. Second we do not handle garbage collection, dequeued operations are still remain in the nodes. We can use list to arrays to resolve the infinite sized arrays issue. To implement an infinite shared array we can create a small array of pointers called \nf{arr}. When a process wishes to write into \nf{head} it checks whether \nf{arr[$\lfloor\log $ head$\rfloor]$]} points to an array or not. If not it creates a shared array with size $2^i$ and tries to \nf{CAS} it to the created array. After \nf{CAS} terminates whether it is successful or not \nf{arr[$\lfloor\log $ head$\rfloor]$]} points to an array. When a process wishes to access to $i$th element it looks upto \nf{arr[$\lfloor\log i\rfloor]$][$i-2^{\lfloor\log i\rfloor]}$]} Note that CAS Retry Problem does not happen here because if $n$ elements are appended to the array then only $O(p\times\log n)$ times \nf{CAS} has happened. And if the size of the all shared memory is $k$, \nf{arr} can be initialized to a $\log k$ sized array.
+\section{Future Directions}
+We designed a tree to achieve agreement among processes in poly-log steps with respect to the total number of operations invoked and used it to implement a poly-log queue with respect to the size of the queue. We can use our solution for agreement to construct more poly-log wait-free linearizable objects. We call our solution \it{Block Tree}. In the next paragraphs we talk about possible improvements on block trees and the data structures that we can implement with block trees.
 
+\paragraph{Reducing Space Usage}
+Our queue algorithm's usage of memory has places to improve. We assumed arrays in the nodes are unbounded.  If there is an $N$, such that the $N$ is greater than the  maximum possible operations appended to the block tree, then we can use Array
+Segment~\cite{7073592} model to take $O(n+ \log N)$ space in each node, where $n$ is the total number of operations. To implement this we can create a static array of pointers called \nf{arr} of references to array segments. When a process wishes to write into \nf{head} it checks whether \nf{arr[$\lfloor\log $ head$\rfloor$]} points to an array or not. If not, it creates a shared array with size $2^i$ and tries to \nf{CAS} a pointer to the created array into \nf{arr[$\lfloor\log $ head$\rfloor$]}. Whether the \nf{CAS} is successful or not \nf{arr[$\lfloor\log $ head$\rfloor$]} points to an array. When a process wishes to access to $i$th element it looks up to \nf{arr[$\lfloor\log i\rfloor$][$i-2^{\lfloor\log i\rfloor}$]} which takes $O(1)$ steps. Note that CAS Retry Problem does not happen here because if $n$ elements are appended to the array then only $O(p\times\log n)$ \nf{CAS} steps have happened. Furthermore at most $p$ arrays with size $2^{\lfloor\log i\rfloor}$ are allocated by processes while processes try to to the \nf{CAS} on \nf{arr[$i$]} which in average the time taken to allocate arrays in an execution is $O(1)$ per operation.
 \begin{figure}[hbt]  
   \center\includegraphics[width=6.5in]{pics/doublingArray.png}
-  \caption{Infinite sized Arrays}
+  \caption{Array Segments}
   \label{fig::doublingArray}
 \end{figure}
 
 \paragraph{Garbage Collection}
-To garbage collect we can keep track of the index of the most recent \nf{block} in the \nf{root} that has been term and then split the blocks from that \nf{block}. We can use Persistent Red Black Trees because they support split in an efficient method.
+We did not handle garbage collection: \nf{Enqueue} operations  remain in the nodes even after their elements have been dequeued.
+We can keep track of the \nf{block}s in the \nf{root} that all of their operations are terminated, i.e, all of its enqueues have been dequeued and the response of all of its dequeues is computed. We call these blocks \it{Finished Blocks}. If we help the old operations to compute their response, then we can say if block $B$ is finshed then all blcoks before $B$ are also finished. Knowing the most recent finished block we can release the memory taken by these blocks. To throw the garbage in the blocks away we cannot use arrays. We need a datastructure that supports \nf{read(i)}, \nf{write(i)} and \nf{split(i)} operations in $O(\log n)$. \nf{split(i)} is to remove all the indices less than \nf{i}. We can use Persistent Red Black Trees~\cite{DBLP:conf/podc/BashariW21} for this usage.
 
-\paragraph{Poly-logarithmic Wait-free Vectors}
-If we do not distinct between \nf{Enqueue}s and \nf{Dequeue}s and replace \nf{DSearch} with Binary Search on all the \nf{root} in our algorithm, we achieve a list with poly-logarithmic \nf{Append}, \nf{Get} and \nf{Index} methods with respect to the number of \nf{Append}s done.
+\begin{figure}[hbt]  
+  \center\includegraphics[width=3.5in]{pics/finishedBlocks.png}
+  \caption{Finished blocks are shown with red color and unfinished blocks are shown with green color. All the subblocks of a finished block are also finished.}
+  \label{fig::doublingArray}
+\end{figure}
 
-\paragraph{Stacks or maybe other objects that store sequences}
-The reason behind why our \nf{tree} worked well to implement a queue was two things. First, we can compute the index of the \nf{Enqueue} that is response of a \nf{Dequeue} fast. Two, the response of the \nf{Dequeue} is not very far from it (size of the queue). We think we can create wait-free poly-logarithmic version of other objects which their operations satisfy these two conditions. 
+\paragraph{Poly-logarithmic Wait-free Sequences}
+Assume a data structure storing a sequence that has supports three operations \nf{append(e)}, \nf{get(i)} and \nf{index(e)}. \nf{append(e)} adds \nf{e} to the sequence, \nf{get(i)} gets the \nf{i}th element in the sequence and \nf{index(e)} computes the position of appended element \nf{e} in the sequence. We can modify our queue to design such data structure.
+If we do not distinct between \nf{Enqueue}s and \nf{Dequeue}s and replace \nf{DSearch} with Binary Search on all the \nf{root} in our algorithm, we achieve this with poly-logarithmic steps for each operation with respect to the number of \nf{append}s done.
+
+\paragraph{Stacks}
+There are two reasons block tree worked well to implement a queue. Firstly, to respond a \nf{Dequeue} we do not need to look at all the history of operations, if a \nf{Dequeue} does not return null we can compute the index of the \nf{Enqueue} that is response of a \nf{Dequeue} in $O(\log n)$ if we keep the number of enqueues and the size. Secondly, the operations needed to look to respond a the \nf{Dequeue} is not very far from it in the sequence of operations: the distance is at most linear in the size of the queue. It may be possible to create wait-free poly-logarithmic implementaion of other objects whose operations satisfy these two conditions. 
 
 \bibliography{main.bib} 
 \bibliographystyle{plain}

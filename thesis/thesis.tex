@@ -271,7 +271,7 @@ To compute the rank in the root of an operation in the leaf, we need to find the
   \caption{Each block stores the index of its last subblock in each child. \label{fig::pointer}}
 \end{figure}
 
-In an execution on a queue where no dequeue operation returns null, the $k$th dequeue returns the argument of the $k$th enqueue. In the general case a dequeue returns null if and only if the size of the queue after the previous operation is 0. We refer to such a dequeue as a null dequeue. Otherwise, if the the dequeue is the $k$th non-null dequeue, it returns the argument of the $k$th enqueue. Having the size of the queue after an operation we can compute the number of non-null dequeues from the number of enqueues up to block B. So, if we store the size of the queue after each block of operations in the root, we can compute the index of the enqueue which is the response to a given dequeue in constant time.
+In an execution on a queue where no dequeue operation returns\nf{null}, the $k$th dequeue returns the argument of the $k$th enqueue. In the general case a dequeue returns\nf{null} if and only if the size of the queue after the previous operation is 0. We refer to such a dequeue as a\nf{null} dequeue. Otherwise, if the the dequeue is the $k$th non-null dequeue, it returns the argument of the $k$th enqueue. Having the size of the queue after an operation we can compute the number of non-null dequeues from the number of enqueues up to block B. So, if we store the size of the queue after each block of operations in the root, we can compute the index of the enqueue which is the response to a given dequeue in constant time.
 
 In our case of implementing a queue, a process only needs to compute the rank of a \nf{Dequeue} and get an \nf{Enqueue} with a specific rank.  We know we can linearize operations in a block in any order; here, we choose to put \nf{Enqueue} operations in a block before \nf{Dequeue} operations. Consider the follwing operations, where operations in a cell are concurrent.
 \begin{table}[hbtp]
@@ -449,7 +449,7 @@ Block $B$ is appended to \nf{$n$.blocks[i]} on Line \ref{cas}. After appending $
 
 \Statex
 
-\Function{Object}{Dequeue()}{} \cmt{Creates a block with null value element, appends it to the tree and returns its response.}
+\Function{Object}{Dequeue()}{} \cmt{Creates a block with\nf{null} value element, appends it to the tree and returns its response.}
 \State \tt{block newBlock= \Call{new}{\sl{LeafBlock}}} 
 \State \tt{newBlock.element= null}
 \State \tt{newBlock.sum\sub{enq}= leaf.blocks[leaf.\head].sum\sub{enq}}
@@ -492,7 +492,7 @@ Block $B$ is appended to \nf{$n$.blocks[i]} on Line \ref{cas}. After appending $
 \While{\tt{root.blocks[start].sum\sub{enq}}$\geq$\tt{e}}
 \State \tt{start= max(start-(end-start), 0)} \label{doubling}
 \EndWhile \label{dsearchEnd}
-\State \tt{b= root.BinarySearch(sum\sub{enq}, e, start, end)} \label{dsearchBinarySearch}
+\State \tt{b= root.BinarySearch( e, start, end)} \label{dsearchBinarySearch}
 \State \tt{i= e- root.blocks[b-1].sum\sub{enq}} \label{DSearchComputei}
 \State\Return \tt{<b,i>}
 \EndFunction{DSearch}
@@ -561,10 +561,10 @@ Block $B$ is appended to \nf{$n$.blocks[i]} on Line \ref{cas}. After appending $
 \EndFunction{Advance}
 
 \pagebreak
-\Statex $\leadsto$ \textsf{Precondition: \tt{blocks[start..end]} contains a block with field \tt{f} greater than or equal to \tt{i}}
-\Statex $\triangleright$ \textmd{Does a binary search for~the value \tt{i} of the given prefix sum \tt{field}. Returns the index of the leftmost block in \tt{blocks[start..end]} whose \sl{field} \tt{f} is $\geq$ \tt{i}}.
-\Function{int}{BinarySearch}{\sl{field} f, \sl{int} i, \sl{int} start, \sl{int} end}
-\State \Return \tt{min\{j: blocks[j].f$\geq$i\}}
+\Statex $\leadsto$ \textsf{Precondition: \tt{blocks[start..end]} contains a block with \tt{sum\sub{enq}} greater than or equal to \tt{i}}
+\Statex $\triangleright$ \textmd{Does a binary search for~the value \tt{i} of \tt{sum\sub{enq}} field. Returns the index of the leftmost block in \tt{blocks[start..end]} whose \tt{sum\sub{enq}} is $\geq$ \tt{i}}.
+\Function{int}{BinarySearch}{ \sl{int} i, \sl{int} start, \sl{int} end}
+\State \Return \tt{min\{j: blocks[j].sum\sub{enq}$\geq$i\}}
 \EndFunction{BinarySearch}
 
 \Statex
@@ -606,11 +606,11 @@ Block $B$ is appended to \nf{$n$.blocks[i]} on Line \ref{cas}. After appending $
 \If{\tt{this} \bf{is} \tt{leaf}}
 \State\Return \tt{blocks[b].element} \label{getBaseCase}
 \ElsIf{\tt{i $\leq$ blocks[b].num\sub{enq-left}}} \label{leftOrRight} \cmt{$E_i(this,b)$ is in the left child of this node.}
-\State \tt{subBlock= left.\Call{BinarySearch}{sum\sub{enq}, i+blocks[b-1].sum\sub{enq-left}, blocks[b-1].end\sub{left}+1, blocks[b].end\sub{left}}} \label{leftChildGet}
+\State \tt{subBlock= left.\Call{BinarySearch}{ i+blocks[b-1].sum\sub{enq-left}, blocks[b-1].end\sub{left}+1, blocks[b].end\sub{left}}} \label{leftChildGet}
 \State \Return\tt{left.}\Call{GetEnqueue}{subBlock, i} 
 \Else
 \State \tt{i= i-blocks[b].num\sub{enq-left}}
-\State\tt{subBlock= right.\Call{BinarySearch}{sum\sub{enq}, i+blocks[b-1].sum\sub{enq-right}, blocks[b-1].end\sub{right}+1, blocks[b].end\sub{right}}} \label{rightChildGet}
+\State\tt{subBlock= right.\Call{BinarySearch}{ i+blocks[b-1].sum\sub{enq-right}, blocks[b-1].end\sub{right}+1, blocks[b].end\sub{right}}} \label{rightChildGet}
 \State \Return\tt{right.}\Call{GetEnqueue}{subBlock, i} 
 \EndIf
 \EndFunction{GetEnqueue}
@@ -1087,12 +1087,12 @@ We must show that, every operation that terminates is in $L$ exactly once and if
 Once some operations are aggregated in one block, they will get propagated up to the root together and they can be linearized in any order among themselves. We have chosen to put \nf{Enqueue}s in a block before \nf{Eequeue}s (see Definition \ref{ordering}).
 
 \begin{definition}\label{defNullDeq}
-If a \nf{Dequeue} operation returns null it is called a \it{null} \nf{Dequeue}, otherwise it is called \it{non-null} \nf{Dequeue}.
+If a \nf{Dequeue} operation returns\nf{null} it is called a \it{null} \nf{Dequeue}, otherwise it is called \it{non-null} \nf{Dequeue}.
 \end{definition}
 
 Next we define  the responses that \nf{Dequeue}s should return, according to the linearization.
 \begin{definition}
-   Assume the operations in \nf{root.blocks} are applied sequentially on an empty queue in the order of $L$.  ${Resp(d)=e}$\nf{.element} if the element of \nf{Enqueue} $e$ is the response to \nf{Dequeue} $d$. Otherwise if ${d}$ is a null dequeue then ${Resp(d)=\nf{null}}$. 
+   Assume the operations in \nf{root.blocks} are applied sequentially on an empty queue in the order of $L$.  ${Resp(d)=e}$\nf{.element} if the element of \nf{Enqueue} $e$ is the response to \nf{Dequeue} $d$. Otherwise if ${d}$ is a\nf{null} dequeue then ${Resp(d)=\nf{null}}$. 
 \end{definition}
 
 % \begin{observation}\label{enqBeforeDeq}
@@ -1159,37 +1159,51 @@ The theorem follows from Lemmas \ref{linearSat} and \ref{linearCorrect}.
 \pagebreak
 
 \section{Analysis}
-\begin{lemma}[Amortized time analysis]
-\nf{Enqueue} and \nf{Dequeue}, each take $O(\log^2 p + \log q)$ steps in amortized analysis. Where $p$ is the number of processes and $q$ is the size of the queue at the time of invocation of operation.
-\end{lemma}
-\begin{proof}
-\nf{Enqueue(x)} consists of creating a \nf{block(x)} and appending it to the tree. The first part takes constant time. To propagate \nf{x} to the root the algorithm tries two \nf{Refresh}es in each node of the path from the leaf to the root (Lines \ref{firstRefresh}, \ref{secondRefresh}). We can see from the code  that each \nf{Refresh} takes constant number of steps since creating a block is done in constant time and does $O(1)$ \nf{CAS}es. Since the height of the tree is $\Theta(\log p)$, \nf{Enqueue(x)} takes $O(\log p)$ steps.
 
-A \nf{Dequeue} creates a block with null value element, appends it to the tree, computes its order among enqueue operations, and returns the response. The first two part is similar to an \nf{Enqueue} operation. To compute the order of a \nf{dqueue} in $D(n)$ there are some constant steps and \nf{IndexDequeue()} is called. \nf{IndexDequeue} does a search with range $p$ in each level which takes $O(log^2 p)$ in the tree. In the \nf{FindResponse()} routine \nf{DSearch()} in the root takes $\Theta(\log$(\nf{root.blocks[b].\size+root.blocks[end].\size}) by Lemma \ref{dsearch}, which is $O(\log$ size of the queue when \nf{Enqueue} is invoked$)+\log$ size of the queue when \nf{Dequeue} is invoked$)$. Each search in \nf{GetEnqueue()} takes $O(\log p)$ since there are $\leq p$ subblocks in a block (Lemma \ref{subBlocksBound}), so \nf{GetEnqueue()} takes $O(\log^2 p)$ steps.
-
-If we split \nf{DSearch} time cost between the corresponding \nf{Enqueue}, \nf{Dequeue}, in amortized we have \nf{Enqueue} takes $O(\log p +q)$ and \nf{Dequeue} takes $O(\log^2 p +q)$ steps.
-\end{proof}
-
+Is this a Lemma or a Result or an Observation of Algorithm? Which is not used in main wait-free theorem.
 \begin{lemma}
-An \nf{Enqueue} or \nf{Dequeue} operation, does at most $4\log p$ \nf{CAS} operations.
+An \nf{Enqueue} or \nf{Dequeue} operation does at most $14\log p$ \nf{CAS} operations.
 \end{lemma}
 \begin{proof}
-  In each height of the tree at most 2 times \nf{Refresh} is invoked and  every \nf{Refresh} invokes at most 3 \nf{CAS}es, one in Line \ref{cas} and two from \nf{Advance} in Line \ref{incrementHead}.
+  In each level of the tree  \nf{Refresh} is invoked at most two times and  every \nf{Refresh} invokes at most 7 \nf{CAS}es, one in Line \ref{cas} and two from each \nf{Advance} in Line \ref{helpAdvance} or \ref{advance}.
 \end{proof}
 
 \begin{lemma}[\nf{DSearch} Analysis]\label{dsearchTime}
-If the \nf{element} enqueued by $E_i(root,b)=E_e(root)$ is the response to some \nf{Dequeue} operation in \nf{root.blocks[end]}, then \nf{DSearch($e$, $end$)} takes $O\big(\log ( \nf{root.blocks[$b$].size}+ \nf{root.blocks[$end$].size})\big )$ steps.
+If the \nf{element} enqueued by $E_i(root,b)=E_e(root)$ is the response to some \nf{Dequeue} operation in \nf{root.blocks[$end$]}, then \nf{DSearch($e$, $end$)} takes $O\big(\log ( \nf{root.blocks[$b$].size}+ \nf{root.blocks[$end$].size})\big )$ steps.
 \end{lemma}
 \begin{proof}
-First we show $end - b -1\leq 2 \times \nf{root.blocks[$b-1$].size}+\nf{root.blocks[$end$].size}$. Suppose there were more than \nf{root.blocks[b].size} \nf{Dequeue}s in \nf{root.blocks[$b+1 \cdots end-1$]}. Then the element in the queue which is the response to the \nf{Dequeue} would become dequeued at some point before \nf{root.blocks[$end$]}'s first \nf{Dequeue}. Furthermore in the execution of queue operations in the linearization ordering, the size of the queue becomes \nf{root.blocks[$end$].size} after the operations of \nf{root.blocks[$end$]}. There can be at most \nf{root.blocks[$b$].size}  \nf{Dequeue}s in \nf{root.blocks[$b+1\cdots end-1$]}; otherwise all elements enqueued by \nf{root.blocks[$b$]} would be dequeued before \nf{root.blocks[$end$]}.  The final size of the queue after \nf{root.blocks[$1\cdots end$]} is \nf{root.blocks[$end$].size}. After an execution on a queue the $size$ of the queue is greater than or equal to $\#enqueues -\#dequeues$ in the execution.We know the number of dequeues in \nf{root.blocks[$b+1\cdots end-1$]} is less than \nf{root.blocks[$b$].size}, therefore there cannot be more than $\nf{root.blocks[$b$].size} + \nf{root.blocks[$end$].size}$ \nf{Enqueue}s in \nf{root.blocks[$b+1\cdots end-1$]}. Overall there can be at most $2 \times\nf{root.blocks[$b$].size}+ \nf{root.blocks[$end$].size}$ operations in \nf{root.blocks[$b+1\cdots end$]} and since from line \ref{addOP} we know that \nf{num} field of the every block in the tree is greater than 0, each block has at least one operation, there are at most $2 \times\nf{root.blocks[$b$].size}+ \nf{root.blocks[$end$].size}$ blocks in between \nf{root.blocks[$b$]} and \nf{root.blocks[$end$]}. So $end-b-1\leq 2 \times\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size}$.
+First we show $end - b -1\leq 2 \times \nf{root.blocks[$b-1$].size}+\nf{root.blocks[$end$].size}$. There can be at most \nf{root.blocks[$b$].size}  \nf{Dequeue}s in \nf{root.blocks[$b+1\cdots end-1$]}; otherwise all elements enqueued by \nf{root.blocks[$b$]} would be dequeued before \nf{root.blocks[$end$]}. Furthermore in the execution of queue operations in the linearization ordering, the size of the queue becomes \nf{root.blocks[$end$].size} after the operations of \nf{root.blocks[$end$]}. The final size of the queue after \nf{root.blocks[$1\cdots end$]} is \nf{root.blocks[$end$].size}. After an execution on a queue the $size$ of the queue is greater than or equal to $\#enqueues -\#dequeues$ in the execution. We know the number of dequeues in \nf{root.blocks[$b+1\cdots end-1$]} is less than \nf{root.blocks[$b$].size}, therefore in \nf{root.blocks[$b+1\cdots end-1$]} cannot be more than $\nf{root.blocks[$b$].size} + \nf{root.blocks[$end$].size}$ \nf{Enqueue}s. Overall there can be at most $2 \times\nf{root.blocks[$b$].size}+ \nf{root.blocks[$end$].size}$ operations in \nf{root.blocks[$b+1\cdots end-1$]} and since from Line \ref{addOP} we know that \nf{num} field of the every block in the tree is greater than 0, each block has at least one operation, there are at most $2 \times\nf{root.blocks[$b$].size}+ \nf{root.blocks[$end$].size}$ blocks in between \nf{root.blocks[$b$]} and \nf{root.blocks[$end$]}. So $end-b-1\leq 2 \times\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size}$.
 
-So the doubling search reaches \nf{start} such that the \nf{root.blocks[start].sum\sub{enq}} is less than $e$ in $O \big(\log(\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size})\big)$ steps. See Figure \ref{fig::doubling}. After Line \ref{dsearchEnd}, the binary search that finds $b$ also takes $O\big(\log(\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size})\big)$. Next, \nf{i} is computed via the definition of \nf{sum\sub{enq}} in constant time (Line \ref{DSearchComputei}). So the claim is proved.
+So, the doubling search reaches \nf{start} such that the \nf{root.blocks[start].sum\sub{enq}} is less than $e$ in $O \big(\log(\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size})\big)$ steps. See Figure \ref{fig::doubling}. After Line \ref{dsearchEnd}, the binary search that finds $b$ also takes $O\big(\log(\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size})\big)$. Next, \nf{i} is computed via the definition of \nf{sum\sub{enq}} in constant time (Line \ref{DSearchComputei}).
 \end{proof}
 \begin{figure}[hbt]  
   \center\includegraphics[width=6in]{pics/doubling.png}
   \caption{Distance relations between \nf{start}$,b,end$.}
   \label{fig::doubling}
 \end{figure}
+
+\begin{lemma}[Worst Case Time analysis] \label{enqDeqTime}
+The worst case number of steps for an \nf{Enqueue} is $O(\log^2 p)$ and for a \nf{Dequeue}, is $O(\log^2 p + \log q_e+ \log q_d)$,  where $q_d$ is the size of the queue when the \nf{Dequeue} is linearized and $q_i$ is the size of the queue at time the response of the \nf{Dequeue} is linearized.
+\end{lemma}
+\begin{proof}
+\nf{Enqueue} consists of creating a block and appending it to the tree. The first part takes constant time. To propagate the operation to the root the algorithm tries at most two \nf{Refresh}es in each node of the path from the leaf to the root (Lines \ref{firstRefresh}, \ref{secondRefresh}). We can see from the code  that each \nf{Refresh} takes a constant number of steps and does $O(1)$ \nf{CAS}es. Since the height of the tree is $\Theta(\log p)$, \nf{Enqueue} takes $O(\log p)$ steps.
+
+A \nf{Dequeue} creates a block whose \nf{element} is \nf{null}, appends it to the tree, computes its rank among non-null dequeues, finds the corresponding enqueue and returns the response. The first two parts are similar to an \nf{Enqueue} operation and take $O(\log p)$ steps. To compute the rank of a \nf{Dequeue} in $D(n)$ the dequeue calls \nf{IndexDequeue()}. \nf{IndexDequeue} does $O(1)$ steps in each level which takes $O(log p)$ steps. If the response to the dequeue is \nf{null}, \nf{FindResponse} returns \nf{null} in $O(1)$ steps. Otherwise, if the response to a dequeue in \nf{root.blocks[end]} is in \nf{root.blocks[b]} the \nf{DSearch} takes $\Theta(\log$(\nf{root.blocks[b].size+root.blocks} \nf{[end].size}) by Lemma \ref{dsearchTime}, which is $O(\log$ size of the queue when \nf{Enqueue} is linearized$)+\log$ size of the queue when \nf{Dequeue} is linearized$)$. Each search in \nf{GetEnqueue()} takes $O(\log p)$ since there are $\leq p$ subblocks in a block (Lemma \ref{subBlocksBound}), so \nf{GetEnqueue()} takes $O(\log^2 p)$ steps.
+\end{proof}
+
+\begin{lemma}[Amortized Time Analysis]
+The amortized number of steps for an \nf{Enqueue} or \nf{Dequeue}, is $O(\log^2 p + \log q)$,  where $q$ is the size of the queue when the operation is linearized.
+\end{lemma}
+\begin{proof}
+If we split \nf{DSearch} time cost between the corresponding \nf{Enqueue}, \nf{Dequeue}, in each operation takes $O(\log^2 p +q)$ steps.
+\end{proof}
+
+\begin{theorem}
+The queue implementation is wait-free.
+\end{theorem}
+\begin{proof}
+To prove the claim, it is sufficient to show that every \nf{Enqueue} and \nf{Dequeue} operation terminates after a finite number of its own steps. This is directly concluded from Lemma \ref{enqDeqTime}.
+\end{proof}
 
 \pagebreak
 \section{Future Directions}
@@ -1219,7 +1233,7 @@ Assume a data structure storing a sequence that has supports three operations \n
 If we do not distinct between \nf{Enqueue}s and \nf{Dequeue}s and replace \nf{DSearch} with Binary Search on all the \nf{root} in our algorithm, we achieve this with poly-logarithmic steps for each operation with respect to the number of \nf{append}s done.
 
 \paragraph{Stacks}
-There are two reasons block tree worked well to implement a queue. Firstly, to respond a \nf{Dequeue} we do not need to look at all the history of operations, if a \nf{Dequeue} does not return null we can compute the index of the \nf{Enqueue} that is response of a \nf{Dequeue} in $O(\log n)$ if we keep the number of enqueues and the size. Secondly, the operations needed to look to respond a the \nf{Dequeue} is not very far from it in the sequence of operations: the distance is at most linear in the size of the queue. It may be possible to create wait-free poly-logarithmic implementaion of other objects whose operations satisfy these two conditions. 
+There are two reasons block tree worked well to implement a queue. Firstly, to respond a \nf{Dequeue} we do not need to look at all the history of operations, if a \nf{Dequeue} does not return\nf{null} we can compute the index of the \nf{Enqueue} that is response of a \nf{Dequeue} in $O(\log n)$ if we keep the number of enqueues and the size. Secondly, the operations needed to look to respond a the \nf{Dequeue} is not very far from it in the sequence of operations: the distance is at most linear in the size of the queue. It may be possible to create wait-free poly-logarithmic implementaion of other objects whose operations satisfy these two conditions. 
 
 \bibliography{main.bib} 
 \bibliographystyle{plain}

@@ -109,13 +109,13 @@ A queue stores a sequence of elements and supports two operations, enqueue and d
 \paragraph{Model} 
 A system is called \it{asynchronous} when processes in the system run at arbitrary varying speeds, i.e the scheduling of each process is independent from the scheduling of other processes. Our model is an asynchronous shared-memory distributed system of $p$ processes. Herlihy showed \cite{10.1145/114005.102808} that we one cannot implement any lock-free data structures with multi-reader multi-writer registers alone. In this work we use Compare \& Swap (\nf{CAS}) objects to reach universal synchronization.
 
-\paragraph{Thesis outline} The rest of the thesis is organized as follows. Chapter 2 gives an outline of related word done in the area and the motivation of our implementation. Previous lock-free queues and their common problem is presented in Section 2.1. In Section 2.2 we mention some restricted lock-free queues. Section 2.3 talks about poly-logarithmic constructions of shared objects. Section 2.4 is devoted to the lower bound (COMPLETE).
+\paragraph{Thesis outline} The rest of the thesis is organized as follows. Chapter 2 gives an outline of related word done in the area and the motivation of our implementation. Previous lock-free queues and their common problem is presented in Section 2.1. In Section 2.2 we mention some restricted lock-free queues. Section 2.3 talks about poly-logarithmic constructions of shared objects.
 
-In Chapter 3 we introduce a poly-logarithmic step wait-free queue. Section 3.1 we give a high-level description of our implementation. Section 3.2 contains the algorithm itself.
+In Chapter 3 we introduce a poly-logarithmic step wait-free queue. In Section 3.1 we give a high-level description of our implementation. Section 3.2 contains the algorithm itself.
 
 We prove the correctness of our queue in Chapter 4 by showing it is wait-free and linearizable.
 
-Chapter 5 presents performance analysis for our implementation. We analyze the number of \nf{CAS} instructions out algorithm invokes and the worst-case and amortized time running of the queue.
+Chapter 5 is devoted to performance analysis for our implementation. We analyze the number of \nf{CAS} instructions out algorithm invokes and the worst-case and amortized time running of the queue.
 
 Finally, we talk about some concluding remarks in Chapter 6. It contains how we can improve our algorithm memory usage and how to use its idea in designing other wait-free data structures in section 6.
 
@@ -153,36 +153,27 @@ Gidenstam, Sundell, and Tsigas~\cite{DBLP:conf/opodis/GidenstamST10} introduced 
 
 Kogan and Petrank~\cite{DBLP:conf/ppopp/KoganP11} introduced wait-free queues based on the MS-queue and use Herlihy's helping technique to achieve wait-freedom. Their step complexity is $\Omega(p)$ because of the helping mechanism.
 
-\bf{TODO} 
-Milman et al.~\cite{DBLP:conf/spaa/MilmanKLLP18} designed BQ: A Lock-Free Queue with Batching. Their idea of batching allows a sequence of operations to be submitted as a batch for later execution. It supports a new notion introduced by the authors called Extended Medium Futures Linearizability.
+Milman et al.~\cite{DBLP:conf/spaa/MilmanKLLP18} designed a lock-free queue with batching. Their idea of batching allows a sequence of operations to be submitted as a batch for later execution on the MS-queue. They use some properties of the size of the queue before and after a batch which is similar to apart of our work. Their queue is not wait-free, in fact if the batch sizes are 1 then the queue is like MS-queue and it supports a new notion introduced by the authors called Extended Medium Futures Linearizability.
 
-\bf{TODO}
-Nikolaev and Ravindran~\cite{DBLP:journals/corr/abs-2201-02179} wCQ to be completed.
+Nikolaev and Ravindran~\cite{DBLP:journals/corr/abs-2201-02179} present a wait-free queue that uses fast-path slow-path methodology. Their work is based on a circular queue using bounded memory. They design a slow phase which is wait-free bounded. If a process has no progress other processes try to help it in its \nf{CAS} loop in its slow phase. Since there can be $p$ processes helping the worst-case complexity cannot be better than linear.
 
 In the worst-case step complexity of all the list-based queues discussed above, there is a $p$ term that comes from the case where all $p$ processes try to do an enqueue simultaneously. Morrison and Afek call this the \textit{CAS retry problem}~\cite{DBLP:conf/ppopp/MorrisonA13}. It is not limited to list-based queues and array-based queues share the CAS retry problem as well~\cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/spaa/TsigasZ01,DBLP:conf/icdcn/Shafiei09}. Our motivation is to overcome this problem and present a wait-free sublinear queue.
 
 \subsection{Restricted Queues}
-Jayanti and Petrovic introduced a wait-free poly-logarithmic multi-enqueuer single-dequeuer queue~\cite{DBLP:conf/fsttcs/JayantiP05}. 
 
-\bf{TODO}
-Which David?
+David introduced the first sublinear concurrent queue \cite{DBLP:conf/wdag/David04}. Even though his algorithm does $O(1)$ steps for each operation, it is a single-enqueuer single-dequeuer queue and uses infinte memory.
+The author states that to reduce memory usage to be bounded the time per operation increases to linear.
+
+Jayanti and Petrovic introduced a wait-free poly-logarithmic multi-enqueuer single-dequeuer queue~\cite{DBLP:conf/fsttcs/JayantiP05}. Their algorithm time complexity is $O(\log n)$ where $n$ is the number of enqueuers. We will improve their algorithm to construct a multi-enqueuer multi-dequeuer queue.
+
+\bf{TODO: Where should be?}
+Ellen and Woelfel introduced an implementation of a Fetch\&Inc object with step complexity of $O(\log p)$ using $O(\log n$)-bit \texttt{LL/SC} objects, where $n$ is the number of operations~\cite{10.1007/978-3-642-41527-2_20}. Their idea to achieve logarithmic complexity is to use a tree storing the list of elements added by processes and when a process wants to do Fetch\&Inc it appends its element to the tree and return the number of elements in the tree. Their work can be descibed a queue without dequeues.
 
 \subsection{Universal Constructions}
-Herlihy discussed the possibility of implementing shared objects from other objects~\cite{10.1145/114005.102808}. A \textit{universal construction} is an algorithm that can implement a shared version of any given sequential object. We can implement a concurrent queue using a universal construction. Jayanti proved an $\Omega(\log p)$ lower bound on the worst-case shared-access time complexity of $p$-process universal constructions~\cite{DBLP:conf/podc/Jayanti98a}. He also introduced a construction that achieves $\textsc{O}(\log^2 p)$ shared accesses~\cite{DBLP:conf/podc/ChandraJT98}. His universal construction can be used to create any data structure, but its implementation is not practical because of using \nf{CAS} instructions on unreasonably large-sized words of memory(\bf{TODO: how large?}).
-
-\bf{TODO: why introducing this result?}
-Ellen and Woelfel introduced an implementation of a Fetch\&Inc object with step complexity of $O(\log p)$ using $O(\log n$)-bit \texttt{LL/SC} objects, where $n$ is the number of operations~\cite{10.1007/978-3-642-41527-2_20}. Their idea has similarities to Jayanti's construction, and they represent the value of the Fetch\&Inc using the history of successful operations. 
-
-%FIFO queues have a wide range of use in OS and applications. The current state-of-the-art queues are implemented using linked lists; that's why they have factor p in their time complexity.
-
-%\href{https://docs.google.com/spreadsheets/d/1cL1tgXXdljkh462sMwkTVMHH_k0MBTmslIVM3xA5VS4/edit#gid=0}{Table of previous works}
-
-%There is a connection between queues and universal constructions. We can implement a universal construction using a queue. We can store operations in the shared queue and compute operations' responses using the queue's content. Some impractical universal constructions are using big words as "...".
-
-\subsection{Attiya Fourier Lower Bound}
-\pagebreak
+Herlihy discussed the possibility of implementing shared objects from other objects~\cite{10.1145/114005.102808}. A \textit{universal construction} is an algorithm that can implement a shared version of any given sequential object. We can implement a concurrent queue using a universal construction. Jayanti proved an $\Omega(\log p)$ lower bound on the worst-case shared-access time complexity of $p$-process universal constructions~\cite{DBLP:conf/podc/Jayanti98a}. Chandra, Jayanti and Tan  introduced a semi-universal construction that achieves $\textsc{O}(\log^2 p)$ shared accesses~\cite{DBLP:conf/podc/ChandraJT98}. Their universal construction cannot be used to create any data structure, but a set of objects called closed objects. We mention a non-practical poly-logarithmic universal construction in page 12.
 
 \pagebreak
+
 \section{Queue Implementation} \label{DescriptQ}
 
 In our model there are $p$ processes doing \nf{Enqueue} and \nf{Dequeue} operations on a queue concurrently. We design a linearizable wait-free queue with $O(\log^2 p +\log q)$ steps per operation, where $q$ is the number of elements in the queue at the time of linearization. We avoid the $\Omega(p)$ worst-case step complexity of existing shared queues based on linked lists or arrays, which suffer from the CAS Retry Problem. 
@@ -375,7 +366,7 @@ Block $B$ is appended to \nf{$n$.blocks[$b$]} on Line \ref{cas}. After appending
 \begin{algorithm}
 \caption{Tree Fields Description}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{100}
+\setcounter{ALG@line}{1}
 \begin{multicols}{2}
 
 \Statex $\diamondsuit$ \tt{\sl{Shared}}
@@ -453,7 +444,7 @@ Block $B$ is appended to \nf{$n$.blocks[$b$]} on Line \ref{cas}. After appending
 \begin{algorithm}
 \caption{\tt{\sl{Queue}}}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{200}
+\setcounter{ALG@line}{0}
 
 
 \Function{void}{Enqueue}{\sl{Object} e} \cmt{Creates a \tt{block} with element \tt{e} and adds it to the tree.}
@@ -499,7 +490,7 @@ Block $B$ is appended to \nf{$n$.blocks[$b$]} on Line \ref{cas}. After appending
 \begin{algorithm}
 \caption{Root}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{800}
+\setcounter{ALG@line}{25}
 \Statex
 \Statex $\leadsto$ \textsf{Precondition: \tt{root.blocks[end].sum\sub{enq} $\geq$ \tt{e}}}
 \Statex $\triangleright$ \textmd{Returns \tt{<b,i>} such that $E_e(root)=E_i(root,b)$,i.e. , the \nf{e}th \nf{Enqueue} in the \nf{root} is the \nf{i}th \nf{Enqueue} within block \nf{b} of the \nf{root}.}
@@ -519,7 +510,7 @@ Block $B$ is appended to \nf{$n$.blocks[$b$]} on Line \ref{cas}. After appending
 \begin{algorithm}
 \caption{Leaf}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{600}
+\setcounter{ALG@line}{34}
 
 \Function{void}{Append}{\sl{block} B} \cmt{Only called by the owner of the leaf.}
 \State \tt{blocks[\head]= B} 
@@ -536,7 +527,7 @@ Block $B$ is appended to \nf{$n$.blocks[$b$]} on Line \ref{cas}. After appending
 \begin{algorithm}
 \caption{\tt{\sl{Node}}}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{300}
+\setcounter{ALG@line}{39}
 \begin{multicols}{2}
 
 \Statex $\triangleright$ \textmd{\nf{$n$.Propagate} propagates operations  in \nf{this}.children up to \nf{this} when it terminates.}
@@ -616,7 +607,7 @@ Block $B$ is appended to \nf{$n$.blocks[$b$]} on Line \ref{cas}. After appending
 \begin{algorithm}
 \caption{Node}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{400}
+\setcounter{ALG@line}{85}
 
 \Statex $\leadsto$ \textsf{Precondition:~\tt{blocks[b].num\sub{enq}$\geq$i$\geq 1$}}
 \Function{element}{GetEnqueue}{\sl{int} b, \sl{int} i} \cmt{Returns the element of $E_i(this,b)$.}
@@ -1251,10 +1242,14 @@ Consider a data structure storing a sequence that supports three operations \nf{
 \paragraph{Stacks}
 There are two reasons block tree worked well to implement a queue. Firstly, to respond to a \nf{Dequeue} we do not need to look at the entire history of operations: if a \nf{Dequeue} does not return\nf{null} we can compute the index of the \nf{Enqueue} that is its response in $O(\log n)$ time if we keep the number of enqueues and the size. Secondly, the operations we need to search to respond to the \nf{Dequeue} is not very far from it in the sequence of operations: the distance is at most linear in the size of the queue. It may be possible to create wait-free poly-logarithmic implementaion of other objects whose operations satisfy these two conditions. 
 
+\paragraph{Attiya--Fouren Lower Bound}
+Attiya and Fouren proved a lower bound on amortized complexity of lock-free queues from the factor of contention (number of concurrent processes). Their result says any implementation of queues, using reads,
+writes and conditional operations like \nf{CAS} has $O(\sqrt{\log \log p})$
+amortized complexity \cite{DBLP:conf/opodis/AttiyaF17}. It is an open problem to create the reduce the gap between our algorithm and Attiya--Fouren lower bound.
+
 \pagebreak
 
 \bibliography{main.bib} 
 \bibliographystyle{plain}
 
 \end{document}
-

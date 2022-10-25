@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE ipe SYSTEM "ipe.dtd">
 <ipe version="70218" creator="Ipe 7.2.24">
-<info created="D:20220624164416" modified="D:20221013150529"/>
+<info created="D:20220624164416" modified="D:20221025185002"/>
 <ipestyle name="basic">
 <symbol name="arrow/arc(spx)">
 <path stroke="sym-stroke" fill="sym-stroke" pen="sym-pen">
@@ -383,7 +383,7 @@ h
 <text matrix="1 0 0 1 -24 -160" transformations="translations" pos="184 752" stroke="red" type="label" width="37.127" height="2.032" depth="0" valign="baseline" size="30">......</text>
 <text matrix="1 0 0 1 312 -80" transformations="translations" pos="176 672" stroke="blue" type="label" width="30.94" height="2.032" depth="0" valign="baseline" size="30">.....</text>
 <text matrix="1 0 0 1 -16 -96" transformations="translations" pos="56 592" stroke="black" type="label" width="125.545" height="6.923" depth="3.04" valign="baseline">$n$\texttt{.blocks[}$b-1$\texttt{].sum\textsubscript{enq-left}}</text>
-<text matrix="1 0 0 1 -48 16" transformations="translations" pos="440 480" stroke="black" type="label" width="112.092" height="6.923" depth="3.04" valign="baseline">$n$\texttt{.blocks[}$b$\texttt{].num\textsubscript{enq-right}}</text>
+<text matrix="1 0 0 1 -48 16" transformations="translations" pos="440 480" stroke="black" type="label" width="129.25" height="6.923" depth="3.04" valign="baseline">$n$\texttt{.blocks[}$b-1$\texttt{].sum\textsubscript{enq-right}}</text>
 <path stroke="black">
 488 576 m
 488 560

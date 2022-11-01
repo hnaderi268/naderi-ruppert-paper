@@ -189,7 +189,7 @@ There is a shared binary tree among the processes (see Figure~\ref{fig::blocktre
 \caption{\label{fig::blocktree}Each of the processes $P_1,P_2,...,P_p$ has a leaf and in each node there is an ordering of operations stored. Each process tries to propagate its operations up to the root, which stores a total ordering of all operations.}  
 \end{figure}
 
-To propagate operations to a node $n$ in the tree, a process observes the operations in both of $n$'s children that are not already in $n$, merges them to create an ordering and then tries to append the ordering to the sequence stored in $n$. We call this procedure \tt{$n$.Refresh()} (see Figure \ref{fig::propagstep}). A \nf{Refresh} on $n$ with a successful append helps to propagate their operations up to the $n$. We shall prove that if a process invokes \tt{Refresh} on the node $n$ two times and fails to append the new operations to $n$ both times, the operations that were in $n$'s children before the first \tt{Refresh} are guaranteed to be in $n$ after the second failed \tt{Refresh}.
+To propagate operations to a node $n$ in the tree, a process observes the operations in both of $n$'s children that are not already in $n$, merges them to create an ordering and then tries to append the ordering to the sequence stored in $n$. We call this procedure \tt{$n$.Refresh} (see Figure \ref{fig::propagstep}). A \nf{Refresh} on $n$ with a successful append helps to propagate their operations up to the $n$. We shall prove that if a process invokes \tt{Refresh} on the node $n$ two times and fails to append the new operations to $n$ both times, the operations that were in $n$'s children before the first \tt{Refresh} are guaranteed to be in $n$ after the second failed \tt{Refresh}.
 We sketch the argument here.
 
 \begin{figure}[hbtp]
@@ -252,7 +252,7 @@ Instead we use an implicit representation of the operations propagated together.
 	level 3/.style={level distance=1.7cm,sibling distance=2cm}]
 \begin{small} 
 
-\Tree [.{\begin{tabular}{||c|c|c||}  \hline (0,11) & (12,6) & (8,36) \\ \hline\end{tabular}}
+\Tree [.{\begin{tabular}{|c|c|c|}  \hline (0,11) & (12,6) & (8,36) \\ \hline\end{tabular}}
  [.{\begin{tabular}{||c||c||}  \hline (10,2) & (5,3) \\\hline  \end{tabular}}
  [.{\begin{tabular}{||c|c||c||}\hline (2,3) & (4,1) & (0,5) \\\hline\end{tabular}} $\vdots$ $\vdots$ ]
   [.{\begin{tabular}{||c||c||}  \hline (0,2) & (1,2)  \\ \hline  \end{tabular}} $\vdots$ $\vdots$ ] ]
@@ -512,7 +512,7 @@ Block $B$ is appended to \nf{$n$.blocks[$b$]} on Line \ref{cas}. After appending
 \setcounter{ALG@line}{34}
 
 \Function{void}{Append}{\sl{block} B} \cmt{Only called by the owner of the leaf.}
-\State \tt{blocks[\head]= B} 
+\State \tt{blocks[\head]= B} \label{appendLeaf}
 \State \tt{\head+=1} \label{appendEnd} 
 \State \tt{parent.}\Call{Propagate()}{} 
 \EndFunction{Append}
@@ -1217,6 +1217,48 @@ There are two reasons the block tree worked well to implement a queue. Firstly, 
 
 \subsection{Attiya--Fouren Lower Bound}
 As we talked earlier in Section 2.4 the Attiya--Fouren lower bound says that a concurrent implementation of queues using reads, writes and conditional operations like \nf{CAS} has $O(\sqrt{\log \log p})$ amortized complexity \cite{DBLP:conf/opodis/AttiyaF17} when the number of concurrent processes is $O(\log\log p)$. Our amortized complexity is $O(log^2p+log q)$. It is an open problem to the reduce the gap between our algorithm and the Attiya--Fouren lower bound.
+
+\pagebreak
+\section{Appendix}
+\subsection{Example Execution of \nf{Propagate}}
+
+Here we want to demonstrate how four processes help each other to  propagate their operations up to the root. We show how the steps of each \nf{Propagate} works as the time goes.
+
+In Figure \ref{fig::exec1}, processes $P1,P2,P4$ have appended the blocks containing $ENQ_1,DEQ_2,DEQ_4$. Line \ref{appendLeaf} appends block $B$ to the leaf.
+
+Then as in Figure \ref{fig::exec2}, $P2$ does a successful \nf{Refresh} on the node $n5$ and propagates both $P1$ and $P2$ operations. $P4$ does also a successful \nf{Refresh} on the node $n6$ and propagates $DEQ_4$. $P1$'s \nf{Refresh} on $n5$ is slower than $P2$'s and creates its new block after the $P2$'s successful \nf{CAS} that put $ENQ_1,ENQ_2$. So the block created by $P1$ is empty as there is nothing to propagate ($P1$'s \ref{readHead} is after $P2$'s \ref{cas}).
+
+Since the block $P1$ creates is empty it returns \nf{true} in Line \ref{addOP} as shown in Figure \ref{fig::exec3}. $P3$ propagates $ENQ_3$ to $n6$ and $P4$ is very fast and it reaches $DEQ_4$ to the \nf{root} even before $P2$ puts its block to $n5$.
+
+Finally $P4$ goes to sleep and $P2$ helps to increment \nf{root.head} after its failed \nf{CAS} on the root. After incrementing \nf{root.head}, $P3$ succeeds to do \nf{root.Refresh} with a single \nf{CAS} on the \nf{root} and puts operations from $P1,P2$ and $P3$ to the \nf{root}. $P1$ fails to do \nf{Refresh} on the \nf{root} two times, but for sure its operation is propagated after the second failed \nf{Refresh}. See Figure \ref{fig::exec4}
+
+All the fields of some blocks from the Figure \ref{fig::exec4} are filled in Figure \ref{fig::exec45}.
+
+\begin{figure}
+  \center\includegraphics[width=4.8in]{thesis/pics/exec1.png}
+  \caption{$P1,P2,P4$ append operations. \label{fig::exec1}}
+\end{figure}
+
+\begin{figure}
+  \center\includegraphics[width=4.8in]{thesis/pics/exec2.png}
+  \caption{$P2$ helps $P1$. $P4$ is faster than $P3$. \label{fig::exec2}}
+\end{figure}
+
+
+\begin{figure}
+  \center\includegraphics[width=4.8in]{thesis/pics/exec3.png}
+  \caption{$P4$ puts its block to the \nf{root} before $P2$ appending its block to $n5$.\label{fig::exec3}}
+\end{figure}
+
+\begin{figure}
+  \center\includegraphics[width=4.8in]{thesis/pics/exec4.png}
+  \caption{$P3$ suceeds to the \nf{CAS} to the \nf{root}. $P1$'s work is done after two failed \nf{CAS}es. \label{fig::exec4}}
+\end{figure}
+
+\begin{figure}
+  \center\includegraphics[width=4.8in]{thesis/pics/exec5.png}
+  \caption{Figure \ref{fig::exec4} with completed fields. \label{fig::exec5}}
+\end{figure}
 
 \pagebreak
 

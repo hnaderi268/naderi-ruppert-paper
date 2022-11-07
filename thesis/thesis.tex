@@ -119,7 +119,8 @@ Finally, we give some concluding remarks in Chapter 6. It contains how we can im
 
 \pagebreak
 \section{Related Work}
-In this section, we look at previous lock-free queues.
+In this section, we look at previous lock-free queues. In the worst-case, step complexity of all the lock-free queues, includes an $\Omega(p)$ term that comes from the case where all $p$ processes try to do an enqueue or dequeue simultaneously. Morrison and Afek call this the \textit{CAS retry problem}~\cite{DBLP:conf/ppopp/MorrisonA13}. 
+
 \subsection{List-based Queues}
 Michael and Scott~\cite{DBLP:conf/podc/MichaelS96} introduced a lock-free queue which we refer to as the MS-queue. A version of it is included in the standard Java Concurrency Package. Their idea is to store the queue elements in a singly-linked list (see Figure~\ref{fig::msq}). A shared variable Head points to the first node in the linked list that has not been dequeued, and Tail points to the last element in the queue. To insert a node into the linked list, they use atomic primitive operations like \texttt{LL/SC} or \texttt{CAS}. If $p$ processes try to enqueue simultaneously, only one can succeed, and the others have to retry. This makes the amortized number of steps $\Omega(p)$ per enqueue. Similarly, dequeue can take $\Omega(p)$ steps.
 
@@ -155,7 +156,7 @@ Milman et al.~\cite{DBLP:conf/spaa/MilmanKLLP18} designed a lock-free queue supp
 
 Nikolaev and Ravindran~\cite{DBLP:journals/corr/abs-2201-02179} present a wait-free queue that uses the fast-path slow-path methodology. Their work is based on a circular queue using bounded memory. When a process wishes to do an enqueue or a dequeue, it starts two paths. One is faster but its running time is not bounded and the other one is slower but has a time bound. They show that these two paths do not effect each other and the queue remains consistent. If a process makes no progress other processes help its slow path to finish. The helping phase suffers from CAS Retry Problem, because processes compete in a \nf{CAS} loop to decide which succeeds to help. Because of this, the worst-case complexity cannot be better than $\Omega(p)$.
 
-In the worst-case, step complexity of all the list-based queues discussed above, includes an $\Omega(p)$ term that comes from the case where all $p$ processes try to do an enqueue simultaneously. Morrison and Afek call this the \textit{CAS retry problem}~\cite{DBLP:conf/ppopp/MorrisonA13}. It is not limited to list-based queues and array-based queues share the CAS retry problem as well~\cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01}. Our motivation is to overcome this problem and present a wait-free sublinear queue.
+CAS Retry Problem is not limited to list-based queues; array-based queues also share the CAS retry problem as well~\cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01}. In all implementations where there is a CAS object with contention $p$ ($p$ processes invoking CAS instructions concurrently), CAS Retry Problem exists. Our motivation is to overcome this problem and present a wait-free sublinear queue.
 
 \subsection{Restricted Queues}
 
@@ -826,6 +827,18 @@ Let $B$ be $n\nf{.blocks[}b\nf{]}$.
     \item $B\nf{.sum\sub{enq}}=\Big|E(n,1)\cdot E(n,2)\cdots E(n,b)\Big|$
 \end{enumerate}
 \end{corollary}
+\begin{proof} Result (1) can be proved using the previous Lemma.
+\begin{align*}
+    B\nf{.sum\sub{enq-left}}=&n\nf{.blocks[}1\nf{].num\sub{enq-left}}+\dots+ n\nf{.blocks[}b\nf{].num\sub{enq-left}}\\
+    =& \Big|E(n.\nf{left},1)\cdots E(n.\nf{left},n\nf{.blocks[}1\nf{].end\sub{left}})\Big| +\\
+    &\vdots\\
+    &+\Big|E(n.\nf{left},n\nf{.blocks[}b-1\nf{].end\sub{left}})\cdots E(n.\nf{left},n\nf{.blocks[}b\nf{].end\sub{left}})\Big|\\
+    =&\Big|E(n.\nf{left},1)\cdots E(n.\nf{left},B.\nf{end\sub{left}})\Big|
+\end{align*}
+
+We can prove (2) and (3) the same as (1).
+\end{proof}
+
 
 \pagebreak
 
@@ -878,7 +891,8 @@ In the next lemma we show that if two consecutive instances of \nf{Refresh} by t
 \begin{proof}
 Let $R_1$ read $i$ from $n\nf{.head}$ at Line \ref{readHead}. By Lemma \ref{lem::headInc}, $R_1$ and $R_2$ both cannot read the same value $i$. By Observation \ref{nonDecreasingHead}, $R_2$ reads a larger value of $n$\nf{.head} than $R_1$.
 
-Consider the case where $R_1$ reads $i$ and $R_2$ reads $i+1$ from Line \ref{readHead}. As $R_2$'s \nf{CAS} in Line \ref{cas} returns \nf{false}, there is another successful instance $R_2^\prime$ of \nf{$n$.Refresh} that has done a \nf{CAS} successfully into \nf{$n$.blocks[$i+1$]} before $R_2$ tries to \nf{CAS}. $R_2^\prime$ creates its block \nf{new} after reading the value $i+1$ from $n$\nf{.head} (Line \ref{readHead}) and $R_1$ reads the value $i$ from $n$\nf{.head}. By Observation \ref{nonDecreasingHead} we have $^{R_1}t<t^{R_1}_{\ref{readHead}}< t^{R2^\prime}_{\ref{readHead}}$ (see Figure \ref{fig::doubleRefresh}). By Lemma \ref{lem::trueRefresh} we have $EST^{n.\nf{left}}_{^{R_2^\prime}_{\ref{readHead}}t} \cup EST^{n.\nf{right}}_{^{R_2^\prime}_{\ref{readHead}}t} \subseteq ops(n.\nf{blocks}_{t_{\ref{cas}}^{R_2^\prime}})$. Also by Lemma \ref{lem::headInc} on $R_2$, the value  of \nf{$n$.head} is more than $i+1$ after $R_2$ terminates, so the block appended by $R_2^\prime$ into $n$\nf{.blocks[$i$]} is established by the time $R_2$ terminates. To summarize, $^{R_1}t$ is before $R_2^\prime$'s read of \nf{$n$.head} ($t_{\ref{readHead}}^{R_2^\prime}$) and $R_2^\prime$'s successful \nf{CAS} ($t^{R_2^\prime}_{\ref{cas}}$) is before $R_2$'s termination ($t^{R_2}$), so by Observation \ref{lem::blocksOrder} and Lemma \ref{lem::headInc} we have \ref{lem::blocksOrder} $EST_{n.\nf{left}}^{t^{R_1}} \cup EST_{n.\nf{right}}^{t^{R_1}} \subseteq ops(n.\nf{blocks}_{t^{R_2^\prime}_{\ref{cas}}}) \subseteq EST_{n}^{^{R_2}t}$. 
+Consider the case where $R_1$ reads $i$ and $R_2$ reads $i+1$ from Line \ref{readHead}. As $R_2$'s \nf{CAS} in Line \ref{cas} returns \nf{false}, there is another successful instance $R_2^\prime$ of \nf{$n$.Refresh} that has done a \nf{CAS} successfully into \nf{$n$.blocks[$i+1$]} before $R_2$ tries to \nf{CAS}. $R_2^\prime$ creates its block \nf{new} after reading the value $i+1$ from $n$\nf{.head} (Line \ref{readHead}) and $R_1$ reads the value $i$ from $n$\nf{.head}. By Observation \ref{nonDecreasingHead} we have $^{R_1}t<t^{R_1}_{\ref{readHead}}< t^{R2^\prime}_{\ref{readHead}}$ (see Figure \ref{fig::doubleRefresh}). By Lemma \ref{lem::trueRefresh} we have $EST^{n.\nf{left}}_{^{R_2^\prime}_{\ref{readHead}}t} \cup EST^{n.\nf{right}}_{^{R_2^\prime}_{\ref{readHead}}t} \subseteq ops(n.\nf{blocks}_{t_{\ref{cas}}^{R_2^\prime}})$. Also by Lemma \ref{lem::headInc} on $R_2$, the value  of \nf{$n$.head} is more than $i+1$ after $R_2$ terminates, so the block appended by $R_2^\prime$ into $n$\nf{.blocks[$i$]} is established by the time $R_2$ terminates. To summarize, $^{R_1}t$ is before $R_2^\prime$'s read of \nf{$n$.head} ($t_{\ref{readHead}}^{R_2^\prime}$), so we have $EST_{n.\nf{left}}^{t^{R_1}} \cup EST_{n.\nf{right}}^{t^{R_1}} \subseteq ops(n.\nf{blocks}_{t^{R_2^\prime}_{\ref{cas}}})$. $R_2^\prime$'s successful \nf{CAS} ($t^{R_2^\prime}_{\ref{cas}}$) is before $R_2$'s termination ($t^{R_2}$), so by Lemma \ref{lem::headInc} $n$\nf{.head} has been incremented when $R_2$ terminates and the block $R_2^\prime$ put into $n$ is established by then. So we have
+$ops(n.\nf{blocks}_{t^{R_2^\prime}_{\ref{cas}}}) \subseteq EST_{n}^{^{R_2}t}$.
 
 If $R_2$ reads some value greater than $i+1$ in Line \ref{readHead} it means $n\nf{.head}$ has been incremented at least two times since $_{\ref{readHead}}^{R_1}t$. By Invariant \ref{lem::headPosition}, when $n.$\nf{head} is incremented from $i+1$ to $i+2$, $n\nf{.blocks[$i+1$]}$ is non-null. Let $R_3$ be the \nf{Refresh} on $n$ that has put the block in $n\nf{.blocks[}i+1\nf{]}$. $R_3$ read $n\nf{.head}=i+1$ at Line \ref{readHead} and has put its block in $n\nf{.blocks[}i+1\nf{]}$ before $R_2$'s read of $n.$\nf{head} at Line \ref{readHead}. So we have $t^{R_1}<_{\ref{readHead}}^{R_3}t<_{\ref{cas}}^{R_3}t<t^{R_2}_{\ref{readHead}}<^{R_{2}}t$. From Observation \ref{lem::blocksOrder}  on the operations before and after $R_3$'s \nf{CAS} and Lemmas \ref{lem::trueRefresh}, \ref{lem::headInc} on $R_3$ the claim holds.
 \end{proof}
@@ -921,22 +935,23 @@ First we prove some claims about the size and operations of a block. These lemma
 Each block contains at most one operation of each process, and therefore at most $p$ operations in total.
 \end{lemma}
 \begin{proof}
-To derive a contradiction, assume there are two operations $op_1$ and $op_2$ of process $p$ in block $b$ in node $n$. Without loss of generality $op_1$ is invoked earlier than $op_2$. Process $p$ cannot invoke more than one operation concurrently, so $op_1$ has to be finished before $op_2$ begins. By Corollary \ref{lem::appendExactlyOnce}, before $op_2$ calls \nf{Append}, $op_1$ exists in every node of the tree on the path from $p$'s leaf to the root. Since $b$ contains $op_2$, it must be created after $op_2$ is invoked. This means there is some block $b^\prime$ before $b$ in $n$ containing $op_1$. The existence of $op_1$ in $b$ and $b^\prime$ contradicts Lemma \ref{lem::noDuplicates}.
+To derive a contradiction, assume there are two operations $op_1$ and $op_2$ of process $p$ in block $B$ in node $n$. Without loss of generality $op_1$ is invoked earlier than $op_2$. Process $p$ cannot invoke more than one operation concurrently, so $op_1$ has to be finished before $op_2$ begins. By Corollary \ref{lem::appendExactlyOnce}, before $op_2$ calls \nf{Append}, $op_1$ exists in every node of the tree on the path from $p$'s leaf to the root. Since $b$ contains $op_2$, it must be created after $op_2$ is invoked. The fact that $op_2$\nf{.Append} is invoked after $op_1$\nf{.Append} terminated means that there is some block $B^\prime$ in $n$ before $B$ that contains $op_1$. The existence of $op_1$ in $B$ and $B^\prime$ contradicts Lemma \ref{lem::noDuplicates}.
 \end{proof}
 
 \begin{lemma}\label{subBlocksBound}
 Each block has at most $p$ direct subblocks.
 \end{lemma}
 \begin{proof}
-The claim follows directly from Lemma \ref{blockSize} and the observation that each block appended to an internal node contains at least one operation, due to the test on Line~\ref{addOP}. We can also see the blocks in the leaves have exactly one operation in the \nf{Enqueue} and \nf{Dequeue} routines.
+From the definition of operations in a block in Definition \ref{def::ops} we know the operations in a block are the union of the operations in the direct subblocks of the block. The claim follows from the equivalence of the number of operations in a block and the number of operations in the subblocks of the block and the observation that each block appended to an internal node contains at least one operation due to the test on Line~\ref{addOP}. Also, blocks in the leaves contain only one \nf{Enqueue} or \nf{Dequeue} operation.
 \end{proof}
 
 \nf{DSearch($e$, $end$)} returns a pair \nf{<$b$, $i$>} such that the $i$th \nf{Enqueue} in the $b$th block of the root is the $e$th \nf{Enqueue} in the sequence stored in the root. 
+
 \begin{lemma}[\nf{DSearch} Correctness]\label{dsearch}
 If $\nf{root.blocks[$end$]}\neq \nf{null}$ and $1\leq e \leq \nf{root.blocks[$end$].sum\sub{enq}}$, \nf{DSearch($e$, $end$)} returns \nf{<$b$, $i$>} such that $E_i(root,b)= E_e(root)$.
 \end{lemma}
 \begin{proof}
- From Lines \ref{setSumEnqLeft} and \ref{setSumEnqRight} we know the \nf{sum\sub{enq-left}} and \nf{sum\sub{enq-right}} fields of \nf{blocks} in each node are sorted in non-decreasing order. Since $\nf{sum\sub{enq}}=\nf{sum\sub{enq-left}}+ \nf{sum\sub{enq-right}}$, the $\nf{sum\sub{enq}}$ values of \nf{root.blocks[$0\cdot\cdot end$]} are also non-decreasing. Furthermore, since $\nf{root.blocks[$0$].sum\sub{enq}}=0$ and $\nf{root.blocks[$end$].sum\sub{enq}} \geq e$, there is a $b$ such that $\nf{root.blocks[$b$].sum\sub{enq}} \geq e$ and $\nf{root.blocks[$b-1$].sum\sub{enq}} < e$ by Corollary~\ref{lem::sumX}. Block \nf{root.blocks[$b$]} contains $E_i(root,b)$.  Lines \ref{dsearchStart}--\ref{dsearchEnd} doubles the search range in Line \ref{doubling} and will eventually reach \nf{start} such that $\nf{root.blocks[start].sum\sub{enq}}\leq e \leq\nf{root.blocks[end].sum\sub{enq}}$. Then, in Line \ref{dsearchBinarySearch}, the binary search finds the $b$ such that \nf{root.blocks[$b-1$].sum\sub{enq}$<e\leq$root.blocks[$b$].sum\sub{enq}}. By Corollary \ref{lem::sumX}, \nf{root.blocks[$b$]} is the block that contains $E_e(root)$. Finally $i$ is computed using the definition of \nf{sum\sub{enq}} and Corollary \ref{lem::sumX}.
+ From Lines \ref{setSumEnqLeft} and \ref{setSumEnqRight} we know the \nf{sum\sub{enq-left}} and \nf{sum\sub{enq-right}} fields of \nf{blocks} in each node are sorted in non-decreasing order. Since $\nf{sum\sub{enq}}=\nf{sum\sub{enq-left}}+ \nf{sum\sub{enq-right}}$, the $\nf{sum\sub{enq}}$ values of \nf{root.blocks[$0\cdot\cdot end$]} are also non-decreasing. By Corollary~\ref{lem::sumX} we know that \nf{sum\sub{enq}} field in a block shows the prefix sum of the number of \nf{Enqueue} operations in that block. Furthermore, since $\nf{root.blocks[$0$].sum\sub{enq}}=0$ and $\nf{root.blocks[$end$].sum\sub{enq}} \geq e$, there is a $b$ such that $\nf{root.blocks[$b$].sum\sub{enq}} \geq e$ and $\nf{root.blocks[$b-1$].sum\sub{enq}} < e$. Block \nf{root.blocks[$b$]} contains $E_i(root,b)$.  Lines \ref{dsearchStart}--\ref{dsearchEnd} doubles the search range in Line \ref{doubling} and will eventually reach \nf{start} such that $\nf{root.blocks[start].sum\sub{enq}}\leq e \leq\nf{root.blocks[end].sum\sub{enq}}$. Then, in Line \ref{dsearchBinarySearch}, the binary search finds the $b$ such that \nf{root.blocks[$b-1$].sum\sub{enq}$<e\leq$root.blocks[$b$].sum\sub{enq}}. By Corollary \ref{lem::sumX}, \nf{root.blocks[$b$]} is the block that contains $E_e(root)$. Finally $i$ is computed using the definition of \nf{sum\sub{enq}} and Corollary \ref{lem::sumX}.
 \end{proof}
 
 
@@ -1064,7 +1079,7 @@ We now prove the two properties needed for linearizability.
 $L$ is a legal linearization ordering.
 \end{lemma}
 \begin{proof}
-We must show that, every operation that terminates is in $L$ exactly once and if $op_{1}$ terminates before $op_{2}$ starts in an execution then $op_{1}$ is before $op_{2}$ in the linearization. The first claim is directly reasoned from Corollary \ref{lem::appendExactlyOnce}. For the latter, if $op_{1}$ terminates before $op_{2}$ starts,  $op_{1}$\nf{.Append} has terminated before $op_{2}$\nf{.Append} started. From Corollary \ref{lem::append}, $op_{1}$ is in \nf{root.blocks} before $op_{2}$ starts to propagate. By definition of $L$, $op_{1}$ is linearized before $op_{2}$.
+We must show for any execution that every operation that terminates is in $L$ exactly once. Also, if $op_{1}$ terminates before $op_{2}$ in starts in the execution, then $op_{1}$ is before $op_{2}$ in the linearization. The first claim is directly reasoned from Corollary \ref{lem::appendExactlyOnce}. For the latter, if $op_{1}$ terminates before $op_{2}$ starts,  $op_{1}$\nf{.Append} has terminated before $op_{2}$\nf{.Append} started. From Corollary \ref{lem::append}, $op_{1}$ is in \nf{root.blocks} before $op_{2}$ starts to propagate. By definition of $L$, $op_{1}$ is linearized before $op_{2}$.
 \end{proof}
 Once some operations are aggregated in one block, they will get propagated up to the root together and they can be linearized in any order among themselves. We have chosen to put \nf{Enqueue}s in a block before \nf{Dequeue}s (see Definition \ref{ordering}).
 
@@ -1077,16 +1092,12 @@ Next we define  the responses that \nf{Dequeue}s should return, according to the
    Assume the operations in \nf{root.blocks} are applied sequentially on an empty queue in the order of $L$.  ${Resp(d)=e}$\nf{.element} if the element of \nf{Enqueue} $e$ is the response to \nf{Dequeue} $d$. Otherwise if ${d}$ is a \nf{null} dequeue then ${Resp(d)=\nf{null}}$. 
 \end{definition}
 
-% \begin{observation}\label{enqBeforeDeq}
-% By Definition \ref{ordering} \nf{Enqueue} operations come before \nf{Dequeue} operations in a block.  
-% \end{observation}
-
 In the next lemma we show that the \nf{size} field in each \nf{root block} is computed correctly.
 \begin{lemma}\label{sizeCorrectness}
   \nf{root.blocks[$b$].\size}is the \size of the queue if the operations in \nf{root.blocks[$0\cdots b$]} are applied in the order of~$L$.  
 \end{lemma}
 \begin{proof}
-We prove the claim by induction on $b$. The base case when ${b=0}$ is trivial since the queue is initially empty and $\nf{root.blocks[}0\nf{]}$ contains an emprty block with \nf{size} field equal to $0$. We are going to show the correctness when $b=i$ assuming  correctness when $b=i-1$. By Definition \ref{ordering} \nf{Enqueue} operations come before \nf{Dequeue} operations in a block. By Lemma~\ref{lem::numX} \nf{num\sub{enq}} and \nf{num\sub{deq}} fields in a block show ther number of \nf{Enqueue} and \nf{Dequeue} operations in it. If there are more than $\nf{root.blocks[}i-1\nf{].size}+\nf{root.blocks[}i\nf{].num\sub{enq}}$ dequeue operations in \nf{root.blocks[$i$]} then the queue would become empty after \nf{root.blocks[$i$]}. Otherwise the size of the queue after the $b$th block in the root is $\nf{root.blocks[}b-1\nf{].size}+ \nf{root.blocks[}b\nf{].num\sub{enq}}- \nf{root.blocks[}b\nf{].num\sub{deq}}$. In both cases, this is same as the assignment on Line \ref{computeLength}.
+We prove the claim by induction on $b$. The base case when ${b=0}$ is trivial since the queue is initially empty and $\nf{root.blocks[}0\nf{]}$ contains an emprty block with \nf{size} field equal to $0$. We are going to show the correctness when $b=i$ assuming  correctness when $b=i-1$. By Definition \ref{ordering} \nf{Enqueue} operations come before \nf{Dequeue} operations in a block in $L$. By Lemma~\ref{lem::numX} \nf{num\sub{enq}} and \nf{num\sub{deq}} fields in a block show ther number of \nf{Enqueue} and \nf{Dequeue} operations in it. If there are more than $\nf{root.blocks[}i-1\nf{].size}+\nf{root.blocks[}i\nf{].num\sub{enq}}$ dequeue operations in \nf{root.blocks[$i$]} then the queue would become empty after \nf{root.blocks[$i$]}. Otherwise the size of the queue after the $b$th block in the root is $\nf{root.blocks[}b-1\nf{].size}+ \nf{root.blocks[}b\nf{].num\sub{enq}}- \nf{root.blocks[}b\nf{].num\sub{deq}}$. In both cases, this is same as the assignment on Line \ref{computeLength}.
 \end{proof}
 
 The next lemma is useful to compute the number of non-null dequeues.
@@ -1232,7 +1243,7 @@ Since the block $P1$ creates is empty it returns \nf{true} in Line \ref{addOP} a
 
 Finally $P4$ goes to sleep and $P2$ helps to increment \nf{root.head} after its failed \nf{CAS} on the root. After incrementing \nf{root.head}, $P3$ succeeds to do \nf{root.Refresh} with a single \nf{CAS} on the \nf{root} and puts operations from $P1,P2$ and $P3$ to the \nf{root}. $P1$ fails to do \nf{Refresh} on the \nf{root} two times, but for sure its operation is propagated after the second failed \nf{Refresh}. See Figure \ref{fig::exec4}
 
-All the fields of some blocks from the Figure \ref{fig::exec4} are filled in Figure \ref{fig::exec45}.
+All the fields of some blocks from the Figure \ref{fig::exec4} are filled in Figure \ref{fig::exec5}.
 
 \begin{figure}
   \center\includegraphics[width=4.8in]{thesis/pics/exec1.png}

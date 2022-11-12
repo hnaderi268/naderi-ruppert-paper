@@ -105,15 +105,17 @@ Linearizability and lock-freedom are standard requirements for designing shared 
 \pagebreak
 
 \section*{Acknowledgements}
+\hspace{\parindent}First, I want to thank my supervisor Eric Ruppert. Without his guidance and support, this thesis probably would not have been completed.
 
+I would also like to thank my co-supervisor Franck van Breugel, not only for his careful reading of my thesis and his thoughtful comments bu also for his academic advice and motivations.
 
-First, I want to thank my supervisor Eric Ruppert. ...
+Besides my supervisors, I am grateful to all members of my examining committee for their time and their helpful comments on my thesis.
 
-I would also like to thank professor Franck van Breugel. ...
-
-I am grateful to all members of my examining committee for their time and their helpful comments on my thesis.
+Last but not the least, I would like to thank my parents, for providing me with unfailing support and continuous encouragement throughout my years of study. I wanted to thank my brother for being there for me whenever I needed any help.
 
 I would like to express my gratitude to York University for the scholarship I was awarded in 2021-2022 academic year.
+
+I dedicate this paper to my people, who are fighting for their freedom.
 
 \pagebreak
 \tableofcontents
@@ -212,7 +214,7 @@ The author states that to reduce memory usage to be bounded, the time per operat
 Jayanti and Petrovic introduced a wait-free poly-logarithmic multi-enqueuer single-dequeuer queue~\cite{DBLP:conf/fsttcs/JayantiP05}. We use their idea of having a tournament tree among processes to agree on the linearization of operations to design a poly-logarithmic multi-enqueuer multi-dequeuer queue. Unlike their work, our algorithm does not put a limit on the number of concurrent dequeuers. 
 
 \subsection{Universal Constructions and Other Poly-log Time Data Structures}
-A \textit{universal construction} is an algorithm that can implement a shared version of any given sequential object. The first universal construction was introduced by Herlihy~\cite{10.1145/114005.102808}. We can implement a concurrent queue using a universal construction. Jayanti proved an $\Omega(\log p)$ lower bound on the worst-case shared-access time complexity of $p$-process universal constructions~\cite{DBLP:conf/podc/Jayanti98a}. He also mentions that the universal construction by Afek, Dauber, and Touitou~\cite{DBLP:conf/stoc/AfekDT95} can be modified to $O(\log p)$ worst-case step complexity, using atomic access to $\Omega(p \log p)$-bit words. Chandra, Jayanti and Tan introduced a semi-universal construction that achieves $\textsc{O}(\log^2 p)$ shared accesses~\cite{DBLP:conf/podc/ChandraJT98}. However their algorithm cannot be used to create a queue. We mention a non-practical universal construction with a poly-log number of \nf{CAS} instructions in the last paragraph of the page 13.
+A \textit{universal construction} is an algorithm that can implement a shared version of any given sequential object. The first universal construction was introduced by Herlihy~\cite{10.1145/114005.102808}. We can implement a concurrent queue using a universal construction. Jayanti proved an $\Omega(\log p)$ lower bound on the worst-case shared-access time complexity of $p$-process universal constructions~\cite{DBLP:conf/podc/Jayanti98a}. He also mentions that the universal construction by Afek, Dauber, and Touitou~\cite{DBLP:conf/stoc/AfekDT95} can be modified to $O(\log p)$ worst-case step complexity, using atomic access to $\Omega(p \log p)$-bit words. Chandra, Jayanti and Tan introduced a semi-universal construction that achieves $\textsc{O}(\log^2 p)$ shared accesses~\cite{DBLP:conf/podc/ChandraJT98}. However their algorithm cannot be used to create a queue. We mention a non-practical universal construction with a poly-log number of \nf{CAS} instructions in the last paragraph of the Page 13.
 
 % TODO: page
 
@@ -423,7 +425,7 @@ A call to \nf{$n$.GetEnqueue($b,i$)} returns the \nf{element} of the $i$th enque
 
 
 \subsection{Pseudocode} \label{algQ}
-We present our algorithm in pseudocode. Page 23 contains the description of the fields in the tree nodes and the blocks. Value of any uninitialized field is \nf{null}. Page 24 contains major routines and the rest is the auxiliary routines
+We present our algorithm in pseudocode. Page~23 contains the description of the fields in the tree nodes and the blocks. Value of any uninitialized field is \nf{null}. Page~24 contains major routines and the rest of this section consists of the auxiliary routines
 The abbreviations bellow are used in the pseudocode and the proof of correctness.
 \begin{itemize}
  \item \tt{blocks[$b$].sum\sub{x}=blocks[$b$].sum\sub{x-left}+blocks[$b$].sum\sub{x-right}} (for internal blocks where $b\geq 0$ and \tt{x} $\in$ \{enq, deq\})
@@ -480,13 +482,13 @@ The abbreviations bellow are used in the pseudocode and the proof of correctness
   \textsf{: Each block in a leaf represents a single operation. If the operation is \tt{enqueue(x)} then \tt{element=x}, otherwise \tt{element=null}.}
   
     \item \tt{\sl{int} sum\sub{enq}, sum\sub{deq}}
-  \textsf{: \# enqueue, dequeue operations in the prefix for the block}
+  \textsf{: \# enqueue, dequeue operations in this block and its previous blocks in the leaf}
 \end{itemize}
 
 \Statex $\blacktriangleright$ \tt{\sl{RootBlock} extends \sl{InternalBlock}}
 \begin{itemize}
   \item \tt{\sl{int} \size}
-  \textsf{: size of the queue after performing all operations in the prefix for this block}
+  \textsf{: size of the queue after performing all operations in this block and its previous blocks in the root}
 \end{itemize}
 
 \end{algorithmic}
@@ -685,14 +687,14 @@ The abbreviations bellow are used in the pseudocode and the proof of correctness
 \If{\tt{this} \bf{is} \tt{leaf}}
 \State\Return \tt{blocks[b].element} \label{getBaseCase}
 \ElsIf{\tt{i <= blocks[b].num\sub{enq-left}}} \label{leftOrRight} \cmt{$E_\tt{i}(\tt{this},\tt{b})$ is in the left child of this node.}
-\State \tt{subBlockIndex= left.BinarySearch(i+blocks[b-1].sum\sub{enq-left}, blocks[b-1].end\sub{left}+1,} \label{leftChildGet}
+\State \tt{subblockIndex= left.BinarySearch(i+blocks[b-1].sum\sub{enq-left}, blocks[b-1].end\sub{left}+1,} \label{leftChildGet}
 \Statex \hspace{10.7em}\tt{blocks[b].end\sub{left})} 
-\State \Return\tt{left.}\Call{GetEnqueue}{subBlockIndex, i} 
+\State \Return\tt{left.}\Call{GetEnqueue}{subblockIndex, i} 
 \Else
 \State \tt{i= i-blocks[b].num\sub{enq-left}}
-\State\tt{subBlockIndex= right.BinarySearch(i+blocks[b-1].sum\sub{enq-right}, blocks[b-1].end\sub{right}+1,} \label{rightChildGet}
+\State\tt{subblockIndex= right.BinarySearch(i+blocks[b-1].sum\sub{enq-right}, blocks[b-1].end\sub{right}+1,} \label{rightChildGet}
 \Statex \hspace{11.1em}\tt{blocks[b].end\sub{right})} 
-\State \Return\tt{right.}\Call{GetEnqueue}{subBlockIndex, i} 
+\State \Return\tt{right.}\Call{GetEnqueue}{subblockIndex, i} 
 \EndIf
 \EndFunction{GetEnqueue}
 
@@ -703,16 +705,16 @@ The abbreviations bellow are used in the pseudocode and the proof of correctness
 \State\Return \tt{<b, i>} \label{indexBaseCase}
 \Else
 \State \tt{dir= (parent.left==n ? left: right)} 
-\State \tt{superBlockIndex= parent.blocks[blocks[b].super].sum\sub{deq-dir} > blocks[b].sum\sub{deq} ? \label{computeSuper}
+\State \tt{superblockIndex= parent.blocks[blocks[b].super].sum\sub{deq-dir} > blocks[b].sum\sub{deq} ? \label{computeSuper}
 \Statex \hspace{11.3em} blocks[b].super: blocks[b].super+1}
 
 \If{\tt{dir {\keywordfont is} left}} \label{computeISuperStart}
-\State \tt{i+= blocks[b-1].sum\sub{deq}-parent.blocks[superBlockIndex-1].sum\sub{deq-left}} \label{considerPreviousLeft}
+\State \tt{i+= blocks[b-1].sum\sub{deq}-parent.blocks[superblockIndex-1].sum\sub{deq-left}} \label{considerPreviousLeft}
 \Else \label{considerRight}
-\State \tt{i+= blocks[b-1].sum\sub{deq}-parent.blocks[superBlockIndex-1].sum\sub{deq-right}}  \label{considerPreviousRight}
-\State \tt{i+= parent.blocks[superBlockIndex].num\sub{deq-left}}  \label{considerLeftBeforeRight}
+\State \tt{i+= blocks[b-1].sum\sub{deq}-parent.blocks[superblockIndex-1].sum\sub{deq-right}}  \label{considerPreviousRight}
+\State \tt{i+= parent.blocks[superblockIndex].num\sub{deq-left}}  \label{considerLeftBeforeRight}
 \EndIf \label{computeISuperEnd}
-\State \Return\tt{this.parent.}\Call{IndexDequeue}{superBlockIndex, i}
+\State \Return\tt{this.parent.}\Call{IndexDequeue}{superblockIndex, i}
 \EndIf
 \EndFunction{IndexDequeue}
 
@@ -767,14 +769,14 @@ All the fields of selected blocks from Figure \ref{fig::exec4} are shown in Figu
 
 \section{Proof of Correctness}
 
-We adopt linearizability as our definition of correctness. In our case, where we create the linearization ordering in the root, we need to prove (1) the ordering is legal, i.e, for every execution on our queue if operation $op_1$ terminates before operation $op_2$ then $op_1$ is linearized before operation $op_2$ and (2) if we do operations sequentially in their the linearization order, operations get the same results as in our queue. The proof is structured like this. First, we define and prove some facts about blocks and the node's \nf{head} field. Then, we introduce  the linearization ordering formally. Next, we prove double \nf{Refresh} on a node is enough to propagate its children's new operations up to the node, which is used to prove (1). After this, we prove some claims about the size and operations of each block, which we use to prove the correctness of \nf{DoublingSearch()}, \nf{GetEnqueue()} and \nf{IndexDequeue()}. Finally, we prove the correctness of the way we compute the response of a dequeue, which establishes (2).
+We adopt linearizability as our definition of correctness. In our case, where we create the linearization ordering in the root, we need to prove (1) the ordering is legal, i.e, for every execution on our queue if operation $op_1$ terminates before operation $op_2$ then $op_1$ is linearized before operation $op_2$ and (2) if we do operations sequentially in their linearization order, operations get the same results as in our queue. The proof is structured like this. First, we define and prove some facts about blocks and the node's \nf{head} field. Then, we introduce  the linearization ordering formally. Next, we prove double \nf{Refresh} on a node is enough to propagate its children's new operations up to the node, which is used to prove (1). After this, we prove some claims about the size and operations of each block, which we use to prove the correctness of \nf{DoublingSearch()}, \nf{GetEnqueue()} and \nf{IndexDequeue()}. Finally, we prove the correctness of the way we compute the response of a dequeue, which establishes (2).
 
 \subsection{Basic Properties}
 In this subsection, we talk about some properties of blocks and fields of the tree nodes.
 
 A block is an object storing some statistics, as described in Algorithm Queue. A block in a node implicitly represents a set of operations.
 \begin{definition}[Ordering of a block in a node]
-Let $b$ be \nf{$n$.blocks[$i$]} and $b^\prime$ be \nf{$n$.blocks[$j$]}. We call $i$ the \emph{index} of block $b$. Block $b$ is \it{before} block $b^\prime$ in node $n$ if and only if $i<j$. We define \it{the prefix for} block $b$ in node $n$ to be the blocks in \tt{$n$.blocks[0..$i$]}.
+Let $B$ be \nf{$n$.blocks[$b$]} and $B^\prime$ be \nf{$n$.blocks[$j$]}. We call $i$ the \emph{index} of block $B$. Block $B$ is \it{before} block $B^\prime$ in node $n$ if and only if $i<j$.
 \end{definition}
 
 Next, we show that the value of \nf{head} in a node can only be increased. By the termination of a \nf{Refresh}, \nf{head} has been incremented by the process doing the \nf{Refresh} or by another process.
@@ -786,7 +788,7 @@ For each node $n$,  $n.\nf{head}$ is non-decreasing over time.
 \end{proof}
 
 \begin{lemma} \label{lem::headInc}
-Let $R$ be an instance of \nf{Refresh} on a node $n$ that its created block \nf{new} is not empty ($\nf{new.sum}\neq 0$). After $R$ terminates, \nf{$n$.head} is greater than the value read in Line \ref{readHead} of $R$.
+Let $R$ be an instance of \nf{Refresh} on a node $n$ that creates a non-empty block \nf{new} ($\nf{new.sum}\neq 0$). After $R$ terminates, \nf{$n$.head} is greater than the value read in Line \ref{readHead} of $R$.
 \end{lemma}
 \begin{proof}
 If the \nf{CAS} in Line \ref{incrementHead} is successful, then the claim holds. Otherwise, $n.\nf{head}$ has changed from the value read in Line \ref{readHead}. By Observation \ref{nonDecreasingHead} this means another process has incremented $n.\nf{head}$.
@@ -801,13 +803,14 @@ Initially the invariant is true since $n.\nf{head}=1$, $n.\nf{blocks[0]}\neq\nf{
 
 In the algorithm, $n.\nf{blocks}$ is modified only on Line \ref{cas}, which updates $n.\nf{blocks[$h$]}$ where $h$ is the value read from $n.\nf{head}$ in Line \ref{readHead}. Since the \nf{CAS} in Line \ref{cas} is successful, it means $n.\nf{head}$ has not changed from $h$ before doing the \nf{CAS}: if $n$\nf{.head} had changed before the \nf{CAS} then it would be greater than $h$ by Observation~\ref{nonDecreasingHead} and hence $n$\nf{.blocks[}$h$\nf{]}$\neq$\nf{null} and by the induction hypothesis, so the \nf{CAS} would fail. Writing into \nf{$n$.blocks[$h$]} when $h=n$\nf{.head} preserves the invariant, since the claim does not talk about the content of \nf{$n$.blocks[$n$.head]}.
 
-The value of \nf{$n$.head} is modified only in Line \ref{incrementHead} of \nf{Advance}. If $n$\nf{.head} is incremented to $h+1$ it is sufficient to show \nf{n.blocks[$h$]}$\neq$\nf{null}. \nf{Advance} is called  in Lines \ref{helpAdvance} and \ref{advance}. For Line \ref{helpAdvance}, $n.\nf{blocks[h]}\neq\nf{null}$ because of the \nf{if} condition in Line \ref{ifHeadnotNull}. For Line \ref{advance}, Line \ref{cas} was finished  before doing \ref{advance}. Whether Line \ref{cas} is successful or not, $n.\nf{blocks[h]}\neq\nf{null}$ after the $n$\nf{.blocks[$h$].CAS}. 
+The value of \nf{$n$.head} is modified only in Line \ref{incrementHead} of \nf{Advance}. If $n$\nf{.head} is incremented to $h+1$ it is sufficient to show \nf{n.blocks[$h$]}$\neq$\nf{null}. \nf{Advance} is called  in Lines \ref{helpAdvance} and \ref{advance}. For Line \ref{helpAdvance}, $n.\nf{blocks[h]}\neq\nf{null}$ because of the \nf{if} condition in Line \ref{ifHeadnotNull}. For Line \ref{advance}, Line \ref{cas} was finished  before doing Line \ref{advance}. Whether Line \ref{cas} is successful or not, $n.\nf{blocks[h]}\neq\nf{null}$ after the $n$\nf{.blocks[$h$].CAS}. 
 \end{proof}
 
 We define the subblocks of a block recursively.
 
 \begin{definition}[Subblock]\label{def::subblock}
-A block is a \emph{direct subblock} of the $i$th block in node $n$ if it is\\ in $$\texttt{$n$.left.blocks[$n$.blocks[$i-1$].end\textsubscript{left}+1$\cdots n$.blocks[$i$].end\textsubscript{left}]}$$ or in $$\texttt{$n$.right.blocks[$n$.blocks[$i-1$].end\textsubscript{right}+1$\cdots n$.blocks[$i$].end\textsubscript{right}]}.$$ Block $b$ is a \emph{subblock} of block $c$ if $b$ is a direct subblock of $c$ or a subblock of a direct subblock of $c$.  We say block $b$ is \it{propagated} to node $n$ if $b$ is in $n.blocks$ or is a subblock of a block in $n\nf{.blocks}$.
+A block is a \emph{direct subblock} of the $i$th block in node $n$ if it is\\ in $$\texttt{$n$.left.blocks[$n$.blocks[$i-1$].end\textsubscript{left}+1$\cdots n$.blocks[$i$].end\textsubscript{left}]}$$ or in $$\texttt{$n$.right.blocks[$n$.blocks[$i-1$].end\textsubscript{right}+1$\cdots n$.blocks[$i$].end\textsubscript{right}]}.$$
+Block $B$ is a \emph{subblock} of block $C$ if $B$ is a direct subblock of $C$ or a subblock of a direct subblock of~$C$.  We say block $B$ has been \it{propagated} to node $n$ if $B$ is in $n.\nf{blocks}$ or is a subblock of a block in $n\nf{.blocks}$.
 \end{definition}
 
 The following lemma is used to prove that subblocks of two blocks in a node are disjoint.
@@ -815,18 +818,18 @@ The following lemma is used to prove that subblocks of two blocks in a node are 
  If $n\nf{.blocks[}b\nf{]}\neq\nf{null}$$(b>0)$ then $\nf{$n$.blocks[$i$].end\sub{left}} \geq \nf{$n$.blocks[$i-1$].end\sub{left}}$ and $\nf{$n$.blocks[$i$].end\sub{right}} \geq \nf{$n$.blocks[$i-1$].end\sub{right}}$.
 \end{lemma}
 \begin{proof}
-Consider the block $B$ written into \nf{n.blocks[$b$]} by \nf{CAS} at Line \ref{cas}. Block $B$ is created by the \nf{CreateBlock($b$)} called at Line \ref{invokeCreateBlock}. Prior to this call to \nf{CreateBlock($b$)}, $\nf{n.head}=b$ at Line \ref{readHead}, so \nf{n.blocks[$b-1$]} is already a non-null value $B^\prime$ by Invariant \ref{lem::headPosition}. Thus, the \nf{CreateBlock($b-1$)} that created  $b^\prime$ terminated before the \nf{CreateBlock($b$)} that creates $B$ is invoked. The value written into \nf{$B$.end\sub{left}} at Line \ref{lastLine} of \nf{CreateBlock($b$)}  was one less than the value of $n$\nf{.left.head} read at Line \ref{lastLine} of \nf{CreateBlock($b$)}. Similarly, the value in \nf{n.blocks[$b-1$].end\sub{left}} was one less than the value read from $\nf{n.left.head}$ during the call to \nf{CreateBlock($b-1$)}. By Observation \ref{nonDecreasingHead}, $n\nf{.left.head}$ is non-decreasing, so $B^\prime\nf{.end\sub{left}} \leq \nf{$B$.end\sub{left}}$. The proof for \nf{end\sub{right}} is similar.
+Consider the block $B$ written into \nf{n.blocks[$b$]} by \nf{CAS} at Line \ref{cas}. Block $B$ is created by the \nf{CreateBlock($b$)} called at Line \ref{invokeCreateBlock}. Prior to this call to \nf{CreateBlock($b$)}, $\nf{n.head}=b$ at Line \ref{readHead}, so \nf{n.blocks[$b-1$]} is already a non-null value $B^\prime$ by Invariant \ref{lem::headPosition}. Thus, the \nf{CreateBlock($b-1$)} that created  $B^\prime$ has terminated before the invocation of \nf{CreateBlock($b$)} that created $B$. The value written into \nf{$B$.end\sub{left}} at Line \ref{lastLine} of \nf{CreateBlock($b$)}  was one less than the value of $n$\nf{.left.head} read at Line \ref{lastLine} of \nf{CreateBlock($b$)}. Similarly, the value in \nf{n.blocks[$b-1$].end\sub{left}} was one less than the value read from $\nf{n.left.head}$ during the call to \nf{CreateBlock($b-1$)}. By Observation \ref{nonDecreasingHead}, $n\nf{.left.head}$ is non-decreasing, so $B^\prime\nf{.end\sub{left}} \leq \nf{$B$.end\sub{left}}$. The proof for \nf{end\sub{right}} is similar.
 \end{proof}
 
 \begin{lemma} \label{lem::subblocksDistinct}
-Subblocks of any two blocks in node $n$ do not overlap.  
+Set of the subblocks of any two blocks in a node are distinct.  
 \end{lemma}
 \begin{proof}
-We are going to prove the lemma by contradiction. Consider the lowest \nf{node} $n$ in the tree that violates the claim. Then subblocks of $n\nf{.blocks[}i\nf{]}$ and $n\nf{.blocks[}j\nf{]}$ overlap for some $i<j$. Since $n$ is the lowest node in the tree violating the claim, direct subblocks of blocks of $n\nf{.blocks[}i\nf{]}$ and $n\nf{.blocks[}j\nf{]}$ have to overlap. Without loss of generality, assume left child subblocks of $n\nf{.blocks[}i\nf{]}$ overlap with the left child subblocks of $n\nf{.blocks[}j\nf{]}$. By Lemma \ref{lem::headProgress} we have $ \nf{$n$.blocks[$i$].end\sub{left}} \leq \nf{$n$.blocks[$j-1$].end\sub{left}}$, so the range $[\nf{$n$.blocks[$i-1$].end\sub{left}}+1 \cdots \nf{$n$.blocks[$i$].end\sub{left}}]$ cannot have overlap with the range $[\nf{$n$.blocks[$j-1$].end\sub{left}}+1 \cdots \\ \nf{$n$.blocks[$j$].end\sub{left}}]$. Therefore, direct subblocks of \nf{$n$.blocks[$i$]} and \nf{$n$.blocks[$j$]} cannot overlap.
+We are going to prove the lemma by contradiction. Consider the lowest \nf{node} $n$ in the tree that violates the claim. Then, subblocks of $n\nf{.blocks[}i\nf{]}$ and $n\nf{.blocks[}j\nf{]}$ overlap for some $i<j$. Since $n$ is the lowest node in the tree violating the claim, direct subblocks of blocks of $n\nf{.blocks[}i\nf{]}$ and $n\nf{.blocks[}j\nf{]}$ have to overlap. Without loss of generality, assume left child subblocks of $n\nf{.blocks[}i\nf{]}$ overlap with the left child subblocks of $n\nf{.blocks[}j\nf{]}$. By Lemma \ref{lem::headProgress} we have $ \nf{$n$.blocks[$i$].end\sub{left}} \leq \nf{$n$.blocks[$j-1$].end\sub{left}}$, so the range $[\nf{$n$.blocks[$i-1$].end\sub{left}}+1 \cdots \nf{$n$.blocks[$i$].end\sub{left}}]$ cannot have overlap with the range $[\nf{$n$.blocks[$j-1$].end\sub{left}}+1 \cdots \\ \nf{$n$.blocks[$j$].end\sub{left}}]$. Therefore, direct subblocks of \nf{$n$.blocks[$i$]} and \nf{$n$.blocks[$j$]} cannot overlap, which is in contradiction with the assumption.
 \end{proof}
 
 \begin{definition}[Superblock]
-  Block $b$ is \it{superblock} of block $c$ if $c$ is a direct subblock of $b$.
+  Block $B$ is \it{superblock} of block $C$ if $C$ is a direct subblock of $B$.
 \end{definition}
 \begin{corollary}
 Every block has at most one superblock.
@@ -837,15 +840,15 @@ A block having more than one superblock contradicts Lemma \ref{lem::subblocksDis
 
 Now we can define the operations of a block using the definition of subblocks.
 \begin{definition}[Operations of a block]\label{def::ops}
-A block $B$ in a leaf represents an \nf{Enqueue} if $B\nf{.element}\neq\nf{null}$. Otherwise, if $B\nf{.element}=\nf{null}$, $B$ represents a \nf{Dequeue}. The set of operations of block $B$ is the union of the operations in leaf subblocks of $b$. We denote the set of operations of block $B$ by ${ops(B)}$ and the union  of operations of a set of blocks \bf{B} by $ops(\bf{B})$.  We also say $B$ contains ${op}$ if $op\in{ops(B)}$.
+A block $B$ in a leaf represents an \nf{Enqueue} if $B\nf{.element}\neq\nf{null}$. Otherwise, if $B\nf{.element}=\nf{null}$, $B$ represents a \nf{Dequeue}. The set of operations of block $B$ is the union of the operations in leaf subblocks of $B$. We denote the set of operations of block $B$ by ${ops(B)}$ and the union  of operations of a set of blocks $\mathcal{B}$ by $ops(\mathcal{B})$.  We also say $B$ contains ${op}$ if $op\in{ops(B)}$.
 \end{definition}
 
 The next lemma proves that each operation appears at most once in the blocks of a node.
 \begin{lemma}\label{lem::noDuplicates}
-If $op$ is in $n.blocks[i]$ then there is no $j\neq i$ such that $op$ is in $n.blocks[j]$.
+For any node $n$, if $op$ is in $n.\nf{blocks[}i\nf{]}$ then there is no $j\neq i$ such that $op$ is in $n\nf{.blocks[}j\nf{]}$.
 \end{lemma}
 \begin{proof}
-We prove this claim by contradiction using Lemma \ref{lem::subblocksDistinct}. Assume $op$ is in the subblocks of both $n.blocks[i]$ and $n.blocks[j]$. From Lemma \ref{lem::subblocksDistinct} we know that the subblocks of these blocks are different, so there are two leaf blocks containing $op$. Since each process puts each operation in only one block of its leaf, then $op$ cannot be in two leaf blocks. This is a contradiction.
+We prove this claim by contradiction using Lemma \ref{lem::subblocksDistinct}. Assume $op$ is in the subblocks of both $n\nf{.blocks[}i\nf{]}$ and $n\nf{.blocks[}j\nf{]}$. From Lemma \ref{lem::subblocksDistinct} we know that the subblocks of these blocks are different, so there are two leaf blocks containing $op$. Since each process puts each operation in only one block of its leaf, $op$ cannot be in two leaf blocks. This is a contradiction.
 \end{proof}
 
 \begin{definition}
@@ -860,22 +863,22 @@ Now we want to say that blocks of a node grow over time.
 Blocks are only appended (not modified) with \nf{CAS} to $n\nf{.blocks[}n\nf{.head]}$, so the set of the blocks of a node after the \nf{CAS} contains the set of the blocks before the \nf{CAS}.
 \end{proof}
 
-\begin{corollary}\label{lem::establishedOrder}
-  If  time $t<$ time $t^\prime$, then $EST_n^t\subseteq EST_n^{t^\prime}$.
-\end{corollary}
-\begin{proof}
-From Observations \ref{nonDecreasingHead}, \ref{lem::blocksOrder}.  
-\end{proof}
+% \begin{corollary}\label{lem::establishedOrder}
+%   If  time $t<$ time $t^\prime$, then $EST_n^t\subseteq EST_n^{t^\prime}$.
+% \end{corollary}
+% \begin{proof}
+% From Observations \ref{nonDecreasingHead}, \ref{lem::blocksOrder}.  
+% \end{proof}
 
 
 \subsection{Ordering Operations}
 
 \begin{figure}[hbt]
   \center\includegraphics[width=5.5in]{pics/tree}
-  \caption[Order of operations in a block]{Order of operations in the block b. Operations in the leaves are ordered in the numerical order shown in the drawing.}
+  \caption[Order of operations in a block]{Order of operations in the block B. Operations in the leaves are ordered in the numerical order shown in the drawing.}
 \end{figure}
 
-Now we define the ordering of operations stored in each node. In the non-root nodes, we only need to order operations of a type among themselves. Processes are numbered from 1 to $p$, and leaves of the tree are assigned from left to right. We will show in Lemma \ref{blockSize} that there is at most one operation from each process in a given block.
+Now we define the ordering of operations stored in each node. In the non-root nodes, we only need to order operations of a type among themselves that is, we order the \nf{Enqueue}s in the node and order the \nf{Dequeue}s in the node separately. Processes are numbered from 1 to $p$, and leaves of the tree are assigned from left to right. We will show in Lemma \ref{blockSize} that there is at most one operation from each process in a given block.
 \begin{definition} [Ordering of operations inside the nodes] \label{ordering}
 \end{definition}
 \begin{itemize}
@@ -902,16 +905,17 @@ The linearization ordering is given by the order in which operations appear in t
  $$L=E(root,1)\cdot D(root,1)\cdot E(root,2)\cdot D(root,2)\cdot E(root,3)\cdot D(root,3)\cdots$$
 \end{definition}
 
+The following observation follows from the Definition of \nf{num\sub{x}} on Page 22.
 \begin{observation}\label{sumToNum}
-For any node $n$ and indices $i<j$ of \nf{blocks} in $in$, we have
+For any node $n$ and indices $i<j$ of \nf{blocks} in $n$, we have
 $$n.\nf{blocks[}j\nf{].sum\sub{x}}-n.\nf{blocks[}i\nf{].sum\sub{x}}=\mathlarger{\sum}_{k=i+1}^{j}  n\nf{.blocks[}k\nf{].num\sub{x}}$$ where \nf{x} in $\{\nf{enq}, \nf{deq}, \nf{enq-left}, \nf{enq-right}, \nf{deq-left}, \nf{deq-right}\}$.
 \end{observation}
 
 The next claim is also valid if we replace \nf{enq} with \nf{deq} and $E$ with $D$.
 \begin{lemma}\label{lem::numX}
-Let $B$, $B^\prime$ be $n\nf{.blocks[}b\nf{]}$, $n\nf{.blocks[}b-1\nf{]}$ respectively.
+Let $B$ and $B^\prime$ be $n\nf{.blocks[}b\nf{]}$ and $n\nf{.blocks[}b-1\nf{]}$, respectively.
 
-If $n$ is an internal node, then
+\hspace{-\parindent}If $n$ is an internal node, then
 \begin{enumerate}[label=(\arabic*)]
     \item  $B\nf{.num\sub{enq-left}}=\Big|E(n.\nf{left},B^\prime.\nf{end\sub{left}}+1)\cdots E(n.\nf{left},B.\nf{end\sub{left}})\Big|$.
     \item $B\nf{.num\sub{enq-right}}=\Big|E(n.\nf{right},B^\prime.\nf{end\sub{right}}+1)\cdots E(n.\nf{right},B.\nf{end\sub{right}})\Big|$.
@@ -922,13 +926,13 @@ And for every node n, we have
 \end{enumerate}
 \end{lemma}
 \begin{proof}
- We prove the claim by induction on the height of node $n$. Base case (3) for leaves is trivial, and (1) and (2) are vacuously true for leaves. Supposing the claim is true for $n$'s children, we prove the correctness of the claim for $n$.
+ We prove the claim by induction on the height of node $n$. For the base case when $n$ is a leaf, statement (3) is trivial, and (1) and (2) are vacuously true. Supposing the claim is true for $n$'s children, we prove the claim for $n$.
 \begin{align*}
-    B\nf{.num\sub{enq-left}}=&B.\nf{sum\sub{enq-left}}-B^\prime.\nf{sum\sub{enq-left}}\\
-    =& B^\prime.\nf{sum\sub{enq-left}}+n\nf{.left.blocks[}B\nf{.end\sub{left}].sum\sub{enq}}\\&-n\nf{.left.blocks[}B^\prime\nf{.end\sub{left}].sum\sub{enq}}-B^\prime.\nf{sum\sub{enq-left}}\\
-    =& n.\nf{left.blocks[}B\nf{.end\sub{left}].sum\sub{enq}}- n.\nf{left.blocks[}B^\prime\nf{.end\sub{left}].sum\sub{enq}}\\
-    =& \sum_{i=B^\prime\nf{.end\sub{left}}+1}^{B\nf{.end\sub{left}}}  n\nf{.left.blocks[}i\nf{].num\sub{enq}} \\
-    =& \Big|E(n.\nf{left},B^\prime.\nf{end\sub{left}}+1)\cdots E(n.\nf{left},B.\nf{end\sub{left}})\Big|
+    B\nf{.num\sub{enq-left}}&=B.\nf{sum\sub{enq-left}}-B^\prime.\nf{sum\sub{enq-left}}\\
+    &= B^\prime.\nf{sum\sub{enq-left}}+n\nf{.left.blocks[}B\nf{.end\sub{left}].sum\sub{enq}}\\&-n\nf{.left.blocks[}B^\prime\nf{.end\sub{left}].sum\sub{enq}}-B^\prime.\nf{sum\sub{enq-left}}\\
+    &= n.\nf{left.blocks[}B\nf{.end\sub{left}].sum\sub{enq}}- n.\nf{left.blocks[}B^\prime\nf{.end\sub{left}].sum\sub{enq}}\\
+    &= \sum_{i=B^\prime\nf{.end\sub{left}}+1}^{B\nf{.end\sub{left}}}  n\nf{.left.blocks[}i\nf{].num\sub{enq}} \\
+    &= \Big|E(n.\nf{left},B^\prime.\nf{end\sub{left}}+1)\cdots E(n.\nf{left},B.\nf{end\sub{left}})\Big|
 \end{align*}
 First line follows from the Definition of \nf{num\sub{enq}}. Second line is similar to the way \nf{sum\sub{enq-left}} is computed in the \nf{CreateBlock} routine. \text{Observation } \ref{sumToNum} results the third line and the last line holds because of the induction hypothesis (3). (2) is similar to (1). Now we prove (3) starting from the Definition of $E(n,b)$.
 \begin{align*} 
@@ -942,18 +946,18 @@ The next claim is also true if we replace \nf{enq} with \nf{deq} and $E$ with $D
 \begin{corollary}\label{lem::sumX}
 Let $B$ be $n\nf{.blocks[}b\nf{]}$.
 \begin{enumerate}[label=(\arabic*)]
-    \item If $n$ is an internal node then $B\nf{.sum\sub{enq-left}}=\Big|E(n.\nf{left},1)\cdots E(n.\nf{left},B.\nf{end\sub{left}})\Big|$
-    \item If $n$ is an internal node then $B\nf{.sum\sub{enq-right}}=\Big|E(n.\nf{right},1)\cdots E(n.\nf{right},B.\nf{end\sub{right}})\Big|$
-    \item $B\nf{.sum\sub{enq}}=\Big|E(n,1)\cdot E(n,2)\cdots E(n,b)\Big|$
+    \item If $n$ is an internal node then $B\nf{.sum\sub{enq-left}}=\Big|E(n.\nf{left},1)\cdots E(n.\nf{left},B.\nf{end\sub{left}})\Big|$.
+    \item If $n$ is an internal node then $B\nf{.sum\sub{enq-right}}=\Big|E(n.\nf{right},1)\cdots E(n.\nf{right},B.\nf{end\sub{right}})\Big|$.
+    \item $B\nf{.sum\sub{enq}}=\Big|E(n,1)\cdot E(n,2)\cdots E(n,b)\Big|$.
 \end{enumerate}
 \end{corollary}
 \begin{proof} Result (1) can be proved using the previous lemma.
 \begin{align*}
-    B\nf{.sum\sub{enq-left}}=&n\nf{.blocks[}1\nf{].num\sub{enq-left}}+\dots+ n\nf{.blocks[}b\nf{].num\sub{enq-left}}\\
-    =& \Big|E(n.\nf{left},1)\cdots E(n.\nf{left},n\nf{.blocks[}1\nf{].end\sub{left}})\Big| +\\
-    &\vdots\\
+    B\nf{.sum\sub{enq-left}}&=n\nf{.blocks[}1\nf{].num\sub{enq-left}}+\dots+ n\nf{.blocks[}b\nf{].num\sub{enq-left}}\\
+    &=\Big|E(n.\nf{left},1)\cdots E(n.\nf{left},n\nf{.blocks[}1\nf{].end\sub{left}})\Big| +\\
+    &\hspace{1em}\vdots\\
     &+\Big|E(n.\nf{left},n\nf{.blocks[}b-1\nf{].end\sub{left}})\cdots E(n.\nf{left},n\nf{.blocks[}b\nf{].end\sub{left}})\Big|\\
-    =&\Big|E(n.\nf{left},1)\cdots E(n.\nf{left},B.\nf{end\sub{left}})\Big|
+    &=\Big|E(n.\nf{left},1)\cdots E(n.\nf{left},B.\nf{end\sub{left}})\Big|
 \end{align*}
 
 We can prove (2) and (3) the same as (1).
@@ -964,7 +968,7 @@ We can prove (2) and (3) the same as (1).
 This section explains why two \nf{Refresh}es are enough to propagate a node's operations to its parent.
 
 \begin{definition}
-Let $t^{op}$ be the time $op$ is invoked, $^{op}t$ be the time $op$ terminates, $t_{l}^{op}$ be the time immediately before running Line $l$ of operation $op$ and $^{op}_{l}t$ be the time immediately after running Line $l$ of operation $op$. We sometimes suppress $op$ and write $t_{l}$ or $_l t$ if $op$ is clear from the context. In the text, $v_l$ is the value of variable \nf{v} immediately after line $l$ for the process we are talking about and $v_t$ is the value of variable \nf{v} at time $t$.
+Let $t^{op}$ be the time $op$ is invoked, $^{op}t$ be the time $op$ terminates, $t_{l}^{op}$ be the time immediately before running Line $l$ of operation $op$ and $^{op}_{l}t$ be the time immediately after running Line $l$ of operation $op$. We sometimes suppress $op$ and write $t_{l}$ or $_l t$ if $op$ is clear from the context. In the text, $v_l$ is the value of variable $v$ immediately after line $l$ for the process we are talking about and $v_t$ is the value of variable $v$ at time $t$.
 \end{definition} 
 
 \begin{definition} [Successful Refresh]
@@ -1002,12 +1006,12 @@ In the next lemma, we show that if two consecutive instances of \nf{Refresh} by 
   Consider two consecutive terminating instances $R_1$, $R_2$ of \nf{Refresh} on internal node $n$ by process $p$. If neither $R_1$ nor $R_2$ is a successful \nf{Refresh}, then we have $EST_{n\nf{.left}}^{t^{R{_1}}} \; \cup \; EST_{n\nf{.right}}^{t^{R{_1}}} \subseteq EST_{n}^{^{R{_2}}t}$.
 \end{lemma}
 \begin{proof}
-Let $R_1$ read $i$ from $n\nf{.head}$ at Line \ref{readHead}. By Lemma \ref{lem::headInc}, $R_1$ and $R_2$ both cannot read the same value $i$. By Observation \ref{nonDecreasingHead}, $R_2$ reads a larger value of $n$\nf{.head} than $R_1$.
+Let $R_1$ read $i$ from $n\nf{.head}$ at Line \ref{readHead}. By Lemma \ref{lem::headInc}, $R_1$ and $R_2$ cannot both read the same value $i$. By Observation \ref{nonDecreasingHead}, $R_2$ reads a larger value of $n$\nf{.head} than $R_1$.
 
 Consider the case where $R_1$ reads $i$ and $R_2$ reads $i+1$ from Line \ref{readHead}. As $R_2$'s \nf{CAS} in Line \ref{cas} returns \nf{false}, there is another successful instance $R_2^\prime$ of \nf{$n$.Refresh} that has done a \nf{CAS} successfully into \nf{$n$.blocks[$i+1$]} before $R_2$ tries to \nf{CAS}. $R_2^\prime$ creates its block \nf{new} after reading the value $i+1$ from $n$\nf{.head} (Line \ref{readHead}) and $R_1$ reads the value $i$ from $n$\nf{.head}. By Observation \ref{nonDecreasingHead} we have $^{R_1}t<t^{R_1}_{\ref{readHead}}< t^{R2^\prime}_{\ref{readHead}}$ (see Figure \ref{fig::doubleRefresh}). By Lemma \ref{lem::trueRefresh} we have $EST^{n.\nf{left}}_{^{R_2^\prime}_{\ref{readHead}}t} \cup EST^{n.\nf{right}}_{^{R_2^\prime}_{\ref{readHead}}t} \subseteq ops(n.\nf{blocks}_{t_{\ref{cas}}^{R_2^\prime}})$. Also by Lemma \ref{lem::headInc} on $R_2$, the value  of \nf{$n$.head} is more than $i+1$ after $R_2$ terminates, so the block appended by $R_2^\prime$ into $n$\nf{.blocks[$i$]} is established by the time $R_2$ terminates. To summarize, $^{R_1}t$ is before $R_2^\prime$'s read of \nf{$n$.head} ($t_{\ref{readHead}}^{R_2^\prime}$), so we have $EST_{n.\nf{left}}^{t^{R_1}} \cup EST_{n.\nf{right}}^{t^{R_1}} \subseteq ops(n.\nf{blocks}_{t^{R_2^\prime}_{\ref{cas}}})$. $R_2^\prime$'s successful \nf{CAS} ($t^{R_2^\prime}_{\ref{cas}}$) is before $R_2$'s termination ($t^{R_2}$), so by Lemma \ref{lem::headInc} $n$\nf{.head} has been incremented when $R_2$ terminates and the block $R_2^\prime$ put into $n$ is established by then. So we have
 $ops(n.\nf{blocks}_{t^{R_2^\prime}_{\ref{cas}}}) \subseteq EST_{n}^{^{R_2}t}$.
 
-If $R_2$ reads some value greater than $i+1$ in Line \ref{readHead} it means $n\nf{.head}$ has been incremented at least two times since $_{\ref{readHead}}^{R_1}t$. By Invariant \ref{lem::headPosition}, when $n.$\nf{head} is incremented from $i+1$ to $i+2$, $n\nf{.blocks[$i+1$]}$ is non-null. Let $R_3$ be the \nf{Refresh} on $n$ that has put the block in $n\nf{.blocks[}i+1\nf{]}$. $R_3$ read $n\nf{.head}=i+1$ at Line \ref{readHead} and has put its block in $n\nf{.blocks[}i+1\nf{]}$ before $R_2$'s read of $n.$\nf{head} at Line \ref{readHead}. So we have $t^{R_1}<_{\ref{readHead}}^{R_3}t<_{\ref{cas}}^{R_3}t<t^{R_2}_{\ref{readHead}}<^{R_{2}}t$. From Observation \ref{lem::blocksOrder}  on the operations before and after $R_3$'s \nf{CAS} and Lemmas \ref{lem::trueRefresh}, \ref{lem::headInc} on $R_3$ the claim holds.
+If $R_2$ reads some value greater than $i+1$ in Line \ref{readHead} it means $n\nf{.head}$ has been incremented at least two times since $_{\ref{readHead}}^{R_1}t$. By Invariant \ref{lem::headPosition}, when $n.$\nf{head} is incremented from $i+1$ to $i+2$, $n\nf{.blocks[$i+1$]}$ is non-null. Let $R_3$ be the \nf{Refresh} on $n$ that has put the block in $n\nf{.blocks[}i+1\nf{]}$. $R_3$ read $n\nf{.head}=i+1$ at Line \ref{readHead} and has put its block in $n\nf{.blocks[}i+1\nf{]}$ before $R_2$'s read of $n.$\nf{head} at Line \ref{readHead}. So we have $t^{R_1}<_{\ref{readHead}}^{R_3}t<_{\ref{cas}}^{R_3}t<t^{R_2}_{\ref{readHead}}<^{R_{2}}t$. From Observation \ref{lem::blocksOrder}  on the operations before and after $R_3$'s \nf{CAS} and Lemmas \ref{lem::trueRefresh} and \ref{lem::headInc} on $R_3$ the claim holds.
 \end{proof}
 
 \begin{figure}[hbt]
@@ -1019,23 +1023,23 @@ If $R_2$ reads some value greater than $i+1$ in Line \ref{readHead} it means $n\
   $EST_{n\nf{.left}}^{_{\ref{firstRefresh}}t} \cup EST_{n\nf{.right}}^ {_{\ref{firstRefresh}}t} \subseteq EST_{n}^{t_{\ref{secondRefresh}}}$
 \end{corollary}
 \begin{proof}
-  If the first \nf{Refresh} in line \ref{firstRefresh} returns \nf{true}, then by Corollary \ref{lem::prectrueRefresh} the claim holds. If the first \nf{Refresh} failed and the second \nf{Refresh} succeeded, the claim still holds by Corollary \ref{lem::prectrueRefresh}. Otherwise, both failed, and the claim is satisfied by Lemma \ref{doubleRefresh}.
+  If the first \nf{Refresh} in line \ref{firstRefresh} returns \nf{true}, then by Corollary \ref{lem::prectrueRefresh} the claim holds. If the first \nf{Refresh} failed and the second \nf{Refresh} succeeded, the claim still holds by Corollary \ref{lem::prectrueRefresh}. Otherwise, both failed, and the claim is implied by Lemma \ref{doubleRefresh}.
 \end{proof}
 
-Now we show that after \nf{Append($b$)} on a leaf finishes, the operation contained in $b$ will be established in \nf{root}.
+Now we show that after \nf{Append($B$)} on a leaf finishes, the operation contained in $B$ will be established in \nf{root}.
 
 \begin{corollary}\label{lem::append}
-For $A=l\nf{.Append(}b\nf{)}$ we have ${ops(b)} \subseteq EST_{n}^{t^A}$ for each node $n$ in the path from $l$ to \nf{root}.
+For $A=l\nf{.Append(}B\nf{)}$ we have ${ops(b)} \subseteq EST_{n}^{t^A}$ for each node $n$ in the path from $l$ to \nf{root}.
 \end{corollary}
 \begin{proof}
-$A$ adds $b$ to the assigned leaf of the process, establishes it at Line \ref{appendEnd} and then calls \nf{Propagate} on the leaf's parent where it appended $b$. For every node $n$, $n.$\nf{Propagate} appends $b$ to $n$, establishes it in $n$ by Corollary \ref{lem::propagateStep} and then calls $n.$\nf{parent.Propagate} until $n$ is \nf{root}.
+$A$ adds $B$ to the assigned leaf of the process, establishes it at Line \ref{appendEnd} and then calls \nf{Propagate} on the parent of the leaf where it appended $B$. For every node $n$, $n.$\nf{Propagate} appends $B$ to $n$, establishes it in $n$ by Corollary \ref{lem::propagateStep} and then calls $n.$\nf{parent.Propagate} until $n$ is \nf{root}.
 \end{proof}
 
 \begin{corollary} \label{lem::appendExactlyOnce}
- After $l$\nf{.Append($b$)} finishes, $b$ is a subblock of exactly one block in each node along the path from $l$ to the \nf{root}.
+ After $l$\nf{.Append($B$)} finishes, $B$ is a subblock of exactly one block in each node along the path from $l$ to the \nf{root}.
 \end{corollary}
 \begin{proof}
-By the previous corollary and Lemma \ref{lem::noDuplicates} there is exactly one block in each node containing $b$.
+By the previous corollary and Lemma \ref{lem::noDuplicates} there is exactly one block in each node containing~$B$.
 \end{proof}
 
 \subsection{Correctness of GetEnqueue}
@@ -1062,32 +1066,32 @@ From the definition of operations in a block in Definition \ref{def::ops} we kno
 If $1\leq e \leq \nf{root.blocks[$end$].sum\sub{enq}}$, then \nf{Doubling-}\\\nf{Search($e$, $end$)} returns \nf{<$b$, $i$>} such that $E_i(root,b)= E_e(root)$.
 \end{lemma}
 \begin{proof}
- From Lines \ref{setSumEnqLeft} and \ref{setSumEnqRight} we know the \nf{sum\sub{enq-left}}, and \nf{sum\sub{enq-right}} fields of \nf{blocks} in each node are sorted in non-decreasing order. Since $\nf{sum\sub{enq}}=\nf{sum\sub{enq-left}}+ \nf{sum\sub{enq-right}}$, the $\nf{sum\sub{enq}}$ values of \nf{root.blocks[$0\cdot\cdot end$]} are also non-decreasing. By Corollary~\ref{lem::sumX} we know that \nf{sum\sub{enq}} field in a block shows the prefix sum of the number of \nf{Enqueue} operations in that block. Furthermore, since $\nf{root.blocks[$0$].sum\sub{enq}}=0$ and $\nf{root.blocks[$end$].sum\sub{enq}} \geq e$, there is a $b$ such that $\nf{root.blocks[$b-1$].sum\sub{enq}}<e\leq\nf{root.blocks[$b$].sum\sub{enq}}$. Block \nf{root.blocks[$b$]} contains $E_i(root,b)$.  Lines \ref{dsearchStart}--\ref{dsearchEnd} doubles the search range in Line \ref{doubling} and will eventually reach \nf{start} such that $\nf{root.blocks[start].sum\sub{enq}}\leq e \leq\nf{root.blocks[end].sum\sub{enq}}$. Then, in Line \ref{dsearchBinarySearch}, the binary search finds the $b$ such that \nf{root.blocks[$b-1$].sum\sub{enq}$<e\leq$root.blocks[$b$].sum\sub{enq}}. By Corollary \ref{lem::sumX}, \nf{root.blocks[$b$]} is the block that contains $E_e(root)$. Finally, $i$ is computed using the definition of \nf{sum\sub{enq}} and Corollary \ref{lem::sumX}.
+ From Lines \ref{setSumEnqLeft} and \ref{setSumEnqRight} we know the \nf{sum\sub{enq-left}}, and \nf{sum\sub{enq-right}} fields of \nf{blocks} in each node are sorted in non-decreasing order. Since $\nf{sum\sub{enq}}=\nf{sum\sub{enq-left}}+ \nf{sum\sub{enq-right}}$, the $\nf{sum\sub{enq}}$ values of \nf{root.blocks[$0\cdot\cdot end$]} are also non-decreasing. By Corollary~\ref{lem::sumX} we know that the \nf{sum\sub{enq}} field in a block is the sum of the number of \nf{Enqueue} operations in that block and the prefix blocks of that block in the node. Furthermore, since $\nf{root.blocks[$0$].sum\sub{enq}}=0$ and $\nf{root.blocks[$end$].sum\sub{enq}} \geq e$, there is a $b$ such that $\nf{root.blocks[$b-1$].sum\sub{enq}}<e\leq\nf{root.blocks[$b$].sum\sub{enq}}$. Block \nf{root.blocks[$b$]} contains $E_i(root,b)$.  Lines \ref{dsearchStart}--\ref{dsearchEnd} doubles the search range in Line \ref{doubling} and will eventually reach \nf{start} such that $\nf{root.blocks[start].sum\sub{enq}}\leq e \leq\nf{root.blocks[end].sum\sub{enq}}$. Then, in Line \ref{dsearchBinarySearch}, the binary search finds the $b$ such that \nf{root.blocks[$b-1$].sum\sub{enq}$<e\leq$root.blocks[$b$].sum\sub{enq}}. By Corollary \ref{lem::sumX}, \nf{root.blocks[$b$]} is the block that contains $E_e(root)$. Finally, $i$ is computed using the definition of \nf{sum\sub{enq}} and Corollary \ref{lem::sumX}.
 \end{proof}
 
 \begin{lemma}[\nf{GetEnqueue} correctness] \label{get}
 If $1\leq i \leq \nf{$n$.blocks[$b$].num\sub{enq}}$ then \nf{$n$.GetEnqueue($b$, $i$)} returns $E_i(n,b)$\nf{.element}.
 \end{lemma}
 \begin{proof}
-We will prove this lemma by induction on the node's height $n$. For the base case, suppose $n$ is a leaf. Leaf blocks each contain exactly one operation, $n\nf{.blocks[$b$].sum\sub{enq}}\leq 1$, which means only \nf{$n$.GetEnqueue(b,1)} can be called when $n$ is a leaf and contains and \nf{Enqueue} operation. Line \ref{getBaseCase} of \nf{$n$.GetEnqueue($b$, $1$)} returns the \nf{element} of the \nf{Enqueue} operation stored in the $b$th block of leaf ${n}$, as required.
+We will prove this lemma by induction on the node $n$'s height. For the base case, suppose $n$ is a leaf. Leaf blocks each contain exactly one operation, $n\nf{.blocks[$b$].sum\sub{enq}}\leq 1$, which means only \nf{$n$.GetEnqueue(b,1)} can be called when $n$ is a leaf and $n$\nf{.blocks[$b$]} must contain an \nf{Enqueue} operation. Line \ref{getBaseCase} of \nf{$n$.GetEnqueue($b$, $1$)} returns the \nf{element} of the \nf{Enqueue} operation stored in the $b$th block of leaf ${n}$, as required.
 
-For the induction step, we prove if \nf{$n$.dir.GetEnqueue($b^\prime$, $i$)} returns $E_i(n.\nf{dir}, b^\prime)$ then \nf{$n$.GetE-}\\\nf{nqueue($b$,~$i$)} returns $E_i(n,b)$.  From Definition \ref{ordering} of $E(n,b)$, we know that operations from the left subblocks come before the operations from the right subblocks in a block (see Figure \ref{figGet}). By Lemma \ref{lem::numX}, the \nf{num\sub{enq-left}} field  in \nf{$n$.blocks[$b$]} is the number of \nf{Enqueue} operations from the blocks' subblocks in the left child of $n$. So the $i$th \nf{Enqueue} operation in $n\nf{.blocks[}b\nf{]}$ is propagated from the right child if and only if $i$ is greater than $n\nf{.blocks[}b\nf{]}$\nf{.num\sub{enq-left}}. Line \ref{leftOrRight} decides whether the $i$th enqueue in the $b$th block  of internal node $n$ is in the  left child or right child subblocks of \nf{$n$.blocks[$b$]}. By Definitions \ref{def::subblock} and \ref{def::ops} to find an operation in the subblocks of \nf{$n$.blocks[$i$]} we need to search in the range
+For the induction step, we prove if \nf{$n$.dir.GetEnqueue($b^\prime$, $i$)} returns $E_i(n.\nf{dir}, b^\prime)$ then \nf{$n$.GetE-}\\\nf{nqueue($b$,~$i$)} returns $E_i(n,b)$.  From Definition \ref{ordering} of $E(n,b)$, we know that operations from the left subblocks come before the operations from the right subblocks in a block (see Figure \ref{figGet}). By Lemma \ref{lem::numX}, the \nf{num\sub{enq-left}} field  in \nf{$n$.blocks[$b$]} is the number of \nf{Enqueue} operations from the blocks' subblocks in the left child of $n$. So the $i$th \nf{Enqueue} operation in $n\nf{.blocks[}b\nf{]}$ is propagated from the right child if and only if $i$ is greater than $n\nf{.blocks[}b\nf{]}$\nf{.num\sub{enq-left}}. Line \ref{leftOrRight} decides whether the $i$th enqueue in the $b$th block  of internal node $n$ is in the  left child or right child subblocks of \nf{$n$.blocks[$b$]}. By Definitions \ref{def::subblock} and \ref{def::ops}, to find an operation in the subblocks of \nf{$n$.blocks[$b$]} we need to search in the range
 \begin{align*}
-&\texttt{$n$.left.blocks[$n$.blocks[$i$-1].end\textsubscript{left}+1..$n$.blocks[$i$].end\textsubscript{left}]}  \textrm{ or } \\
-&\texttt{$n$.right.blocks[$n$.blocks[$i$-1].end\textsubscript{right}+1..$n$.blocks[$i$].end\textsubscript{right}]}.
+&\texttt{$n$.left.blocks[$n$.blocks[$b$-1].end\textsubscript{left}+1..$n$.blocks[$b$].end\textsubscript{left}]}  \textrm{ or } \\
+&\texttt{$n$.right.blocks[$n$.blocks[$b$-1].end\textsubscript{right}+1..$n$.blocks[$b$].end\textsubscript{right}]}.
  \end{align*}
 First, we consider the case where the \nf{Enqueue} we are looking for is in the left child. There are $eb=n.\nf{blocks[}b-1\nf{].sum\sub{enq-left}}$ \nf{Enqueue}s in the blocks of $n$\nf{.left} before the left subblocks of $n$\nf{.blocks[$b$]}, so $E_i(n,b)$ is $E_{i+eb}(n.\tt{left})$ which is $E_{i^\prime}(n.\tt{left},b^\prime)$ for some $b^\prime$ and $i^\prime$. We can compute $b^\prime$ and then search for the $i^\prime$th \nf{Enqueue} in \tt{$n$.left.blocks[$b^\prime$]}, where $i^\prime$ is $i+eb-n$\tt{.left.blocks[}$b^\prime-1$\tt{].sum\sub{enq}}. The parameters in Line~\ref{leftChildGet} are for searching $E_{i+eb}(n\nf{.left})$ in \nf{$n$.left.blocks} in the range of left subblocks of $n$\nf{.blocks[}$b$\nf{]}, so this \nf{BinarySearch} returns the index of the subblock containing $E_i(n,b)$.
 
-Otherwise, the enqueue we are looking for is in the right child. Because \nf{Enqueue}s from the left subblocks are ordered before the ones from the right subblocks, there are \nf{n.blocks[b].num\sub{enq-left}} enqueues ahead of $E_i(n,b)$ from the left child. So we need to search for $i-n\nf{.blocks[}b\nf{].num\sub{enq-left}}+ n\nf{.blocks[}b-1\nf{].sum\sub{enq-right}}$ in the right child (Line \ref{rightChildGet}). Other parameters for the right child are chosen similarly to the left child. 
+Otherwise, the \nf{Enqueue} we are looking for is in the right child. Because \nf{Enqueue}s from the left subblocks are ordered before the ones from the right subblocks, there are \nf{n.blocks[b].num\sub{enq-left}} enqueues ahead of $E_i(n,b)$ from the left child. So we need to search for $i-n\nf{.blocks[}b\nf{].num\sub{enq-left}}+ n\nf{.blocks[}b-1\nf{].sum\sub{enq-right}}$ in the right child (Line \ref{rightChildGet}). Other parameters for the right child are chosen similarly to the left child. 
 
 So, in both cases, the direct subblock containing $E_i(n,b)$ is computed in Line \ref{leftChildGet} or \ref{rightChildGet}.
-Let $subblock$ be the block in $n.\nf{dir}$ containing $E_i(n,b)$. Finally, \nf{$n$.child.GetEnqueue($subblock$, $i$)} is invoked  and it returns $E_i(n,b)$\nf{.element} by the hypothesis of the induction.
+$subblockIndex$ is the index of the block in $n.\nf{dir}$ containing $E_i(n,b)$. Finally, \nf{$n$.child.GetEnqueue( $subblockIndex$, $i$)} is invoked  and it returns $E_i(n,b)$\nf{.element} by the hypothesis of the induction.
 \end{proof}
 
 \begin{figure}[hbt]  
   \center\includegraphics[width=6in]{pics/blockSumEnq.png}
   
-  \caption[\nf{Enqueue} operations propagated from the left and the right child to a node]{The number and order of the \nf{Enqueue} operations propagated from the left and the right child to \nf{$n$.blocks[$b$]}. Both \nf{$n$.blocks[$b$]} and its subblocks are shown in grey. \nf{Enqueue} operations from the left subblocks (colored red), are ordered before the \nf{Enqueue} operations from the right child (colored blue).
+  \caption[\nf{Enqueue} operations propagated from the left and the right child to a node]{The number and order of the \nf{Enqueue} operations propagated from the left and the right child to \nf{$n$.blocks[$b$]}. Both \nf{$n$.blocks[$b$]} and its subblocks are shown in grey. \nf{Enqueue} operations from the left child (colored red), are ordered before the \nf{Enqueue} operations from the right child (colored blue).
   }\label{figGet}
 \end{figure}
 
@@ -1117,20 +1121,20 @@ If the block created by an instance $R_p$ of $n$\nf{.parent.Refresh} contains bl
 \end{observation}
 
 \begin{lemma}
-  If $B=n$\nf{.blocks[}$b$\nf{]} is a direct subblock of \nf{$n$.parent.blocks[$superBlock$]} then $\nf{$B$.super}\leq superBlock$.
+  If $B=n$\nf{.blocks[}$b$\nf{]} is a direct subblock of \nf{$n$.parent.blocks[$superblock$]} then $\nf{$B$.super}\leq superblock$.
 \end{lemma}
 \begin{proof}
-Let $R_p$ be the instance of $n$\nf{.parent.Refresh} that does a successful \nf{CAS} on the superblock of B which is $n$\nf{.parent.blocks[$superBlock$]}. By Observation~\ref{lem::createBlockHead} if $R_p$ propagates $B$ it has to read a greater value than $b$ from \nf{$n$.head}, which means \nf{$n$.head} was incremented from $b$ to $b+1$ in Line \ref{incrementHead}. By Observation \ref{setSupBeforeIncHead} \nf{$B$.super} was already set in Line \ref{setSuper1}. The value written in \nf{$B$.super}, was read in Line \ref{readParentHead} before the \nf{CAS} that sets \nf{$B$.super} in Line \ref{setSuper1}. From Observation \ref{nonDecreasingHead} we know \nf{$n$.parent.head} is non-decreasing so $B\nf{.super}\leq superBlock$, since \nf{$n$.parent.head} is still equal to $superBlock$ when $R_p$ executes its \nf{CAS} at Line \ref{cas} by Lemma \ref{lem::headProgress}. The reader may wonder when the case $b\nf{.super}=superBlock$ happens. This can happen when $\nf{$n$.parent.blocks[$B$.super]}=\nf{null}$ when $B$\nf{.super} is written and $R_p$ puts its created block into \nf{$n$.parent.blocks[$B$\nf{.super}]} afterwards.
+Let $R_p$ be the instance of $n$\nf{.parent.Refresh} that does a successful \nf{CAS} on the superblock of B which is $n$\nf{.parent.blocks[$superblock$]}. By Observation~\ref{lem::createBlockHead} if $R_p$ propagates $B$ it has to read a greater value than $b$ from \nf{$n$.head}, which means \nf{$n$.head} was incremented from $b$ to $b+1$ in Line \ref{incrementHead}. By Observation \ref{setSupBeforeIncHead} \nf{$B$.super} was already set in Line \ref{setSuper1}. The value written in \nf{$B$.super}, was read in Line \ref{readParentHead} before the \nf{CAS} that sets \nf{$B$.super} in Line \ref{setSuper1}. From Observation \ref{nonDecreasingHead} we know \nf{$n$.parent.head} is non-decreasing so $B\nf{.super}\leq superblock$, since \nf{$n$.parent.head} is still equal to $superblock$ when $R_p$ executes its \nf{CAS} at Line \ref{cas} by Lemma \ref{lem::headProgress}. The reader may wonder when the case $b\nf{.super}=superblock$ happens. This can happen when $\nf{$n$.parent.blocks[$B$.super]}=\nf{null}$ when $B$\nf{.super} is written and $R_p$ puts its created block into \nf{$n$.parent.blocks[$B$\nf{.super}]} afterwards.
 \end{proof}
 
-\begin{lemma}
+\begin{lemma}\label{lem::secondRefreshSuper}
 Let $R_n$ be a \nf{Refresh} that puts $B$ in \nf{$n$.blocks[$b$]} at Line \ref{cas}. Then, the block created by one of the next two successful \nf{$n$.parent.Refresh}es according to Definition \ref{orderRefresh} contains $B$ and \nf{$B$.super} is set when the second successful \nf{$n$.parent.Refresh} reaches Line \ref{invokeCreateBlock}.
 \end{lemma}
 
 \begin{proof}
-Let $R_{p1}$ be the first successful \nf{$n$.parent.Refresh} after $R_n$ and $R_{p2}$ be the second next successful \nf{$n$.parent.Refresh}. To derive a contradiction assume $B$ was neither propagated to $n$\nf{.parent} by $R_{p1}$ nor by $R_{p2}$.
+Let $R_{p1}$ and $R_{p2}$ be the next two successful \nf{$n$.parent.Refresh}es after $R_n$. To derive a contradiction assume $B$ was neither propagated to $n$\nf{.parent} by $R_{p1}$ nor by $R_{p2}$.
 
-Since $R_{p2}$'s created block does not contain $B$, by Observation \ref{lem::createBlockHead} the value $R_{p2}$ reads from $n$\nf{.head} in Line \ref{lastLine} is at most $b$. From Observation \ref{nonDecreasingHead} the value $R_{p2}$ reads in Line \ref{readChildHead} is also at most $b$.
+Since $R_{p2}$'s created block does not contain $B$, by Observation \ref{lem::createBlockHead} the value $R_{p2}$ reads from $n$\nf{.head} in Line \ref{lastLine} is at most $b$. From Observation \ref{nonDecreasingHead} the value $R_{p2}$ reads in Line \ref{readChildHead} is also at most~$b$.
 
 $R_n$ puts $B$ into $n$\nf{.blocks[}$b$\nf{]} so ${R_n}$ reads the value $b$ from $n.$\nf{head}. Since $R_{p2}$'s \nf{CAS} into $n$\nf{.parent.blocks} is successful there should be a \nf{Refresh} instance $R_p^\prime$ on $n$\nf{.parent} that increments $n$\nf{.parent.head} (Line \ref{incrementHead}) after $R_{p1}$'s Line \ref{cas} and before $R_{p2}$'s Line \ref{readHead}. We assumed $t^{R_n}_{\ref{cas}}<t^{R_{p1}}_{\ref{cas}}<t^{R_{p2}}_{\ref{cas}}$ by Definition \ref{orderRefresh}. Finally, Line \ref{readChildHead} is after Line \ref{readHead} and $R_{p2}$'s Line \ref{readHead} is after $R_p^\prime$'s Line \ref{incrementHead}, which is after ${R_n}$'s $n$\nf{.blocks.CAS}. 
 \begin{align*}
@@ -1145,9 +1149,9 @@ _{\ref{readHead}}^{R_{p2}}t<_{\ref{readChildHead}}^{R_{p2}}t\\
 
 So $R_{p2}$ reads a value greater than or equal to $b$ for $n.\nf{head}$ by Observation \ref{nonDecreasingHead}.
 
-Therefore $R_{p2}$ reads $n\nf{.head}=b$. $R_{p2}$ calls $n$\nf{.Advance} at Line Line \ref{helpAdvance}, which ensures $n$\nf{.head} is incremented from $b$. So the value $R_{p2}$ reads in Line \ref{lastLine} of \nf{CreateBlock} is greater than $b$ and $R_{p2}$'s created block contains $B$. This is in contradiction with our hypothesis.
+Therefore $R_{p2}$ reads $n\nf{.head}=b$. $R_{p2}$ calls $n$\nf{.Advance} at Line \ref{helpAdvance}, which ensures $n$\nf{.head} is incremented from $b$. So the value $R_{p2}$ reads in Line \ref{lastLine} of \nf{CreateBlock} is greater than $b$ and $R_{p2}$'s created block contains $B$. This is in contradiction with our hypothesis.
 
-Furthermore, if $B$\nf{.super} was not set earlier, it is set by $R_{p2}$'s call to $n$\nf{.Advance} invoked from Line \ref{helpAdvance}.
+Furthermore, if $B$\nf{.super} was not set earlier, it is set by $R_{p2}$'s call to $n$\nf{.Advance} invoked from Line~\ref{helpAdvance}.
 \end{proof}
 
 \begin{corollary} \label{superRelation}
@@ -1157,7 +1161,7 @@ If \nf{$B=n$.blocks[$b$]} is propagated to $n$\nf{.parent}, then \nf{$B$.super} 
 % After that $B$ is installed, $n$\nf{.parent.head} is read, and $B.$\nf{super} field is set to the value read from the parent's \nf{head} (see Lines \ref{readParentHead} and \ref{setSuper1} of\nf{Advance}).
 Let $R_n$ be the \nf{$n$.Refresh} that put $B$ in $n$\nf{.blocks} and let $R_{p1}$ be the first successful \nf{$n$.parent.Refresh} after $R_n$ and $R_{p2}$ be the second next successful \nf{$n$.parent.Refresh}.
 Before $B$ can be propagated to $n$'s \nf{parent}, $n$\nf{.head}  must be greater than $b$, so by Observation \ref{setSupBeforeIncHead} $B$\nf{.super} is set.
-From the previous lemma we know that $B$ is propagated by the second next successful \nf{Refresh}'s \nf{CAS} on $n$\nf{.parent.blocks}. To summarize, we have $n\nf{.parent.head}_{_{\ref{cas}}^{R_{p2}}t}= n\nf{.parent.head}_{_{\ref{cas}}^{R_{p1}}t}+1$ and  $n\nf{.parent.head}_{_{\ref{cas}}^{R_{p1}}t}\leq n\nf{.parent.head}_{_{\ref{cas}}^{R_n}t}$ from Definition \ref{orderRefresh} and Observation \ref{nonDecreasingHead}. The value that is set in $B$\nf{.super} is read from $n$\nf{.parent.head} after ${_{\ref{cas}}^{R_n}t}$. So $B$\nf{.super} is equal to or one less than the index of the superblock of $B$.
+From Lemma \ref{lem::secondRefreshSuper} we know that $B$ is propagated by the second next successful \nf{Refresh}'s \nf{CAS} on $n$\nf{.parent.blocks}. To summarize, we have $n\nf{.parent.head}_{_{\ref{cas}}^{R_{p2}}t}= n\nf{.parent.head}_{_{\ref{cas}}^{R_{p1}}t}+1$ and  $n\nf{.parent.head}_{_{\ref{cas}}^{R_{p1}}t}\leq n\nf{.parent.head}_{_{\ref{cas}}^{R_n}t}$ from Definition \ref{orderRefresh} and Observation \ref{nonDecreasingHead}. The value that is set in $B$\nf{.super} is read from $n$\nf{.parent.head} after ${_{\ref{cas}}^{R_n}t}$. So $B$\nf{.super} is equal to or one less than the index of the superblock of $B$.
 \end{proof}
 
 We prove \nf{IndexDequeue}'s correctness using Corollary \ref{superRelation} on each step of the \nf{IndexDequeue}.
@@ -1167,21 +1171,21 @@ We prove \nf{IndexDequeue}'s correctness using Corollary \ref{superRelation} on 
 \end{lemma}
 \begin{proof}
 We will prove this by induction on the distance of $n$ from the \nf{root}. The base case where $n$ is \nf{root} is trivial (see Line \ref{indexBaseCase}).
-For the non-root nodes \nf{$n$.IndexDequeue($b$, $i$)} computes $superBlock$, the index of the superblock of the $b$th block in $n$, in Line \ref{computeSuper} by Corollary \ref{superRelation}. After that, the position of $D_i(n,b)$ in $D(n.\nf{parent}, superBlock)$ is computed in Lines \ref{computeISuperStart}--\ref{computeISuperEnd}. By Definition \ref{ordering}, \nf{Dequeue}s in a block are ordered based on the order of its subblocks  from left to right. If $D_i(n,b)$ was propagated from the left child, the number of dequeues in the left subblocks of \nf{$n$.parent.blocks[$superBlock$]} before \nf{$n$.blocks[$b$]} is considered in Line \ref{considerPreviousLeft} (see Figure \ref{fig::blockSumDeqLeft}). Otherwise, if $D_i(n,b)$ was propagated from the right child, the number of dequeues in the subblocks from the left child is considered to be ahead of the computed index (Line \ref{considerRight}) (see Figure \ref{fig::blockSumDeqRight}). Finally, \nf{IndexDequeue} is called on \nf{$n$.parent} recursively, and it returns the correct response by the induction hypothesis. 
+For the non-root nodes \nf{$n$.IndexDequeue($b$, $i$)} computes $superblockIndex$, the index of the superblock of the $b$th block in $n$, in Line \ref{computeSuper} by Corollary \ref{superRelation}. After that, the position of $D_i(n,b)$ in $D(n.\nf{parent}, superblockIndex)$ is computed in Lines \ref{computeISuperStart}--\ref{computeISuperEnd}. By Definition \ref{ordering}, \nf{Dequeue}s in a block are ordered based on the order of its subblocks  from left to right. If $D_i(n,b)$ was propagated from the left child, the number of dequeues in the left subblocks of \nf{$n$.parent.blocks[$superblockIndex$]} before \nf{$n$.blocks[$b$]} is considered in Line \ref{considerPreviousLeft} (see Figure \ref{fig::blockSumDeqLeft}). Otherwise, if $D_i(n,b)$ was propagated from the right child, the number of dequeues in the subblocks from the left child is considered to be ahead of the computed index (Line \ref{considerRight}) (see Figure \ref{fig::blockSumDeqRight}). Finally, \nf{IndexDequeue} is called on \nf{$n$.parent} recursively, and it returns the correct response by the induction hypothesis. 
 \end{proof}
 \begin{figure}[hbt]  
   \center\includegraphics[width=6in]{pics/blockSumDeqLeft.png}
   
-  \caption[Number of \nf{Dequeue} operations before a \nf{Dequeue} in a left child]{The number of \nf{Dequeue} operations before $D_i(n,b)$ shown in the case where $n$ is a left child.}\label{fig::blockSumDeqLeft}
+  \caption[Number of \nf{Dequeue} operations before a \nf{Dequeue} in a left child]{The number of \nf{Dequeue} operations before $D_i(n,b)$ shown in the case where $n$ is a left child. The index of the superblock is shown with $sb$. }\label{fig::blockSumDeqLeft}
 \end{figure}
 \begin{figure}[hbt]  
   \center\includegraphics[width=6in]{pics/blockSumDeqRight.png}
   
-  \caption[Number of \nf{Dequeue} operations before a \nf{Dequeue} in a right child]{The number of \nf{Dequeue} operations before $D_i(n,b)$ shown in the case where $n$ is a right child.}\label{fig::blockSumDeqRight}
+  \caption[Number of \nf{Dequeue} operations before a \nf{Dequeue} in a right child]{The number of \nf{Dequeue} operations before $D_i(n,b)$ shown in the case where $n$ is a right child. The index of the superblock is shown with $sb$. }\label{fig::blockSumDeqRight}
 \end{figure}
 % \%TODO :Change sb to superblockIndex
 % \%TODO :Change subblock to subblockIndex in GetEnqueue proof
-\pagebreak
+
 \subsection{Linearizability}
 We now prove the two properties needed for linearizability.
 
@@ -1199,12 +1203,12 @@ If a \nf{Dequeue} operation returns \nf{null} it is called a \it{null} \nf{Deque
 
 Next, we define the responses that \nf{Dequeue}s should return, according to the linearization.
 \begin{definition}
-   Assume the operations in \nf{root.blocks} are applied sequentially on an empty queue in the order of $L$.  ${Resp(d)=e}$\nf{.element} if the element of \nf{Enqueue} $e$ is the response to \nf{Dequeue} $d$. Otherwise if ${d}$ is a \nf{null} dequeue then ${Resp(d)=\nf{null}}$. 
+   Assume the operations in \nf{root.blocks} are applied sequentially on an empty queue in the order of $L$.  ${Resp(d)=e}$\nf{.element} if the element of \nf{Enqueue} $e$ is the response to \nf{Dequeue} $d$. Otherwise if ${d}$ is a null \nf{Dequeue} then ${Resp(d)=\nf{null}}$. 
 \end{definition}
 
 In the next lemma, we show that the \nf{size} field in each \nf{root block} is computed correctly.
 \begin{lemma}\label{sizeCorrectness}
-  \nf{root.blocks[$b$].\size}is the \size of the queue if the operations in \nf{root.blocks[$0\cdots b$]} are applied in the order of~$L$.  
+  \nf{root.blocks[$b$].\size}is the \size of the queue after the operations in \nf{root.blocks[$0\cdots b$]} are applied in the order of~$L$.  
 \end{lemma}
 \begin{proof}
 We prove the claim by induction on $b$. The base case when ${b=0}$ is trivial since the queue is initially empty and $\nf{root.blocks[}0\nf{]}$ contains an empty block with \nf{size} field equal to $0$. We are going to show the correctness when $b=i$ assuming  correctness when $b=i-1$. By Definition \ref{ordering} \nf{Enqueue} operations come before \nf{Dequeue} operations in a block in $L$. By Lemma~\ref{lem::numX} \nf{num\sub{enq}} and \nf{num\sub{deq}} fields in a block show the number of \nf{Enqueue} and \nf{Dequeue} operations in it. If there are more than $\nf{root.blocks[}i-1\nf{].size}+\nf{root.blocks[}i\nf{].num\sub{enq}}$ dequeue operations in \nf{root.blocks[$i$]} then the queue would become empty after \nf{root.blocks[$i$]}. Otherwise, the size of the queue after the $b$th block in the root is $\nf{root.blocks[}b-1\nf{].size}+ \nf{root.blocks[}b\nf{].num\sub{enq}}- \nf{root.blocks[}b\nf{].num\sub{deq}}$. In both cases, this is the same as the assignment on Line \ref{computeLength}.
@@ -1227,14 +1231,14 @@ the number of $\it{enqueues}$ in $\nf{root.blocks[}0\cdots b\nf{]}$ minus the nu
 $Resp(D_i(\nf{root},b))$ is \nf{null} iff \nf{root.blocks[$b-1$].\size $+$ root.blocks[$b$].num\sub{enq}$- i$ $<0$}.
 \end{lemma}
 \begin{proof}
-From Corollary \ref{numNullDeqBlock} and Lemma \ref{lem::numX}.
+Immediately from Corollary \ref{numNullDeqBlock} and Lemma \ref{lem::numX}.
 \end{proof}
 
 \begin{lemma}\label{computeHead}
 \nf{FindResponse($b$, $i$)} returns $Resp(D_i(root,b))$.
 \end{lemma}
 \begin{proof}
-$D_i(root,b)$ is $D_{\nf{root.blocks[}b-1\nf{].sum\sub{deq}}+i}(root)$ by Definition \ref{ordering} and Lemma \ref{lem::sumX}. $D_i(root,b)$ returns \nf{null} at Line \ref{returnNull} if $\nf{root.blocks[}b-1\nf{].size}+ \nf{root.blocks[}b\nf{].num\sub{enq}}- i <0$ and $Resp(D_i(root,b))=\nf{null}$ in this case by Lemma \ref{nullReturn}. Otherwise, if $D_i(root,b)$ is the $e$th non-null dequeue in $L$ it should return the $e$th enqueued value. By Lemma \ref{numberOfNND} there are \nf{root.blocks[$b-1$].sum\sub{enq} $-$ root.blocks[$b-1$].\size} non-null \nf{Dequeue} operations in $\nf{root.blocks[}0\cdots b-1\nf{]}$. The \nf{Dequeue}s in \nf{root.blocks[$b$]} before $D_i(root,b)$ are non-null dequeues. So $D_i(root,b)$ is the $e$th non-null \nf{Dequeue} where $e= i + \nf{root.blocks[}b-1\nf{].sum\sub{deq}} - \nf{root.blocks[}b-1\nf{].size}$ (Line \ref{computeE}). See Figure \ref{computeResponseDetail}.
+$D_i(root,b)$ is $D_{\nf{root.blocks[}b-1\nf{].sum\sub{deq}}+i}(root)$ by Definition \ref{ordering} and Lemma \ref{lem::sumX}. $D_i(root,b)$ returns \nf{null} at Line \ref{returnNull} if $\nf{root.blocks[}b-1\nf{].size}+ \nf{root.blocks[}b\nf{].num\sub{enq}}- i <0$ and $Resp(D_i(root,b))=\nf{null}$ in this case by Lemma \ref{nullReturn}. Otherwise, if $D_i(root,b)$ is the $e$th non-null \nf{Dequeue} in $L$ it should return the $e$th enqueued value. By Lemma \ref{numberOfNND} there are \nf{root.blocks[$b-1$].sum\sub{enq} $-$ root.blocks[$b-1$].\size} non-null \nf{Dequeue} operations in $\nf{root.blocks[}0\cdots b-1\nf{]}$. The \nf{Dequeue}s in \nf{root.blocks[$b$]} before $D_i(root,b)$ are non-null \nf{Dequeue}s. So $D_i(root,b)$ is the $e$th non-null \nf{Dequeue} where $e= i + \nf{root.blocks[}b-1\nf{].sum\sub{deq}} - \nf{root.blocks[}b-1\nf{].size}$ (Line \ref{computeE}). See Figure \ref{computeResponseDetail}.
 
 After computing $e$ at Line \ref{computeE}, the code finds \nf{$b$,$i$} such that $E_i(root,b)=E_e(root)$ using \nf{DoublingSearch} and then finds its \nf{element} using \nf{GetEnqueue} (Line \ref{findAnswer}). Correctness of \nf{DoublingS-}\\\nf{earch} and \nf{GetEnqueue} routines are shown in Lemmas \ref{dsearch} and \ref{get}.
 \end{proof}
@@ -1249,7 +1253,7 @@ After computing $e$ at Line \ref{computeE}, the code finds \nf{$b$,$i$} such tha
 The responses to operations in our algorithm are the same as in the sequential execution in the order given by $L$.
 \end{lemma}
 \begin{proof}
-\nf{Enqueue} operations do not return any value. By Lemma \ref{computeHead}, the response of a \nf{Dequeue} in our algorithm is same as the response from the sequential execution of $L$.  
+\nf{Enqueue} operations do not return any value. By Lemma \ref{computeHead}, the response of a \nf{Dequeue} in our algorithm is same as its response in the sequential execution of $L$.  
 \end{proof}
 
 \begin{theorem}[Main]
@@ -1275,9 +1279,9 @@ An \nf{Enqueue} or \nf{Dequeue} operation does at most $14\log p$ \nf{CAS} opera
 If the \nf{element} enqueued by $E_i(root,b)=E_e(root)$ is the response to some \nf{Dequeue} operation in \nf{root.blocks[$end$]}, then \nf{DoublingSearch($e$, $end$)} takes $O\big(\log ( \nf{root.blocks[$b$].size}+ \nf{root.blocks[$end$].size})\big )$ steps.
 \end{lemma}
 \begin{proof}
-First we show $end - b -1\leq 2 \times \nf{root.blocks[$b-1$].size}+\nf{root.blocks[$end$].size}$. There can be at most \nf{root.blocks[$b$].size}  \nf{Dequeue}s in \nf{root.blocks[$b+1\cdots end-1$]}; otherwise all elements enqueued by \nf{root.blocks[$b$]} would be dequeued before \nf{root.blocks[$end$]}. Furthermore, in the execution of queue operations in the linearization ordering, the size of the queue becomes \nf{root.blocks[$end$].size} after the operations of \nf{root.blocks[$end$]}. The final size of the queue after \nf{root.blocks[$1\cdots end$]} is \nf{root.blocks[$end$].size}. After an execution on a queue, the $size$ of the queue is greater than or equal to $\#enqueues -\#dequeues$ in the execution. We know the number of dequeues in \nf{root.blocks[$b+1\cdots end-1$]} is less than \nf{root.blocks[$b$].size}, therefore in \nf{root.blocks[$b+1\cdots end-1$]} cannot be more than $\nf{root.blocks[$b$].size} + \nf{root.blocks[$end$].size}$ \nf{Enqueue}s. Overall there can be at most $2 \times\nf{root.blocks[$b$].size}+ \nf{root.blocks[$end$].size}$ operations in \nf{root.blocks[$b+1\cdots end-1$]} and since from Line \ref{addOP} we know that the \nf{num} field of every block in the tree is greater than 0, each block has at least one operation, there are at most $2 \times\nf{root.blocks[$b$].size}+ \nf{root.blocks[$end$].size}$ blocks in between \nf{root.blocks[$b$]} and \nf{root.blocks[$end$]}. So $end-b-1\leq 2 \times\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size}$.
+First we show $end - b -1\leq 2 \times \nf{root.blocks[$b-1$].size}+\nf{root.blocks[$end$].size}$. There can be at most \nf{root.blocks[$b$].size}  \nf{Dequeue}s in \nf{root.blocks[$b+1\cdots end-1$]}; otherwise all elements enqueued by \nf{root.blocks[$b$]} would be dequeued before \nf{root.blocks[$end$]}. Furthermore, in the execution of queue operations in the linearization ordering, the size of the queue becomes \nf{root.blocks[$end$].size} after the operations of \nf{root.blocks[$end$]}. The final size of the queue after \nf{root.blocks[$1\cdots end$]} is \nf{root.blocks[$end$].size}. After an execution on a queue, the $size$ of the queue is greater than or equal to $\#enqueues -\#dequeues$ in the execution. We know the number of dequeues in \nf{root.blocks[$b+1\cdots end-1$]} is less than \nf{root.blocks[$b$].size}, therefore in \nf{root.blocks[$b+1\cdots end-1$]} there cannot be more than $\nf{root.blocks[$b$].size} + \nf{root.blocks[$end$].size}$ \nf{Enqueue}s. Overall there can be at most $2 \times\nf{root.blocks[$b$].size}+ \nf{root.blocks[$end$].size}$ operations in \nf{root.blocks[$b+1\cdots end-1$]} and since from Line \ref{addOP} we know that the \nf{num} field of every block in the tree is greater than 0, each block has at least one operation, so there are at most $2 \times\nf{root.blocks[$b$].size}+ \nf{root.blocks[$end$].size}$ blocks in between \nf{root.blocks[$b$]} and \nf{root.blocks[$end$]}. So, $end-b-1\leq 2 \times\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size}$.
 
-So, the doubling search reaches \nf{start} such that the \nf{root.blocks[start].sum\sub{enq}} is less than $e$ in $O \big(\log(\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size})\big)$ steps. See Figure \ref{fig::doubling}. After Line \ref{dsearchEnd}, the binary search that finds $b$ also takes $O\big(\log(\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size})\big)$. Next, \nf{i} is computed via the definition of \nf{sum\sub{enq}} in constant time (Line \ref{DSearchComputei}).
+Thus, the doubling search reaches \nf{start} such that the \nf{root.blocks[start].sum\sub{enq}} is less than $e$ in $O \big(\log(\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size})\big)$ steps. See Figure \ref{fig::doubling}. After Line \ref{dsearchEnd}, the binary search that finds $b$ also takes $O\big(\log(\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size})\big)$. Next, \nf{i} is computed via the definition of \nf{sum\sub{enq}} in constant time (Line \ref{DSearchComputei}).
 \end{proof}
 \begin{figure}[hbt]  
   \center\includegraphics[width=6in]{pics/doubling.png}
@@ -1291,7 +1295,7 @@ The worst case number of steps for an \nf{Enqueue} is $O(\log^2 p)$ and for a \n
 \begin{proof}
 \nf{Enqueue} consists of creating a block and appending it to the tree. The first part takes constant time. To propagate the operation to the root the algorithm tries at most two \nf{Refresh}es in each node of the path from the leaf to the root (Lines \ref{firstRefresh}, \ref{secondRefresh}). We can see from the code  that each \nf{Refresh} takes a constant number of steps and does $O(1)$ \nf{CAS}es. Since the height of the tree is $\Theta(\log p)$, \nf{Enqueue} takes $O(\log p)$ steps.
 
-A \nf{Dequeue} creates a block whose \nf{element} is \nf{null}, appends it to the tree, computes its rank among non-null dequeues, finds the corresponding enqueue and returns the response. The first two parts are similar to an \nf{Enqueue} operation and take $O(\log p)$ steps. To compute the rank of a \nf{Dequeue} in $D(n)$, the \nf{Dequeue} calls \nf{IndexDequeue()}. \nf{IndexDequeue} does $O(1)$ steps in each level which takes $O(\log p)$ steps. If the response to the \nf{Dequeue} is \nf{null}, \nf{FindResponse} returns \nf{null} in $O(1)$ steps. Otherwise, if the response to a dequeue in \nf{root.blocks[end]} is in \nf{root.blocks[b]} the \nf{DoublingSearch} takes $\Theta(\log$(\nf{root.blocks[b].size+root.blocks} \nf{[end].size}) by Lemma \ref{dsearchTime}, which is $O(\log$ size of the queue when \nf{Enqueue} is linearized$)+\log$ size of the queue when \nf{Dequeue} is linearized$)$. Each search in \nf{GetEnqueue()} takes $O(\log p)$ since there are $\leq p$ subblocks in a block (Lemma \ref{subBlocksBound}), so \nf{GetEnqueue()} takes $O(\log^2 p)$ steps.
+A \nf{Dequeue} creates a block whose \nf{element} is \nf{null}, appends it to the tree, computes its rank among non-null dequeues, finds the corresponding enqueue and returns the response. The first two parts are similar to an \nf{Enqueue} operation and take $O(\log p)$ steps. To compute the rank of a \nf{Dequeue} in $D(n)$, the \nf{Dequeue} calls \nf{IndexDequeue()}. \nf{IndexDequeue} does $O(1)$ steps in each level which takes $O(\log p)$ steps. If the response to the \nf{Dequeue} is \nf{null}, \nf{FindResponse} returns \nf{null} in $O(1)$ steps. Otherwise, if the response to a dequeue in \nf{root.blocks[end]} is in \nf{root.blocks[b]} the \nf{DoublingSearch} takes $\Theta(\log$(\nf{root.blocks[b].size+root.blocks} \nf{[end].size}) by Lemma \ref{dsearchTime}, which is $O(\log q_e+\log q_d)$. Each search in \nf{GetEnqueue()} takes $O(\log p)$ steps since there are at most $p$ subblocks in a block (Lemma \ref{subBlocksBound}), so \nf{GetEnqueue()} takes $O(\log^2 p)$ steps.
 \end{proof}
 
 \begin{lemma}[Amortized Time Analysis]
@@ -1310,7 +1314,7 @@ To prove the claim, it is sufficient to show that every \nf{Enqueue} and \nf{Deq
 
 \pagebreak
 \section{Future Directions}
-We designed a tree to achieve agreement on a linearization of operations invoked by $p$ processes in an asynchronous model, which we will call a \it{block tree}. We  implemented two queries to know information about the ordering agreed in the block tree. Then we used the tree to implement a queue where the number of steps per operation is poly-logarithmic with respect to the size of the queue and the number of processes. Block trees can be used as a mechanism to achieve agreement among processes to construct more poly-logarithmic wait-free linearizable objects. In the next paragraphs, we talk about possible improvements on block trees and the data structures that we can implement with block trees.
+We designed a tree to achieve agreement on a linearization of operations invoked by $p$ processes in an asynchronous model, which we will call a \it{block tree}. We implemented two queries to compute information about the ordering agreed in the block tree. Then we used the tree to implement a queue where the number of steps per operation is poly-logarithmic with respect to the size of the queue and the number of processes. Block trees can be used as a mechanism to achieve agreement among processes to construct more poly-logarithmic wait-free linearizable objects. In the next paragraphs, we talk about possible improvements on block trees and the data structures that we can implement with block trees.
 
 \paragraph{Reducing Space Usage}
 The \nf{blocks} arrays defined in our algorithm are unbounded. To use $O(n)$ space in each node where $n$ is the total number of operations, instead of unbounded arrays, we could use the memory model of the wait-free vector introduced by Feldman, Valera-Leon and Damian~\cite{7073592}. We can create an array called \nf{arr} of pointers to array segments (see Figure \ref{fig::doublingArray}). When a process wishes to write into location \nf{head} it checks whether \nf{arr[$\lfloor\log $ head$\rfloor$]} points to an array or not. If not, it creates a shared array of size $2^{\lfloor\log \nf{head} \rfloor}$ and tries to \nf{CAS} a pointer to the created array into \nf{arr[$\lfloor\log $ head$\rfloor$]}. Whether the \nf{CAS} is successful or not, \nf{arr[$\lfloor\log $ head$\rfloor$]} points to an array. When a process wishes to access the $i$th element it looks up \nf{arr[$\lfloor\log i\rfloor$][$i-2^{\lfloor\log i\rfloor}$]}, which takes $O(1)$ steps. The CAS Retry Problem does not happen here because if $n$ elements are appended to the array, then only $O(p\times\log n)$ \nf{CAS} steps have happened on the array \nf{arr}. Furthermore, at most $p$ arrays with size $2^{\lfloor\log i\rfloor}$ are allocated by processes while processes try to do the \nf{CAS} on \nf{arr[$i$]}. Jayanti and Shun \cite{DBLP:conf/wdag/JayantiS21} present a way to initialize wait-free arrays in constant steps. The time taken to allocate arrays in an execution containing $n$ operations is $O(\frac{p\log n}{n})$  per operation, which is negligible if $n>>p$. The vector implementation also has a mechanism for doubling \nf{arr} when necessary, but this happens very rarely since increasing \nf{arr} from $s$ to $2s$ increases the capacity of the vector from $2^s$ to $2^{2s}$.
@@ -1322,7 +1326,7 @@ The \nf{blocks} arrays defined in our algorithm are unbounded. To use $O(n)$ spa
 
 \paragraph{Garbage Collection}
 We did not handle garbage collection: \nf{Enqueue} operations  remain in the nodes even after their elements have been dequeued.
-We can keep track of the \nf{block}s in the \nf{root} whose operations are all terminated, i.e., all of its enqueues have been dequeued, and the responses of all of its dequeues have been computed. We call these blocks \it{finished blocks}. If we help the operations of all processes to compute their responses, then we can say if block $B$ is finished, then all blocks before $B$ are also finished. Knowing the most recent finished block in a node, we can reclaim the memory taken by finished blocks. We cannot use arrays (or vectors) to throw the garbage blocks away. We need a data structure that supports \nf{tryAppend()}, \nf{read(i)}, \nf{write(i)} and \nf{split(i)} operations in $O(\log n)$, where \nf{split(i)} removes all the indices less than \nf{i}. If each process tries to do the garbage collection every $p^2$ operation on the queue, then the amortized complexity remains the same. We can use a concurrent implementation of persistent red-black trees for this~\cite{DBLP:conf/afp/Okasaki96}. Bashari and Woelfel ~\cite{DBLP:conf/podc/BashariW21} used persistent red-black trees in a similar way.
+We can keep track of the \nf{block}s in the \nf{root} whose operations are all terminated, i.e., all enqueues have been dequeued, and the responses of all dequeues have been computed. We call these blocks \it{finished blocks}. If we help the operations of all processes to compute their responses, then we can say if block $B$ is finished, then all blocks before $B$ are also finished. Knowing the most recent finished block in a node, we can reclaim the memory taken by finished blocks. We cannot use arrays (or vectors) to throw the garbage blocks away. We need a data structure that supports \nf{tryAppend()}, \nf{read(i)}, \nf{write(i)} and \nf{split(i)} operations in $O(\log n)$ time, where \nf{split(i)} removes all the indices less than~\nf{i}. If each process tries to do the garbage collection once every $p^2$ operations on the queue, then the amortized complexity remains the same. We can use a concurrent implementation of a persistent red-black trees for this~\cite{DBLP:conf/afp/Okasaki96}. Bashari and Woelfel ~\cite{DBLP:conf/podc/BashariW21} used persistent red-black trees in a similar way.
 
 \begin{figure}[hbt]  
   \center\includegraphics[width=3.5in]{pics/finishedBlocks.png}
@@ -1338,7 +1342,7 @@ Consider a data structure storing a sequence that supports three operations \nf{
 There are two reasons the block tree worked well to implement a queue. Firstly, to respond to a \nf{Dequeue} we do not need to look at the entire history of operations: if a \nf{Dequeue} does not return \nf{null}, we can compute the index of the \nf{Enqueue} that is its response in $O(\log n)$ time if we keep the number of enqueues and the size. Secondly, the operations we need to search to respond to the \nf{Dequeue} are not very far from it in the sequence of operations: the distance is at most linear in the size of the queue. Creating a wait-free poly-logarithmic implementation of other objects whose operations satisfy these two conditions may be possible. 
 
 \paragraph{Attiya--Fouren Lower Bound}
-As we talked about earlier in Section 2.4 the Attiya--Fouren lower bound says that a concurrent implementation of queues using reads, writes and conditional operations like \nf{CAS} has $\Omega(c)$ amortized complexity \cite{DBLP:conf/opodis/AttiyaF17} when $c$, the number of concurrent processes, is $O(\log\log p)$. Our amortized complexity is $O(\log^2p+\log q)$. It is an open problem to reduce the gap between our algorithm and the Attiya--Fouren lower bound.
+As discussed in Section 2.4 the Attiya--Fouren lower bound says that a concurrent implementation of queues using reads, writes and conditional operations like \nf{CAS} has $\Omega(c)$ amortized complexity \cite{DBLP:conf/opodis/AttiyaF17} when $c$, the number of concurrent processes, is $O(\log\log p)$. Our amortized complexity is $O(\log^2p+\log q)$. It is an open problem to reduce the gap between our algorithm and the Attiya--Fouren lower bound.
 
 \pagebreak
 

@@ -168,7 +168,7 @@ Finally, we give some concluding remarks in Chapter 6. It contains how we can im
 
 \pagebreak
 \section{Related Work}
-In this section, we look at previous lock-free queues. In the worst-case, step complexity of all the lock-free queues includes an $\Omega(p)$ term that comes from the case where all $p$ processes try to do an enqueue or a dequeue simultaneously. Morrison and Afek call this the \textit{CAS retry problem}~\cite{DBLP:conf/ppopp/MorrisonA13}. 
+In this section, we look at previous lock-free queues. The worst-case step complexity of all the lock-free queues includes an $\Omega(p)$ term that comes from the case where all $p$ processes try to do an enqueue or a dequeue simultaneously. Morrison and Afek call this the \textit{CAS retry problem}~\cite{DBLP:conf/ppopp/MorrisonA13}. 
 
 \subsection{List-based Queues}
 Michael and Scott~\cite{DBLP:conf/podc/MichaelS96} introduced a lock-free queue which we refer to as the MS-queue. A version of it is included in the standard Java Concurrency Package. Their idea is to store the queue elements in a singly-linked list (see Figure~\ref{fig::msq}). A shared variable Head points to the first node in the linked list that has not been dequeued, and Tail points to the last element in the queue. To insert a node into the linked list, they use atomic primitive operations like \texttt{LL/SC} or \texttt{CAS}. If $p$ processes try to enqueue simultaneously, only one can succeed, and the others have to retry. This makes the amortized number of steps $\Omega(p)$ per enqueue. Similarly, dequeue can take $\Omega(p)$ steps.
@@ -198,7 +198,7 @@ Gidenstam, Sundell, and Tsigas~\cite{DBLP:conf/opodis/GidenstamST10} introduced 
     \caption[Global and local pointers in~\cite{DBLP:conf/opodis/GidenstamST10}]{\label{fig::sundell}Global pointers point to arrays. Head and Tail elements are blue, dequeued elements are red and current elements of the queue are green.}
 \end{figure}
 
-Kogan and Petrank~\cite{DBLP:conf/ppopp/KoganP11} introduced wait-free queues based on the MS-queue and use Herlihy's helping technique~\cite{10.1145/114005.102808} to achieve wait-freedom. Their step complexity is $\Omega(p)$ because of the helping mechanism.
+Kogan and Petrank~\cite{DBLP:conf/ppopp/KoganP11} introduced wait-free queues based on the MS-queue and use Herlihy's helping technique~\cite{10.1145/114005.102808} to achieve wait-freedom. Their worst-case step complexity is $\Omega(p)$ because of the helping mechanism.
 
 Milman et al.~\cite{DBLP:conf/spaa/MilmanKLLP18} designed a lock-free queue supporting futures. In their queue, operations  return future objects instead of responses. Later when the response is needed, it can be evaluated from the future object. They also define a weaker linearizability condition such that each operation can be linearized between its invocation and when its future is evaluated. Their idea of batching allows a sequence of operations to be submitted as a batch for later execution on the MS-queue. They use some properties of the queue size before and after a batch, similar to a part of our work. Their queue is not wait-free: in fact, if the batch sizes are 1, then the queue is like MS-queue.
 
@@ -1298,12 +1298,18 @@ The worst case number of steps for an \nf{Enqueue} is $O(\log^2 p)$ and for a \n
 A \nf{Dequeue} creates a block whose \nf{element} is \nf{null}, appends it to the tree, computes its rank among non-null dequeues, finds the corresponding enqueue and returns the response. The first two parts are similar to an \nf{Enqueue} operation and take $O(\log p)$ steps. To compute the rank of a \nf{Dequeue} in $D(n)$, the \nf{Dequeue} calls \nf{IndexDequeue()}. \nf{IndexDequeue} does $O(1)$ steps in each level which takes $O(\log p)$ steps. If the response to the \nf{Dequeue} is \nf{null}, \nf{FindResponse} returns \nf{null} in $O(1)$ steps. Otherwise, if the response to a dequeue in \nf{root.blocks[end]} is in \nf{root.blocks[b]} the \nf{DoublingSearch} takes $\Theta(\log$(\nf{root.blocks[b].size+root.blocks} \nf{[end].size}) by Lemma \ref{dsearchTime}, which is $O(\log q_e+\log q_d)$. Each search in \nf{GetEnqueue()} takes $O(\log p)$ steps since there are at most $p$ subblocks in a block (Lemma \ref{subBlocksBound}), so \nf{GetEnqueue()} takes $O(\log^2 p)$ steps.
 \end{proof}
 
-\begin{lemma}[Amortized Time Analysis]
-The amortized number of steps for an \nf{Enqueue} or \nf{Dequeue}, is $O(\log^2 p + \log q)$,  where $q$ is the size of the queue when the operation is linearized.
+
+\begin{lemma}[Amortized Worst-case Analysis]
+The amortized number of steps for an \nf{Enqueue} or \nf{Dequeue} in the worst-case, is $O(\log^2 p + \log q)$,  where $q$ is the size of the queue when the operation is linearized.
 \end{lemma}
 \begin{proof}
 If we split the \nf{DoublingSearch} time cost between the corresponding \nf{Enqueue} and \nf{Dequeue}, each operation takes $O(\log^2 p +q)$ steps.
 \end{proof}
+
+\begin{corollary}
+    If the number of concurrent processes in an execution is less than $c$, then each \nf{GetEnqueue} takes $O(\log c)$ steps because each block has at most $c$ operations. So the total amortized worst-case step complexity would be $O(\log p\log c + \log q)$. Furthermore, in a sequential execution where $c=1$, the step complexity of our algorithm would be $\Theta(\log p + \log q)$.
+\end{corollary}
+
 
 \begin{theorem}
 The queue implementation is wait-free.
@@ -1342,7 +1348,7 @@ Consider a data structure storing a sequence that supports three operations \nf{
 There are two reasons the block tree worked well to implement a queue. Firstly, to respond to a \nf{Dequeue} we do not need to look at the entire history of operations: if a \nf{Dequeue} does not return \nf{null}, we can compute the index of the \nf{Enqueue} that is its response in $O(\log n)$ time if we keep the number of enqueues and the size. Secondly, the operations we need to search to respond to the \nf{Dequeue} are not very far from it in the sequence of operations: the distance is at most linear in the size of the queue. Creating a wait-free poly-logarithmic implementation of other objects whose operations satisfy these two conditions may be possible. 
 
 \paragraph{Attiya--Fouren Lower Bound}
-As discussed in Section 2.4 the Attiya--Fouren lower bound says that a concurrent implementation of queues using reads, writes and conditional operations like \nf{CAS} has $\Omega(c)$ amortized complexity \cite{DBLP:conf/opodis/AttiyaF17} when $c$, the number of concurrent processes, is $O(\log\log p)$. Our amortized complexity is $O(\log^2p+\log q)$. It is an open problem to reduce the gap between our algorithm and the Attiya--Fouren lower bound.
+As discussed in Section 2.4 the Attiya--Fouren lower bound says that a concurrent implementation of queues using reads, writes and conditional operations like \nf{CAS} has $\Omega(c)$ amortized complexity \cite{DBLP:conf/opodis/AttiyaF17} when $c$, the number of concurrent processes, is $O(\log\log p)$. Our amortized worst-case step complexity is $\Theta(\log^2p+\log q)$. It is an open problem to reduce the gap between our algorithm and the Attiya--Fouren lower bound.
 
 \pagebreak
 

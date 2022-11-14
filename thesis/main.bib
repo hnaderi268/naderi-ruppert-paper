@@ -1,3 +1,20 @@
+@inproceedings{10.1145/3490148.3538572,
+author = {Nikolaev, Ruslan and Ravindran, Binoy},
+title = {WCQ: A Fast Wait-Free Queue with Bounded Memory Usage},
+year = {2022},
+isbn = {9781450391467},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3490148.3538572},
+doi = {10.1145/3490148.3538572},
+abstract = {The concurrency literature presents a number of approaches for building non-blocking, FIFO, multiple-producer and multiple-consumer (MPMC) queues. However, only a fraction of them have high performance. In addition, many queue designs, such as LCRQ, trade memory usage for better performance. The recently proposed SCQ design achieves both memory efficiency as well as excellent performance. Unfortunately, both LCRQ and SCQ are only lock-free. On the other hand, existing wait-free queues are either not very performant or suffer from potentially unbounded memory usage. Strictly described, the latter queues, such as Yang &amp; Mellor-Crummey's (YMC) queue, forfeit wait-freedom as they are blocking when memory is exhausted. We present a wait-free queue, called wCQ. wCQ is based on SCQ and uses its own variation of fast-path-slow-path methodology to attain wait-freedom and bound memory usage. Our experimental studies on x86 and PowerPC architectures validate wCQ's great performance and memory efficiency. They also show that wCQ's performance is often on par with the best known concurrent queue designs.},
+booktitle = {Proceedings of the 34th ACM Symposium on Parallelism in Algorithms and Architectures},
+pages = {307–319},
+numpages = {13},
+keywords = {ring buffer, fifo queue, wait-free},
+location = {Philadelphia, PA, USA},
+series = {SPAA '22}
+}
 @article{10.1145/2370036.2145835,
 	title        = {A Methodology for Creating Fast Wait-Free Data Structures},
 	author       = {Kogan, Alex and Petrank, Erez},
@@ -424,17 +441,4 @@
 	abstract     = {A wait-free implementation of a concurrent data object is one that guarantees that any process can complete any operation in a finite number of steps, regardless of the execution speeds of the other processes. The problem of constructing a wait-free implementation of one data object from another lies at the heart of much recent work in concurrent algorithms, concurrent data structures, and multiprocessor architectures. First, we introduce a simple and general technique, based on reduction to a concensus protocol, for proving statements of the form, “there is no wait-free implementation of X by Y.” We derive a hierarchy of objects such that no object at one level has a wait-free implementation in terms of objects at lower levels. In particular, we show that atomic read/write registers, which have been the focus of much recent attention, are at the bottom of the hierarchy: thay cannot be used to construct wait-free implementations of many simple and familiar data types. Moreover, classical synchronization primitives such astest&set and fetch&add, while more powerful than read and write, are also computationally weak, as are the standard message-passing primitives. Second, nevertheless, we show that there do exist simple universal objects from which one can construct a wait-free implementation of any sequential object.},
 	numpages     = 26,
 	keywords     = {wait-free synchronization, linearization}
-}
-@article{DBLP:journals/corr/abs-2201-02179,
-	title        = {{wCQ}: {A} Fast Wait-Free Queue with Bounded Memory Usage},
-	author       = {Ruslan Nikolaev and Binoy Ravindran},
-	year         = 2022,
-	journal      = {CoRR},
-	volume       = {abs/2201.02179},
-	url          = {https://arxiv.org/abs/2201.02179},
-	eprinttype   = {arXiv},
-	eprint       = {2201.02179},
-	timestamp    = {Mon, 10 Jan 2022 13:39:01 +0100},
-	biburl       = {https://dblp.org/rec/journals/corr/abs-2201-02179.bib},
-	bibsource    = {dblp computer science bibliography, https://dblp.org}
 }

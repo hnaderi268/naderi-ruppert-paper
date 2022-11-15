@@ -1,4 +1,4 @@
-\documentclass[11pt]{article}
+\documentclass[11pt,letterpaper]{article}
 \renewcommand{\baselinestretch}{1.8}
 
 \usepackage[letterpaper, margin=1in]{geometry}
@@ -16,6 +16,7 @@
 \usepackage{relsize}
 \usepackage{enumitem}
 \usepackage{bold-extra}
+\renewcommand*\contentsname{Table of Contents}
 
 \usepackage{multicol}
 \setlength\columnsep{24pt}
@@ -72,7 +73,7 @@
 \begin{document}
 
 \begin{center}
-
+\pagenumbering{roman}
 \huge{\bf{A Wait-free Queue with Poly-logarithmic\\Worst-case Step Complexity}}
 
 \vspace{2em}
@@ -82,8 +83,8 @@
 \large A Thesis submitted to the Faculty of Graduate Studies \\ in Partial Fulfillment of the Requirements\\for the Degree of Master of Science
 
 \vspace{2em}
-Graduate Program in Computer Science\\
-York University,\\
+Graduate Program in Computer Science,\\
+York University\\
 Toronto, Ontario
 
 \vspace{2em}
@@ -97,13 +98,15 @@ November, 2022
 \pagebreak
 
 \normalsize
+\addcontentsline{toc}{subsection}{Abstract}
 \section*{Abstract}
 
 In this work, we introduce a novel linearizable wait-free queue implementation.
 Linearizability and lock-freedom are standard requirements for designing shared data structures. To the best of our knowledge, all of the existing linearizable lock-free queues in the literature have a common problem in their worst case, called the CAS Retry Problem. We show that our algorithm avoids this problem with the helping mechanism which we use and has a worst-case running time better than prior lock-free queues. The amortized number of steps for an \nf{Enqueue} or \nf{Dequeue} in our algorithm is $O(\log^2 p + \log q)$,  where $p$ is the number of processes and $q$ is the size of the queue when the operation is linearized.
-\pagenumbering{roman}
+
 \pagebreak
 
+\addcontentsline{toc}{subsection}{Acknowledgements}
 \section*{Acknowledgements}
 \hspace{\parindent}First, I want to thank my supervisor Eric Ruppert. Without his guidance and support, this thesis probably would not have been completed. He helped me in every step of this thesis, taught me shared data structures, helped me find the problem, design and improve the algorithm, and write it with its complications because of lots of new notions in it. Thank you again for always pushing to make it better.
 
@@ -118,13 +121,16 @@ I would like to express my gratitude to York University for the scholarship I wa
 I dedicate this paper to the people in Iran and all the people who are fighting for their freedom.
 
 \pagebreak
+\addcontentsline{toc}{subsection}{Table of Contents}
 \tableofcontents
 
 \pagebreak
-\listoffigures
+\addcontentsline{toc}{subsection}{List of Tables}
+\listoftables
 
 \pagebreak
-\listoftables
+\addcontentsline{toc}{subsection}{List of Figures}
+\listoffigures
 \newpage
 
 \pagebreak
@@ -1352,13 +1358,13 @@ Consider a data structure storing a sequence that supports three operations \nf{
 There are two reasons the block tree worked well to implement a queue. Firstly, to respond to a \nf{Dequeue} we do not need to look at the entire history of operations: if a \nf{Dequeue} does not return \nf{null}, we can compute the index of the \nf{Enqueue} that is its response in $O(\log n)$ time if we keep the number of enqueues and the size. Secondly, the operations we need to search to respond to the \nf{Dequeue} are not very far from it in the sequence of operations: the distance is at most linear in the size of the queue. Creating a wait-free poly-logarithmic implementation of other objects whose operations satisfy these two conditions may be possible. 
 
 \paragraph{Attiya--Fouren Lower Bound}
-As discussed in Section 2.4 the Attiya--Fouren lower bound says that a concurrent implementation of queues using reads, writes and conditional operations like \nf{CAS} has $\Omega(c)$ amortized complexity \cite{DBLP:conf/opodis/AttiyaF17} when $c$, the number of concurrent processes, is $\Omega(\log\log p)$. Our amortized worst-case step complexity is $\Theta(\log^2p+\log q)$. It is an open problem to reduce the gap between our algorithm and the Attiya--Fouren lower $\Omega(\log\log p)$ bound.
+As discussed in Section 2.4 the Attiya--Fouren lower bound says that a concurrent implementation of queues using reads, writes and conditional operations like \nf{CAS} has $\Omega(c)$ amortized complexity \cite{DBLP:conf/opodis/AttiyaF17} when $c$ the number of concurrent processes, is $O(\log\log p)$. Our amortized worst-case step complexity is $\Theta(\log^2p+\log q)$. It is an open problem to reduce the gap between our algorithm and the Attiya--Fouren lower $\Omega(\log\log p)$ bound.
 
 \pagebreak
 
 \pagebreak
 
-
+\addcontentsline{toc}{section}{References}
 \bibliography{main.bib} 
 \bibliographystyle{acm}
 

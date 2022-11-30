@@ -88,7 +88,7 @@
 \Statex $\diamondsuit$ \tt{\sl{Local}}
 \begin{itemize}
 \item \tt{\sl{Node} leaf:} \sf{ process's leaf in the tree.}
-\item {\color{red}\tt{\sl{int} garbageCollectRound}}
+% \item {\color{red}\tt{\sl{int} garbageCollectRound}}
 \end{itemize}
 
 \Statex $\blacktriangleright$ \tt{\sl{Node}}
@@ -172,7 +172,7 @@
 \Statex $\triangleright$ Returns the response to $D_i(root,b)$, the \nf{i}th \nf{Dequeue} in \nf{root.blocks[b]}.
 \Function{element}{FindResponse}{\sl{int} b, \sl{int} i}
 \If{\tt{ root.blocks[b-1].\size}\tt{ + root.blocks[b].num\sub{enq} - i $<$ 0}} \label{checkEmpty}\cmt{Check if the queue is empty.}
-\State \tt{lastDequeudFrom.update(b)}
+\State \tt{ \color{red} lastDequeudFrom.update(b)}
 \State \Return \tt{null} \label{returnNull}
 \Else \cmt{The response is $E_e(root)$, the \nf{e}th \nf{Enqueue} in the root.}
 \State \tt{e= i + (root.blocks[b-1].sum\sub{enq}-root.blocks[b-1].size)} \label{computeE}
@@ -193,18 +193,18 @@
 \setcounter{ALG@line}{25}
 
 \Statex $\leadsto$ \textsf{Precondition: \tt{blocks[start..end]} contains a block with \tt{sum\sub{enq}} greater than or equal to \tt{x}}
-\Statex $\triangleright$ \textmd{\color{red} Update needed: search on RBT}.
-\Function{int}{BinarySearch}{\sl{int} x, \sl{int} start, \sl{int} end}
-% \State \Return \tt{min\{j: blocks[j].sum\sub{enq}$\geq$x\}}
-\While{\nf{start<end}}
-\State \tt{\sl{int}} \tt{mid= floor((start+end)/2)}
-\If{\nf{blocks[mid].sum\sub{enq}<x}}
-\State \nf{start= mid+1}
-\Else
-\State \nf{end= mid}
-\EndIf
-\EndWhile
-\State\Return \nf{start}
+\Statex $\triangleright$ \textmd{\color{red} Update needed: search on RBT does not need start and end, we can search over whole the red-black tree.}.
+\Function{int}{BinarySearch}{\sl{int} x}
+\State \Return \tt{\color{red} min\{j: blocks[j].sum\sub{enq}$\geq$x\}}
+% \While{\nf{start<end}}
+% \State \tt{\sl{int}} \tt{mid= floor((start+end)/2)}
+% \If{\nf{blocks[mid].sum\sub{enq}<x}}
+% \State \nf{start= mid+1}
+% \Else
+% \State \nf{end= mid}
+% \EndIf
+% \EndWhile
+% \State\Return \nf{start}
 \EndFunction{BinarySearch}
 
 \end{algorithmic}
@@ -218,14 +218,14 @@
 \Statex $\leadsto$ \textsf{Precondition: \tt{root.blocks[end].sum\sub{enq} $\geq$ \tt{e}}}
 \Statex $\triangleright$ \textmd{Returns \tt{<b,i>} such that $E_\nf{e}(\nf{root})=E_\nf{i}(\nf{root},\nf{b})$, i.e., the \nf{e}th \nf{Enqueue} in the \nf{root} is the \nf{i}th \nf{Enqueue} within $\triangleright$~the \nf{b}th block in the \nf{root}.}
 
-\Function{<int, int>}{DoublingSearch}{\sl{int} e, \sl{int} end}
-\State \tt{start= end-1} \label{dsearchStart}
-\While{\tt{root.blocks[start].sum\sub{enq}}$>=$\tt{e}}
-\State \tt{start= max(start-(end-start), 0)} \label{doubling}
-\EndWhile \label{dsearchEnd}
-\State \tt{b= root.BinarySearch(e, start, end)} \label{dsearchBinarySearch}
-\State \tt{i= e- root.blocks[b-1].sum\sub{enq}} \label{DSearchComputei}
-\State\Return \tt{<b,i>}
+\Function{<int, int>}{DoublingSearch}{\sl{int} e, \sl{int} end} \cmt{{\color{red} I think with garbage collection, doubling search is not needed any more and a binary search on \nf{root.blocks} would be good enough.}}
+% \State \tt{start= end-1} \label{dsearchStart} 
+% \While{\tt{root.blocks[start].sum\sub{enq}}$>=$\tt{e}}
+% \State \tt{start= max(start-(end-start), 0)} \label{doubling}
+% \EndWhile \label{dsearchEnd}
+% \State \tt{b= root.BinarySearch(e, start, end)} \label{dsearchBinarySearch}
+% \State \tt{i= e- root.blocks[b-1].sum\sub{enq}} \label{DSearchComputei}
+% \State\Return \tt{<b,i>}
 \EndFunction{DoublingSearch}
 \end{algorithmic}
 \end{algorithm}
@@ -237,12 +237,7 @@
 \setcounter{ALG@line}{45}
 
 \Function{void}{Append}{\sl{block} B} \cmt{Only called by the owner of the leaf.}
-{\color{red}\If{\tt{root.head\%p\textsuperscript{2}<p and garbageCollectRound<floor(root.head/p\textsuperscript{2})}}
-\State \Call{Help()}{}
-\State \tt{root.}\Call{FreeMemory()}{lastDequeuedFrom.Get()-1}
-\State \tt{garbageCollectRound=floor(root.head/p\textsuperscript{2})}
-\EndIf}
-\State \tt{blocks[\head]= B} \label{appendLeaf}
+\State \tt{\color{red} blocks.TryAppend(B, head)} \label{appendLeaf}
 \State \tt{\head= \head+1} \label{appendEnd} 
 \State \tt{parent.}\Call{Propagate()}{} 
 \EndFunction{Append}
@@ -285,7 +280,7 @@
 \State \tt{new= \Call{CreateBlock}{h}} \label{invokeCreateBlock}
 \If{\tt{new.num==0}} \Return{\tt{true}} \label{addOP} 
 \EndIf
-\State{\tt{result= blocks[h].CAS(null, new)}} \label{cas}
+\State{\tt{\color{red} result= blocks.TryAppend(new, h)}} \label{cas}
 \State{\tt{this.\Call{Advance}{h}}} \label{advance}
 \State \Return{ \tt{result}}
 
@@ -326,6 +321,16 @@
 \State \Return \tt{new}
 \EndFunction{CreateBlock}
 
+\Statex
+\color{red}
+\Function{int}{GetLastDequeuedFrom}{}{\cmt{Returns the index that is safe to remove the blocks before that in the node.}}
+\State \tt{x= lastDequeuedFrom.Get()-1}
+\State \tt{n= root}
+\State \bf{while} \tt{n!=this} \bf{do}
+\State \tt{dir= left (if this is in left subtree of n): otherwise dir=right}
+\State \tt{    x=n.blocks[x].end\sub{dir}}
+\State\bf{end while}
+\EndFunction{GetLastDequeuedFrom}
 
 \end{algorithmic}
 \end{algorithm}
@@ -342,26 +347,26 @@
 \If{\tt{this} \bf{is} \tt{leaf}}
 \State\Return \tt{blocks[b].element} \label{getBaseCase}
 \ElsIf{\tt{i <= blocks[b].num\sub{enq-left}}} \label{leftOrRight} \cmt{$E_\tt{i}(\tt{this},\tt{b})$ is in the left child of this node.}
-\State \tt{subblockIndex= left.BinarySearch(i+blocks[b-1].sum\sub{enq-left}, blocks[b-1].end\sub{left}+1,} \label{leftChildGet}
-\Statex \hspace{10.7em}\tt{blocks[b].end\sub{left})} 
+\State \tt{subblockIndex= left.BinarySearch(i+blocks[b-1].sum\sub{enq-left}, blocks[b-1].end\sub{left}+1,}  \label{leftChildGet}
+\Statex \hspace{10.7em}\tt{blocks[b].end\sub{left})} \cmt{{\color{red} start and end values are not needed anymore?}}
 \State \Return\tt{left.}\Call{GetEnqueue}{subblockIndex, i} 
 \Else
 \State \tt{i= i-blocks[b].num\sub{enq-left}}
 \State\tt{subblockIndex= right.BinarySearch(i+blocks[b-1].sum\sub{enq-right}, blocks[b-1].end\sub{right}+1,} \label{rightChildGet}
-\Statex \hspace{11.1em}\tt{blocks[b].end\sub{right})} 
+\Statex \hspace{11.1em}\tt{blocks[b].end\sub{right})} \cmt{{\color{red} start and end values are not needed anymore?}}
 \State \Return\tt{right.}\Call{GetEnqueue}{subblockIndex, i} 
 \EndIf
 \EndFunction{GetEnqueue}
 
 \Statex
 \Statex $\leadsto$ \textsf{Precondition: \tt{b}th block of the node has propagated up to the root and \tt{blocks[b].num\sub{deq}$\geq$i}.}
-\Function{<int, int>}{IndexDequeue}{\sl{int} b, \sl{int} i} \cmt{\color{red} Update needed: return null when superblock in the root was not found.}
+\Function{<int, int>}{IndexDequeue}{\sl{int} b, \sl{int} i} \cmt{{\color{red} Update needed: return null when superblock in the root was not found.}}
 \If{\tt{this} \bf{is} \tt{root}}
 \State\Return \tt{<b, i>} \label{indexBaseCase}
 \Else
 \State \tt{dir= (parent.left==n ? left: right)} 
-\State \tt{superblockIndex= parent.blocks[blocks[b].super].sum\sub{deq-dir} > blocks[b].sum\sub{deq} ? \label{computeSuper}
-\Statex \hspace{11.3em} blocks[b].super: blocks[b].super+1}
+\State \tt{superblockIndex= parent.blocks[blocks[b].super].sum\sub{deq-dir} > blocks[b].sum\sub{deq} ? \label{computeSuper} 
+\Statex \hspace{11.3em} blocks[b].super: blocks[b].super+1} \cmt{{\color{red} Preconditions might be not met.}}
 
 \If{\tt{dir {\keywordfont is} left}} \label{computeISuperStart}
 \State \tt{i+= blocks[b-1].sum\sub{deq}-parent.blocks[superblockIndex-1].sum\sub{deq-left}} \label{considerPreviousLeft}
@@ -380,6 +385,7 @@
 \section{MaxByProcess}
 
 \begin{algorithm}
+\color{red}
 \caption{\tt{\sl{\color{red}MaxByProcess}}}
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{121}
@@ -405,6 +411,7 @@
 \section{Help}
 
 \begin{algorithm}
+\color{red}
 \caption{\tt{\sl{Tree}}}
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{130}
@@ -427,16 +434,17 @@
 \section{FreeMemory}
 
 \begin{algorithm}
+\color{red}
 \caption{\tt{\sl{Node}}}
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{140}
 
 \Function{}{FreeMemory}{\sl{int} \tt{b}}
 \If{not leaf}
-\State \tt{left.FreeMemory(blocks[i].end\sub{left})}
-\State \tt{right.FreeMemory(blocks[i].end\sub{right})}
+\State \tt{left.FreeMemory(blocks[i].end\sub{left}-1)}
+\State \tt{right.FreeMemory(blocks[i].end\sub{right}-1)}
 \EndIf
-\State \tt{\bf{while} !blocks.CAS(blocks.splitGreater(i))}
+\State \tt{blocks= blocks.splitGreater(i)} \cmt{I think CAS is not needed.}
 \EndFunction{FreeMemory}
 
 \end{algorithmic}
@@ -449,6 +457,7 @@
 \section{PBRT}
 
 \begin{algorithm}
+\color{red}
 \caption{\tt{\sl{PBRT}}}
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{140}
@@ -457,11 +466,22 @@
 \Statex \sf{nodes store \tt{<key, sum\sub{enq}-> block}}
 \Statex \tt{[i] -> GetByBlock(i)}
 
+\Statex
 \Function{}{GetByBlock}{\sl{int} \tt{i}}
 \State \Return \tt{rbt.get(i)}
 \If{not found}
 \State \tt{return written response}
 \EndIf
+\EndFunction{GetByBlock}
+
+\Statex
+\Function{}{TryAppend}{\sl{block} \tt{B}, \sl{int} \tt{i}}
+\Statex {\color{red} Tries to append \nf{B} with key \nf{i} to the red-black tree.}
+{\color{red}\If{\tt{i\%p\textsuperscript{2}=0}}
+\State \Call{Help()}{}
+\State \tt{root.}\Call{FreeMemory()}{lastDequeuedFrom.Get()-1}
+\State \tt{garbageCollectRound=floor(root.head/p\textsuperscript{2})}
+\EndIf}
 \EndFunction{FreeMemory}
 
 \end{algorithmic}
@@ -533,3 +553,4 @@ There is a shared array among processes which they write the last block dequeud 
 
 
 \end{document}
+

@@ -493,40 +493,37 @@
 \color{black}
 In our original algorithm an \nf{Enqueue} or a \nf{Dequeue} remains in the \nf{blocks} array in the tree nodes even after they terminate. This makes the space used by the algorithm factor of the number of operations of invoked on the queue. In this section here we want to free the memory allocated by the operations that are no longer needed and make the space used polynomial of $p+q$.
 
-One way of handling garbage collection is to reallocate the space taken by each each operation right after it is not needed anymore, but it might cost too much to do that. So we garbage collect by batching. If we do the garbage collection every $p^2$ block appended to the root, its cost is amortized over $p^2$ blocks which is $O(p^3)$ and $\Omega(p^2)$.
+One way of handling garbage collection is to reallocate the space taken by each operation right after it is not needed anymore, but it might cost too much to do that. So we garbage collect by batching. If we garbage collect the unnecessary blocks in a node every $p^2$ block appended to the node, the garbage collection cost is amortized over $p^2$ blocks which is $O(p^3)$ and $\Omega(p^2)$.
 
-In our design a process attempts to do \nf{Garbage Collect} every $p^2$ block appended to the root. \nf{Garbage Collect} corresponded to the $kp^2$ root block is called the $k$th round. To know if it is $k$th round or nor we can use an if condition on the value of \nf{root.head}. But the problem is that a process might miss a round not because it is on idle but because it reads \nf{root.head} not to be $kp^2$. We handle that by checking with a window.
+In our design a process garbage collects a node when it attempts to append a block in the $kp^2$ position in the. \nf{Garbage Collect} corresponded to the $kp^2$th block in node $n$ is called the $k$th round of garbage collect on $n$. Every $p^2$  block appended to a node at least one garbage collect happens because the node's \nf{head} cannot advance until the garbage collect is done (see Lines ).
 
 \begin{lemma}
 The number of the blocks in the \nf{blocks} is $O(p^2+q)$.
 \end{lemma}
 
-\begin{lemma}
-When $\cfrac{\nf{root.head}}{p^2}$ incremnts from $r$ to $r+1$, at least one operation has executed Lines 48,49.
-\end{lemma}
 
-An \nf{Enqueue} operation cannot be remove after it is terminated since later it might be dequeues, however it can be remove from the tree after it has been computed to be the response of a \nf{Dequeue}. A \nf{Dequeue} operation can be removed from the tree safely after it has computed its response \nf{Enqueue}. Note that it is not needed for the \nf{Dequeue} to be terminated but only it is sufficient if it has computed its response. We say a block in the \nf{root} is \it{finished} if all of its operations can be removed.
+An \nf{Enqueue} operation can be removed from the tree after its \nf{element} has been computed to be the response of some \nf{Dequeue}. It is safe to remove a \nf{Dequeue} operation from the tree after the \nf{Dequeue} is terminated, but a \nf{Dequeue} might sleep for a long time and prevents to be garbage collected. In that situation other processes can help the \nf{Dequeue} to compute its response and wtite down its response somewhere. If we remove a \nf{Dequeue} from the tree after it is helped the \nf{Dequeue} can read the helped response writtern when it encountered a problem (computing the \nf{Dequeue} index in the \nf{root} or getting the response \nf{Enqueue}). A \nf{Dequeue} operation can be removed from the tree after its response has been computed. We say a block  is \it{finished} if all of its operations can be removed.
 
 \begin{lemma}
-There are at most $p^2+q$ not finished blocks in the \nf{root.blocks} at a time.
+There are at most $O(p^2+q)$ unfinished blocks in a node's \nf{blocks} at a time.
 \end{lemma}
 
-The good property in a fifo queue is that if $i$th \nf{Enqueue} gets dequeued then it means $1$ to $i-1$th enqueue operation have also dequeued. This gives us the idea that if a block is finished all the blocks before it are also finished. However if an operation in a block goes to sleep for a long time then the block remains not finished. Since there are at most $p$ idle operations we can help them and then remove all the finished blocks safely.
+If the $i$th \nf{Enqueue} gets dequeued in a FIFO queue, it means $1$ to $i-1$th \nf{Enqueue} operations are also dequeued. This gives us the idea that if a block is finished then all the blocks before it are also finished. If an operation in a block goes to sleep for a long time then other processes help the operation so the block get finished. Note that when an \nf{Enqueue} operation in a block is not finished the block cannot be finished until some \nf{Dequeue} dequeues that \nf{Enqueue}. Since there are at most $p$ idle operations, we can help them before garbage collection and then remove all the finished blocks safely.
 
 \begin{lemma}
-    If all current operations are helped, then there is a block in the root that all of its previous blocks are finished.
+    If all current operations are helped, then there is a block in the root that all of its previous blocks are finished. That block is the most recent block that has been dequeued from.
 \end{lemma}
 
-The idea above leads us to a poly-log data structure that supports throwing away all the values smaller than an index. Red-black trees do this for us.
-We can create a shared red-black tree just creaing a new path for the operation and then using \nf{CAS} to change the root of the tree. See [this] for more.
+The idea above leads us to a poly-log data structure that supports throwing away all the blocks with keys smaller than an index. Red-black trees do this for us. \nf{Get(i)}, \nf{Append()} and \nf{Split(i)} are logarithmic in block trees.
+We can create a shared red-black tree just creating a new path for the operation and then using \nf{CAS} to change the root of the tree. See [this] for more.
+
 \begin{observation}
-PBRT supports....
+PBRT supports poly-log operations ....
 \end{observation}
 
 \begin{lemma}
     If we replace the arrays we used to implement \nf{blocks} with red-black trees the amortized complexity of the algorithm would be $PolyLog(p,q)$. And also the algorithm is correct.
 \end{lemma}
-
 
 We can help a \nf{Dequeue} by computing its response and writing it down. If the process in future failed to execute, it can read the helped value written down.
 
@@ -534,21 +531,21 @@ We can help a \nf{Dequeue} by computing its response and writing it down. If the
 The \nf{response} written is correct.
 \end{lemma}
 
-But how can we know which blocks in each node are finished or not? We can keep track of the last finished block.
+But how can we know which blocks in each node are finished or not? 
 
 \begin{lemma}
-    If all current operations are helped, then the blocks before the newest block that some \nf{Enqueue} has been dequeued from is safe to remove. If the most current \nf{Deuque} returned \nf{null} then all the blocks before the block containing the \nf{Dequeue} can be removed.
+    If all current operations are helped, then the blocks before the newest block that some \nf{Enqueue} has been dequeued from is safe to remove. If the most current \nf{Dequeue} returned \nf{null} then all the blocks before the block containing the \nf{Dequeue} can be removed.
 \end{lemma}
 
-There is a shared array among processes which they write the last block dequeud from in it. 
+There is a shared array among processes which they write the last block dequeued from in it. 
 
 
 \begin{lemma}
-    \nf{lastDequeuedFrom}- index of the last finished block in the root is $O(p)$.
+    $\nf{GetLastDequeuedFrom($n$} - \text{index of the last finished block}$ in the node $n$ is $O(p)$.
 \end{lemma}
 
 \begin{lemma}
-    After \nf{FreeMemory}, the space taken by each node is $O(p^2+q)$
+    After \nf{FreeMemory}, the space taken by each node of the tree is $O(p^2+q)$. The total space in the tree is $PolyLog(p+q)$
 \end{lemma}
 
 

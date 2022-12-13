@@ -44,6 +44,7 @@
 \usepackage{relsize}
 \usepackage{enumitem}
 \usepackage{bold-extra}
+\usepackage{showkeys}
 \renewcommand*\contentsname{Table of Contents}
 
 \usepackage{multicol}
@@ -86,6 +87,8 @@
 \newcommand{\cmt}[1]{\Comment{#1}}
 \newcommand{\head}{head}
 \newcommand{\size}{size }
+
+\newcommand{\here}[1]{\bf{[[#1]]}}
 
 \usepackage{amsmath,amssymb,amsthm}
 %\newtheorem{theorem}{Theorem}
@@ -192,8 +195,12 @@
 \settopmatter{printacmref=false}  % REMOVE THIS LINE FOR CAMERA READY
 
 \begin{abstract}
-In this work, we introduce a novel linearizable wait-free queue implementation.
-Linearizability and lock-freedom are standard requirements for designing shared data structures. To the best of our knowledge, all of the existing linearizable lock-free queues in the literature have a common problem in their worst case, called the CAS Retry Problem. We show that our algorithm avoids this problem with the helping mechanism which we use and has a worst-case running time better than prior lock-free queues. The amortized number of steps for an \nf{Enqueue} or \nf{Dequeue} in our algorithm is $O(\log^2 p + \log q)$,  where $p$ is the number of processes and $q$ is the size of the queue when the operation is linearized.
+We introduce a novel linearizable wait-free queue implementation using single-word 
+CAS instructions.
+Previous lock-free queues all take $\Omega(p)$ steps per operation in the worst case, 
+where $p$ is the number of processes that can access the queue.
+We achieve $O(\log^2 p +\log q)$ steps per operation, where $q$ is the size of the queue.
+\here{mention space usage; update time bound if space-efficient version takes more time per op}
 \end{abstract}
 
 %%
@@ -212,10 +219,49 @@ Linearizability and lock-freedom are standard requirements for designing shared 
 \maketitle
 
 \section{Introduction}
-Shared data structures have become an essential field in distributed algorithms research.
-We are reaching the physical limits of how many transistors we can place on a CPU core. The industry solution to provide more computational power is to increase the number of cores of the CPU. It is not hard to see why multiple processes cannot share a sequential data structure. For example, consider two processes trying to append to a sequential linked list simultaneously. Processes $P,Q$ read the same tail node, $P$ changes the next pointer of the tail node to its new node, and then $Q$ does the same. In this run, $P$'s update is overwritten, which makes the queue inconsistent. One solution is to use locks; whenever a process wants to update or query a data structure, the process locks the data structure, and others have to wait until the lock is released to read or update the data structure. Using locks has some disadvantages; for example, one process might be slow, and holding a lock for a long time prevents other processes from progressing. Moreover, locks do not allow complete parallelism since only the process holding the lock can progress when the data structure is locked. For these reasons, we are interested in the design of an efficient shared queue without using locks.
 
-A sequential queue stores a sequence of elements and supports two operations, enqueue and dequeue. \texttt{Enqueue(e)} appends the element \texttt{e} to the sequence stored. \texttt{Dequeue} removes and returns the first element in the queue. If the queue is empty, it returns \texttt{null}. In a concurrent version of the queue data structure, operations do not happen one at a time. The question that may arise is, ``What properties matter for the implementation of a shared data structure?'' Since executions on a shared data structure are different from sequential ones, the correctness conditions also differ. To prove a concurrent object works perfectly, we have to show it satisfies safety and progress conditions. A \textit{safety condition} tells us that the data structure does not return wrong responses, and a \textit{progress property} requires that operations eventually terminate.
+A great deal of research has been devoted to the design of lock-free queues,
+starting with the classic MS-queue of Michael and Scott \cite{DBLP:conf/podc/MichaelS96}.
+Their design uses a singly-linked list with pointers to the front and back nodes.
+To dequeue or enqueue an element, the front or back pointer is updated by a 
+compare-and-swap (CAS) instruction.
+If this CAS fails, the operation must retry.
+In the worst case, this means that each successful CAS may cause all other processes to
+fail and retry, leading to an amortized step complexity of $\Omega(p)$ per operation.
+Numerous papers have suggested modifications to the MS-queue \cite{list some}, but 
+all still have $\Omega(p)$ worst-case step complexity as a result of
+contention on the front and back of the queue.
+Morrison and Afek \cite{DBLP:conf/ppopp/MorrisonA13} dubbed this the CAS retry problem.
+The same problem occurs in array-based implementations of queues \cite{list some}.
+
+This problem reoccurs with other data structures that keep track of a set of elements.
+For example, lock-free lists \cite{}, stacks \cite{} and search trees \cite{} 
+always have a term in their step complexity
+that depends linearly on the contention $c$, i.e., 
+the number of processes that access the data structure concurrently (which can be as high
+as $p$ in the worst case).
+It was conjectured that lock-free implementations of many types of data structures
+require $\Omega(c)$ steps per operation, even in an amortized sense \cite{Ruppert}.
+Attiya and Fouren \cite{AF} proved this conjecture for bag data structures, which allow processes
+to insert elements and delete an arbitrary element (chosen non-deterministically).
+They showed that any implementation of a bag from CAS instructions
+has $\Omega(c)$ amortized step complexity.
+Since a queue trivially implements a bag, the lower bound also holds for queues.
+However the lower bound leaves a loophole:  it holds only if $c$ is $O(\log\log p)$.
+Thus, the lower bound could be stated more as $\Omega(\min(c,\log\log p))$ steps per operation.
+
+In this paper, we exploit this loophole to show that it is possible to implement a queue
+whose step complexity does not depend linearly on $p$.
+Our implementation's step complexity is polylogarithmic in $p$ and in $q$, the number of elements
+stored in the queue.
+
+Our queue uses a tournament tree where each process has its own leaf.
+The process tries to propagate its operations along the path from its leaf up to the root.
+Operations that reach the root are ordered, and this ordering is used to linearize all
+operations and compute their responses.
+\here{Either here or in related work section, talk about previous usage of tournament tree and how ours differs from it}
+We create a helping mechanism for when a process is propagating its operation to a node, such that new operations are ensured to be propagated one step further up the tree after at most 2 \nf{CAS} invocations. The amortized number of steps for an \nf{Enqueue} or \nf{Dequeue}, is $O(\log^2 p + \log q)$,  where $q$ is the size of the queue when the operation is linearized. \nf{CAS} instructions cost more than other instructions for the processor. Each operation in our queue does $\Theta(\log p)$ \nf{CAS} operations compared to $\Omega(p)$ \nf{CAS} steps for previous queues in the worst case. We use unbounded memory space in our queue and present a way to reduce the memory size to the total number of operations. Furthermore, we do not address garbage collection but we describe a way we think it can be handled.
+------
 
 A system is called \it{asynchronous} when processes in the system run at arbitrarily varying speeds, i.e., the scheduling of each process is independent from the scheduling of other processes. Our model is an asynchronous shared-memory distributed system of $p$ processes. Herlihy \cite{10.1145/114005.102808} showed that one cannot implement concurrent versions of all data structures with multi-reader multi-writer registers alone and introduced a hierarchy based on how powerful objects are to solve the consensus problem among processes. Objects like LL/SC or CAS can be used to reach a consensus among any number of processors. A CAS object provides an atomic Compare\&Swap(\nf{new, old}) operation: if the value stored in the object is \nf{old}, it updates the value to \nf{new} and returns \nf{true}; otherwise it returns \nf{false}.  In this work, we use Compare\&Swap (\nf{CAS}) objects to synchronize among processes.
 
@@ -225,17 +271,8 @@ The standard safety condition is called \textit{linearizability}~\cite{10.1145/7
 
 There are various progress properties; the strongest is wait-freedom, and the more common is lock-freedom. An algorithm is \textit{wait-free} if each operation terminates after a finite number of its own steps. We call an algorithm \textit{lock-free} if, after a sufficient number of steps, one operation terminates. A wait-free algorithm is also lock-free but not vice versa; in an infinite run of a lock-free algorithm, there might be an operation that takes infinitely many steps but never terminates.
 
-We will present a wait-free linearizable queue, which to the best of our knowledge  is the first wait-free queue whose operations run in a poly-logarithmic number of steps. We design a tournament tree in which each process tries to propagate its operations along a path from the process's leaf up to the root to be linearized. Processes can do queries to get information about the linearization stored in the root. We create a helping mechanism for when a process is propagating its operation to a node, such that new operations are ensured to be propagated one step further up the tree after at most 2 \nf{CAS} invocations. The amortized number of steps for an \nf{Enqueue} or \nf{Dequeue}, is $O(\log^2 p + \log q)$,  where $q$ is the size of the queue when the operation is linearized. \nf{CAS} instructions cost more than other instructions for the processor. Each operation in our queue does $\Theta(\log p)$ \nf{CAS} operations compared to $\Omega(p)$ \nf{CAS} steps for previous queues in the worst case. We use unbounded memory space in our queue and present a way to reduce the memory size to the total number of operations. Furthermore, we do not address garbage collection but we describe a way we think it can be handled.
+We will present a wait-free linearizable queue, which to the best of our knowledge  is the first wait-free queue whose operations run in a poly-logarithmic number of steps. 
 
-The rest of the thesis is organized as follows. Chapter 2 gives an outline of the related work done in the area and the motivation for our implementation. Previous lock-free queues and their common problem are presented in Section 2.1. In Section 2.2, we mention some restricted lock-free queues. Section 2.3 talks about poly-logarithmic constructions of shared objects. Section 2.4 ends with a lower bound on the amortized time complexity of shared queues.
-
-In Chapter 3 we introduce a poly-logarithmic step wait-free queue. In Section 3.1 we give a high-level description of our implementation. We also discuss the motivation and requirements in our design to achieve poly-log time. Section 3.2 contains the algorithm itself and there is an example of a concurrent execution of the algorithm described in Section 3.3.
-
-We prove the correctness of our queue in Chapter 4 by showing it is linearizable.
-
-Chapter 5 is devoted to a complexity analysis for our implementation. We compute the number of \nf{CAS} instructions our algorithm invokes and the worst-case and amortized running time of the queue. In the end, we prove our queue is wait-free.
-
-Finally, we give some concluding remarks in Chapter 6. It contains how we can improve our algorithm's memory usage and how to use its idea in designing other wait-free data structures.
 
 \section{Related Work}
 In this section, we look at previous lock-free queues. The amortized step complexity of all the lock-free queues includes an $\Omega(p)$ term that comes from the worst case, where all $p$ processes try to do an enqueue or a dequeue simultaneously. Morrison and Afek call this the \textit{CAS retry problem}~\cite{DBLP:conf/ppopp/MorrisonA13}. 

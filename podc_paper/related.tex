@@ -1,24 +1,13 @@
 % !TEX root =  podc-submission.tex
 
 \section{Related Work}
-In this section, we look at previous lock-free queues. The amortized
-step complexity of all the lock-free queues includes an $\Omega(p)$
-term that comes from the worst case, where all $p$ processes try to do
-an enqueue or a dequeue simultaneously. Morrison and Afek call this
-the \textit{CAS retry problem}~\cite{DBLP:conf/ppopp/MorrisonA13}.  
 
-\subsection{List-based Queues}
-Michael and Scott~\cite{DBLP:conf/podc/MichaelS96} introduced a
-lock-free queue which we refer to as the MS-queue. A version of it is
-included in the standard Java Concurrency Package. Their idea is to
-store the queue elements in a singly-linked list. A shared variable
-Head points to the first node in the linked list that has not been
-dequeued, and the Tail points to the last element in the queue. To
-insert a node into the linked list, they use atomic primitive
-operations like \texttt{LL/SC} or \texttt{CAS}. If $p$ processes try
-to enqueue simultaneously, only one can succeed, and the others have
-to retry. This makes the amortized number of steps $\Omega(p)$ per
-enqueue. Similarly, dequeue can take $\Omega(p)$ steps. 
+The MS-queue \cite{DBLP:conf/podc/MichaelS96} has stood the test of time.
+A version of it is
+included in the standard Java Concurrency Package.  %java.util.concurrent.ConcurrentLinkedQueue
+However, as mentioned above, it suffers from the CAS retry problem
+which means it is lock-free but not wait-free and has an amortized step complexity
+of $\Theta(p)$ per operation.
 
 Moir, Nussbaum, and Shalev~\cite{DBLP:conf/spaa/MoirNSS05} presented a
 more sophisticated queue by using the \it{elimination} technique. The
@@ -120,22 +109,29 @@ it~\cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/Tsi
 Our motivation is to overcome this problem and present a wait-free
 sublinear queue. 
 
-\subsection{Restricted Queues}
+\paragraph{Other Primitives and Restricted Queues}
 
-David introduced the first sublinear concurrent queue
-\cite{DBLP:conf/wdag/David04}. Even though his algorithm does $O(1)$
-steps for each operation, it is a single-enqueuer single-dequeuer
-queue and uses infinite memory. 
-The author states that to reduce memory usage to be bounded, the time
-per operation increases linearly. 
+David introduced the first sublinear-time queue
+\cite{DBLP:conf/wdag/David04}, but it works only for a single enqueuer.
+It uses fetch\&increment and swap primitive instructions and takes constant time per operation, but
+uses unbounded memory.  A modification to use bounded space
+is described, but it increases the time per operation to $\Omega(p)$.
 
 Jayanti and Petrovic introduced a wait-free poly-logarithmic
-multi-enqueuer single-dequeuer
-queue~\cite{DBLP:conf/fsttcs/JayantiP05}. We use their idea of having
+queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but it only works for a single dequeuer. 
+Our implementation uses their idea of having
 a tournament tree among processes to agree on the linearization of
-operations to design a poly-logarithmic multi-enqueuer multi-dequeuer
-queue. Unlike their work, our algorithm does not put a limit on the
-number of concurrent dequeuers.  
+operations.
+
+\here{new result I found:}
+Khanchandani and Wattenhofer \cite{KW18} gave a wait-free queue implementation
+with $O(\sqrt{p})$ complexity using non-standard synchronization primitives
+called half-increment and half-max, which can be viewed as particular kinds of
+double-word read-modify-write operations.
+They use this as evidence that their primitives can be more efficient than CAS
+since previous CAS-based queues all required $\Omega(p)$ step complexity.
+Our new implementation counters this argument.
+
 
 \subsection{Universal Constructions and Other Poly-log Time Data Structures}
 A \textit{universal construction} is an algorithm that can implement a

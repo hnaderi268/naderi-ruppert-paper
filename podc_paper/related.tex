@@ -2,39 +2,32 @@
 
 \section{Related Work}
 
-The MS-queue \cite{DBLP:conf/podc/MichaelS96} has stood the test of time.
+Michael and Scott \cite{DBLP:conf/podc/MichaelS96} describe the early history of concurrent queue algorithms
+in the paper that described their MS-queue \cite{DBLP:conf/podc/MichaelS96}, which
+is a lock-free queue that has stood the test of time.
 A version of it is
 included in the standard Java Concurrency Package.  %java.util.concurrent.ConcurrentLinkedQueue
 However, as mentioned above, it suffers from the CAS retry problem
 which means it is lock-free but not wait-free and has an amortized step complexity
 of $\Theta(p)$ per operation.
 
-Moir, Nussbaum, and Shalev~\cite{DBLP:conf/spaa/MoirNSS05} presented a
-more sophisticated queue by using the \it{elimination} technique. The
-elimination mechanism has the dual purpose of allowing operations to
-complete in parallel and reducing contention for the queue. An
-Elimination Queue consists of an MS-queue augmented with an
-elimination array. Elimination works by allowing opposing pairs of
-concurrent operations such as an enqueue and a dequeue to exchange
-values when the queue is empty or when concurrent operations can be
-linearized to empty the queue. Their algorithm makes it possible for
-long-running operations to eliminate an opposing operation. The
-empirical evaluation showed the throughput of their work is better
-than the MS-queue, but the worst case is still the same; in case there
-are $p$ concurrent enqueues, their algorithm is not better than
-MS-queue.  
+A number of papers have described ways to cope with the high contention at the front
+and back of the MS-queue.
+Moir, Nussbaum, and Shalev~\cite{DBLP:conf/spaa/MoirNSS05} 
+added an elimination array that allows an enqueue to pass its value directly
+to a concurrent dequeue when the queue is empty or when concurrent operations 
+can be linearized to empty the queue.
+However, when there are $p$ concurrent enqueues (and no dequeues), the CAS retry problem
+is still present.
+The baskets queue of
+Hoffman, Shalev, and Shavit~\cite{DBLP:conf/opodis/HoffmanSS07} 
+is another approach to avoid contention:  concurrent enqueues are grouped into baskets
+and operations within a basket can be ordered arbitrarily.
+However, if there are $p$ concurrent enqueues in the same basket
+the CAS retry problem occurs when they must be ordered into a list using CAS instructions.
+Both modifications thus still have $\Omega(p)$ amortized step complexity.
 
-Hoffman, Shalev, and Shavit~\cite{DBLP:conf/opodis/HoffmanSS07} tried
-to make the MS-queue more parallel by introducing the Baskets
-Queue. Their idea is to allow more parallelism by treating the
-simultaneous enqueue operations as a basket. Each basket has a time
-interval in which all its nodes' enqueue operations overlap. Since the
-operations in a basket are concurrent, we can order them in any
-way. Enqueues in a basket try to find their order in the basket one by
-one using \texttt{CAS} operations. However, like the previous
-algorithms, if there are $p$ concurrent enqueue operations in a
-basket, the amortized step complexity remains $\Omega(p)$ per
-operation. 
+-----
 
 Ladan-Mozes and Shavit~\cite{DBLP:journals/dc/Ladan-MozesS08}
 presented an optimistic approach to implement a queue. MS-queue uses
@@ -109,6 +102,11 @@ it~\cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/Tsi
 Our motivation is to overcome this problem and present a wait-free
 sublinear queue. 
 
+\here{Check:
+Turek Shasha Prakash locking without blocking (PODS92).
+Prakash Lee Johnson non blocking algorithms for concurrent data structures Tech rept 91-002 U of Florida 1991.
+}
+
 \paragraph{Other Primitives and Restricted Queues}
 
 David introduced the first sublinear-time queue
@@ -166,15 +164,3 @@ interesting because of the similarities between Fetch\&Inc objects and
 queues. Also, it is one of the few wait-free data structures achieving
 poly-logarithmic complexity. 
 
-\subsection{Attiya--Fouren Lower Bound}
-Because of the \nf{CAS} retry problem in previous list-based queues
-one might guess the $\Omega(p)$ term is inherent in the time
-complexity of concurrent queues. Attiya and Fouren gave a lower bound
-on amortized complexity of lock-free queues with regard to $c$, the
-number of concurrent processes. Their result says if $c$ is
-$O(\log\log p)$, any implementation of queues using reads, writes and
-conditional operations like \nf{CAS} has $\Omega(c)$ amortized
-complexity \cite{DBLP:conf/opodis/AttiyaF17}. The surprising point is
-that since their result is about when contention is low, their lower
-bound does not contradict our algorithm's complexity and we manage to
-reach poly-log time complexity. 

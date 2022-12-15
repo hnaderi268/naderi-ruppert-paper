@@ -2,8 +2,11 @@
 
 \section{Introduction}
 
-A great deal of research in the past 25 years has been devoted to the design of linearizable, lock-free queues,
-starting with the classic MS-queue of Michael and Scott \cite{DBLP:conf/podc/MichaelS96}.
+A great deal of research in the past 25 years has been devoted to the design of linearizable, lock-free queues.
+As well as being a fundamental data structure, queues are needed in
+significant concurrent applications, including OS kernels \cite{MP91}, memory reclamation \cite{?},
+and sharing resources or tasks.
+The lock-free MS-queue of Michael and Scott \cite{DBLP:conf/podc/MichaelS96} is a classic shared queue implementation.
 Their design uses a singly-linked list with pointers to the front and back nodes.
 To dequeue or enqueue an element, the front or back pointer is updated by a 
 compare-and-swap (CAS) instruction.

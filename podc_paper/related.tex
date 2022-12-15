@@ -2,8 +2,8 @@
 
 \section{Related Work}
 
-Michael and Scott \cite{DBLP:conf/podc/MichaelS96} describe the early history of concurrent queue algorithms
-in the paper that described their MS-queue \cite{DBLP:conf/podc/MichaelS96}, which
+Michael and Scott \cite{MS98} describe the early history of concurrent queue algorithms
+in the paper that described their MS-queue, which
 is a lock-free queue that has stood the test of time.
 A version of it is
 included in the standard Java Concurrency Package.  %java.util.concurrent.ConcurrentLinkedQueue
@@ -11,21 +11,29 @@ However, as mentioned above, it suffers from the CAS retry problem
 which means it is lock-free but not wait-free and has an amortized step complexity
 of $\Theta(p)$ per operation.
 
-A number of papers have described ways to cope with the high contention at the front
+A number of papers have described ways to reduce contention at the front
 and back of the MS-queue.
-Moir, Nussbaum, and Shalev~\cite{DBLP:conf/spaa/MoirNSS05} 
-added an elimination array that allows an enqueue to pass its value directly
+Moir et al.~\cite{DBLP:conf/spaa/MoirNSS05} 
+added an elimination array that allows an enqueue to pass its enqueued value directly
 to a concurrent dequeue when the queue is empty or when concurrent operations 
 can be linearized to empty the queue.
 However, when there are $p$ concurrent enqueues (and no dequeues), the CAS retry problem
 is still present.
 The baskets queue of
 Hoffman, Shalev, and Shavit~\cite{DBLP:conf/opodis/HoffmanSS07} 
-is another approach to avoid contention:  concurrent enqueues are grouped into baskets
+is another approach to avoid contention:  concurrent enqueues are grouped into baskets.
+If an enqueue fails its CAS, it is put in the basket with the operation that succeeded,
 and operations within a basket can be ordered arbitrarily.
 However, if there are $p$ concurrent enqueues in the same basket
-the CAS retry problem occurs when they must be ordered into a list using CAS instructions.
+the CAS retry problem occurs when they order themselves into a list using CAS instructions.
 Both modifications thus still have $\Omega(p)$ amortized step complexity.
+
+
+- MKLL18 batches several of a process's operations together and apply them as a group to the queue but this assumes processes can wait to do a batch all at once.  In worst case batches of size 1 reduces to MS98
+- RC17 sketched how to add a helping mechanism to ensure wait-freedom (increases amortized time to Omega($P^2$) for enqueue)
+- Kogan Petrank PPoPP 2011 add helping to MS98 queue to make it wait-free; only makes complexity worse
+
+LS08 modified MS98; switched to doubly-linked list to reduce number of successful CASes needed for an op from 2 to 1 in optimistic approach, but could get inconsistent pointers that can be fixed when needed.  Fixing the list, though rare in practice, is expensive, so Omega(nP) amortized time per op.
 
 -----
 
@@ -71,7 +79,7 @@ technique~\cite{10.1145/114005.102808} to achieve wait-freedom. Their
 amortized step complexity is $\Omega(p)$ because of the helping
 mechanism. 
 
-Milman et al.~\cite{DBLP:conf/spaa/MilmanKLLP18} designed a lock-free
+Milman-Sela et al.~\cite{MKLLP22} designed a lock-free
 queue supporting futures. In their queue, operations  return future
 objects instead of responses. Later when the response is needed, it
 can be evaluated from the future object. They also define a weaker

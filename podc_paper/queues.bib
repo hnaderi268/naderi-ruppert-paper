@@ -212,7 +212,7 @@
 
 
 @inproceedings{10.1145/3490148.3538572,
-	title        = {{WCQ}: A Fast Wait-Free Queue with Bounded Memory Usage},
+	title        = {{wCQ}: A Fast Wait-Free Queue with Bounded Memory Usage},
 	author       = {Nikolaev, Ruslan and Ravindran, Binoy},
 	year         = 2022,
 	booktitle    = {
@@ -737,8 +737,7 @@ abstract = {Most multiprocessors are multiprogrammed to achieve acceptable respo
 	title        = {The future(s) of shared data structures},
 	author       = {Alex Kogan and Maurice Herlihy},
 	year         = 2014,
-	booktitle    = {{ACM} Symposium on Principles of Distributed Computing},
-	publisher    = {{ACM}},
+	booktitle    = {Proc.\ {ACM} Symposium on Principles of Distributed Computing},
 	pages        = {30--39},
 	doi          = {10.1145/2611462.2611496},
 	url          = {https://doi.org/10.1145/2611462.2611496},
@@ -871,7 +870,7 @@ title = {On the Importance of Synchronization Primitives with Low Consensus Numb
 
 @techreport{MP91,
 author = {Henry Massalin and Carlton Pu},
-title = {A Lock-Free Multiprocessor OS Kernel},
+title = {A Lock-Free Multiprocessor {OS} Kernel},
 institution = {Department of Computer Science, Columbia University},
 number = {CUCS-005-91},
 year = 1991}
@@ -884,3 +883,48 @@ publisher = {SIAM},
 address = {Philadelphia, USA},
 comment = {see p.53 for split on RBTs}
 }
+
+@inproceedings{10.1145/3018743.3019022,
+author = {Ramalhete, Pedro and Correia, Andreia},
+title = {POSTER: A Wait-Free Queue with Wait-Free Memory Reclamation},
+year = {2017},
+isbn = {9781450344937},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3018743.3019022},
+doi = {10.1145/3018743.3019022},
+abstract = {Queues are a widely deployed data structure. They are used extensively in many multi threaded applications, or as a communication mechanism between threads or processes. We propose a new linearizable multi-producer-multi-consumer queue we named Turn queue, with wait-free progress bounded by the number of threads, and with wait-free bounded memory reclamation. Its main characteristics are: a simple algorithm that does no memory allocation apart from creating the node that is placed in the queue, a new wait-free consensus algorithm using only the atomic instruction compare-and-swap (CAS), and is easy to plugin with other algorithms for either enqueue or dequeue methods.},
+booktitle = {Proceedings of the 22nd ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming},
+pages = {453?454},
+numpages = {2},
+keywords = {non-blocking queue, low latency, wait-free},
+location = {Austin, Texas, USA},
+series = {PPoPP '17}
+}
+
+  
+
+@article{RC17,
+author = {Ramalhete, Pedro and Correia, Andreia},
+title = {Poster: A Wait-Free Queue with Wait-Free Memory Reclamation},
+year = {2017},
+volume = {52},
+number = {8},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/3155284.3019022},
+doi = {10.1145/3155284.3019022},
+abstract = {Queues are a widely deployed data structure. They are used extensively in many multi threaded applications, or as a communication mechanism between threads or processes. We propose a new linearizable multi-producer-multi-consumer queue we named Turn queue, with wait-free progress bounded by the number of threads, and with wait-free bounded memory reclamation. Its main characteristics are: a simple algorithm that does no memory allocation apart from creating the node that is placed in the queue, a new wait-free consensus algorithm using only the atomic instruction compare-and-swap (CAS), and is easy to plugin with other algorithms for either enqueue or dequeue methods.},
+journal = {SIGPLAN Not.},
+month = jan,
+pages = {453--454},
+keywords = {low latency, wait-free, non-blocking queue}
+}
+
+@misc{DPDK,
+author = {{DPDK Project}},
+title = {Data Plane Development Kit},
+note = {\url{www.dpdk.org}},
+}
+
+
+

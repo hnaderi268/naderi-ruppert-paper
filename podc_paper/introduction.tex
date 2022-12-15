@@ -5,6 +5,7 @@
 A great deal of research in the past 25 years has been devoted to the design of linearizable, lock-free queues.
 As well as being a fundamental data structure, queues are used in
 significant concurrent applications, including OS kernels \cite{MP91}, memory reclamation \cite{?},
+packet processing \cite{DPDK},
 and sharing resources or tasks.
 The lock-free MS-queue of Michael and Scott \cite{MS98} is a classic shared queue implementation.
 Their design uses a singly-linked list with pointers to the front and back nodes.
@@ -15,7 +16,7 @@ In the worst case, this means that each successful CAS may cause all other proce
 fail and retry, leading to an amortized step complexity of $\Omega(p)$ per operation.
 (To measure amortized step complexity of a lock-free implementation, we consider all possible finite executions
 and divide the number of steps in the execution by the number of operations initated in the execution.)
-Numerous papers have suggested modifications to the MS-queue \cite{list-some}, but 
+Numerous papers have suggested modifications to the MS-queue \cite{DBLP:conf/opodis/HoffmanSS07,DBLP:conf/podc/KoganH14,DBLP:conf/ppopp/KoganP11,DBLP:journals/dc/Ladan-MozesS08,MKLLP22,DBLP:conf/spaa/MoirNSS05,RC17}, but 
 all still have $\Omega(p)$ amortized step complexity as a result of
 contention on the front and back of the queue.
 Morrison and Afek \cite{DBLP:conf/ppopp/MorrisonA13} dubbed this the CAS retry problem.

@@ -1,0 +1,184 @@
+% !TEX root =  podc-submission.tex
+
+\section{Related Work}
+In this section, we look at previous lock-free queues. The amortized
+step complexity of all the lock-free queues includes an $\Omega(p)$
+term that comes from the worst case, where all $p$ processes try to do
+an enqueue or a dequeue simultaneously. Morrison and Afek call this
+the \textit{CAS retry problem}~\cite{DBLP:conf/ppopp/MorrisonA13}.  
+
+\subsection{List-based Queues}
+Michael and Scott~\cite{DBLP:conf/podc/MichaelS96} introduced a
+lock-free queue which we refer to as the MS-queue. A version of it is
+included in the standard Java Concurrency Package. Their idea is to
+store the queue elements in a singly-linked list. A shared variable
+Head points to the first node in the linked list that has not been
+dequeued, and the Tail points to the last element in the queue. To
+insert a node into the linked list, they use atomic primitive
+operations like \texttt{LL/SC} or \texttt{CAS}. If $p$ processes try
+to enqueue simultaneously, only one can succeed, and the others have
+to retry. This makes the amortized number of steps $\Omega(p)$ per
+enqueue. Similarly, dequeue can take $\Omega(p)$ steps. 
+
+Moir, Nussbaum, and Shalev~\cite{DBLP:conf/spaa/MoirNSS05} presented a
+more sophisticated queue by using the \it{elimination} technique. The
+elimination mechanism has the dual purpose of allowing operations to
+complete in parallel and reducing contention for the queue. An
+Elimination Queue consists of an MS-queue augmented with an
+elimination array. Elimination works by allowing opposing pairs of
+concurrent operations such as an enqueue and a dequeue to exchange
+values when the queue is empty or when concurrent operations can be
+linearized to empty the queue. Their algorithm makes it possible for
+long-running operations to eliminate an opposing operation. The
+empirical evaluation showed the throughput of their work is better
+than the MS-queue, but the worst case is still the same; in case there
+are $p$ concurrent enqueues, their algorithm is not better than
+MS-queue.  
+
+Hoffman, Shalev, and Shavit~\cite{DBLP:conf/opodis/HoffmanSS07} tried
+to make the MS-queue more parallel by introducing the Baskets
+Queue. Their idea is to allow more parallelism by treating the
+simultaneous enqueue operations as a basket. Each basket has a time
+interval in which all its nodes' enqueue operations overlap. Since the
+operations in a basket are concurrent, we can order them in any
+way. Enqueues in a basket try to find their order in the basket one by
+one using \texttt{CAS} operations. However, like the previous
+algorithms, if there are $p$ concurrent enqueue operations in a
+basket, the amortized step complexity remains $\Omega(p)$ per
+operation. 
+
+Ladan-Mozes and Shavit~\cite{DBLP:journals/dc/Ladan-MozesS08}
+presented an optimistic approach to implement a queue. MS-queue uses
+two \nf{CAS}es to do an enqueue: one to change the tail to the new
+node and another one to change the next pointer of the previous node
+to the new node. They use a doubly-linked list to do fewer
+\texttt{CAS} operations in an \nf{Enqueue} than MS-queue. As in
+previous algorithms, the worst case happens in the case where the
+contention is high: when $p$ concurrent enqueues happen, their nodes
+have to be appended to the linked list one by one. The amortized
+complexity is still $\Omega(p)$ \texttt{CAS}es. 
+
+Hendler et al.~\cite{DBLP:conf/spaa/HendlerIST10} proposed a new
+paradigm called flat combining. The key idea behind flat combining is
+to allow a combiner who has acquired the global lock on the data
+structure to learn about the requests of threads on the queue, combine
+them and apply the combined results on the data structure. Their queue
+is linearizable but not lock-free and they present experiments that
+show their algorithm performs well in some situations. 
+
+Gidenstam, Sundell, and Tsigas~\cite{DBLP:conf/opodis/GidenstamST10}
+introduced a new algorithm using a linked list of arrays. The queue is
+stored in a shared array where head and tail pointers point to the
+current elements in the queue. When the array is full, an empty array
+is linked to the array and tail pointers are updated. A global head
+points to the array containing the first element in the queue, and
+each process has a local head index that points to the first element
+in that array. Global tail and local tail pointers are similar. A
+process updates the position of the pointers after it does an
+operation. One process might go to sleep before setting the pointers,
+so the pointers might be behind their real places. They mention how to
+scan the arrays to update pointers while doing an operation. A process
+writes an element in the location head by a \nf{CAS} instruction, so
+if $p$ processes try to enqueue simultaneously, the amortized step
+(and \nf{CAS}) complexity remains $\Omega(p)$. Their design is
+lock-free but not wait-free. 
+
+Kogan and Petrank~\cite{DBLP:conf/ppopp/KoganP11} introduced wait-free
+queues based on the MS-queue and use Herlihy's helping
+technique~\cite{10.1145/114005.102808} to achieve wait-freedom. Their
+amortized step complexity is $\Omega(p)$ because of the helping
+mechanism. 
+
+Milman et al.~\cite{DBLP:conf/spaa/MilmanKLLP18} designed a lock-free
+queue supporting futures. In their queue, operations  return future
+objects instead of responses. Later when the response is needed, it
+can be evaluated from the future object. They also define a weaker
+linearizability condition such that each operation can be linearized
+between its invocation and when its future is evaluated. Their idea of
+batching allows a sequence of operations to be submitted as a batch
+for later execution on the MS-queue. They use some properties of the
+queue size before and after a batch, similar to a part of our
+work. Their queue is not wait-free: in fact, if the batch sizes are 1,
+then the queue is like MS-queue. 
+
+Nikolaev and Ravindran~\cite{10.1145/3490148.3538572} present a
+wait-free queue that uses the fast-path slow-path methodology
+introduced by Kogan and Petrank~\cite{10.1145/2370036.2145835}. Their
+work is based on a circular queue using bounded memory. When a process
+wishes to do an enqueue or a dequeue, it starts two paths. The fast
+path  ensures good performance while the slow path ensures
+termination. They show that these two paths do not affect each other
+and the queue remains consistent. If a process makes no progress,
+other processes help its slow path to finish. The helping phase
+suffers from the CAS Retry Problem because processes compete in a
+\nf{CAS} loop to decide which succeeds to help. Because of this, the
+amortized complexity cannot be better than $\Omega(p)$. 
+
+The CAS Retry Problem is not limited to list-based queues; array-based
+queues also share
+it~\cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01}.
+Our motivation is to overcome this problem and present a wait-free
+sublinear queue. 
+
+\subsection{Restricted Queues}
+
+David introduced the first sublinear concurrent queue
+\cite{DBLP:conf/wdag/David04}. Even though his algorithm does $O(1)$
+steps for each operation, it is a single-enqueuer single-dequeuer
+queue and uses infinite memory. 
+The author states that to reduce memory usage to be bounded, the time
+per operation increases linearly. 
+
+Jayanti and Petrovic introduced a wait-free poly-logarithmic
+multi-enqueuer single-dequeuer
+queue~\cite{DBLP:conf/fsttcs/JayantiP05}. We use their idea of having
+a tournament tree among processes to agree on the linearization of
+operations to design a poly-logarithmic multi-enqueuer multi-dequeuer
+queue. Unlike their work, our algorithm does not put a limit on the
+number of concurrent dequeuers.  
+
+\subsection{Universal Constructions and Other Poly-log Time Data Structures}
+A \textit{universal construction} is an algorithm that can implement a
+shared version of any given sequential object. The first universal
+construction was introduced by
+Herlihy~\cite{10.1145/114005.102808}. We can implement a concurrent
+queue using a universal construction. Jayanti proved an $\Omega(\log
+p)$ lower bound on the worst-case shared-access time complexity of
+$p$-process universal
+constructions~\cite{DBLP:conf/podc/Jayanti98a}. He also mentions that
+the universal construction by Afek, Dauber, and
+Touitou~\cite{DBLP:conf/stoc/AfekDT95} can be modified to $O(\log p)$
+worst-case step complexity, using atomic access to $\Omega(p \log
+p)$-bit words. Chandra, Jayanti and Tan introduced a semi-universal
+construction that achieves $\textsc{O}(\log^2 p)$ shared
+accesses~\cite{DBLP:conf/podc/ChandraJT98}. However, their algorithm
+cannot be used to create a queue. We mention a non-practical universal
+construction with a poly-log number of \nf{CAS} instructions in the
+last paragraph of page 13. 
+
+Ellen and Woelfel introduced an implementation of a Fetch\&Inc object
+with step complexity of $O(\log p)$ using $O(\log n$)-bit
+\texttt{LL/SC} objects, where $n$ is the number of
+operations~\cite{10.1007/978-3-642-41527-2_20}. Their idea to achieve
+logarithmic complexity is to use a tree storing the Fetch\&Inc
+operations invoked by processes. When a process wants to do a
+Fetch\&Inc it adds its Fetch\&Inc to the tree and returns the number
+of elements in the tree. There are some similarities between designing
+a queue and a Fetch\&Inc object. A Fetch\&Inc object can be
+constructed from a queue. The algorithm by Ellen and Woelfel is
+interesting because of the similarities between Fetch\&Inc objects and
+queues. Also, it is one of the few wait-free data structures achieving
+poly-logarithmic complexity. 
+
+\subsection{Attiya--Fouren Lower Bound}
+Because of the \nf{CAS} retry problem in previous list-based queues
+one might guess the $\Omega(p)$ term is inherent in the time
+complexity of concurrent queues. Attiya and Fouren gave a lower bound
+on amortized complexity of lock-free queues with regard to $c$, the
+number of concurrent processes. Their result says if $c$ is
+$O(\log\log p)$, any implementation of queues using reads, writes and
+conditional operations like \nf{CAS} has $\Omega(c)$ amortized
+complexity \cite{DBLP:conf/opodis/AttiyaF17}. The surprising point is
+that since their result is about when contention is low, their lower
+bound does not contradict our algorithm's complexity and we manage to
+reach poly-log time complexity. 

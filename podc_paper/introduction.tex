@@ -1,0 +1,59 @@
+% !TEX root =  podc-submission.tex
+
+\section{Introduction}
+
+A great deal of research in the past 25 years has been devoted to the design of linearizable, lock-free queues,
+starting with the classic MS-queue of Michael and Scott \cite{DBLP:conf/podc/MichaelS96}.
+Their design uses a singly-linked list with pointers to the front and back nodes.
+To dequeue or enqueue an element, the front or back pointer is updated by a 
+compare-and-swap (CAS) instruction.
+If this CAS fails, the operation must retry.
+In the worst case, this means that each successful CAS may cause all other processes to
+fail and retry, leading to an amortized step complexity of $\Omega(p)$ per operation.
+Numerous papers have suggested modifications to the MS-queue \cite{list some}, but 
+all still have $\Omega(p)$ worst-case step complexity as a result of
+contention on the front and back of the queue.
+Morrison and Afek \cite{DBLP:conf/ppopp/MorrisonA13} dubbed this the CAS retry problem.
+The same problem occurs in array-based implementations of queues \cite{list-some}.
+
+This problem occurs more broadly in other data structures that keep track of a set of elements, as observed by Ruppert \cite{Rup16}.
+For example, lock-free lists \cite{FR04,Sha15}, stacks \cite{Tre86} and search trees \cite{EFHR14} 
+have a term in their step complexity
+that depends linearly on the contention $c$, i.e., 
+the number of processes that access the data structure concurrently (which can be as high
+as $p$ in the worst case).
+Attiya and Fouren \cite{DBLP:conf/opodis/AttiyaF17} proved 
+that amortized $\Omega(c)$ steps per operation are indeed necessary
+for CAS-based implementations of lock-free bag data structures, which allow processes
+to insert elements and remove an arbitrary element (chosen non-deterministically).
+Since a queue trivially implements a bag, this lower bound also holds for queues.
+However, the lower bound leaves a loophole:  it holds only if $c$ is $O(\log\log p)$.
+Thus, the lower bound could be stated more precisely as an amortized bound of $\Omega(\min(c,\log\log p))$ steps per operation.
+
+In this paper, we exploit this loophole to show that it is in fact possible to implement a linearizable, lock-free queue
+whose step complexity does not depend linearly on $p$.
+Our implementation is the first to have step complexity that is polylogarithmic in $p$ and in $q$, the number of elements
+stored in the queue.
+For simplicity of presentation, we first give an unbounded-space construction that uses
+$O(\log^2 p + \log q)$ steps per operation.
+Then, we show how to modify the implementation to use 
+\here{$O(?)$ space} and \here{$O(?)$ steps per operation}.
+Both implementations use single-word CAS instructions and reasonably-sized words.
+Moreover, they use $O(\log p)$ CAS instructions per operation in the worst case, whereas previous
+lock-free queues use an unbounded number of CAS instructions in the worst case
+and $\Omega(p)$ CAS instructions in an amortized sense.
+For the space-bounded implementation, we unlink unneeded memory from our data structure, but 
+leave the problem of reclaiming that memory up to a garbage collector (such as the one Java provides).
+
+Our queue uses a tournament tree where each process has its own leaf.
+Each process propagates its operations along the path from its leaf up to the root.
+The root of the tree provides an ordering for all the operations,
+and this ordering is used to linearize the operations and compute their responses.
+\here{Either here or in related work section, talk about previous usage of tournament tree and how ours differs from it}
+To ensure wait-freedom, we use a helping mechanism:  a process propagating its operation 
+to a node $n$ helps propagate all operations from both of $n$'s children.
+If we explicitly stored all operations in the nodes, this helping would become very costly.
+Instead, we use an implicit representation of collections
+of operations that allows for quickly merging two collections from the two children of a node,
+and for quickly accessing any particular operation in the collection.
+\here{Maybe say a little more about techniques used in the implementation, if space permits}

@@ -70,7 +70,7 @@ the capacity constraint by using a linked list of arrays.
 These solutions also suffer from the CAS retry problem, with $\Omega(p)$ steps per operation.
 
 Morrison and Afek \cite{DBLP:conf/ppopp/MorrisonA13} also used a linked list of (circular) arrays.
-To avoid the CAS retry problem, concurrent operations try to claim spots in an array using fetch-and-increment instructions.
+To avoid the CAS retry problem, concurrent operations try to claim spots in an array using fetch\&increment instructions.
 If livelock between enqueues and a racing dequeue prevent enqueues from claiming a spot,
 the enqueues fall back on using a CAS to add a new array to the linked list, 
 and the CAS retry problem reappears.
@@ -119,46 +119,16 @@ due either to the CAS retry problem or helping mechanisms.
 %is linearizable but not lock-free and they present experiments that
 %show their algorithm performs well in some situations. 
 
-
-
-
-
-\paragraph{Universal Constructions and Other Poly-log Time Data Structures}
-A \textit{universal construction} is an algorithm that can implement a
-shared version of any given sequential object. The first universal
-construction was introduced by
-Herlihy~\cite{10.1145/114005.102808}. We can implement a concurrent
-queue using a universal construction. Jayanti proved an $\Omega(\log
-p)$ lower bound on the worst-case shared-access time complexity of
-$p$-process universal
-constructions~\cite{DBLP:conf/podc/Jayanti98a}. He also mentions that
-the universal construction by Afek, Dauber, and
-Touitou~\cite{DBLP:conf/stoc/AfekDT95} can be modified to $O(\log p)$
-worst-case step complexity, using atomic access to $\Omega(p \log
-p)$-bit words. Chandra, Jayanti and Tan introduced a semi-universal
-construction that achieves $\textsc{O}(\log^2 p)$ shared
-accesses~\cite{DBLP:conf/podc/ChandraJT98}. However, their algorithm
-cannot be used to create a queue. We mention a non-practical universal
-construction with a poly-log number of \nf{CAS} instructions in the
-last paragraph of page 13. 
-
-Need to discuss Fatourou and Kallimanis TCS 55(3)
-Fatourou and Kallimanis \cite{FK14} gave a universal construction based on fetch-and-add and CAS
-and used it to implement a queue....
-
-Ellen and Woelfel introduced an implementation of a Fetch\&Inc object
-with step complexity of $O(\log p)$ using $O(\log n$)-bit
-\texttt{LL/SC} objects, where $n$ is the number of
-operations~\cite{10.1007/978-3-642-41527-2_20}. Their idea to achieve
-logarithmic complexity is to use a tree storing the Fetch\&Inc
-operations invoked by processes. When a process wants to do a
-Fetch\&Inc it adds its Fetch\&Inc to the tree and returns the number
-of elements in the tree. There are some similarities between designing
-a queue and a Fetch\&Inc object. A Fetch\&Inc object can be
-constructed from a queue. The algorithm by Ellen and Woelfel is
-interesting because of the similarities between Fetch\&Inc objects and
-queues. Also, it is one of the few wait-free data structures achieving
-poly-logarithmic complexity. 
+\paragraph{Universal Constructions}
+One can also build a queue using a universal construction \cite{10.1145/114005.102808}.
+Jayanti \cite{DBLP:conf/podc/Jayanti98a} observed that
+the universal construction of Afek, Dauber, and
+Touitou~\cite{DBLP:conf/stoc/AfekDT95} can be modified to use $O(\log p)$ steps per operation, 
+using atomic access to $\Omega(p \log p)$-bit words. 
+(Thus, in terms of operations on reasonably-sized words, their construction would still take $\Omega(p)$ steps per operation.)
+Fatourou and Kallimanis \cite{FK14} used their universal construction based on fetch\&add and LL/SC instructions
+to implement a queue, but its step complexity is also $\Omega(P)$.
+\here{Double check this.}
 
 \paragraph{Restricted Queues}
 David introduced the first sublinear-time queue
@@ -182,5 +152,20 @@ double-word read-modify-write operations.
 They use this as evidence that their primitives can be more efficient than CAS
 since previous CAS-based queues all required $\Omega(p)$ step complexity.
 Our new implementation counters this argument.
+
+\paragraph{Fetch\&Increment Objects}
+Ellen and Woelfel introduced an implementation of a Fetch\&Increment object
+with step complexity of $O(\log p)$ using $O(\log n$)-bit
+\texttt{LL/SC} objects, where $n$ is the number of
+operations~\cite{10.1007/978-3-642-41527-2_20}. Their idea to achieve
+logarithmic complexity is to use a tree storing the Fetch\&Increment
+operations invoked by processes. When a process wants to do a
+Fetch\&Increment it adds its Fetch\&Increment to the tree and returns the number
+of elements in the tree. There are some similarities between designing
+a queue and a Fetch\&Increment object. A Fetch\&Increment object can be
+constructed from a queue. The algorithm by Ellen and Woelfel is
+interesting because of the similarities between Fetch\&Increment objects and
+queues. Also, it is one of the few wait-free data structures achieving
+poly-logarithmic complexity. 
 
 

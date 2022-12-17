@@ -21,7 +21,7 @@ all still have $\Omega(p)$ amortized step complexity as a result of
 contention on the front and back of the queue.
 Morrison and Afek \cite{DBLP:conf/ppopp/MorrisonA13} called this the CAS retry problem.
 The same problem occurs in array-based implementations of queues \cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01,DBLP:conf/opodis/GidenstamST10}.
-Solutions that tried to sidestep this problem using fetch-and-increment \cite{DBLP:conf/ppopp/MorrisonA13,DBLP:conf/ppopp/YangM16,Nik19,10.1145/3490148.3538572}
+Solutions that tried to sidestep this problem using fetch\&increment \cite{DBLP:conf/ppopp/MorrisonA13,DBLP:conf/ppopp/YangM16,Nik19,10.1145/3490148.3538572}
 rely on slower mechanisms to handle worst-case executions and still have $\Omega(p)$ step complexity.
 
 Many concurrent data structures that keep track of a set of elements also have an $\Omega(p)$ term in their step complexity, as observed by Ruppert \cite{Rup16}.
@@ -47,11 +47,12 @@ Then, we show how to modify the implementation to use
 \here{$O(?)$ space} and \here{$O(?)$ steps per operation}.
 Both implementations use single-word CAS instructions and reasonably-sized words.
 Moreover, they use $O(\log p)$ CAS instructions per operation in the worst case, whereas previous
-lock-free queues use an unbounded number of CAS instructions in the worst case
-and $\Omega(p)$ CAS instructions in an amortized sense.
+lock-free queues use 
+%an unbounded number of CAS instructions in the worst case and 
+$\Omega(p)$ CAS instructions in an amortized sense.
 For the space-bounded implementation, we unlink unneeded memory from our data structure.
 We do not address the orthogonal problem of reclaiming unlinked memory; we assume a safe
-garbage collector, such as the highly optimized one Java provides.
+garbage collector, such as the highly optimized one that Java provides.
 
 Our queue uses a tournament tree where each process has its own leaf.
 Each process propagates its operations along the path from its leaf up to the root.

@@ -21,7 +21,7 @@ is still present.
 The baskets queue of
 Hoffman, Shalev, and Shavit~\cite{DBLP:conf/opodis/HoffmanSS07} 
 attempts to reduce contention by grouping concurrent enqueues into baskets.
-An enqueue that fails its CAS is put in the basket with the eqnueue that succeeded.
+An enqueue that fails its CAS is put in the basket with the enqueue that succeeded.
 Enqueues within a basket determine their order among themselves without having to access the back of the queue.
 However, if $p$ concurrent enqueues are in the same basket
 the CAS retry problem occurs when they order themselves using CAS instructions.
@@ -61,8 +61,54 @@ a wait-free queue.
 Ramalhete and Correia \cite{RC17} added a different helping mechanism.
 In both cases, the helping mechanisms only add to the step complexity of the MS-queue.
 
+\paragraph{Array-Based Queues}
+Arrays can be used to implement queues with bounded capacity, with indices
+for the front and back elements updated using CAS instructions 
+\cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01}.
+Gidenstam, Sundell, and Tsigas~\cite{DBLP:conf/opodis/GidenstamST10} avoid
+the capacity constraint by using a linked list of arrays.
+These solutions also suffer from the CAS retry problem, with $\Omega(p)$ steps per operation.
 
------
+Morrison and Afek \cite{DBLP:conf/ppopp/MorrisonA13} also used a linked list of (circular) arrays.
+To avoid the CAS retry problem, concurrent operations try to claim spots in an array using fetch-and-increment instructions.
+If livelock between enqueues and a racing dequeue prevent enqueues from claiming a spot,
+the enqueues fall back on using a CAS to add a new array to the linked list, 
+and the CAS retry problem reappears.
+% I looked at the CRQ algorithm to implement each of the circular arrays.
+% Here is an execution that causes livelock for 3 processes
+% enqueue(A) reads t=0 and increments tail to 1
+% enqueue(B) reads t=1 and increments tail to 2
+% (*) dequeue reads h=0 and increments head to 1
+% dequeue's CAS succeds changing array[0] to (1,R,bottom)
+% dequeue reads t=2 at line 53
+% enqueue(A) fails CAS on array[0]
+% dequeue reads h=1 and increments head to 2
+% dequeue's CAS succeeds changing array[1] to (1,R+1,bottom)
+% enqueue(B) fails CAS on array[1]
+% enqueue(A) reads t=2 and increments tail to 3
+% enqueue(B) reads t=3 and increments tail to 4
+% dequeue reads t=4 at line 53
+% go back to (*) and repeat this sequence
+Similarly,
+other queues \cite{Nik19,10.1145/3490148.3538572,DBLP:conf/ppopp/YangM16} used the fast-path slow-path methodology of Kogan and Petrank~\cite{10.1145/2370036.2145835}.
+The fast path has good performance and the slow path guarantees
+termination.
+In worst-case executions, where processes must execute the slow path,
+these implementations also take $\Omega(p)$ steps per operation, 
+due either to the CAS retry problem or helping mechanisms.
+
+%Nikolaev and Ravindran~\cite{10.1145/3490148.3538572} present a
+%wait-free queue that uses the fast-path slow-path methodology. Their
+%work is based on a circular queue using bounded memory. When a process
+%wishes to do an enqueue or a dequeue, it starts two paths. 
+% They show that these two paths do not affect each other
+%and the queue remains consistent. If a process makes no progress,
+%other processes help its slow path to finish. The helping phase
+%suffers from the CAS Retry Problem because processes compete in a
+%\nf{CAS} loop to decide which succeeds to help. Because of this, the
+%amortized complexity cannot be better than $\Omega(p)$. 
+
+
 
 % OMIT, since it is not lock-free:
 %Hendler et al.~\cite{DBLP:conf/spaa/HendlerIST10} proposed a new
@@ -73,74 +119,11 @@ In both cases, the helping mechanisms only add to the step complexity of the MS-
 %is linearizable but not lock-free and they present experiments that
 %show their algorithm performs well in some situations. 
 
-Gidenstam, Sundell, and Tsigas~\cite{DBLP:conf/opodis/GidenstamST10}
-introduced a new algorithm using a linked list of arrays. The queue is
-stored in a shared array where head and tail pointers point to the
-current elements in the queue. When the array is full, an empty array
-is linked to the array and tail pointers are updated. A global head
-points to the array containing the first element in the queue, and
-each process has a local head index that points to the first element
-in that array. Global tail and local tail pointers are similar. A
-process updates the position of the pointers after it does an
-operation. One process might go to sleep before setting the pointers,
-so the pointers might be behind their real places. They mention how to
-scan the arrays to update pointers while doing an operation. A process
-writes an element in the location head by a \nf{CAS} instruction, so
-if $p$ processes try to enqueue simultaneously, the amortized step
-(and \nf{CAS}) complexity remains $\Omega(p)$. Their design is
-lock-free but not wait-free. 
 
 
 
-Nikolaev and Ravindran~\cite{10.1145/3490148.3538572} present a
-wait-free queue that uses the fast-path slow-path methodology
-introduced by Kogan and Petrank~\cite{10.1145/2370036.2145835}. Their
-work is based on a circular queue using bounded memory. When a process
-wishes to do an enqueue or a dequeue, it starts two paths. The fast
-path  ensures good performance while the slow path ensures
-termination. They show that these two paths do not affect each other
-and the queue remains consistent. If a process makes no progress,
-other processes help its slow path to finish. The helping phase
-suffers from the CAS Retry Problem because processes compete in a
-\nf{CAS} loop to decide which succeeds to help. Because of this, the
-amortized complexity cannot be better than $\Omega(p)$. 
 
-The CAS Retry Problem is not limited to list-based queues; array-based
-queues also share
-it~\cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01}.
-Our motivation is to overcome this problem and present a wait-free
-sublinear queue. 
-
-\here{Check:
-John Giacomoni et al. FastForward
-https://dl-acm-org.ezproxy.library.yorku.ca/doi/10.1145/1345206.1345215
-}
-
-\paragraph{Other Primitives and Restricted Queues}
-
-David introduced the first sublinear-time queue
-\cite{DBLP:conf/wdag/David04}, but it works only for a single enqueuer.
-It uses fetch\&increment and swap primitive instructions and takes constant time per operation, but
-uses unbounded memory.  A modification to use bounded space
-is described, but it increases the time per operation to $\Omega(p)$.
-
-Jayanti and Petrovic introduced a wait-free poly-logarithmic
-queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but it only works for a single dequeuer. 
-Our implementation uses their idea of having
-a tournament tree among processes to agree on the linearization of
-operations.
-
-\here{new result I found:}
-Khanchandani and Wattenhofer \cite{KW18} gave a wait-free queue implementation
-with $O(\sqrt{p})$ step complexity using non-standard synchronization primitives
-called half-increment and half-max, which can be viewed as particular kinds of
-double-word read-modify-write operations.
-They use this as evidence that their primitives can be more efficient than CAS
-since previous CAS-based queues all required $\Omega(p)$ step complexity.
-Our new implementation counters this argument.
-
-
-\subsection{Universal Constructions and Other Poly-log Time Data Structures}
+\paragraph{Universal Constructions and Other Poly-log Time Data Structures}
 A \textit{universal construction} is an algorithm that can implement a
 shared version of any given sequential object. The first universal
 construction was introduced by
@@ -159,6 +142,10 @@ cannot be used to create a queue. We mention a non-practical universal
 construction with a poly-log number of \nf{CAS} instructions in the
 last paragraph of page 13. 
 
+Need to discuss Fatourou and Kallimanis TCS 55(3)
+Fatourou and Kallimanis \cite{FK14} gave a universal construction based on fetch-and-add and CAS
+and used it to implement a queue....
+
 Ellen and Woelfel introduced an implementation of a Fetch\&Inc object
 with step complexity of $O(\log p)$ using $O(\log n$)-bit
 \texttt{LL/SC} objects, where $n$ is the number of
@@ -172,4 +159,28 @@ constructed from a queue. The algorithm by Ellen and Woelfel is
 interesting because of the similarities between Fetch\&Inc objects and
 queues. Also, it is one of the few wait-free data structures achieving
 poly-logarithmic complexity. 
+
+\paragraph{Restricted Queues}
+David introduced the first sublinear-time queue
+\cite{DBLP:conf/wdag/David04}, but it works only for a single enqueuer.
+It uses fetch\&increment and swap  instructions and takes $O(1)$ steps per operation, but
+uses unbounded memory.  Bounding the space increases the steps per operation to $\Omega(p)$.
+
+Jayanti and Petrovic introduced a wait-free poly-logarithmic
+queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but it works only for a single dequeuer. 
+Our implementation uses their idea of having
+a tournament tree among processes to agree on the linearization of
+operations.
+
+\here{Should we mention https://arxiv.org/abs/2103.11926 , which seems to have a queue for 2 enqueuers and 2 dequeuers ?  May not be worth mentioning because then $p$ is a constant, so complexity in terms of $p$ doesn't make sense.}
+
+\paragraph{Other Primitives}
+Khanchandani and Wattenhofer \cite{KW18} gave a wait-free queue implementation
+with $O(\sqrt{p})$ step complexity using non-standard synchronization primitives
+called half-increment and half-max, which can be viewed as particular kinds of
+double-word read-modify-write operations.
+They use this as evidence that their primitives can be more efficient than CAS
+since previous CAS-based queues all required $\Omega(p)$ step complexity.
+Our new implementation counters this argument.
+
 

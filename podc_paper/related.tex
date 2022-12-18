@@ -161,8 +161,9 @@ implemented fetch\&increment objects from LL/SC objects
 using a polylogarithmic number of steps per operation.
 Our approach is similar to that of Ellen, Ramachandran and Woelfel \cite{ERW12},
 which uses a tournament tree to keep track of the fetch\&increment operations
-that have been performed.  However, our construction requires much more intricate
-data structures, since the state of a queue cannot easily be represented as succinctly
+that have been performed, as in the universal construction of \cite{DBLP:conf/stoc/AfekDT95}.
+However, our construction requires more intricate
+data structures to represent sets of operations, since the state of a queue cannot easily be represented as succinctly
 as the single-word state of a fetch\&increment object.
 
 

@@ -2,24 +2,49 @@
 
 \section{Queue Implementation} \label{DescriptQ}
 
-We use a static {\it tournament tree}, which is a static binary tree of height $\ceil{\log_2 p}$ with one leaf 
+We use a \emph{tournament tree} to agree on a total ordering of the operations performed on the queue.
+The tree is a static binary tree of height $\ceil{\log_2 p}$ with one leaf 
 assigned to each process. 
+Each node of the tree stores an array of \emph{blocks} and each \emph{block} represents a 
+sequence of enqueues and a sequence of dequeues.
+To perform an operation on the queue, a process $P$ creates a block containing that single 
+operation and appends it to the array in $P$'s leaf.
+Then, $P$ attempts to propagate the operation along the path from that leaf to the root of the tree.
+At each node $v$ along this path, $P$ combines information from the blocks in $v$'s children into a single
+block and attempts to append this block to $v$'s array using a CAS instruction.
+This cooperative approach is sufficient to ensure that if $P$ fails to CAS a new block into $v$'s array twice,
+then its operation has been propagated to $v$ by some other process.
+We define a total order on all operations that have been propagated to the root, which is used to
+linearize the operations.
+In this section, we assume for simplicity that each node has an infinite blocks array.
+We describe in Section \ref{??} how to replace the infinite array by a representation that uses bounded space.
 
-There is a shared binary tree among the processes to agree on one
-total ordering of the operations invoked by processes. The tree is
-called a \it{tournament tree} (see Figure~\ref{fig::blocktree}). Each
-process has a leaf in which the operations invoked by the process are
-stored in order. When a process wishes to do an operation it appends
-the operation to its leaf and tries to propagate its new operation up
-to the tree's root. Each node of the tree keeps an ordering of
-operations propagated up to it. All processes agree on the sequence of
-operations in the root and this ordering is used as the linearization
-ordering. 
+If $P$'s operation is an enqueue, it can terminate when the operation has been propagated to the root.
+If $P$'s operation is a dequeue, $P$ must use information in the tree to compute the value that the
+dequeue must return.  To do this, $P$ first determines which block in the root contains its operation
+(since the operation may have been propagated to the root by some other process).
+Then, $P$ determines whether the queue is empty when its dequeue is linearized. If so, it returns \nil.
+If not, $P$ computes the rank $r$ of its dequeue in the linearization ordering
+among all dequeues that do not return \nil,
+finds the $r$th enqueue in the linearization and returns that enqueue's value.
 
-Each of the processes $P_1,P_2,...,P_p$ has a leaf and in each node
-there is an ordering of operations stored. Each process tries to
-propagate its operations up to the root, which stores a total ordering
-of all operations. 
+The primary challenge is thus figuring out what information to store in each block so that 
+the following tasks can be done efficiently (in a polylogarithmic number of steps).
+\begin{itemize}
+\item
+Construct a block for node $v$ that represents the operations contained in $O(p)$ consecutive blocks in $v$'s children.
+\item
+Given an operation in a leaf that has been propagated to the root, find that operation's location in the root's blocks array.
+\item
+Given the location of a dequeue operation in the root's blocks array, find the enqueue whose value it should return (or determine that the queue is empty when the dequeue is linearized).
+\end{itemize}
+
+
+
+
+---------
+
+
 
 To propagate operations to a node $n$ in the tree, a process observes
 the operations in both of $n$'s children that are not already in $n$,

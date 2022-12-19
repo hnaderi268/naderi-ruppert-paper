@@ -1,0 +1,535 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\renewcommand{\baselinestretch}{1.8}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[letterpaper, margin=1in]{geometry}
+\usepackage{tikz-qtree}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\makeatletter
+\renewcommand{\ALG@beginalgorithmic}{\footnotesize}
+\makeatother
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{relsize}
+\usepackage{enumitem}
+\usepackage{bold-extra}
+\renewcommand*\contentsname{Table of Contents}
+
+\usepackage{multicol}
+\setlength\columnsep{24pt}
+
+\algnewcommand\algorithmicforeach{\bf{for each}}
+\algdef{S}[FOR]{ForEach}[1]{\algorithmicforeach\ #1\ \algorithmicdo}
+
+\algdef{S}[FUNCTION]{Function}
+   [3]{{\tt{\sl{#1}}} {\tt{#2}}\ifthenelse{\equal{#3}{}}{}{\tt{(#3)}}}
+  
+\algdef{E}[FUNCTION]{EndFunction}
+   [1]{\algorithmicend\ \tt{{#1}}}
+
+\algrenewcommand\Call[2]{\tt{{#1}\ifthenelse{\equal{#2}{}}{}{(#2)}}}
+   
+\newcommand\keywordfont{\sffamily\bfseries}
+\algrenewcommand\algorithmicend{{\keywordfont end}}
+\algrenewcommand\algorithmicfor{{\keywordfont for}}
+\algrenewcommand\algorithmicforeach{{\keywordfont for each}}
+\algrenewcommand\algorithmicdo{{\keywordfont do}}
+\algrenewcommand\algorithmicuntil{{\keywordfont until}}
+\algrenewcommand\algorithmicfunction{{\keywordfont function}}
+\algrenewcommand\algorithmicif{{\keywordfont if}}
+\algrenewcommand\algorithmicthen{{\keywordfont then}}
+\algrenewcommand\algorithmicelse{{\keywordfont else}}
+\algrenewcommand\algorithmicreturn{{\keywordfont return}}
+
+\renewcommand\thealgorithm{}
+\newcommand{\setalglineno}[1]{
+  \setcounter{ALC@line}{\numexpr#1-1}}
+
+\newcommand{\sub}[1]{\textsubscript{#1}}
+\renewcommand{\tt}[1]{\texttt{#1}}
+\renewcommand{\sl}[1]{\textsl{#1}}
+\renewcommand{\it}[1]{\textit{#1}}
+\renewcommand{\sc}[1]{\textsc{#1}}
+\renewcommand{\bf}[1]{\textbf{#1}}
+\newcommand{\nf}[1]{{\normalfont{\texttt{#1}}}}
+\newcommand{\cmt}[1]{\Comment{#1}}
+\newcommand{\head}{head}
+\newcommand{\size}{size }
+
+\usepackage{amsmath,amssymb,amsthm}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{observation}[theorem]{Observation}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{invariant}[theorem]{Invariant}
+\newtheorem{proposition}[theorem]{Proposition}
+
+
+\begin{document}
+
+
+\begin{algorithm}
+\caption{Tree Fields Description}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{1}
+
+
+\Statex $\diamondsuit$ \tt{\sl{Shared}}
+\begin{itemize}
+\item \textsf{A binary tree of \tt{Node}s with one \tt{leaf} for each process. \tt{root} is the root \nf{node}.}
+\item {\color{red}\tt{\sl{MaxbyProcess} lastDequeuedFrom} \textsf{Index of the most recent block in the root that has been deqeueued from.}}
+\end{itemize}
+
+\Statex $\diamondsuit$ \tt{\sl{Local}}
+\begin{itemize}
+\item \tt{\sl{Node} leaf:} \sf{ process's leaf in the tree.}
+% \item {\color{red}\tt{\sl{int} garbageCollectRound}}
+\end{itemize}
+
+\Statex $\blacktriangleright$ \tt{\sl{Node}}
+\begin{itemize}
+\item \tt{\sl{*Node} left, right, parent} \textsf{: Initialized  when creating the tree.}
+\item {\color{red}\tt{\sl{PBRT} blocks} \textsf{: Initially \tt{blocks[0]} contains an empty block with all fields equal to 0.}}
+\item \tt{\sl{int} \head= 1}\textsf{: \#\tt{block}s in \tt{blocks}. \tt{blocks[0]} is a block with all integer fields equal to zero.}
+\end{itemize}
+
+\Statex $\blacktriangleright$ \tt{\sl{Block}} 
+
+\begin{itemize}
+  \item \tt{\sl{int} super}
+  \textsf{: approximate index of the superblock, read from \tt{parent.head} when appending the block to the node}
+\end{itemize}
+
+
+
+\Statex $\blacktriangleright$ \tt{\sl{InternalBlock} extends \sl{Block}}
+\begin{itemize}
+    \item \tt{\sl{int} end\sub{left}, end\sub{right}}
+  \textsf{:~~indices of the last subblock of the block in the left and right child}
+  \item \tt{\sl{int} sum\sub{enq-left}}\textsf{: \#enqueues in \tt{left.blocks[1..end\sub{left}]}}
+  \item \tt{\sl{int} sum\sub{deq-left}}\textsf{: \#dequeues in \tt{left.blocks[1..end\sub{left}]}}
+  \item \tt{\sl{int} sum\sub{enq-right}}\textsf{: \#enqueues in \tt{right.blocks[1..end\sub{right}]}}
+  \item \tt{\sl{int} sum\sub{deq-right}}\textsf{: \#dequeues in \tt{right.blocks[1..end\sub{right}]}}
+\end{itemize}
+
+\Statex $\blacktriangleright$ \tt{\sl{LeafBlock} extends \sl{Block}}
+\begin{itemize}
+  \item \tt{\sl{Object} element}
+  \textsf{: Each block in a leaf represents a single operation. If the operation is \tt{enqueue(x)} then \tt{element=x}, otherwise \tt{element=null}.}
+  
+    \item \tt{\sl{int} sum\sub{enq}, sum\sub{deq}}
+  \textsf{: \# enqueue, dequeue operations in this block and its previous blocks in the leaf}
+
+  \item {\color{red}\tt{\sl{object} response}}
+\end{itemize}
+
+\Statex $\blacktriangleright$ \tt{\sl{RootBlock} extends \sl{InternalBlock}}
+\begin{itemize}
+  \item \tt{\sl{int} \size}
+  \textsf{: size of the queue after performing all operations in this block and its previous blocks in the root}
+\end{itemize}
+
+\end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+\caption{\tt{\sl{Queue}}}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{0}
+
+
+\Function{void}{Enqueue}{\sl{Object} e} \cmt{Creates a \tt{block} with element \tt{e} and adds it to the tree.}
+\State \tt{block newBlock= \Call{new}{\sl{LeafBlock}}}
+\State \tt{newBlock.element= e}
+\State \tt{newBlock.sum\sub{enq}= leaf.blocks[leaf.\head].sum\sub{enq}+1}
+\State \tt{newBlock.sum\sub{deq}= leaf.blocks[leaf.\head].sum\sub{deq}}
+\State \tt{leaf.}\Call{Append}{newBlock}
+\EndFunction{Enqueue}
+
+\Statex
+
+\Statex $\triangleright$ Creates a block with \nf{null} value element, appends it to the tree and returns its response.
+\Function{Object}{Dequeue()}{} 
+\State \tt{block newBlock= \Call{new}{\sl{LeafBlock}}} 
+\State \tt{newBlock.element= null}
+\State \tt{newBlock.sum\sub{enq}= leaf.blocks[leaf.\head].sum\sub{enq}}
+\State \tt{newBlock.sum\sub{deq}= leaf.blocks[leaf.\head].sum\sub{deq}+1}
+\State \tt{leaf.}\Call{Append}{newBlock}
+\State \tt{<b, i>=} \Call{IndexDequeue}{leaf.\head, 1}
+\State \tt{output=} \Call{FindResponse}{b, i} 
+\label{deqRest}
+\State \Return{\tt{output}}
+\EndFunction{Dequeue}
+
+\Statex
+
+\Statex $\triangleright$ Returns the response to $D_i(root,b)$, the \nf{i}th \nf{Dequeue} in \nf{root.blocks[b]}.
+\Function{element}{FindResponse}{\sl{int} b, \sl{int} i}
+\If{\tt{ root.blocks[b-1].\size}\tt{ + root.blocks[b].num\sub{enq} - i $<$ 0}} \label{checkEmpty}\cmt{Check if the queue is empty.}
+\State \tt{ \color{red} lastDequeudFrom.update(b)}
+\State \Return \tt{null} \label{returnNull}
+\Else \cmt{The response is $E_e(root)$, the \nf{e}th \nf{Enqueue} in the root.}
+\State \tt{e= i + (root.blocks[b-1].sum\sub{enq}-root.blocks[b-1].size)} \label{computeE}
+\State {\color{red}\tt{<x, y>= root.\Call{BinarySearch}{e}}}
+\State {\color{red}\tt{lastDequeudFrom.update(x)}}
+\State \Return \tt{root.GetEnqueue(x,y)}\label{findAnswer}
+\EndIf
+\EndFunction{FindResponse}
+
+\end{algorithmic}
+\end{algorithm}
+
+
+
+\begin{algorithm}
+\caption{\tt{\sl{Node}}}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{25}
+
+\Statex $\leadsto$ \textsf{Precondition: \tt{blocks[start..end]} contains a block with \tt{sum\sub{enq}} greater than or equal to \tt{x}}
+\Statex $\triangleright$ \textmd{\color{red} Update needed: search on RBT does not need start and end, we can search over whole the red-black tree.}.
+\Function{int}{BinarySearch}{\sl{int} x}
+\State \Return \tt{\color{red} min\{j: blocks[j].sum\sub{enq}$\geq$x\}}
+% \While{\nf{start<end}}
+% \State \tt{\sl{int}} \tt{mid= floor((start+end)/2)}
+% \If{\nf{blocks[mid].sum\sub{enq}<x}}
+% \State \nf{start= mid+1}
+% \Else
+% \State \nf{end= mid}
+% \EndIf
+% \EndWhile
+% \State\Return \nf{start}
+\EndFunction{BinarySearch}
+
+\end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+\caption{\tt{\sl{Leaf}}}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{45}
+
+\Function{void}{Append}{\sl{block} B} \cmt{Only called by the owner of the leaf.}
+\State \tt{\color{red} blocks.TryAppend(B, head)} \label{appendLeaf}
+\State \tt{\head= \head+1} \label{appendEnd} 
+\State \tt{parent.}\Call{Propagate()}{} 
+\EndFunction{Append}
+
+\end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+\caption{\tt{\sl{Node}}}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{50}
+
+\Statex $\triangleright$ \textmd{\nf{$n$.Propagate} propagates operations  in \nf{this}.children up to \nf{this} when it terminates.}
+\Function{void}{Propagate()}{}
+\If{\bf{not} \Call{Refresh()}{}} \label{firstRefresh}
+\State \Call{Refresh()}{} \label{secondRefresh}
+\EndIf
+\If{\tt{this} \bf{is not} \tt{root}}
+\State \tt{parent.}\Call{Propagate()}{}
+\EndIf
+\EndFunction{Propagate}
+
+\Statex
+
+\Statex $\triangleright$ \textmd{Creates a block containing new operations of \nf{this.}children, and then tries to append it to \nf{this}.}
+\Function{boolean}{Refresh()}{}
+\State \tt{h= \head} \label{readHead}
+{\color{red}\If{\tt{h\%p\textsuperscript{2}=0}}
+\State \Call{Help()}{}
+\State \tt{root.}\Call{FreeMemory()}{lastDequeuedFrom.Get()-1}
+\EndIf}
+\ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}} \label{startHelpChild1}
+\State \tt{h\sub{dir}= dir.\head} \label{readChildHead}
+\If{\nf{dir.blocks[h\sub{dir}]!=null}} \label{ifHeadnotNull}
+\State{\tt{dir.\Call{Advance}{h\sub{dir}}}} \label{helpAdvance}
+\EndIf
+\EndFor \label{endHelpChild1}
+\State \tt{new= \Call{CreateBlock}{h}} \label{invokeCreateBlock}
+\If{\tt{new.num==0}} \Return{\tt{true}} \label{addOP} 
+\EndIf
+\State{\tt{\color{red} result= blocks.TryAppend(new, h)}} \label{cas}
+\State{\tt{this.\Call{Advance}{h}}} \label{advance}
+\State \Return{ \tt{result}}
+
+\EndFunction{Refresh}
+
+
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{\tt{\sl{Node}}}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{73}
+
+\Function{void}{Advance}{\sl{int} h} \cmt{Sets \nf{blocks[h].super} and increments \nf{head} from \nf{h} to \nf{h+1}.}
+\State \tt{h\sub{p}= parent.\head} \label{readParentHead}
+\State \tt{blocks[h].super.CAS(null, h\sub{p})} \label{setSuper1}
+\State \tt{head.CAS(h, h+1)} \label{incrementHead}
+\EndFunction{Advance}
+
+\Statex
+
+\Function{Block}{CreateBlock}{\sl{int} i} \cmt{Creates and returns the block to be installed in \tt{blocks[i]}.}
+\State \tt{block new= \Call{new}{\sl{InternalBlock}}} \label{initNewBlock}
+\ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}}
+\State \tt{index\sub{prev}= blocks[i-1].end\sub{dir}} \label{prevLine}
+\State \tt{new.end\sub{dir}= dir.\head-1} \label{lastLine} \cmt{\nf{new} contains \tt{dir.blocks[blocks[i-1].end\sub{dir}..dir.\head-1]}.}
+\State \tt{block\sub{prev}= dir.blocks[index\sub{prev}]}
+\State \tt{block\sub{last}= dir.blocks[new.end\sub{dir}]}
+\State \tt{new.sum\sub{enq-dir}= blocks[i-1].sum\sub{enq-dir} + block\sub{last}.sum\sub{enq} - block\sub{prev}.sum\sub{enq}} \label{setSumEnqLeft}
+\State \tt{new.sum\sub{deq-dir}= blocks[i-1].sum\sub{deq-dir} + block\sub{last}.sum\sub{deq} - block\sub{prev}.sum\sub{deq}} \label{setSumEnqRight}
+\EndFor
+\If{\tt{this} \bf{is} \tt{root}}
+\State \tt{new.type= \sl{InternalBlock}-->\sl{RootBlock}}
+\State \tt{new.size= max(root.blocks[i-1].\size { }+ new.num\sub{enq}- new.num\sub{deq}, 0)}\label{computeLength}
+\EndIf
+
+\State \Return \tt{new}
+\EndFunction{CreateBlock}
+
+\Statex
+\color{red}
+\Function{int}{GetLastDequeuedFrom}{}{\cmt{Returns the index that is safe to remove the blocks before that in the node.}}
+\State \tt{x= lastDequeuedFrom.Get()-1}
+\State \tt{n= root}
+\State \bf{while} \tt{n!=this} \bf{do}
+\State \tt{dir= left (if this is in left subtree of n): otherwise dir=right}
+\State \tt{    x=n.blocks[x].end\sub{dir}}
+\State\bf{end while}
+\EndFunction{GetLastDequeuedFrom}
+
+\end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+\caption{\tt{\sl{Node}}}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{94}
+
+\Statex $\leadsto$ \textsf{Precondition:~\tt{blocks[b].num\sub{enq}$\geq$i$\geq 1$}}
+\Function{element}{GetEnqueue}{\sl{int} b, \sl{int} i} \cmt{Returns the \tt{element} of $E_\tt{i}(\tt{this},\tt{b})$.}
+\If{\tt{this} \bf{is} \tt{leaf}}
+\State\Return \tt{blocks[b].element} \label{getBaseCase}
+\ElsIf{\tt{i <= blocks[b].num\sub{enq-left}}} \label{leftOrRight} \cmt{$E_\tt{i}(\tt{this},\tt{b})$ is in the left child of this node.}
+\State \tt{subblockIndex= left.BinarySearch(i+blocks[b-1].sum\sub{enq-left}, blocks[b-1].end\sub{left}+1,}  \label{leftChildGet}
+\Statex \hspace{10.7em}\tt{blocks[b].end\sub{left})} \cmt{{\color{red} start and end values are not needed anymore?}}
+\State \Return\tt{left.}\Call{GetEnqueue}{subblockIndex, i} 
+\Else
+\State \tt{i= i-blocks[b].num\sub{enq-left}}
+\State\tt{subblockIndex= right.BinarySearch(i+blocks[b-1].sum\sub{enq-right}, blocks[b-1].end\sub{right}+1,} \label{rightChildGet}
+\Statex \hspace{11.1em}\tt{blocks[b].end\sub{right})} \cmt{{\color{red} start and end values are not needed anymore?}}
+\State \Return\tt{right.}\Call{GetEnqueue}{subblockIndex, i} 
+\EndIf
+\EndFunction{GetEnqueue}
+
+\Statex
+\Statex $\leadsto$ \textsf{Precondition: \tt{b}th block of the node has propagated up to the root and \tt{blocks[b].num\sub{deq}$\geq$i}.}
+\Function{<int, int>}{IndexDequeue}{\sl{int} b, \sl{int} i} \cmt{{\color{red} Update needed: return null when superblock in the root was not found.}}
+\If{\tt{this} \bf{is} \tt{root}}
+\State\Return \tt{<b, i>} \label{indexBaseCase}
+\Else
+\State \tt{dir= (parent.left==n ? left: right)} 
+\State \tt{superblockIndex= parent.blocks[blocks[b].super].sum\sub{deq-dir} > blocks[b].sum\sub{deq} ? \label{computeSuper} 
+\Statex \hspace{11.3em} blocks[b].super: blocks[b].super+1} \cmt{{\color{red} Preconditions might be not met.}}
+
+\If{\tt{dir {\keywordfont is} left}} \label{computeISuperStart}
+\State \tt{i+= blocks[b-1].sum\sub{deq}-parent.blocks[superblockIndex-1].sum\sub{deq-left}} \label{considerPreviousLeft}
+\Else \label{considerRight}
+\State \tt{i+= blocks[b-1].sum\sub{deq}-parent.blocks[superblockIndex-1].sum\sub{deq-right}}  \label{considerPreviousRight}
+\State \tt{i+= parent.blocks[superblockIndex].num\sub{deq-left}}  \label{considerLeftBeforeRight}
+\EndIf \label{computeISuperEnd}
+\State \Return\tt{this.parent.}\Call{IndexDequeue}{superblockIndex, i}
+\EndIf
+\EndFunction{IndexDequeue}
+
+\end{algorithmic}
+\end{algorithm}
+
+\color{red}
+
+\begin{algorithm}
+\color{red}
+\caption{\tt{\sl{\color{red}MaxByProcess}}}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{121}
+
+\State \tt{\sl{int[p]} lastDequeuedbyProcess}
+\Statex
+
+\Function{int}{Get}{}
+\State \Return \tt{max(lastDequeuedbyProcess)}
+\EndFunction{Get}
+
+\Statex
+\Function{}{Update}{\sl{int} \tt{b}}
+\If{\tt{lastDequeuedbyProcess[pid]<b}}
+\State \tt{lastDequeuedbyProcess[pid]=b}
+\EndIf
+\EndFunction{Update}
+
+\end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+\color{red}
+\caption{\tt{\sl{Tree}}}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{130}
+
+\Function{int}{Help}{}
+\State \bf{for each} \sl{process} \tt{P}
+\State \tt{h=P.leaf.head}
+\If{\tt{P.leaf.blocks[h].num\sub{deq}==1 and P.leaf.IndexDequeue(h,1)!=null}}
+\State \tt{<b, i>=} \Call{IndexDequeue}{h, 1}
+\State \tt{output=} \Call{FindResponse}{b, i} 
+\State \tt{P.leaf.blocks[h].response= output}
+\EndIf
+\State \bf{end for}
+\EndFunction{Help}
+
+\end{algorithmic}
+\end{algorithm}
+
+
+
+\begin{algorithm}
+\color{red}
+\caption{\tt{\sl{Node}}}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{140}
+
+\Function{}{FreeMemory}{\sl{int} \tt{b}}
+\If{not leaf}
+\State \tt{left.FreeMemory(blocks[i].end\sub{left}-1)}
+\State \tt{right.FreeMemory(blocks[i].end\sub{right}-1)}
+\EndIf
+\State \tt{blocks= blocks.splitGreater(i)} \cmt{I think CAS is not needed.}
+\EndFunction{FreeMemory}
+
+\end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}
+\color{red}
+\caption{\tt{\sl{PBRT}}}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{140}
+
+\Statex \tt{\sl{PRBT} prbt}
+\Statex \sf{nodes store \tt{<key, sum\sub{enq}-> block}}
+\Statex \tt{[i] -> GetByBlock(i)}
+
+\Statex
+\Function{}{GetByBlock}{\sl{int} \tt{i}}
+\State \Return \tt{rbt.get(i)}
+\If{not found}
+\State \tt{return written response}
+\EndIf
+\EndFunction{GetByBlock}
+
+\end{algorithmic}
+\end{algorithm}
+
+\pagebreak
+\clearpage
+\section{Description}
+
+\color{black}
+In our algorithm an \nf{Enqueue} or a \nf{Dequeue} remains in the \nf{blocks} array in the tree nodes even after they terminate. This makes the space used by the algorithm factor of the number of operations of invoked on the queue. Here in this section, we want to add a mechanism to free the memory allocated by the operations that are no longer needed and make the overall space used polynomial of $p+q$.
+
+It is a common way to do garbage collection in batches. If we garbage collect the unnecessary blocks in the nodes every $p^2$ block appended to the root, the garbage collection cost is amortized over $p^2$ blocks which is $O(p^3)$ and $\Omega(p^2)$ operations.
+
+In our design a process attempts to collect the garbage, when it is going to to append a block in the $kp^2$ position in \nf{root.blocks} (see Line \ref{}). Every $p^2$  block appended to the root, one \nf{GarbageCollect} terminates because \nf{root.head} cannot advance until a \nf{GarbageCollect} garbage collect is done (see Lines ).
+
+\begin{lemma}
+Size of \nf{root.blocks} after \nf{GarbageCollect} is $O(p^2+q)$.
+\end{lemma}
+
+\begin{lemma}
+Total number of the blocks in the tree is $O(p^3+pq)$.
+\end{lemma}
+
+
+\nf{Enqueue} operation $e$ can be removed from the tree after termination of \nf{Dequeue} $d$ where $Resp(d)=e$ or $e.$\nf{element} has been computed to be $RESP(d)$. It is safe to remove \nf{Dequeue} $d$o from the tree after the $d$ is terminated or $Resp(d)$\nf{.element} has been computed. We can remove a block after the told conditions are satisfied for all ofits operations. A \nf{Dequeue} may go to sleep for a long time and prevent the \nf{block} to be removed. In that situation other processes can help the \nf{Dequeue} by computing its response and writing it down somewhere. After writing down the response of th \nf{Dequeue} it is safe to remove. Because if the \nf{Dequeue} failed to compute its response it can read the response written (computing the \nf{Dequeue} index in the \nf{root} or getting the response \nf{Enqueue}).
+
+\begin{definition}
+A block  is \it{finished} if all of its \nf{Enqueue}s have been computed to be the response of some \nf{Dequeue} and all of its \nf{Dequeues} responses have been computed.  
+\end{definition}
+
+\begin{corollary}
+If a block is finished, then all of its subblocks are also finished.  
+\end{corollary}
+
+
+\begin{lemma}
+It is safe to remove a finished block from the tree.
+\end{lemma}
+
+
+If the $i$th \nf{Enqueue} gets dequeued in a FIFO queue, it means the first $i-1$ \nf{Enqueue} operations have been already dequeued. This gives us the idea that if a block is finished then all the blocks before it are also finished. If an operation in a block goes to sleep for a long time then other processes help the operation so the block get finished. Note that when an \nf{Enqueue} operation in a block is not finished the block cannot be finished until some \nf{Dequeue} dequeues that \nf{Enqueue}. Since there are at most $p$ idle operations, we can help them before garbage collection and then remove all the finished blocks safely.
+
+\begin{lemma}
+    If all current operations are helped, then there is a block in the root that all of its previous blocks are finished. That block is the most recent block that has been dequeued from.
+\end{lemma}
+
+The idea above leads us to a poly-log data structure that supports throwing away all the blocks with keys smaller than an index. Red-black trees do this for us. \nf{Get(i)}, \nf{Append()} and \nf{Split(i)} are logarithmic in block trees.
+We can create a shared red-black tree just creating a new path for the operation and then using \nf{CAS} to change the root of the tree. See [this] for more.
+
+\begin{observation}
+PBRT supports poly-log operations ....
+\end{observation}
+
+\begin{lemma}
+    If we replace the arrays we used to implement \nf{blocks} with red-black trees the amortized complexity of the algorithm would be $PolyLog(p,q)$. And also the algorithm is correct.
+\end{lemma}
+
+We can help a \nf{Dequeue} by computing its response and writing it down. If the process in future failed to execute, it can read the helped value written down.
+
+\begin{lemma}
+The \nf{response} written is correct.
+\end{lemma}
+
+But how can we know which blocks in each node are finished or not? 
+
+\begin{lemma}
+    If all current operations are helped, then the blocks before the newest block that some \nf{Enqueue} has been dequeued from is safe to remove. If the most current \nf{Dequeue} returned \nf{null} then all the blocks before the block containing the \nf{Dequeue} can be removed.
+\end{lemma}
+
+There is a shared array among processes which they write the last block dequeued from in it. 
+
+
+\begin{lemma}
+    $\nf{GetLastDequeuedFrom($n$} - \text{index of the last finished block}$ in the node $n$ is $O(p)$.
+\end{lemma}
+
+\begin{lemma}
+    After \nf{FreeMemory}, the space taken by each node of the tree is $O(p^2+q)$. The total space in the tree is $PolyLog(p+q)$
+\end{lemma}
+
+\begin{lemma}
+  The amortized step per process for \nf{GarbageCollect} is $O()$.
+\end{lemma}
+
+\begin{lemma}
+  Algorithm is wait-free and linearizable.
+\end{lemma}
+
+
+\end{document}
+

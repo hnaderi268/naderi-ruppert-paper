@@ -5,7 +5,7 @@
 We use a \emph{tournament tree} to agree on a total ordering of the operations performed on the queue.
 The tree is a static binary tree of height $\ceil{\log_2 p}$ with one leaf 
 assigned to each process. 
-Each node of the tree stores an array of \emph{blocks} and each \emph{block} represents a 
+Each node of the tree stores an array of \emph{blocks}, where each block represents a 
 sequence of enqueues and a sequence of dequeues.
 To perform an operation on the queue, a process $P$ creates a block containing that single 
 operation and appends it to the array in $P$'s leaf.
@@ -39,7 +39,7 @@ Given an operation in a leaf that has been propagated to the root, find that ope
 Given the location of a dequeue operation in the root's blocks array, find the enqueue whose value it should return (or determine that the queue is empty when the dequeue is linearized).
 \end{itemize}
 
-
+\here{At what point would a figure illustrating of the tournament tree be useful?}
 
 
 ---------

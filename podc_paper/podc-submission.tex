@@ -91,6 +91,9 @@
 \newcommand{\here}[1]{\bf{[[#1]]}}
 \newcommand{\ceil}[1]{\lceil #1 \rceil}
 \newcommand{\nil}{nil}
+\newcommand{\opa}[2]{\nf{#1(#2)}}
+\newcommand{\op}[1]{\nf{#1}}
+\newcommand{\var}[1]{\nf{#1}}
 
 \usepackage{amsmath,amsthm}
 %\newtheorem{theorem}{Theorem}
@@ -1081,10 +1084,8 @@ The queue implementation is wait-free.
 To prove the claim, it is sufficient to show that every \nf{Enqueue} and \nf{Dequeue} operation terminates after a finite number of its own steps. This is directly concluded from Lemma \ref{enqDeqTime}.
 \end{proof}
 
-\pagebreak
-\section{Future Directions}
-We designed a tree to achieve agreement on a linearization of operations invoked by $p$ processes in an asynchronous model, which we will call a \it{block tree}. We implemented two queries to compute information about the ordering agreed in the block tree. Then we used the tree to implement a queue where the number of steps per operation is poly-logarithmic with respect to the size of the queue and the number of processes. Block trees can be used as a mechanism to achieve agreement among processes to construct more poly-logarithmic wait-free linearizable objects. In the next paragraphs, we talk about possible improvements on block trees and the data structures that we can implement with block trees.
-
+\section{Reducing Space}
+\label{reducing}
 \paragraph{Reducing Space Usage}
 The \nf{blocks} arrays defined in our algorithm are unbounded. To use $O(n)$ space in each node where $n$ is the total number of operations, instead of unbounded arrays, we could use the memory model of the wait-free vector introduced by Feldman, Valera-Leon and Damian~\cite{7073592}. We can create an array called \nf{arr} of pointers to array segments (see Figure \ref{fig::doublingArray}). When a process wishes to write into location \nf{head} it checks whether \nf{arr[$\lfloor\log $ head$\rfloor$]} points to an array or not. If not, it creates a shared array of size $2^{\lfloor\log \nf{head} \rfloor}$ and tries to \nf{CAS} a pointer to the created array into \nf{arr[$\lfloor\log $ head$\rfloor$]}. Whether the \nf{CAS} is successful or not, \nf{arr[$\lfloor\log $ head$\rfloor$]} points to an array. When a process wishes to access the $i$th element it looks up \nf{arr[$\lfloor\log i\rfloor$][$i-2^{\lfloor\log i\rfloor}$]}, which takes $O(1)$ steps. The CAS Retry Problem does not happen here because if $n$ elements are appended to the array, then only $O(p\times\log n)$ \nf{CAS} steps have happened on the array \nf{arr}. Furthermore, at most $p$ arrays with size $2^{\lfloor\log i\rfloor}$ are allocated by processes while processes try to do the \nf{CAS} on \nf{arr[$i$]}. Jayanti and Shun \cite{DBLP:conf/wdag/JayantiS21} present a way to initialize wait-free arrays in constant steps. The time taken to allocate arrays in an execution containing $n$ operations is $O(\frac{p\log n}{n})$  per operation, which is negligible if $n>>p$. The vector implementation also has a mechanism for doubling \nf{arr} when necessary, but this happens very rarely since increasing \nf{arr} from $s$ to $2s$ increases the capacity of the vector from $2^s$ to $2^{2s}$.
 \begin{figure}[hbt]  
@@ -1105,15 +1106,7 @@ Tarjan \cite[Sec.~4.2]{Tar83} described a split algorithm for red-black trees th
   \label{fig::finishedBlock}
 \end{figure}
 
-\paragraph{Poly-logarithmic Wait-free Sequences}
-Consider a data structure storing a sequence that supports three operations \nf{append(e)}, \nf{get(i)} and \nf{index(e)}. An \nf{append(e)} adds \nf{e} to the end of the sequence, a \nf{get(i)} gets the \nf{i}th element in the sequence and an \nf{index(e)} computes the position of element \nf{e} in the sequence. We can modify our queue to design such a data structure. An \nf{append(e)} is implemented like \nf{Enqueue(e)}, \nf{get(i)} is done by calling \nf{DoublingSearch} but with a \nf{BinarySearch} on the entire \nf{root.blocks} array and \nf{index(e)} is done similarly to \nf{IndexDequeue} (except operating on enqueues instead of dequeues).
- We achieve this with poly-logarithmic steps for each operation with respect to the number of \nf{append}s done.
-
-\paragraph{Other Poly-log Wait-free Data structures}
-There are two reasons the block tree worked well to implement a queue. Firstly, to respond to a \nf{Dequeue} we do not need to look at the entire history of operations: if a \nf{Dequeue} does not return \nf{null}, we can compute the index of the \nf{Enqueue} that is its response in $O(\log n)$ time if we keep the number of enqueues and the size. Secondly, the operations we need to search to respond to the \nf{Dequeue} are not very far from it in the sequence of operations: the distance is at most linear in the size of the queue. Creating a wait-free poly-logarithmic implementation of other objects whose operations satisfy these two conditions may be possible. 
-
-\paragraph{Attiya--Fouren Lower Bound}
-As discussed in Section 2.4 the Attiya--Fouren lower bound says that a concurrent implementation of queues using reads, writes and conditional operations like \nf{CAS} has $\Omega(c)$ amortized complexity \cite{DBLP:conf/opodis/AttiyaF17} when $c$ the number of concurrent processes, is $O(\log\log p)$. Our amortized worst-case step complexity is $\Theta(\log^2p+\log q)$. It is an open problem to reduce the gap between our algorithm and the Attiya--Fouren lower $\Omega(\log\log p)$ bound.
+\input{conclusion}
 
 \newpage
 

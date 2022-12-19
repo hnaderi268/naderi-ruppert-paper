@@ -2,25 +2,35 @@
 
 \section{Queue Implementation} \label{DescriptQ}
 
-We begin with an overview of the algorithm.
+\subsection{Overview of Implementation}
 We use a \emph{tournament tree} to agree on a total ordering of the operations performed on the queue.
 The tree is a static binary tree of height $\ceil{\log_2 p}$ with one leaf 
 assigned to each process. 
-Each node of the tree stores an array of \emph{blocks}, where each block represents a 
+Each tree node  stores an array of \emph{blocks}, where each block represents a 
 sequence of enqueues and a sequence of dequeues.
+In this section, we assume for simplicity that each node has an infinite blocks array.
+Section \ref{reducing} describes how to replace the infinite array by a representation that uses bounded space.
+
 To perform an operation on the queue, a process $P$ creates a block containing that single 
 operation and appends it to the blocks array in $P$'s leaf.
-Then, $P$ attempts to propagate the operation along the path from that leaf to the root of the tree.
-At each node $v$ along this path, $P$ combines information from the blocks in $v$'s children into a single
-block and attempts to append this block to $v$'s array using a CAS instruction.
-This cooperative approach is sufficient to ensure that if $P$ fails to CAS a new block into $v$'s array twice,
-then its operation has been propagated to $v$ by some other process.
-We define a total order on all operations that have been propagated to the root, which is used to
+Then, $P$ attempts to propagate the operation to each node along the path from that leaf to the root of the tree.
+We shall define a total order on all operations that have been propagated to the root, which is used to
 linearize the operations.
-In this section, we assume for simplicity that each node has an infinite blocks array.
-We describe in Section \ref{reducing} how to replace the infinite array by a representation that uses bounded space.
 
-If $P$'s operation is an enqueue, it can terminate when the operation has been propagated to the root.
+To propagate an operation to a node $v$ in the tree, $P$ first observes
+the blocks in both of $v$'s children that are not already in $v$,
+creates a new block by combining information from those blocks, and attempts to append this 
+new block to $v$'s blocks array using a CAS instruction.
+Following \cite{}, we call this a 3-step sequence a
+\op{refresh} on $v$. %(see Figure \ref{fig::propagstep}).
+A successful \op{refresh} by $P$ may propagate pending operations by several other processes to $v$.
+This cooperative approach is sufficient to ensure that if $P$ fails to CAS a 
+new block into $v$'s array twice,
+then its operation has been propagated to $v$ by some other process, so $P$ can continue 
+onwards towards the root.
+
+Now suppose $P$'s operation has been propagated all the way to the root.
+If $P$'s operation is an enqueue, it has obtained a place in the linearization ordering and can terminate.
 If $P$'s operation is a dequeue, $P$ must use information in the tree to compute the value that the
 dequeue must return.  To do this, $P$ first determines which block in the root contains its operation
 (since the operation may have been propagated to the root by some other process).
@@ -31,144 +41,61 @@ finds the $r$th enqueue in the linearization and returns that enqueue's value.
 
 The primary challenge is thus figuring out what information to store in each block so that 
 the following tasks can be done efficiently (in a polylogarithmic number of steps).
-\begin{itemize}
+\begin{enumerate}[label={(T\arabic*)}]
 \item
-Construct a block for node $v$ that represents the operations contained in $O(p)$ consecutive blocks in $v$'s children.
+\label{construct}
+Construct a block for node $v$ that represents the operations contained in $O(p)$ consecutive blocks in $v$'s children, as required for a \op{refresh}.
 \item
-Given an operation in a leaf that has been propagated to the root, find that operation's location in the root's blocks array.
+\label{findinroot}
+Given a dequeue in a leaf that has been propagated to the root, find that operation's position in the root's blocks array.
 \item
-Given the location of a dequeue operation in the root's blocks array, find the enqueue whose value it should return (or determine that the queue is empty when the dequeue is linearized).
-\end{itemize}
+\label{findrank}
+Given a dequeue's position in the root, determine that the queue is empty when it occurs
+or determine the rank $r$ of the enqueue whose value it should return.
+\item
+\label{findenqueue}
+Find the $r$th enqueue in the linearization ordering.
+\end{enumerate}
+Since these tasks require knowing the linearization ordering, we next describe that ordering.
 
-An operation can only terminate after it a block containing it has been appended to the root's blocks array.
+\subsection{Linearization Ordering}
+
+An operation can terminate only after a block containing it has been appended to the root's blocks array.
 So, if an operation $op_1$ terminates before another operation $op_2$ begins, 
 $op_1$ will be in an earlier block than $op_2$ in root's blocks array.
-Our linearization orders operations according to the block they belong to in the root's blocks array.
-Operations that appear in the same block are necessarily concurrent, so they can be ordered arbitrarily.
-We next describe how to order them so that computing results of dequeue operations is efficient.
+Thus, our linearization orders operations according to the block they belong to in the root's blocks array.
+Operations that appear in the same block are necessarily concurrent, so we can choose how to order them.
 
-Each block $B$ in a node $v$ represents several consecutive blocks in each of $v$'s children.
-The blocks in the children are called the \emph{direct subblocks} of $B$.
+Each block in a leaf represents a single operation.
+Each block $B$ in an internal node $v$ results from merging
+several consecutive blocks from each of $v$'s children.
+The blocks in $v$'s children are called the \emph{direct subblocks} of $B$.
 A block $B'$ in a descendant of $v$ is a \emph{subblock} of $B$ if it is a direct subblock of $B$
 or a subblock of a direct subblock of $B$.
-Recall that blocks in the leaves contain a single operation.
 A block $B$ represents the set of operations in all of $B$'s subblocks in leaves of the tree.
-We order the operations within a block as follows.
+
+The operations propagated by a \op{refresh} are all pending when the \op{refresh} occurs,
+so there is at most one operation per process.
+Hence, a block represents at most $p$ operations in total.  
+Moreover, we never append empty blocks, so 
+each block represents at least one operation and it follows that a block can have at most $p$ direct subblocks.
+
+As mentioned above, we are free to order operations within a block however we like.
+For convenience, we order the enqueues and dequeues separately, and put the 
+operations that were propagated from the left child before the operations from the right child.
+More formally, we inductively define an sequence $E(B)$ of the enqueues represented by a block $B$.
+If $B$ is a block in a leaf representing an enqueue operation, its enqueue sequence $E(B)$ is either the single
+enqueue represented by the block (if $B$ stores an enqueue), or the empty sequence (if $B$ stores a dequeue).
+If $B$ is a block in an internal node $v$ with direct subblocks $B^L_1, \ldots, B^L_\ell$ from the left child of $v$
+and $B^R_1,\ldots,B^R_r$ from the right child of $v$, then $B$'s enqueue sequence is the concatenation $E(B^L_1)\cdots E(B^L_\ell)\cdot E(B^R_1) \cdots E(B^R_r)$.
+The dequeue sequence $D(B)$ of a block $B$ is defined symmetrically.
+
+Finally, if the root's blocks array contains blocks $B_1, \ldots, B_k$, the 
+linearization ordering is 
+$E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k)$.
 
 
-\here{At what point would a figure illustrating of the tournament tree be useful?}
-
-
----------
-
-
-
-To propagate operations to a node $n$ in the tree, a process observes
-the operations in both of $n$'s children that are not already in $n$,
-merges them to create an ordering and then tries to append the
-ordering to the sequence stored in $n$. We call this procedure
-\tt{$n$.Refresh} (see Figure \ref{fig::propagstep}). A \nf{Refresh} on
-$n$ with a successful append helps to propagate their operations up to
-$n$. We shall prove that if a process invokes \tt{Refresh} on the node
-$n$ two times and fails to append the new operations to $n$ both
-times, the operations that were in $n$'s children before the first
-\tt{Refresh} are guaranteed to be in $n$ after the second failed
-\tt{Refresh}. 
-We sketch the argument here.
-
-\begin{figure}[hbtp]
-\begin{center}
-\hspace{6em}\begin{subfigure}[b]{.29\textwidth}
-  \centering
-  \resizebox{\columnwidth}{!}{
-  \begin{tikzpicture}[level 1/.style={level distance=1.2cm,sibling distance=0.5cm}]
-\Tree [.$r_1,l_1,l_2,r_2,l_3$
-$l_1,l_2,l_3,l_4,l_5$
-$r_1,r_2,r_3,r_4$ ]
-\end{tikzpicture}}
-  \caption{Before the \nf{Refresh}.}
-\end{subfigure}
-\hfill
-\begin{subfigure}[b]{.29\textwidth}
-  \centering
-  \resizebox{\columnwidth}{!}{
-  \begin{tikzpicture}[level 1/.style={level distance=1.2cm,sibling distance=0.5cm}]
-\Tree [.$r_1,l_1,l_2,r_2,l_3,l_4,l_5,r_3,r_4$
-$l_1,l_2,l_3,l_4,l_5$
-$r_1,r_2,r_3,r_4$ ]
-\end{tikzpicture}}
-  \caption{After the \nf{Refresh}.}
-\end{subfigure}
-\hspace{6em}
-\caption[A successful \nf{Refresh}.]{\label{fig::propagstep} Before
-  and after a \nf{$n$.Refresh} with a successful append. Operations
-  propagating from the left child are labelled with $l$ and from the
-  right child with $r$.} 
-\end{center}
-\end{figure}
-
-\begin{figure}[hbpt]
-  \center\includegraphics[width=4in]{pics/doublyrefresh-drawio.png}
-  \caption[Two consecutive failed \nf{Refresh}es by a
-    process.]{\label{fig::simpleDoubleRefresh}Time relations between
-    the concurrent successful \nf{Refresh}es and the two consecutive
-    failed \nf{Refresh}es.} 
-\end{figure}
-
-We use \nf{CAS} (Compare\&Swap) instructions to implement the
-\nf{Refresh}'s attempt to append  described in the previous
-paragraph. 
-The second failed \nf{Refresh} of $P$ is assuredly concurrent with a
-successful \texttt{Refresh} that has read its information after the
-invocation of the first failed \nf{Refresh} (see Figure
-\ref{fig::simpleDoubleRefresh}). This is because some process $L$ does
-a successful append during $P$'s first failed attempt, and some
-process $K$ performs a \nf{Refresh} that reads its information after
-$L$'s append and then performs a successful append during $P$'s second
-failed \nf{Refresh}. Process $K$'s \nf{Refresh} helps to append the
-new operations that were in $n$'s children before $P$'s first failed
-\nf{Refresh}, in case they were not already appended. After a process
-appends its operation into its leaf it can call \nf{Refresh} on the
-path up to the root at most two times on each node. So, with $O(\log
-p)$ \nf{CAS}es an operation can ensure it appears in the
-linearization. This cooperative solution allows us to overcome the CAS
-Retry Problem. 
-
-
-It is not efficient to explicitly store the sequence of operations in
-each node because each operation would have to be copied all the way
-up to the root; doing this would not be possible in poly-logarithmic
-time. 
-Instead we use an implicit representation of the operations propagated
-together. Furthermore, we do not need to maintain an ordering on
-operations propagated together in a node until they have reached the
-root. It is sufficient to only keep track of sets of operations
-propagated together in each \nf{Refresh} and then define the
-linearization ordering only in the root (see Figure
-\ref{fig::set}). Achieving a constant-sized implicit representation of
-operations in a \nf{Refresh} allows us to do \texttt{CAS} instructions
-on fixed-size objects in each \tt{Refresh}. To do that, we introduce
-\it{block}s. A block stores information about the operations
-propagated by a \nf{Refresh}. It contains the number of operations
-from the left and the right child propagated to the node by the
-\texttt{Refresh} procedure. See Figure~\ref{fig:block} for an
-example. A node stores an array of blocks of operations propagated up
-to it. A propagate step  aggregates the new blocks in the children
-into a new block and stores the new block in the parent. We call the
-aggregated blocks \it{subblocks} of the new block and the new block
-the \it{superblock} of them.  In each \nf{Refresh} there is at most
-one operation from each process trying to be propagated, because one
-process cannot invoke two operations concurrently. Thus, there are at
-most $p$ operations in a block. Furthermore, since the operations in a
-\texttt{Refresh} step are concurrent we can linearize them  among
-themselves in any order we wish, because if two operations are read in
-one successful \tt{Refresh} step in a node they are going to be
-propagated up to the root together. Our choice is to put the
-operations propagated from the left child before the operations
-propagated from the right child. In this way, if we know the number of
-operations from the left child and the number of operations from the
-right child in a block, we have a complete ordering of the
-operations. 
+\here{Need some figures illustrating tournament tree, ordering of operations, representation as blocks.  Might be able to modify Fig \ref{fig::set} and \ref{fig:block}.}
 
 \begin{figure}[hbtp]
 \begin{center}
@@ -187,7 +114,6 @@ operations.
   they can be linearized in any order.} 
 \end{center}
 \end{figure}
-
 
 \begin{figure}[hbtp]
 \begin{center}
@@ -219,22 +145,20 @@ operations.
   (0,5) and (1,2) and (5,1),(3,5) and (4,2) are subblocks of (14,6).} 
 \end{figure}
 
-So far, we have a shared tree that processes use to agree on the
-implicit ordering stored in its root. With this agreement on the
-linearization ordering, we can design a universal construction; for a
-given object, we can perform an operation $op$ by applying all the
-operations up until $op$ in the root on a local copy of the object and
-then returning the response for $op$. However, this approach is not
-enough for an efficient queue. 
-We show that we can build an efficient queue if we can compute two
-things about the ordering in the root: (1) the $i$th propagated
-operation and (2) the rank of a propagated operation in the
-linearization. We explain how to implement (1) and (2) in
-poly-logarithmic steps. 
+\subsection{Representing Blocks}
+
+If a block contained an explicit representation of its sequences of enqueues and dequeues,
+it would take $\Omega(p)$ time to construct a block (task \ref{construct}), which would be much too slow.
+Instead, the block stores an implicit representation of the sequences.
+
+
+
+---------
+
 
 After propagating an operation \textit{op} to the root, processes can
-find out information about the linearization ordering using (1) and
-(2).  
+find out information about the linearization ordering using \ref{findenqueue} and
+\ref{findinroot}.  
 To get the $i$th operation in the root, we find the block $B$
 containing the $i$th operation in the root, and then recursively find
 the subblock of $B$ in the descendent of the root that contains that

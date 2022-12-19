@@ -2,13 +2,14 @@
 
 \section{Queue Implementation} \label{DescriptQ}
 
+We begin with an overview of the algorithm.
 We use a \emph{tournament tree} to agree on a total ordering of the operations performed on the queue.
 The tree is a static binary tree of height $\ceil{\log_2 p}$ with one leaf 
 assigned to each process. 
 Each node of the tree stores an array of \emph{blocks}, where each block represents a 
 sequence of enqueues and a sequence of dequeues.
 To perform an operation on the queue, a process $P$ creates a block containing that single 
-operation and appends it to the array in $P$'s leaf.
+operation and appends it to the blocks array in $P$'s leaf.
 Then, $P$ attempts to propagate the operation along the path from that leaf to the root of the tree.
 At each node $v$ along this path, $P$ combines information from the blocks in $v$'s children into a single
 block and attempts to append this block to $v$'s array using a CAS instruction.
@@ -17,7 +18,7 @@ then its operation has been propagated to $v$ by some other process.
 We define a total order on all operations that have been propagated to the root, which is used to
 linearize the operations.
 In this section, we assume for simplicity that each node has an infinite blocks array.
-We describe in Section \ref{??} how to replace the infinite array by a representation that uses bounded space.
+We describe in Section \ref{reducing} how to replace the infinite array by a representation that uses bounded space.
 
 If $P$'s operation is an enqueue, it can terminate when the operation has been propagated to the root.
 If $P$'s operation is a dequeue, $P$ must use information in the tree to compute the value that the
@@ -38,6 +39,22 @@ Given an operation in a leaf that has been propagated to the root, find that ope
 \item
 Given the location of a dequeue operation in the root's blocks array, find the enqueue whose value it should return (or determine that the queue is empty when the dequeue is linearized).
 \end{itemize}
+
+An operation can only terminate after it a block containing it has been appended to the root's blocks array.
+So, if an operation $op_1$ terminates before another operation $op_2$ begins, 
+$op_1$ will be in an earlier block than $op_2$ in root's blocks array.
+Our linearization orders operations according to the block they belong to in the root's blocks array.
+Operations that appear in the same block are necessarily concurrent, so they can be ordered arbitrarily.
+We next describe how to order them so that computing results of dequeue operations is efficient.
+
+Each block $B$ in a node $v$ represents several consecutive blocks in each of $v$'s children.
+The blocks in the children are called the \emph{direct subblocks} of $B$.
+A block $B'$ in a descendant of $v$ is a \emph{subblock} of $B$ if it is a direct subblock of $B$
+or a subblock of a direct subblock of $B$.
+Recall that blocks in the leaves contain a single operation.
+A block $B$ represents the set of operations in all of $B$'s subblocks in leaves of the tree.
+We order the operations within a block as follows.
+
 
 \here{At what point would a figure illustrating of the tournament tree be useful?}
 

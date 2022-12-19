@@ -62,12 +62,13 @@ Ramalhete and Correia \cite{RC17} added a different helping mechanism.
 In both cases, the helping mechanisms only add to the step complexity of the MS-queue.
 
 \paragraph{Array-Based Queues}
-Arrays can be used to implement queues with bounded capacity, with indices
-for the front and back elements updated using CAS instructions 
-\cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01}.
+Arrays can be used to implement queues with bounded capacity \cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01}.  
+%Similar to the front and back pointers of list-based queues, indices
+Dequeues and enqueues update
+indexes of the front and back elements using CAS instructions.
 Gidenstam, Sundell, and Tsigas~\cite{DBLP:conf/opodis/GidenstamST10} avoid
 the capacity constraint by using a linked list of arrays.
-These solutions also suffer from the CAS retry problem, with $\Omega(p)$ steps per operation.
+These solutions also use $\Omega(p)$ steps per operation due to the CAS retry problem.
 
 Morrison and Afek \cite{DBLP:conf/ppopp/MorrisonA13} also used a linked list of (circular) arrays.
 To avoid the CAS retry problem, concurrent operations try to claim spots in an array using fetch\&increment instructions.
@@ -127,7 +128,7 @@ Touitou~\cite{DBLP:conf/stoc/AfekDT95} can be modified to use $O(\log p)$ steps 
 assuming that words can store $\Omega(p \log p)$ bits. 
 (Thus, in terms of operations on reasonably-sized $O(\log p)$-bit words, their construction would take $\Omega(p\log p)$ steps per operation.)
 Fatourou and Kallimanis \cite{FK14} used their universal construction based on fetch\&add and LL/SC instructions
-to implement a queue, but its step complexity is also $\Omega(P)$.
+to implement a queue, but its step complexity is also $\Omega(p)$.
 \here{Double check this.}
 
 \paragraph{Restricted Queues}
@@ -154,13 +155,13 @@ since previous CAS-based queues all required $\Omega(p)$ step complexity.
 Our new implementation counters this argument.
 
 \paragraph{Fetch\&Increment Objects}
-Progress has been made on obtaining sublinear-time implementations of other objects 
+There are sublinear-time implementations of another object
 with consensus number 2.
 Two papers \cite{ERW12,10.1007/978-3-642-41527-2_20}
 implemented fetch\&increment objects from LL/SC objects
 using a polylogarithmic number of steps per operation.
 Our approach is similar to that of Ellen, Ramachandran and Woelfel \cite{ERW12},
-which uses a tournament tree to keep track of the fetch\&increment operations
+which uses a tournament tree to keep track of the fetch\&increments
 that have been performed, as in the universal construction of \cite{DBLP:conf/stoc/AfekDT95}.
 However, our construction requires more intricate
 data structures to represent sets of operations, since the state of a queue cannot easily be represented as succinctly

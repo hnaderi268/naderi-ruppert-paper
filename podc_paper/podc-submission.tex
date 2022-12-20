@@ -73,6 +73,11 @@
 \algrenewcommand\algorithmicelse{{\keywordfont else}}
 \algrenewcommand\algorithmicreturn{{\keywordfont return}}
 
+\newcommand{\eleft}{\var{end\sub{left}}}
+\newcommand{\eright}{\var{end\sub{right}}}
+\newcommand{\edir}{\var{end\sub{dir}}}
+
+
 \renewcommand\thealgorithm{}
 \newcommand{\setalglineno}[1]{%
   \setcounter{ALC@line}{\numexpr#1-1}}
@@ -238,65 +243,6 @@ We present our algorithm in pseudocode. page~22 contains the description of the 
 \end{itemize}
 
 
-\begin{algorithm}
-\caption{Objects used in Tournament Tree Data Structure}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{1}
-
-
-\Statex $\diamondsuit$ \tt{\sl{Shared}}
-\begin{itemize}
-\item \tt{\sl{Node} root} \sf{\com\ the root of a binary tree of \tt{Node}s with one leaf for each process}
-\end{itemize}
-
-\Statex $\diamondsuit$ \tt{\sl{Local}}
-\begin{itemize}
-\item \tt{\sl{Node} leaf} \sf{\com\ process's leaf in the tree}
-\end{itemize}
-
-\Statex $\blacktriangleright$ \tt{\sl{Node}}
-\begin{itemize}
-\item \tt{\sl{Node} left, right, parent} \textsf{\com\ children and parent pointers initialized  when creating the tree}
-\item \tt{\sl{Block[0..$\infty$]} blocks} \textsf{\com\ initially \tt{blocks[0]} contains an empty block with all integer fields equal to 0}
-\item \tt{\sl{int} \head} \textsf{\com\ position to attempt appending next \tt{block} to \tt{blocks}, initially 1}
-\end{itemize}
-
-\Statex $\blacktriangleright$ \tt{\sl{Block}} 
-
-\begin{itemize}
-  \item \tt{\sl{int} super}
-  \textsf{\com\ approximate index of the block's superblock in \var{parent.blocks}}
-\end{itemize}
-
-
-
-\Statex $\blacktriangleright$ \tt{\sl{InternalBlock} extends \sl{Block}} \sf{\com\ the following additional fields are used only for blocks in internal nodes}
-\begin{itemize}
-    \item \tt{\sl{int} end\sub{left}, end\sub{right}}
-  \textsf{\com\ indices of the last subblock of the block in the left and right child}
-  \item \tt{\sl{int} sum\sub{enq-left}}\textsf{\com\ number of enqueues in \tt{left.blocks[1..end\sub{left}]}}
-  \item \tt{\sl{int} sum\sub{deq-left}}\textsf{\com\ number of dequeues in \tt{left.blocks[1..end\sub{left}]}}
-  \item \tt{\sl{int} sum\sub{enq-right}}\textsf{\com\ number of enqueues in \tt{right.blocks[1..end\sub{right}]}}
-  \item \tt{\sl{int} sum\sub{deq-right}}\textsf{\com\ number of dequeues in \tt{right.blocks[1..end\sub{right}]}}
-\end{itemize}
-
-\Statex $\blacktriangleright$ \tt{\sl{LeafBlock} extends \sl{Block}} \sf{\com\ the following additional fields are used only for blocks in leaves}
-\begin{itemize}
-  \item \tt{\sl{Object} element}
-  \textsf{\com\ if the operation stored in the block is \tt{enqueue(x)} then \tt{element=x}, otherwise \tt{element=null}.}
-  
-    \item \tt{\sl{int} sum\sub{enq}, sum\sub{deq}}
-  \textsf{\com\ number of enqueue, dequeue operations in  leaf's \var{blocks} array up to this block (inclusive)}
-\end{itemize}
-
-\Statex $\blacktriangleright$ \tt{\sl{RootBlock} extends \sl{InternalBlock}} \sf{\com\ the following field is used only for blocks in the root}
-\begin{itemize}
-  \item \tt{\sl{int} \size}%
-  \textsf{\com\ size of the queue after performing all operations up to the end of this block in linearization order}
-\end{itemize}
-
-\end{algorithmic}
-\end{algorithm}
 
 
 \begin{algorithm}
@@ -463,10 +409,10 @@ We present our algorithm in pseudocode. page~22 contains the description of the 
 \Function{Block}{CreateBlock}{\sl{int} i} \cmt{Creates and returns the block to be installed in \tt{blocks[i]}.}
 \State \tt{block new= \Call{new}{\sl{InternalBlock}}} \label{initNewBlock}
 \ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}}
-\State \tt{index\sub{prev}= blocks[i-1].end\sub{dir}} \label{prevLine}
-\State \tt{new.end\sub{dir}= dir.\head-1} \label{lastLine} \cmt{\nf{new} contains \tt{dir.blocks[blocks[i-1].end\sub{dir}..dir.\head-1]}.}
+\State \tt{index\sub{prev}= blocks[i-1].\edir} \label{prevLine}
+\State \tt{new.\edir= dir.\head-1} \label{lastLine} \cmt{\nf{new} contains \tt{dir.blocks[blocks[i-1].\edir..dir.\head-1]}.}
 \State \tt{block\sub{prev}= dir.blocks[index\sub{prev}]}
-\State \tt{block\sub{last}= dir.blocks[new.end\sub{dir}]}
+\State \tt{block\sub{last}= dir.blocks[new.\edir]}
 \State \tt{new.sum\sub{enq-dir}= blocks[i-1].sum\sub{enq-dir} + block\sub{last}.sum\sub{enq} - block\sub{prev}.sum\sub{enq}} \label{setSumEnqLeft}
 \State \tt{new.sum\sub{deq-dir}= blocks[i-1].sum\sub{deq-dir} + block\sub{last}.sum\sub{deq} - block\sub{prev}.sum\sub{deq}} \label{setSumEnqRight}
 \EndFor
@@ -494,13 +440,13 @@ We present our algorithm in pseudocode. page~22 contains the description of the 
 \If{\tt{this} \bf{is} \tt{leaf}}
 \State\Return \tt{blocks[b].element} \label{getBaseCase}
 \ElsIf{\tt{i <= blocks[b].num\sub{enq-left}}} \label{leftOrRight} \cmt{$E_\tt{i}(\tt{this},\tt{b})$ is in the left child of this node.}
-\State \tt{subblockIndex= left.BinarySearch(i+blocks[b-1].sum\sub{enq-left}, blocks[b-1].end\sub{left}+1,} \label{leftChildGet}
-\Statex \hspace{10.7em}\tt{blocks[b].end\sub{left})} 
+\State \tt{subblockIndex= left.BinarySearch(i+blocks[b-1].sum\sub{enq-left}, blocks[b-1].\eleft+1,} \label{leftChildGet}
+\Statex \hspace{10.7em}\tt{blocks[b].\eleft)} 
 \State \Return\tt{left.}\Call{GetEnqueue}{subblockIndex, i} 
 \Else
 \State \tt{i= i-blocks[b].num\sub{enq-left}}
-\State\tt{subblockIndex= right.BinarySearch(i+blocks[b-1].sum\sub{enq-right}, blocks[b-1].end\sub{right}+1,} \label{rightChildGet}
-\Statex \hspace{11.1em}\tt{blocks[b].end\sub{right})} 
+\State\tt{subblockIndex= right.BinarySearch(i+blocks[b-1].sum\sub{enq-right}, blocks[b-1].\eright+1,} \label{rightChildGet}
+\Statex \hspace{11.1em}\tt{blocks[b].\eright)} 
 \State \Return\tt{right.}\Call{GetEnqueue}{subblockIndex, i} 
 \EndIf
 \EndFunction{GetEnqueue}

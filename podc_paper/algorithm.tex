@@ -147,11 +147,104 @@ $E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k)$.
 
 \subsection{Representing Blocks}
 
+Each node has an infinite array called \var{blocks}.
+To simplify the code, each node has an empty block in \var{blocks[0]}.
+
 If a block contained an explicit representation of its sequences of enqueues and dequeues,
 it would take $\Omega(p)$ time to construct a block (task \ref{construct}), which would be much too slow.
-Instead, the block stores an implicit representation of the sequences.
+Instead, the block stores an implicit representation of the sequences; see Figure \ref{object-fields}.
+
+\here{This parag may need to be rewritten if we use sum\sub{enq} field instead of sum\sub{enq-left} and sum\sub{enq-right}.  Also, maybe it is too detailed at this point; perhaps instead just say that for task \ref{findenqueue} we want to be able to find the position of the $r$th enqueue in a block within a block in its child using binary search.}
+Each block in an internal node $v$ stores the indices of the last direct subblock in $v$'s left and right child in the fields \eleft\ and \eright.  This allows us to find the direct subblocks of any block easily.
+Now, suppose we want to find the $r$th enqueue in the linearization ordering for task \ref{findenqueue}.
+Let $B_1, B_2, \ldots, B_k$ be the blocks in the root.
+First, we need prefix sums of the number of enqueues in $E(B_1)\cdot E(B_2)\cdots E(B_i)$
+so that we can do a binary search for the block $B_e$ that contains the $r$th enqueue.
+This prefix sum also allows us to know the rank $r'$ within $E(B_e)$ of the $r$th enqueue.
+Once we have $r'$, we need the number of enqueues that $B_e$ received from its left child
+to determine whether the enqueue came from the left or right child of the root.
+Suppose the enqueue came from the right child $v_r$.
+Then, we know that the index of the block in $v_r$ that contains the enqueue
+is between $B_{e-1}.\eright + 1$ and $B_e$.\eright.
+We can again do a binary search within this range.
+For this, we can again use the prefix sums of the number of enqueues in any prefix of the array $v_r.blocks$.
+We can then continue in this way down the tree until reaching a leaf where the enqueue is stored explicitly.
+We shall show that the binary search in the root can be done in $O(\log p + \log q)$ steps,
+and the binary search within each other node along the path to a leaf can be done in $O(\log p)$ steps,
+for a total of $O(\log^2 p + \log q)$ steps to complete task \ref{findenqueue}.
+All of the information for this search process can be derived from the 
+\var{sum\sub{enq-left}} and \var{sum\sub{enq-right}} fields.
+
+To facilitate \ref{findinroot}, each block has a field \var{super} that contains
+the (approximate) index of its superblock in the parent node's blocks array.
+We will ensure that this field's value differs from the true index of the superblock by at most 1.
+This allows a process to determine the true location of the superblock by checking the \eleft\ or \eright\ values of just two blocks in the parent node.
+Thus, starting from an operation in a leaf's block, one can use these indices to track the 
+operation all the way up the path to the root, and determine the operation's location in a root block
+in $O(\log p)$ time.
 
 
+
+
+\begin{figure}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{1}
+
+
+\Statex $\diamondsuit$ \tt{\sl{Shared}}
+\begin{itemize}
+\item \tt{\sl{Node} root} \sf{\com\ the root of a binary tree of \tt{Node}s with one leaf for each process}
+\end{itemize}
+
+\Statex $\diamondsuit$ \tt{\sl{Local}}
+\begin{itemize}
+\item \tt{\sl{Node} leaf} \sf{\com\ process's leaf in the tree}
+\end{itemize}
+
+\Statex $\blacktriangleright$ \tt{\sl{Node}}
+\begin{itemize}
+\item \tt{\sl{Node} left, right, parent} \textsf{\com\ children and parent pointers initialized  when creating the tree}
+\item \tt{\sl{Block[0..$\infty$]} blocks} \textsf{\com\ initially \tt{blocks[0]} contains an empty block with all integer fields equal to 0}
+\item \tt{\sl{int} \head} \textsf{\com\ position to attempt appending next \tt{block} to \tt{blocks}, initially 1}
+\end{itemize}
+
+\Statex $\blacktriangleright$ \tt{\sl{Block}} 
+
+\begin{itemize}
+  \item \tt{\sl{int} super}
+  \textsf{\com\ approximate index of the block's superblock in \var{parent.blocks}}
+\end{itemize}
+
+
+
+\Statex $\blacktriangleright$ \tt{\sl{InternalBlock} extends \sl{Block}} \sf{\com\ the following additional fields are used only for blocks in internal nodes}
+\begin{itemize}
+    \item \tt{int} \eleft, \eright
+  \textsf{\com\ indices of the last subblock of the block in the left and right child}
+  \item \tt{\sl{int} sum\sub{enq-left}}\textsf{\com\ number of enqueues in \tt{left.blocks[1..end\sub{left}]}}
+  \item \tt{\sl{int} sum\sub{deq-left}}\textsf{\com\ number of dequeues in \tt{left.blocks[1..end\sub{left}]}}
+  \item \tt{\sl{int} sum\sub{enq-right}}\textsf{\com\ number of enqueues in \tt{right.blocks[1..end\sub{right}]}}
+  \item \tt{\sl{int} sum\sub{deq-right}}\textsf{\com\ number of dequeues in \tt{right.blocks[1..end\sub{right}]}}
+\end{itemize}
+
+\Statex $\blacktriangleright$ \tt{\sl{LeafBlock} extends \sl{Block}} \sf{\com\ the following additional fields are used only for blocks in leaves}
+\begin{itemize}
+  \item \tt{\sl{Object} element}
+  \textsf{\com\ if the operation stored in the block is \tt{enqueue(x)} then \tt{element=x}, otherwise \tt{element=null}.}
+  
+    \item \tt{\sl{int} sum\sub{enq}, sum\sub{deq}}
+  \textsf{\com\ number of enqueue, dequeue operations in  leaf's \var{blocks} array up to this block (inclusive)}
+\end{itemize}
+
+\Statex $\blacktriangleright$ \tt{\sl{RootBlock} extends \sl{InternalBlock}} \sf{\com\ the following field is used only for blocks in the root}
+\begin{itemize}
+  \item \tt{\sl{int} \size}%
+  \textsf{\com\ size of the queue after performing all operations up to the end of this block in linearization order}
+\end{itemize}
+
+\end{algorithmic}
+\caption{Objects used in Tournament Tree Data Structure \label{object-fields}}
+\end{figure}
 
 ---------
 

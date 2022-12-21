@@ -14,8 +14,8 @@ Section \ref{reducing} describes how to replace the infinite array by a represen
 To perform an operation on the queue, a process $P$ creates a block containing that single 
 operation and appends it to the blocks array in $P$'s leaf.
 Then, $P$ attempts to propagate the operation to each node along the path from that leaf to the root of the tree.
-We shall define a total order on all operations that have been propagated to the root, which is used to
-linearize the operations.
+We shall define a total order on all operations that have been propagated to the root, which 
+will serve as the linearization ordering of the operations.
 
 To propagate an operation to a node $v$ in the tree, $P$ first observes
 the blocks in both of $v$'s children that are not already in $v$,
@@ -35,9 +35,9 @@ If $P$'s operation is a dequeue, $P$ must use information in the tree to compute
 dequeue must return.  To do this, $P$ first determines which block in the root contains its operation
 (since the operation may have been propagated to the root by some other process).
 Then, $P$ determines whether the queue is empty when its dequeue is linearized. If so, it returns \nil.
-If not, $P$ computes the rank $r$ of its dequeue in the linearization ordering
+If not, $P$ computes the rank\footnote{We say that the $r$th element in a sequence has rank $r$ within that sequence.} $r$ of its dequeue in the linearization ordering
 among all dequeues that do not return \nil,
-finds the $r$th enqueue in the linearization and returns that enqueue's value.
+finds the $r$th enqueue in the linearization, and returns that enqueue's value.
 
 The primary challenge is thus figuring out what information to store in each block so that 
 the following tasks can be done efficiently (in a polylogarithmic number of steps).
@@ -145,17 +145,24 @@ $E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k)$.
   (0,5) and (1,2) and (5,1),(3,5) and (4,2) are subblocks of (14,6).} 
 \end{figure}
 
-\subsection{Representing Blocks}
+\subsection{Designing a Block Representation to Solve Tasks \ref{construct} to \ref{findenqueue}}
 
 Each node has an infinite array called \var{blocks}.
 To simplify the code, each node has an empty block in \var{blocks[0]}.
+The node also has a \var{head} index which is the position in the \var{blocks} array to be used
+for the next attempt to append a block to this node.
 
 If a block contained an explicit representation of its sequences of enqueues and dequeues,
-it would take $\Omega(p)$ time to construct a block (task \ref{construct}), which would be much too slow.
-Instead, the block stores an implicit representation of the sequences; see Figure \ref{object-fields}.
+it would take $\Omega(p)$ time to construct a block, which would be much too slow for task \ref{construct}.
+Instead, the block stores an implicit representation of the sequences.
+We now explain how the fields of the blocks were chosen for this implicit representation. 
+See Figure \ref{object-fields}.
+
+A block in a leaf represents a single enqueue or dequeue.  The \var{element} field stores the value
+enqueued for an enqueue operation, or \var{null} if the operation is a dequeue.
 
 \here{This parag may need to be rewritten if we use sum\sub{enq} field instead of sum\sub{enq-left} and sum\sub{enq-right}.  Also, maybe it is too detailed at this point; perhaps instead just say that for task \ref{findenqueue} we want to be able to find the position of the $r$th enqueue in a block within a block in its child using binary search.}
-Each block in an internal node $v$ stores the indices of the last direct subblock in $v$'s left and right child in the fields \eleft\ and \eright.  This allows us to find the direct subblocks of any block easily.
+Each block in an internal node $v$ stores the indices of the last direct subblock in $v$'s left and right child in the fields \eleft\ and \eright.  This allows us to navigate to the direct subblocks of any block easily.
 Now, suppose we want to find the $r$th enqueue in the linearization ordering for task \ref{findenqueue}.
 Let $B_1, B_2, \ldots, B_k$ be the blocks in the root.
 First, we need prefix sums of the number of enqueues in $E(B_1)\cdot E(B_2)\cdots E(B_i)$
@@ -174,8 +181,9 @@ and the binary search within each other node along the path to a leaf can be don
 for a total of $O(\log^2 p + \log q)$ steps to complete task \ref{findenqueue}.
 All of the information for this search process can be derived from the 
 \var{sum\sub{enq-left}} and \var{sum\sub{enq-right}} fields.
+\here{modify to \var{sum\sub{enq}} and \eleft/\eright.}
 
-To facilitate \ref{findinroot}, each block has a field \var{super} that contains
+To facilitate task \ref{findinroot}, each block has a field \var{super} that contains
 the (approximate) index of its superblock in the parent node's blocks array.
 We will ensure that this field's value differs from the true index of the superblock by at most 1.
 This allows a process to determine the true location of the superblock by checking the \eleft\ or \eright\ values of just two blocks in the parent node.
@@ -183,7 +191,36 @@ Thus, starting from an operation in a leaf's block, one can use these indices to
 operation all the way up the path to the root, and determine the operation's location in a root block
 in $O(\log p)$ time.
 
+We now consider task \ref{findrank}.
+First, we must determine whether the queue is empty when a dequeue occurs.
+For this, each block in the root stores a \var{size} field that stores the number of elements
+in the queue after all operations in the linearization ordering up to that block (inclusive) 
+have been performed.
+We can easily determine which dequeues in a block $B_d$ in the root should return \nil using
+$B_{d-1}.\var{size}$ and the number of enqueues and dequeues in $B_d$.
+We can also compute the number of dequeues in blocks $B_1, \ldots, B_{d-1}$ that returned non-nil
+values as $B_{d-1}.\var{sum\sub{enq}}-B_{d-1}.\var{size}$.
+Then, for any dequeue in $B_d$ that should return a non-nil value, we can also determine its
+rank among all non-nil dequeues in the linearization ordering, and hence the rank of the enqueue
+whose value it should return (among all enqueues).
 
+Now that we have defined the fields required for tasks \ref{findinroot}, \ref{findrank} and \ref{findenqueue},
+we can easily see how to construct a new block $B$ during a \op{refresh} in $O(1)$ time.
+A \op{refresh} on node $v$ reads the value $h$ of the \var{head} field of each of $v$'s children and stores 
+$h-1$ in the $B.\eleft$ and $B.\eright$.
+$B.\var{sum\sub{enq}}$ can be computed as $v.\var{left}.\var{blocks}[B.\eleft].\var{sum\sub{enq}} + v.\var{right}.\var{blocks}[B.\eright].\var{sum\sub{enq}}$.
+For a block $B$ in the root, $B.\var{size}$ can be computed using the \var{size} field of the previous block,
+the number of enqueues in $B$ and the number of non-nil dequeues in $B$ (determined as described above).
+
+The only remaining field is $B.\var{super}$.  When the block 
+$B$ is created for a node $v$, we do not yet know where its
+superblock will eventually be installed in $B$'s parent.
+So, we leave this field blank.  After $B$ is installed 
+in $v.\var{blocks[i]}$, processes cooperate to fill it in 
+when they attempt to advance $v.\var{head}$ from $i$ to $i+1$.
+They use the value read from the \var{head} field of $v$'s parent at that time.
+As mentioned above, this might not be exactly the right index for $B$'s superblock, but we
+shall prove that it is close.
 
 
 \begin{figure}
@@ -191,12 +228,12 @@ in $O(\log p)$ time.
 \setcounter{ALG@line}{1}
 
 
-\Statex $\diamondsuit$ \tt{\sl{Shared}}
+\Statex $\diamondsuit$ \tt{\sl{Shared Variable}}
 \begin{itemize}
 \item \tt{\sl{Node} root} \sf{\com\ the root of a binary tree of \tt{Node}s with one leaf for each process}
 \end{itemize}
 
-\Statex $\diamondsuit$ \tt{\sl{Local}}
+\Statex $\diamondsuit$ \tt{\sl{Local Variable}}
 \begin{itemize}
 \item \tt{\sl{Node} leaf} \sf{\com\ process's leaf in the tree}
 \end{itemize}

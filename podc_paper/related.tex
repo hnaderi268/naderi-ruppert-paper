@@ -8,8 +8,9 @@ A version of it is
 included in the standard Java Concurrency Package.  %java.util.concurrent.ConcurrentLinkedQueue
 See the paper that introduced it for a survey of the early history of concurrent queues.
 As mentioned above, the MS-queue suffers from the CAS retry problem because of contention at the front and back of the queue.
-Thus, it is lock-free but not wait-free and has an amortized \here{Maybe we can say worst-case. I see that you have used amortized step complexity consistently everywhere but maybe it is fair to say that these papers were not designed to improve the worst-case amortized step complexity.} step complexity
-of $\Theta(p)$ per operation.
+Thus, it is lock-free but not wait-free and has an amortized\Hossein{Maybe we can say worst-case. I see that you have used amortized step complexity consistently everywhere but maybe it is fair to say that these papers were not designed to improve the worst-case amortized step complexity.}
+\Eric{Amortized step complexity is defined in first parag of paper to be worst case over all executions of the average number of steps per operation, so I think the worst-case aspect of it is clear.  Also, if we just said ``worst-case'' without ``amortized'' it would be confused with worst-case of an individual operation, which is infinite in this case.  By the way, saying that previous implementations have $\Omega(p)$ step complexity, even in the amortized sense, makes the new contribution even more of a contrast.}
+step complexity of $\Theta(p)$ per operation.
 
 A number of papers have described ways to reduce contention in the MS-queue.
 Moir et al.~\cite{DBLP:conf/spaa/MoirNSS05} 
@@ -58,8 +59,16 @@ Kogan and Petrank~\cite{DBLP:conf/ppopp/KoganP11}
 added Herlihy's helping
 technique~\cite{10.1145/114005.102808} to the MS-queue to obtain
 a wait-free queue.
-Ramalhete and Correia \cite{RC17} added a different helping mechanism.
-In both cases, the helping mechanisms only add to the step complexity of the MS-queue. \here{I get what this sentence means, but from a high overview i think it is inaccurate. Since the step complexity of MS-queue is infinite, so nothing can be added to it and a wait-free queue is always better than a lock-free queue in the worst-case.}
+Then, Kogan and Petrank \cite{10.1145/2370036.2145835} introduced the 
+fast-path slow-path methodology for making data structures wait-free:
+The fast path has good performance and the slow path guarantees termination.
+They applied their methodology to combine the MS-queue (as the fast path)
+with their previous wait-free queue (as the slow path).
+Ramalhete and Correia \cite{RC17} added a different helping mechanism to the MS-queue.
+Although these approaches can improve practical performance,
+their amortized step complexity remains $\Omega(p)$. 
+\Hossein{I get what this sentence means, but from a high overview i think it is inaccurate. Since the step complexity of MS-queue is infinite, so nothing can be added to it and a wait-free queue is always better than a lock-free queue in the worst-case.}
+\Eric{I modified the wording.  I also added the material about fast-path slow-path here (since I had forgotten that paper also applies it to a queue), and fixed the paragraph about FPSP method below when discussin array-based queues.}
 
 \paragraph{Array-Based Queues}
 Arrays can be used to implement queues with bounded capacity \cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01}.  
@@ -90,10 +99,9 @@ and the CAS retry problem reappears.
 % enqueue(B) reads t=3 and increments tail to 4
 % dequeue reads t=4 at line 53
 % go back to (*) and repeat this sequence
-\here{Is it ok for a reader to talk about A and then start a sentence about similarity to B? My suggestion which is longer: Kogan and Petrank~\cite{10.1145/2370036.2145835} proposed the fast-path slow-path methodology which is similar to Morrison and Afek \cite{DBLP:conf/ppopp/MorrisonA13}. Other queues \cite{Nik19,10.1145/3490148.3538572,DBLP:conf/ppopp/YangM16} have used the methodology.} Similarly,
-other queues \cite{Nik19,10.1145/3490148.3538572,DBLP:conf/ppopp/YangM16} used the fast-path slow-path methodology of Kogan and Petrank~\cite{10.1145/2370036.2145835}.
-The fast path has good performance and the slow path guarantees
-termination.
+This approach is similar to the fast-path slow-path methodology \cite{10.1145/2370036.2145835}.
+Other queues \cite{Nik19,10.1145/3490148.3538572,DBLP:conf/ppopp/YangM16} have also used this methodology
+on array-based queues.
 In worst-case executions, where processes must execute the slow path,
 these implementations also take $\Omega(p)$ steps per operation, 
 due either to the CAS retry problem or helping mechanisms.

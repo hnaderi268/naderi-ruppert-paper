@@ -50,6 +50,24 @@
 \usepackage{multicol}
 \setlength\columnsep{24pt}
 
+\def\draft{1}  % set to 1 for draft (include comments, color edits), 0 for clean final copy (omit comments, edits in black)
+\if\draft 1
+\newcommand{\mycomment}[3]{{\color{#2}{[\bf{#1: #3}]}}}
+\newcommand{\myedit}[2]{{\color{#1}{#2}}\normalcolor}
+\newcommand{\rebuttaledit}[2]{{\color{#1}{#2}}\normalcolor}
+\newcommand{\here}[1]{\bf{[[[#1]]]}}
+%\usepackage{showkeys}
+\else
+\newcommand{\mycomment}[3]{}
+\newcommand{\rebuttaledit}[2]{#2}
+\newcommand{\myedit}[2]{#2}
+\newcommand{\here}[1]{}  % \here's include comments to ourselves that readers should not see.
+\fi
+
+\newcommand{\Eric}[1]{\mycomment{Eric}{magenta}{#1}}
+\newcommand{\Hossein}[1]{\mycomment{Hossein}{blue}{#1}}
+\newcommand{\er}[1]{\myedit{magenta}{#1}}
+
 \algnewcommand\algorithmicforeach{\bf{for each}}
 \algdef{S}[FOR]{ForEach}[1]{\algorithmicforeach\ #1\ \algorithmicdo}
 
@@ -93,7 +111,6 @@
 \newcommand{\head}{head}
 \newcommand{\size}{size }
 
-\newcommand{\here}[1]{\bf{[[#1]]}}
 \newcommand{\ceil}[1]{\lceil #1 \rceil}
 \newcommand{\nil}{nil}
 \newcommand{\opa}[2]{\nf{#1(#2)}}
@@ -171,7 +188,7 @@
 %% end of the preamble, start of the body of the document source.
 \begin{document}
 
-\title{A Wait-free Queue with Poly-logarithmic Step Complexity}
+\title{A Wait-free Queue with Polylogarithmic Step Complexity}
 
 
 %%

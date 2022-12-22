@@ -34,9 +34,10 @@ If $P$'s operation is an enqueue, it has obtained a place in the linearization o
 If $P$'s operation is a dequeue, $P$ must use information in the tree to compute the value that the
 dequeue must return.  To do this, $P$ first determines which block in the root contains its operation
 (since the operation may have been propagated to the root by some other process).
-Then, $P$ determines whether the queue is empty when its dequeue is linearized. If so, it returns \nil.
+Then, $P$ determines whether the queue is empty when its dequeue is linearized. 
+If so, it returns \nil\ and we call it a \emph{null dequeue}
 If not, $P$ computes the rank\footnote{We say that the $r$th element in a sequence has rank $r$ within that sequence.} $r$ of its dequeue in the linearization ordering
-among all dequeues that do not return \nil,
+among all non-null dequeues,
 finds the $r$th enqueue in the linearization, and returns that enqueue's value.
 
 The primary challenge is thus figuring out what information to store in each block so that 
@@ -50,13 +51,13 @@ Construct a block for node $v$ that represents the operations contained in $O(p)
 Given a dequeue in a leaf that has been propagated to the root, find that operation's position in the root's blocks array.
 \item
 \label{findrank}
-Given a dequeue's position in the root, determine that the queue is empty when it occurs
+Given a dequeue's position in the root, determine whether it is a null dequeue (i.e., whether the queue is empty when it is linearized)
 or determine the rank $r$ of the enqueue whose value it should return.
 \item
 \label{findenqueue}
 Find the $r$th enqueue in the linearization ordering.
 \end{enumerate}
-Since these tasks require knowing the linearization ordering, we next describe that ordering.
+Since these tasks depends on the linearization ordering, we describe that ordering next.
 
 \subsection{Linearization Ordering}
 
@@ -161,27 +162,37 @@ See Figure \ref{object-fields}.
 A block in a leaf represents a single enqueue or dequeue.  The \var{element} field stores the value
 enqueued for an enqueue operation, or \var{null} if the operation is a dequeue.
 
-\here{This parag may need to be rewritten if we use sum\sub{enq} field instead of sum\sub{enq-left} and sum\sub{enq-right}.  Also, maybe it is too detailed at this point; perhaps instead just say that for task \ref{findenqueue} we want to be able to find the position of the $r$th enqueue in a block within a block in its child using binary search.}
 Each block in an internal node $v$ stores the indices of the last direct subblock in $v$'s left and right child in the fields \eleft\ and \eright.  This allows us to navigate to the direct subblocks of any block easily.
-Now, suppose we want to find the $r$th enqueue in the linearization ordering for task \ref{findenqueue}.
-Let $B_1, B_2, \ldots, B_k$ be the blocks in the root.
-First, we need prefix sums of the number of enqueues in $E(B_1)\cdot E(B_2)\cdots E(B_i)$
-so that we can do a binary search for the block $B_e$ that contains the $r$th enqueue.
-This prefix sum also allows us to know the rank $r'$ within $E(B_e)$ of the $r$th enqueue.
-Once we have $r'$, we need the number of enqueues that $B_e$ received from its left child
-to determine whether the enqueue came from the left or right child of the root.
-Suppose the enqueue came from the right child $v_r$.
-Then, we know that the index of the block in $v_r$ that contains the enqueue
-is between $B_{e-1}.\eright + 1$ and $B_e$.\eright.
-We can again do a binary search within this range.
-For this, we can again use the prefix sums of the number of enqueues in any prefix of the array $v_r.blocks$.
-We can then continue in this way down the tree until reaching a leaf where the enqueue is stored explicitly.
+Blocks also store prefix sums of the numbers of enqueues and dequeues:
+the block in $v.\var{blocks}[i]$ has two fields \var{sum\sub{enq}} and \var{sum\sub{deq}}
+that store the total number of enqueues and dequeues in $v.\var{blocks[1..i]}$.
+These fields allow us to pinpoint the exact location of an operation among the subblocks of a given block.
+For example, consider finding the $r$th enqueue in the linearization ordering.
+We use the \var{sum\sub{enq}} fields of the root's blocks to do a binary search
+to locate which block in the root contains the operation.
+If we know which block $B$ in some node $v$ contains the enqueue,
+we can use the \var{sum\sub{enq}} field again determine which child of $v$ contains the enqueue
+and then to do a binary search
+among the direct subblocks of $B$ in that child.
+Thus, we work our way down the tree until we find a leaf block, which explicitly stores 
+the enqueue.
+%Now, suppose we want to find the $r$th enqueue in the linearization ordering for task \ref{findenqueue}.Let $B_1, B_2, \ldots, B_k$ be the blocks in the root.
+%First, we need prefix sums of the number of enqueues in $E(B_1)\cdot E(B_2)\cdots E(B_i)$
+%so that we can do a binary search for the block $B_e$ that contains the $r$th enqueue.
+%This prefix sum also allows us to know the rank $r'$ within $E(B_e)$ of the $r$th enqueue.
+%Once we have $r'$, we need the number of enqueues that $B_e$ received from its left child
+%to determine whether the enqueue came from the left or right child of the root.
+%Suppose the enqueue came from the right child $v_r$.
+%Then, we know that the index of the block in $v_r$ that contains the enqueue
+%is between $B_{e-1}.\eright + 1$ and $B_e$.\eright.
+%We can again do a binary search within this range.
+%For this, we can again use the prefix sums of the number of enqueues in any prefix of the array $v_r.blocks$.
+%We can then continue in this way down the tree until reaching a leaf where the enqueue is stored explicitly.
 We shall show that the binary search in the root can be done in $O(\log p + \log q)$ steps,
 and the binary search within each other node along the path to a leaf can be done in $O(\log p)$ steps,
 for a total of $O(\log^2 p + \log q)$ steps to complete task \ref{findenqueue}.
-All of the information for this search process can be derived from the 
-\var{sum\sub{enq-left}} and \var{sum\sub{enq-right}} fields.
-\here{modify to \var{sum\sub{enq}} and \eleft/\eright.}
+All of the information needed for this search process can be derived from the 
+\eleft, \eright\ and \var{sum\sub{enq}} fields.
 
 To facilitate task \ref{findinroot}, each block has a field \var{super} that contains
 the (approximate) index of its superblock in the parent node's blocks array.
@@ -193,24 +204,24 @@ in $O(\log p)$ time.
 
 We now consider task \ref{findrank}.
 First, we must determine whether the queue is empty when a dequeue occurs.
-For this, each block in the root stores a \var{size} field that stores the number of elements
+To facilitate this, each block in the root stores a \var{size} field that stores the number of elements
 in the queue after all operations in the linearization ordering up to that block (inclusive) 
 have been performed.
-We can easily determine which dequeues in a block $B_d$ in the root should return \nil using
-$B_{d-1}.\var{size}$ and the number of enqueues and dequeues in $B_d$.
-We can also compute the number of dequeues in blocks $B_1, \ldots, B_{d-1}$ that returned non-nil
-values as $B_{d-1}.\var{sum\sub{enq}}-B_{d-1}.\var{size}$.
-Then, for any dequeue in $B_d$ that should return a non-nil value, we can also determine its
-rank among all non-nil dequeues in the linearization ordering, and hence the rank of the enqueue
+We can easily determine which dequeues in a block $B_d$ in the root are null dequeues using
+$B_{d-1}.\var{size}$, which stores the size of the queue just before $B_d$'s operations are performed, and the number of enqueues and dequeues in $B_d$.
+We can also compute the number of non-null dequeues in blocks $B_1, \ldots, B_{d-1}$ 
+as $B_{d-1}.\var{sum\sub{enq}}-B_{d-1}.\var{size}$.
+Then, for any non-null dequeue in $B_d$, we can also determine its
+rank among all non-null dequeues in the linearization ordering, and hence the rank of the enqueue
 whose value it should return (among all enqueues).
 
 Now that we have defined the fields required for tasks \ref{findinroot}, \ref{findrank} and \ref{findenqueue},
 we can easily see how to construct a new block $B$ during a \op{refresh} in $O(1)$ time.
 A \op{refresh} on node $v$ reads the value $h$ of the \var{head} field of each of $v$'s children and stores 
-$h-1$ in the $B.\eleft$ and $B.\eright$.
-$B.\var{sum\sub{enq}}$ can be computed as $v.\var{left}.\var{blocks}[B.\eleft].\var{sum\sub{enq}} + v.\var{right}.\var{blocks}[B.\eright].\var{sum\sub{enq}}$.
+$h-1$ in the $B.\eleft$ and $B.\eright$ fields of the new block.
+Then, we can compute $B.\var{sum\sub{enq}}$ as $v.\var{left}.\var{blocks}[B.\eleft].\var{sum\sub{enq}} + v.\var{right}.\var{blocks}[B.\eright].\var{sum\sub{enq}}$.
 For a block $B$ in the root, $B.\var{size}$ can be computed using the \var{size} field of the previous block,
-the number of enqueues in $B$ and the number of non-nil dequeues in $B$ (determined as described above).
+the number of enqueues in $B$ and the number of non-null dequeues in $B$ (determined as described above).
 
 The only remaining field is $B.\var{super}$.  When the block 
 $B$ is created for a node $v$, we do not yet know where its
@@ -285,39 +296,6 @@ shall prove that it is close.
 
 ---------
 
-
-After propagating an operation \textit{op} to the root, processes can
-find out information about the linearization ordering using \ref{findenqueue} and
-\ref{findinroot}.  
-To get the $i$th operation in the root, we find the block $B$
-containing the $i$th operation in the root, and then recursively find
-the subblock of $B$ in the descendent of the root that contains that
-$i$th operation. When we reach a block in a leaf, the operation is
-explicitly stored there. To make this search faster, instead of
-iterating over all blocks in the node, we store the prefix sum of the
-number of elements in the blocks sequence to permit a binary search
-for the required block. We also store pointers to determine the range
-of subblocks of a block to make the binary search faster. In each
-block, we store the prefix sum of operations from the left child and
-from the right child. Moreover, for each block, we store two
-attributes \nf{end\sub{left}} and \nf{end\sub{right}}, the indices of
-the last left and right subblock (see Figure \ref{fig::pointer}). We
-know a block size is at most $p$, so binary search takes at most
-\textsc{O}$(\log p)$ time, since the \nf{end\sub{left}} and
-\nf{end\sub{right}} indices of a block and its previous block reduce
-the search range size to \textsc{O}$(p)$. 
-
-To compute the rank in the root of an operation in a leaf, we need to
-find the superblock of the block that the operation is in. After a
-block is installed in a node we store the approximate index of its
-superblock in it to make this faster. 
-
-\begin{figure}[hbtp]
-\centering
-  \includegraphics[width=4in, height=1.4in]{pics/pointers}
-  \caption{Each block stores the index of its last subblock in each
-    child. \label{fig::pointer}} 
-\end{figure}
 
 In an execution on a queue where no dequeue operation returns
 \nf{null}, the $k$th dequeue returns the argument of the $k$th

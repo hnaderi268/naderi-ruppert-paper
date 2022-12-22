@@ -8,7 +8,7 @@ significant concurrent applications, including OS kernels \cite{MP91}, memory re
 packet processing \cite{DPDK},
 and sharing resources or tasks.
 The lock-free MS-queue of Michael and Scott \cite{MS98} is a classic shared queue implementation.
-IT uses a singly-linked list with pointers to the front and back nodes.
+It uses a singly-linked list with pointers to the front and back nodes.
 To dequeue or enqueue an element, the front or back pointer is updated by a 
 compare-and-swap (CAS) instruction.
 If this CAS fails, the operation must retry.

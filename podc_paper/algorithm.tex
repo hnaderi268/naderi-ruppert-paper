@@ -126,17 +126,19 @@ $E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k)$.
 
 Each node has an infinite array called \var{blocks}.
 To simplify the code, each node has an empty block in \var{blocks[0]}.
-The node also has a \var{head} index which is the position in the \var{blocks} array to be used
+Each node also has a \var{head} index that stores the position in the \var{blocks} array to be used
 for the next attempt to append a block to this node.
 
 If a block contained an explicit representation of its sequences of enqueues and dequeues,
-it would take $\Omega(p)$ time to construct a block, which would be much too slow for task \ref{construct}.
+it would take $\Omega(p)$ time to construct a block, which would be too slow for task \ref{construct}.
 Instead, the block stores an implicit representation of the sequences.
-We now explain how the fields of the blocks were chosen for this implicit representation. 
-Refer to Figure \ref{implicit} for an example showing how the tree in Figure \ref{tournament} would actually be represented, and Figure \ref{object-fields} for the definitions of the fields of blocks and tree nodes.
+We now explain how we designed the fields for this implicit representation. 
+Refer to Figure \ref{implicit} for an example showing how the tree in Figure \ref{tournament} is actually represented, and Figure \ref{object-fields} for the definitions of the fields of blocks and tree nodes.
 
 A block in a leaf represents a single enqueue or dequeue.  The \var{element} field stores the value
 enqueued for an enqueue operation, or \var{null} if the operation is a dequeue.
+
+\here{If space permits, we might want to add some examples in the following paragraphs that refer back to Figure \ref{implicit}.}
 
 Each block in an internal node $v$ stores the indices of the last direct subblock in $v$'s left and right child in the fields \eleft\ and \eright.  This allows us to navigate to the direct subblocks of any block easily.
 Blocks also store prefix sums of the numbers of enqueues and dequeues:
@@ -147,7 +149,7 @@ For example, consider finding the $r$th enqueue in the linearization ordering.
 We use the \var{sum\sub{enq}} fields of the root's blocks to do a binary search
 to locate which block in the root contains the operation.
 If we know which block $B$ in some node $v$ contains the enqueue,
-we can use the \var{sum\sub{enq}} field again determine which child of $v$ contains the enqueue
+we can use the \var{sum\sub{enq}} field again to determine which child of $v$ contains the enqueue
 and then to do a binary search
 among the direct subblocks of $B$ in that child.
 Thus, we work our way down the tree until we find a leaf block, which explicitly stores 
@@ -196,8 +198,9 @@ we can easily see how to construct a new block $B$ during a \op{refresh} in $O(1
 A \op{refresh} on node $v$ reads the value $h$ of the \var{head} field of each of $v$'s children and stores 
 $h-1$ in the $B.\eleft$ and $B.\eright$ fields of the new block.
 Then, we can compute $B.\var{sum\sub{enq}}$ as $v.\var{left}.\var{blocks}[B.\eleft].\var{sum\sub{enq}} + v.\var{right}.\var{blocks}[B.\eright].\var{sum\sub{enq}}$.
-For a block $B$ in the root, $B.\var{size}$ can be computed using the \var{size} field of the previous block,
-the number of enqueues in $B$ and the number of non-null dequeues in $B$ (determined as described above).
+For a block $B$ in the root, $B.\var{size}$ can be computed using the \var{size} field of the previous block $B'$ and
+the number of enqueues and dequeues in $B$:
+$B.\var{size} = \max(0, B'.\var{size} + (B.\var{sum\sub{enq}}-B'.\var{sum\sub{enq}}) - (B.\var{sum\sub{deq}} - B'.\var{sum\sub{deq}}))$.
 
 The only remaining field is $B.\var{super}$.  When the block 
 $B$ is created for a node $v$, we do not yet know where its
@@ -211,126 +214,68 @@ shall prove that it is close.
 
 
 \begin{figure}
+\here{Does \var{leaf} have to be shared for helping when doing GC?}
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{1}
-
-
-\Statex $\diamondsuit$ \tt{\sl{Shared Variable}}
+\Statex $\diamondsuit$ \tt{\sl{Shared variable}}
 \begin{itemize}
-\item \tt{\sl{Node} root} \sf{\com\ the root of a binary tree of \tt{Node}s with one leaf for each process}
+\item \tt{\sl{Node} root} \Comment{root of a binary tree of \tt{Node}s with one leaf for each process}
 \end{itemize}
 
-\Statex $\diamondsuit$ \tt{\sl{Local Variable}}
+\Statex $\diamondsuit$ \tt{\sl{Thread-local variable}} 
 \begin{itemize}
-\item \tt{\sl{Node} leaf} \sf{\com\ process's leaf in the tree}
+\item \tt{\sl{Node} leaf} \Comment{process's leaf in the tree}
 \end{itemize}
 
 \Statex $\blacktriangleright$ \tt{\sl{Node}}
 \begin{itemize}
-\item \tt{\sl{Node} left, right, parent} \textsf{\com\ children and parent pointers initialized  when creating the tree}
-\item \tt{\sl{Block[0..$\infty$]} blocks} \textsf{\com\ initially \tt{blocks[0]} contains an empty block with all integer fields equal to 0}
-\item \tt{\sl{int} \head} \textsf{\com\ position to attempt appending next \tt{block} to \tt{blocks}, initially 1}
+\item \tt{\sl{Node} left, right, parent} \Comment{children and parent pointers initialized  when creating the tree}
+\item \tt{\sl{Block[0..$\infty$]} blocks} \Comment{initially \tt{blocks[0]} contains an empty block with all integer fields equal to 0}
+\item \tt{\sl{int} \head} \Comment{position to attempt appending next \tt{block} to \tt{blocks}, initially 1}
 \end{itemize}
 
 \Statex $\blacktriangleright$ \tt{\sl{Block}} 
 
 \begin{itemize}
-  \item \tt{\sl{int} super}
-  \textsf{\com\ approximate index of the block's superblock in \var{parent.blocks}}
+  	\item \tt{\sl{int} sum\sub{enq}, sum\sub{deq}}
+  		\Comment{number of enqueue, dequeue operations in \var{blocks} array up to this block (inclusive)}
+  	\item \tt{\sl{int} super}
+  		\Comment{approximate index of the block's superblock in \var{parent.blocks}}
+	\item[\com] Blocks in internal nodes have the following additional fields
+	\item \tt{int} \eleft, \eright
+  		\Comment{index of last direct subblock in the left and right child}
+  	\item[\com] Blocks in leaf nodes have the following additional field
+  	\item \tt{\sl{Object} element}
+  		\Comment{if the block's operation is \tt{enqueue(x)} then \tt{element=x}, otherwise \tt{element=null}.}
+	\item[\com] Blocks in the root node have the following additional field
+	\item \tt{\sl{int} \size}%
+  		\Comment{size of the queue after performing all operations up to the end of this block}
 \end{itemize}
 
+%\Statex {\com\  Blocks in internal nodes have the following additional fields}
+%\Statex $\blacktriangleright$ \tt{\sl{InternalBlock} extends \sl{Block}} \sf{\com\ the following additional fields are used only for blocks in internal nodes}
+%\begin{itemize}
+%	\item \tt{int} \eleft, \eright
+%  		\Comment{index of last direct subblock in the left and right child}
+%\end{itemize}
 
+%\Statex {\com\ Blocks in leaf nodes have the following additional field}
+%\Statex $\blacktriangleright$ \tt{\sl{LeafBlock} extends \sl{Block}} \sf{\com\ the following additional field is used only for blocks in leaves}
+%\begin{itemize}
+%  \item \tt{\sl{Object} element}
+%  \Comment{if the block's operation is \tt{enqueue(x)} then \tt{element=x}, otherwise \tt{element=null}.}
+%\end{itemize}
 
-\Statex $\blacktriangleright$ \tt{\sl{InternalBlock} extends \sl{Block}} \sf{\com\ the following additional fields are used only for blocks in internal nodes}
-\begin{itemize}
-    \item \tt{int} \eleft, \eright
-  \textsf{\com\ indices of the last subblock of the block in the left and right child}
-  \item \tt{\sl{int} sum\sub{enq-left}}\textsf{\com\ number of enqueues in \tt{left.blocks[1..end\sub{left}]}}
-  \item \tt{\sl{int} sum\sub{deq-left}}\textsf{\com\ number of dequeues in \tt{left.blocks[1..end\sub{left}]}}
-  \item \tt{\sl{int} sum\sub{enq-right}}\textsf{\com\ number of enqueues in \tt{right.blocks[1..end\sub{right}]}}
-  \item \tt{\sl{int} sum\sub{deq-right}}\textsf{\com\ number of dequeues in \tt{right.blocks[1..end\sub{right}]}}
-\end{itemize}
-
-\Statex $\blacktriangleright$ \tt{\sl{LeafBlock} extends \sl{Block}} \sf{\com\ the following additional fields are used only for blocks in leaves}
-\begin{itemize}
-  \item \tt{\sl{Object} element}
-  \textsf{\com\ if the operation stored in the block is \tt{enqueue(x)} then \tt{element=x}, otherwise \tt{element=null}.}
-  
-    \item \tt{\sl{int} sum\sub{enq}, sum\sub{deq}}
-  \textsf{\com\ number of enqueue, dequeue operations in  leaf's \var{blocks} array up to this block (inclusive)}
-\end{itemize}
-
-\Statex $\blacktriangleright$ \tt{\sl{RootBlock} extends \sl{InternalBlock}} \sf{\com\ the following field is used only for blocks in the root}
-\begin{itemize}
-  \item \tt{\sl{int} \size}%
-  \textsf{\com\ size of the queue after performing all operations up to the end of this block in linearization order}
-\end{itemize}
+%\Statex {\com\ Blocks in the root node have the following additional field}
+%\Statex $\blacktriangleright$ \tt{\sl{RootBlock} extends \sl{InternalBlock}} \sf{\com\ the following additional field is used only for blocks in the root}
+%\begin{itemize}
+%  \item \tt{\sl{int} \size}%
+%  \Comment{size of the queue after performing all operations up to the end of this block}
+%\end{itemize}
 
 \end{algorithmic}
 \caption{Objects used in Tournament Tree Data Structure \label{object-fields}}
 \end{figure}
-
----------
-
-
-In our case of implementing a queue, a process only needs to compute
-the rank of a \nf{Dequeue} and get an \nf{Enqueue} with a specific
-position.  We know we can linearize operations in a block in any
-order; here, we choose to put \nf{Enqueue} operations in a block
-before \nf{Dequeue} operations. Consider the following operations,
-where operations in a cell are concurrent. 
-\begin{table}[hbtp]
-\centering
-\begin{small}
-\begin{tabular}{c|c|c|c}
-    \hline \texttt{Deq} & \texttt{Enq(5)}, \texttt{Enq(2)}, \texttt{Enq(1)}, \texttt{Deq}& \texttt{Enq(3)}, \texttt{Deq}&  \texttt{Enq(4)}, \texttt{Deq}, \texttt{Deq}, \texttt{Deq}, \texttt{Deq}\\ \hline
-  \end{tabular}
-\end{small}
-\caption{An execution on a queue separated by the operations in the root blocks.}
-\end{table}
-
-\noindent The \texttt{Dequeue} operations return \texttt{null, 5, 2,
-  1, 3, 4, null}, respectively. 
-Now, we claim that by knowing the size of the queue, we can compute
-the rank of the required \texttt{Enqueue} for any non-null
-\nf{Dequeue}. We apply this approach to blocks; if we store the size
-of the queue after each block of operations, we can compute the index
-of each \nf{Dequeue}'s result in \textsc{O}$(1)$ steps. 
-
-\begin{table}[hbtp]
-\centering
-\begin{small}
-  \begin{tabular}{c|c|c|c|c}
-    \hline &\texttt{Deq} & \texttt{Enq(5)}, \texttt{Enq(2)}, \texttt{Enq(1)}, \texttt{Deq}& \texttt{Enq(3)}, \texttt{Deq}&  \texttt{Enq(4)}, \texttt{Deq}, \texttt{Deq}, \texttt{Deq}, \texttt{Deq}\\ \hline
-    \#\tt{Enq}s & 0 & 3 & 1 & 1 \\ \hline
-    \#\tt{Deq}s & 1 & 1 & 1 & 4 \\ \hline
-    Size at end & 0 & 2 & 2 & 0 \\ \hline
-  \end{tabular}
-\end{small}
-  \caption{Augmented history of operation blocks on the queue.}
-\end{table}
-
-\noindent The size of the queue after the $b$th block in the root
-could be computed as 
-$$\textrm{max}\Big(\textrm{size after }(b-1)\textrm{th block} +
-\#\textrm{\tt{Enqueue}s in }b\textrm{th block} -
-\#\textrm{\tt{Dequeue}s in }b\textrm{th block}, 0\Big).$$ 
-\noindent Moreover, the total number of non-null dequeues in blocks
-$1,2,...,b$ in the root is 
-$$ \sum_{i=1}^{b} \#\textrm{\tt{Enqueue}s in }i\textrm{th block} -
-\textrm{size after }b\textrm{th block}.$$ 
-
-Given a \texttt{Dequeue} is in block $B$, its response is the argument
-of the \tt{Enqueue} whose rank is 
-\begin{center}
-    \#\textrm{non-null } \nf{Dequeue}s in  blocks $1,2,...,b-1 +  $index of the \nf{Dequeue} among B\textrm{'s} \nf{Dequeue}
-\end{center}
-if \vspace{-3em}
-\begin{center}
-    $\big ($size of the queue after $b-1\textrm{th block} + \#\textrm{\tt{Enqueue}s in }b\textrm{th block} $\\$- \textrm{index of \tt{Dequeue} in }B\textrm{'s \tt{Dequeue}s} \big )\geq 0$.
-\end{center}
-Otherwise, the response would be \nf{null}.
-
 
 \subsection{Details of the Implementation}
 Section \ref{algQ} gives the pseudocode for the queue

@@ -68,18 +68,22 @@
 \newcommand{\Hossein}[1]{\mycomment{Hossein}{blue}{#1}}
 \newcommand{\er}[1]{\myedit{magenta}{#1}}
 
+\newcommand{\node}{node}
+\newcommand{\nodes}{nodes}
+\newcommand{\block}{block}
+\newcommand{\blocks}{blocks}
+
 \algnewcommand\algorithmicforeach{\bf{for each}}
 \algdef{S}[FOR]{ForEach}[1]{\algorithmicforeach\ #1\ \algorithmicdo}
 
 \algdef{S}[FUNCTION]{Function}
-   [3]{{\tt{\sl{#1}}} {\tt{#2}}\ifthenelse{\equal{#3}{}}{}{\tt{(#3)}}}
+   [3]{{\var{{#1}}} {\op{#2}}\ifthenelse{\equal{#3}{}}{}{\tt{(#3)}}}
   
 \algdef{E}[FUNCTION]{EndFunction}
-   [1]{\algorithmicend\ \tt{{#1}}}
+   [1]{\algorithmicend\ \op{{#1}}}
 
-\algrenewcommand\Call[2]{\tt{{#1}\ifthenelse{\equal{#2}{}}{}{(#2)}}}
+\algrenewcommand\Call[2]{\var{{#1}\ifthenelse{\equal{#2}{}}{}{(#2)}}}
 \usepackage{eqparbox}
-\renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENT}{\com\ #1}}
 
 \newcommand\keywordfont{\sffamily\bfseries}
 \algrenewcommand\algorithmicend{{\keywordfont end}}
@@ -115,10 +119,11 @@
 
 \newcommand{\ceil}[1]{\lceil #1 \rceil}
 \newcommand{\nil}{nil}
-\newcommand{\opa}[2]{\nf{#1(#2)}}
-\newcommand{\op}[1]{\nf{#1}}
-\newcommand{\var}[1]{\nf{#1}}
+\newcommand{\opa}[2]{\sf{#1(#2)}}
+\newcommand{\op}[1]{\sf{#1}}
+\newcommand{\var}[1]{\sf{#1}}
 \newcommand{\com}{$\triangleright$}
+\newcommand{\linecomment}[1]{\com\ #1}
 
 \usepackage{amsmath,amsthm}
 %\newtheorem{theorem}{Theorem}
@@ -264,234 +269,6 @@ We present our algorithm in pseudocode. page~22 contains the description of the 
 
 
 
-\begin{algorithm}
-\caption{\tt{\sl{Queue}}}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{0}
-
-
-\Function{void}{Enqueue}{\sl{Object} e} \cmt{Creates a \tt{block} with element \tt{e} and adds it to the tree.}
-\State \tt{block newBlock= \Call{new}{\sl{LeafBlock}}}
-\State \tt{newBlock.element= e}
-\State \tt{newBlock.sum\sub{enq}= leaf.blocks[leaf.\head].sum\sub{enq}+1}
-\State \tt{newBlock.sum\sub{deq}= leaf.blocks[leaf.\head].sum\sub{deq}}
-\State \tt{leaf.}\Call{Append}{newBlock}
-\EndFunction{Enqueue}
-
-\Statex
-
-\Statex \com\ Creates a block with \nf{null} value element, appends it to the tree and returns its response.
-\Function{Object}{Dequeue()}{} 
-\State \tt{block newBlock= \Call{new}{\sl{LeafBlock}}} 
-\State \tt{newBlock.element= null}
-\State \tt{newBlock.sum\sub{enq}= leaf.blocks[leaf.\head].sum\sub{enq}}
-\State \tt{newBlock.sum\sub{deq}= leaf.blocks[leaf.\head].sum\sub{deq}+1}
-\State \tt{leaf.}\Call{Append}{newBlock}
-\State \tt{<b, i>=} \Call{IndexDequeue}{leaf.\head, 1}
-\State \tt{output=} \Call{FindResponse}{b, i} 
-\label{deqRest}
-\State \Return{\tt{output}}
-\EndFunction{Dequeue}
-
-\Statex
-
-\Statex \com\ Returns the response to $D_i(root,b)$, the \nf{i}th \nf{Dequeue} in \nf{root.blocks[b]}.
-\Function{element}{FindResponse}{\sl{int} b, \sl{int} i}
-\If{\tt{ root.blocks[b-1].\size}\tt{ + root.blocks[b].num\sub{enq} - i $<$ 0}} \label{checkEmpty}\cmt{Check if the queue is empty.}
-\State \Return \tt{null} \label{returnNull}
-\Else \cmt{The response is $E_e(root)$, the \nf{e}th \nf{Enqueue} in the root.}
-\State \tt{e= i + (root.blocks[b-1].sum\sub{enq}-root.blocks[b-1].size)} \label{computeE}
-\State \Return \tt{root.GetEnqueue(root.\Call{DoublingSearch}{e, b})}\label{findAnswer}
-\EndIf
-\EndFunction{FindResponse}
-
-\end{algorithmic}
-\end{algorithm}
-
-
-
-\begin{algorithm}
-\caption{\tt{\sl{Node}}}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{25}
-
-\Statex $\leadsto$ \textsf{Precondition: \tt{blocks[start..end]} contains a block with \tt{sum\sub{enq}} greater than or equal to \tt{x}}
-\Statex \com\ \textmd{Does a binary search for~the value \tt{x} of \tt{sum\sub{enq}} field and returns the index of the leftmost block in\\
-\com\ \tt{blocks[start..end]} whose \tt{sum\sub{enq}} is $\geq$ \tt{x}}.
-\Function{int}{BinarySearch}{\sl{int} x, \sl{int} start, \sl{int} end}
-% \State \Return \tt{min\{j: blocks[j].sum\sub{enq}$\geq$x\}}
-\While{\nf{start<end}}
-\State \tt{\sl{int}} \tt{mid= floor((start+end)/2)}
-\If{\nf{blocks[mid].sum\sub{enq}<x}}
-\State \nf{start= mid+1}
-\Else
-\State \nf{end= mid}
-\EndIf
-\EndWhile
-\State\Return \nf{start}
-\EndFunction{BinarySearch}
-
-\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}
-\caption{\tt{\sl{Root}}}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{36}
-\Statex
-\Statex $\leadsto$ \textsf{Precondition: \tt{root.blocks[end].sum\sub{enq} $\geq$ \tt{e}}}
-\Statex \com\ \textmd{Returns \tt{<b,i>} such that $E_\nf{e}(\nf{root})=E_\nf{i}(\nf{root},\nf{b})$, i.e., the \nf{e}th \nf{Enqueue} in the \nf{root} is the \nf{i}th \nf{Enqueue} within \\
-\com\ the \nf{b}th block in the \nf{root}.}
-
-\Function{<int, int>}{DoublingSearch}{\sl{int} e, \sl{int} end}
-\State \tt{start= end-1} \label{dsearchStart}
-\While{\tt{root.blocks[start].sum\sub{enq}}$>=$\tt{e}}
-\State \tt{start= max(start-(end-start), 0)} \label{doubling}
-\EndWhile \label{dsearchEnd}
-\State \tt{b= root.BinarySearch(e, start, end)} \label{dsearchBinarySearch}
-\State \tt{i= e- root.blocks[b-1].sum\sub{enq}} \label{DSearchComputei}
-\State\Return \tt{<b,i>}
-\EndFunction{DoublingSearch}
-\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}
-\caption{\tt{\sl{Leaf}}}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{45}
-
-\Function{void}{Append}{\sl{block} B} \cmt{Only called by the owner of the leaf.}
-\State \tt{blocks[\head]= B} \label{appendLeaf}
-\State \tt{\head= \head+1} \label{appendEnd} 
-\State \tt{parent.}\Call{Propagate()}{} 
-\EndFunction{Append}
-
-\end{algorithmic}
-\end{algorithm}
-
-
-
-
-\begin{algorithm}
-\caption{\tt{\sl{Node}}}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{50}
-
-
-\Statex \com\ \textmd{\nf{$n$.Propagate} propagates operations  in \nf{this}.children up to \nf{this} when it terminates.}
-\Function{void}{Propagate()}{}
-\If{\bf{not} \Call{Refresh()}{}} \label{firstRefresh}
-\State \Call{Refresh()}{} \label{secondRefresh}
-\EndIf
-\If{\tt{this} \bf{is not} \tt{root}}
-\State \tt{parent.}\Call{Propagate()}{}
-\EndIf
-\EndFunction{Propagate}
-
-\Statex
-
-\Statex \com\ \textmd{Creates a block containing new operations of \nf{this.}children, and then tries to append it to \nf{this}.}
-\Function{boolean}{Refresh()}{}
-\State \tt{h= \head} \label{readHead}
-\ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}} \label{startHelpChild1}
-\State \tt{h\sub{dir}= dir.\head} \label{readChildHead}
-\If{\nf{dir.blocks[h\sub{dir}]!=null}} \label{ifHeadnotNull}
-\State{\tt{dir.\Call{Advance}{h\sub{dir}}}} \label{helpAdvance}
-\EndIf
-\EndFor \label{endHelpChild1}
-\State \tt{new= \Call{CreateBlock}{h}} \label{invokeCreateBlock}
-\If{\tt{new.num==0}} \Return{\tt{true}} \label{addOP} 
-\EndIf
-\State{\tt{result= blocks[h].CAS(null, new)}} \label{cas}
-\State{\tt{this.\Call{Advance}{h}}} \label{advance}
-\State \Return{ \tt{result}}
-
-\EndFunction{Refresh}
-
-
-\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}
-\caption{\tt{\sl{Node}}}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{73}
-
-\Function{void}{Advance}{\sl{int} h} \cmt{Sets \nf{blocks[h].super} and increments \nf{head} from \nf{h} to \nf{h+1}.}
-\State \tt{h\sub{p}= parent.\head} \label{readParentHead}
-\State \tt{blocks[h].super.CAS(null, h\sub{p})} \label{setSuper1}
-\State \tt{head.CAS(h, h+1)} \label{incrementHead}
-\EndFunction{Advance}
-
-\Statex
-
-\Function{Block}{CreateBlock}{\sl{int} i} \cmt{Creates and returns the block to be installed in \tt{blocks[i]}.}
-\State \tt{block new= \Call{new}{\sl{InternalBlock}}} \label{initNewBlock}
-\ForEach{\tt{dir} {\keywordfont{in}} \tt{\{left, right\}}}
-\State \tt{index\sub{prev}= blocks[i-1].\edir} \label{prevLine}
-\State \tt{new.\edir= dir.\head-1} \label{lastLine} \cmt{\nf{new} contains \tt{dir.blocks[blocks[i-1].\edir..dir.\head-1]}.}
-\State \tt{block\sub{prev}= dir.blocks[index\sub{prev}]}
-\State \tt{block\sub{last}= dir.blocks[new.\edir]}
-\State \tt{new.sum\sub{enq-dir}= blocks[i-1].sum\sub{enq-dir} + block\sub{last}.sum\sub{enq} - block\sub{prev}.sum\sub{enq}} \label{setSumEnqLeft}
-\State \tt{new.sum\sub{deq-dir}= blocks[i-1].sum\sub{deq-dir} + block\sub{last}.sum\sub{deq} - block\sub{prev}.sum\sub{deq}} \label{setSumEnqRight}
-\EndFor
-\If{\tt{this} \bf{is} \tt{root}}
-\State \tt{new.type= \sl{InternalBlock}-->\sl{RootBlock}}
-\State \tt{new.size= max(root.blocks[i-1].\size { }+ new.num\sub{enq}- new.num\sub{deq}, 0)}\label{computeLength}
-\EndIf
-
-\State \Return \tt{new}
-\EndFunction{CreateBlock}
-
-
-\end{algorithmic}
-\end{algorithm}
-
-
-
-\begin{algorithm}
-\caption{\tt{\sl{Node}}}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{94}
-
-\Statex $\leadsto$ \textsf{Precondition:~\tt{blocks[b].num\sub{enq}$\geq$i$\geq 1$}}
-\Function{element}{GetEnqueue}{\sl{int} b, \sl{int} i} \cmt{Returns the \tt{element} of $E_\tt{i}(\tt{this},\tt{b})$.}
-\If{\tt{this} \bf{is} \tt{leaf}}
-\State\Return \tt{blocks[b].element} \label{getBaseCase}
-\ElsIf{\tt{i <= blocks[b].num\sub{enq-left}}} \label{leftOrRight} \cmt{$E_\tt{i}(\tt{this},\tt{b})$ is in the left child of this node.}
-\State \tt{subblockIndex= left.BinarySearch(i+blocks[b-1].sum\sub{enq-left}, blocks[b-1].\eleft+1,} \label{leftChildGet}
-\Statex \hspace{10.7em}\tt{blocks[b].\eleft)} 
-\State \Return\tt{left.}\Call{GetEnqueue}{subblockIndex, i} 
-\Else
-\State \tt{i= i-blocks[b].num\sub{enq-left}}
-\State\tt{subblockIndex= right.BinarySearch(i+blocks[b-1].sum\sub{enq-right}, blocks[b-1].\eright+1,} \label{rightChildGet}
-\Statex \hspace{11.1em}\tt{blocks[b].\eright)} 
-\State \Return\tt{right.}\Call{GetEnqueue}{subblockIndex, i} 
-\EndIf
-\EndFunction{GetEnqueue}
-
-\Statex
-\Statex $\leadsto$ \textsf{Precondition: \tt{b}th block of the node has propagated up to the root and \tt{blocks[b].num\sub{deq}$\geq$i}.}
-\Function{<int, int>}{IndexDequeue}{\sl{int} b, \sl{int} i} \cmt{Returns \tt{<x, y>} if $D_\tt{i}(\tt{this}, \tt{b})=D_\tt{y}(\tt{root},\tt{x})$.}
-\If{\tt{this} \bf{is} \tt{root}}
-\State\Return \tt{<b, i>} \label{indexBaseCase}
-\Else
-\State \tt{dir= (parent.left==n ? left: right)} 
-\State \tt{superblockIndex= parent.blocks[blocks[b].super].sum\sub{deq-dir} > blocks[b].sum\sub{deq} ? \label{computeSuper}
-\Statex \hspace{11.3em} blocks[b].super: blocks[b].super+1}
-
-\If{\tt{dir {\keywordfont is} left}} \label{computeISuperStart}
-\State \tt{i+= blocks[b-1].sum\sub{deq}-parent.blocks[superblockIndex-1].sum\sub{deq-left}} \label{considerPreviousLeft}
-\Else \label{considerRight}
-\State \tt{i+= blocks[b-1].sum\sub{deq}-parent.blocks[superblockIndex-1].sum\sub{deq-right}}  \label{considerPreviousRight}
-\State \tt{i+= parent.blocks[superblockIndex].num\sub{deq-left}}  \label{considerLeftBeforeRight}
-\EndIf \label{computeISuperEnd}
-\State \Return\tt{this.parent.}\Call{IndexDequeue}{superblockIndex, i}
-\EndIf
-\EndFunction{IndexDequeue}
-
-\end{algorithmic}
-\end{algorithm}
 
 \input{correctness}
 

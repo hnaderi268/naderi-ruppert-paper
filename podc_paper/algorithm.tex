@@ -280,11 +280,12 @@ shall prove that it is close.
 
 \subsection{Details of the Implementation}
 
-We now discuss the queue implementation in more detail.  Pseudocode is provided in Figure \ref{?}.
+We now discuss the queue implementation in more detail.  Pseudocode is provided in Figure \ref{pseudocode}.
 We use $v.\var{blocks[i].num\sub{enq}}$ as shorthand for 
 $v.\var{blocks[i].sum\sub{enq} - blocks[i-1].sum\sub{enq}}$, that is, 
 the number of enqueues in the block.  (For $\var{i}=0$, $v.\var{blocks[0].num\sub{enq}} = 0$.)
-We use a similar abbreviation \var{num\sub{deq}}.
+We use \var{num\sub{deq}} similarly.
+\here{Check if the num abbreviation is really needed in the code--how many times do we use it?}
 
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTDOUBLE}{\com\ #1}}
 \newcommand{\hangbox}[1]{\parbox[t]{\dimexpr\linewidth-\algorithmicindent\relax}{%
@@ -294,7 +295,7 @@ We use a similar abbreviation \var{num\sub{deq}}.
 \newcommand{\assign}{\mbox{:=}}
 
 \begin{figure}
-\begin{minipage}[t]{0.46\textwidth}
+\begin{minipage}[t]{0.465\textwidth}
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{0}
 
@@ -312,7 +313,7 @@ We use a similar abbreviation \var{num\sub{deq}}.
 	    \var{sum\sub{enq} \assign\ leaf.blocks[leaf.\head-1].sum\sub{enq}},\\
 	    \var{sum\sub{deq} \assign\ leaf.blocks[leaf.\head-1].sum\sub{deq}+1}}
     \State \Call{Append}{n}
-    \State \var{<b, i>} \assign\ \Call{IndexDequeue}{leaf.\head, 1}
+    \State \var{<b, i>} \assign\ \Call{IndexDequeue}{leaf, leaf.\head, 1}
     \State \Return{ \Call{FindResponse}{b, i}}
     \label{deqRest}
 \EndFunction{Dequeue}
@@ -329,7 +330,7 @@ We use a similar abbreviation \var{num\sub{deq}}.
 \spac
 
 \Function{void}{Propagate}{\var{Node v}}
-    \State \linecomment{propagates blocks from \var{v}'s children to root}
+    \State \linecomment{propagate blocks from \var{v}'s children to root}
     \If{\bf{not} \Call{Refresh}{v}} \label{firstRefresh}  \hfill \com\ double refresh
         \State \Call{Refresh}{v} \label{secondRefresh}
     \EndIf
@@ -341,7 +342,7 @@ We use a similar abbreviation \var{num\sub{deq}}.
 \spac
 
 \Function{boolean}{Refresh}{\var{Node v}}
-    \State \linecomment{tries to append a new block to \var{v.blocks}}
+    \State \linecomment{try to append a new block to \var{v.blocks}}
     \State \var{h \assign\ v.\head} \label{readHead}
     \ForEach{\var{dir} {\keywordfont{in}} \var{\{left, right\}}} \label{startHelpChild1}
         \State \var{h\sub{dir} \assign\ v.dir.\head} \label{readChildHead}
@@ -350,7 +351,7 @@ We use a similar abbreviation \var{num\sub{deq}}.
         \EndIf
     \EndFor \label{endHelpChild1}
     \State \var{new} \assign\ \Call{CreateBlock}{v,h} \label{invokeCreateBlock}
-    \If{\var{new.num = 0}} \Return{\var{true}} \label{addOP} 
+    \If{\var{new = null}} \Return{\var{true}} \label{addOP} 
     \EndIf
     \State{\var{result} \assign\ \var{CAS(v.blocks[h], null, new)}} \label{cas}
     \State{\var{\Call{Advance}{v, h}}} \label{advance}
@@ -359,7 +360,7 @@ We use a similar abbreviation \var{num\sub{deq}}.
 
 \spac
 
-\Function{void}{Advance}{\var{Node v}, \var{int h}} 
+\Function{void}{Advance}{\var{Node v, int h}} 
     \State \linecomment{set \nf{v.blocks[h].super} and }
     \State \linecomment{increment \nf{v.head} from \nf{h} to \nf{h+1}}
     \State \var{h\sub{p}} \assign\ \var{v.parent.\head} \label{readParentHead}
@@ -369,48 +370,76 @@ We use a similar abbreviation \var{num\sub{deq}}.
 
 \end{algorithmic}
 \end{minipage}
-\begin{minipage}[t]{0.53\textwidth}
+\begin{minipage}[t]{0.525\textwidth}
 
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{48}
 
 \Function{Block}{CreateBlock}{\var{Node v, int i}} 
-    \State\linecomment{create new block to be installed in \var{v.blocks[i]}}
-    \State let \var{new} be a new Block \label{initNewBlock}
-    \ForEach{\var{dir} {\keywordfont{in}} \var{\{left, right\}}}
-        \State \var{index\sub{prev} \assign\ v.blocks[i-1].\edir} \label{prevLine}
-        \State \var{new.\edir\ \assign\ v.dir.\head-1} \label{lastLine}
-        \State \linecomment{\var{new} contains \var{v.dir.blocks[index\sub{prev}+1..new.\edir]}}
-        \State \var{block\sub{prev} \assign\ v.dir.blocks[index\sub{prev}]}
-        \State \var{block\sub{last} \assign\ v.dir.blocks[new.\edir]}
-    \EndFor
-	\State \hangbox{\var{new.sum\sub{enq}} \assign\ \var{v.left.blocks[\eleft].sum\sub{enq} + \\
-			v.right.blocks[\eright].sum\sub{enq}}}
-	\State \hangbox{\var{new.sum\sub{deq}} \assign\ \var{v.left.blocks[\eleft].sum\sub{deq} + \\
-			v.right.blocks[\eright].sum\sub{deq}}}
+    \State\linecomment{create new block for a \op{Refresh} to install in \var{v.blocks[i]}}
+    \State\linecomment{(return \var{null} if no blocks need to be propagated to \var{v})}
+    \State let \var{new} be a new \var{Block} \label{initNewBlock}
+    \State \var{new.\eleft} \assign\ $\var{v.left.head} - 1$
+    \State \var{new.\eright} \assign\ $\var{v.right.head} - 1$
+	\State \hangbox{\var{new.sum\sub{enq}} \assign\ \var{v.left.blocks[new.\eleft].sum\sub{enq} + \\
+			v.right.blocks[new.\eright].sum\sub{enq}}}
+	\State \hangbox{\var{new.sum\sub{deq}} \assign\ \var{v.left.blocks[new.\eleft].sum\sub{deq} + \\
+			v.right.blocks[new.\eright].sum\sub{deq}}}
+    \State \var{num\sub{enq}} \assign\ \var{new.sum\sub{enq} - v.blocks[i-1].sum\sub{enq}}
+    \State \var{num\sub{deq}} \assign\ \var{new.sum\sub{deq} - v.blocks[i-1].sum\sub{deq}}
     \If{$\var{v} = \var{root}$}
-        \State \hangbox{\var{new.size \assign\ max(0, \\ v.blocks[i-1].\size\ + new.num\sub{enq} - new.num\sub{deq})}\label{computeLength}}
+        \State \hangbox{\var{new.size \assign\ max(0, v.blocks[i-1].\size\ + num\sub{enq} - num\sub{deq})}\label{computeLength}}
     \EndIf
-    \State \Return \tt{new}
+    \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$}
+        \State \Return \var{null}
+    \Else
+        \State \Return \var{new}
+    \EndIf
 \EndFunction{CreateBlock}
 
 \spac
 
+\Function{<int, int>}{IndexDequeue}{\var{Node v, int b, int i}}
+    \State \linecomment{return \var{<x, y>} such that \var{i}th dequeue in D(\var{v.blocks[b]})}
+    \State \linecomment{is \var{y}th dequeue of D(\var{root.blocks[x]})}
+    \State \linecomment{Precondition: \var{v.blocks[b]} has been propagated to root}
+    \State \linecomment{and $\var{v.blocks[b].num\sub{deq}}\geq \var{i}$}
+    \If{$\var{v} = \var{root}$}
+        \State\Return \var{<b, i>} \label{indexBaseCase}
+    \Else
+	    \State \var{dir \assign\ (v.parent.left = v ? left : right)} 
+    	\State \var{sup \assign\ v.blocks[b].super}
+	    \If{$\var{b} > \var{v.parent.blocks[sup].end\sub{dir}}$}
+	        \State{\var{sup} \assign\ $\var{sup}+1$}
+	    \EndIf
+	    \State \hangbox{\var{i += v.blocks[b-1].sum\sub{deq} - \\
+	    		v.blocks[v.parent.blocks[sup-1].end\sub{dir}].sum\sub{deq}}}
+        \If{$\var{dir} = \var{right}$} 
+        	\State \hangbox{\var{i += v.blocks[v.parent.blocks[sup].end\sub{left}].sum\sub{deq} -\\
+					v.blocks[v.parent.blocks[sup-1].end\sub{left}].sum\sub{deq}}\label{considerLeftBeforeRight}}
+        \EndIf \label{computeISuperEnd}
+        \State \Return\Call{IndexDequeue}{v.parent, sup, i}
+    \EndIf
+\EndFunction{IndexDequeue}
+
+\spac
+
 \Function{element}{FindResponse}{\var{int b, int i}}
-\State \linecomment{find response to \var{i}th dequeue in \var{root.blocks[b]}}
-\If{\var{root.blocks[b-1].\size + root.blocks[b].num\sub{enq}} $<$ \var{i}}\label{checkEmpty}
-\State \linecomment{queue is empty when the dequeue is linearized}
-\State \Return \var{null} \label{returnNull}
-\Else \ \linecomment{response is the \var{e}th enqueue in the root}
-\State \var{e} \assign\ \var{i + root.blocks[b-1].sum\sub{enq} - root.blocks[b-1].size}\label{computeE}
-\State \Return \var{root.GetEnqueue(root.\Call{DoublingSearch}{e, b})}\label{findAnswer}
-\EndIf
+    \State \linecomment{find response to \var{i}th dequeue in \var{root.blocks[b]}}
+    \If{\var{root.blocks[b-1].\size + root.blocks[b].num\sub{enq}} $<$ \var{i}}\label{checkEmpty}
+        \State \linecomment{queue is empty when the dequeue is linearized}
+        \State \Return \var{null} \label{returnNull}
+    \Else \ \linecomment{response is the \var{e}th enqueue in the root}
+        \State \hangbox{\var{e} \assign\ \var{i + root.blocks[b-1].sum\sub{enq} - \\
+	root.blocks[b-1].size}\label{computeE}}
+        \State \Return \var{root.GetEnqueue(root.\Call{DoublingSearch}{e, b})}\label{findAnswer}
+    \EndIf
 \EndFunction{FindResponse}
 
 
 \end{algorithmic}
 \end{minipage}
-\caption{\tt{\sl{Queue}}}
+\caption{Queue implementation.\label{pseudocode}}
 \end{figure}
 
 
@@ -482,25 +511,6 @@ We use a similar abbreviation \var{num\sub{deq}}.
 \EndIf
 \EndFunction{GetEnqueue}
 
-\Statex
-\Statex $\leadsto$ \textsf{Precondition: \tt{b}th block of the node has propagated up to the root and \tt{blocks[b].num\sub{deq}$\geq$i}.}
-\Function{<int, int>}{IndexDequeue}{\sl{int} b, \sl{int} i} \cmt{Returns \tt{<x, y>} if $D_\tt{i}(\tt{this}, \tt{b}) \assign\ D_\tt{y}(\tt{root},\tt{x})$.}
-\If{\tt{this} \bf{is} \tt{root}}
-\State\Return \tt{<b, i>} \label{indexBaseCase}
-\Else
-\State \tt{dir\assign\ (parent.left=n ? left: right)} 
-\State \tt{superblockIndex \assign\ parent.blocks[blocks[b].super].sum\sub{deq-dir} > blocks[b].sum\sub{deq} ? \label{computeSuper}
-\Statex \hspace{11.3em} blocks[b].super: blocks[b].super+1}
-
-\If{\tt{dir {\keywordfont is} left}} \label{computeISuperStart}
-\State \tt{i+= blocks[b-1].sum\sub{deq}-parent.blocks[superblockIndex-1].sum\sub{deq-left}} \label{considerPreviousLeft}
-\Else \label{considerRight}
-\State \tt{i+= blocks[b-1].sum\sub{deq}-parent.blocks[superblockIndex-1].sum\sub{deq-right}}  \label{considerPreviousRight}
-\State \tt{i+= parent.blocks[superblockIndex].num\sub{deq-left}}  \label{considerLeftBeforeRight}
-\EndIf \label{computeISuperEnd}
-\State \Return\tt{this.parent.}\Call{IndexDequeue}{superblockIndex, i}
-\EndIf
-\EndFunction{IndexDequeue}
 
 \end{algorithmic}
 \end{algorithm}

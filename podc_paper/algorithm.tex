@@ -295,7 +295,7 @@ We use \var{num\sub{deq}} similarly.
 \newcommand{\assign}{\mbox{:=}}
 
 \begin{figure}
-\begin{minipage}[t]{0.465\textwidth}
+\begin{minipage}[t]{0.461\textwidth}
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{0}
 
@@ -370,7 +370,7 @@ We use \var{num\sub{deq}} similarly.
 
 \end{algorithmic}
 \end{minipage}
-\begin{minipage}[t]{0.525\textwidth}
+\begin{minipage}[t]{0.533\textwidth}
 
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{48}
@@ -381,10 +381,10 @@ We use \var{num\sub{deq}} similarly.
     \State let \var{new} be a new \var{Block} \label{initNewBlock}
     \State \var{new.\eleft} \assign\ $\var{v.left.head} - 1$
     \State \var{new.\eright} \assign\ $\var{v.right.head} - 1$
-	\State \hangbox{\var{new.sum\sub{enq}} \assign\ \var{v.left.blocks[new.\eleft].sum\sub{enq} + \\
-			v.right.blocks[new.\eright].sum\sub{enq}}}
-	\State \hangbox{\var{new.sum\sub{deq}} \assign\ \var{v.left.blocks[new.\eleft].sum\sub{deq} + \\
-			v.right.blocks[new.\eright].sum\sub{deq}}}
+	\State \hangbox{\var{new.sum\sub{enq}} \assign\ \var{v.left.blocks[new.\eleft].sum\sub{enq}} + \\
+			\var{v.right.blocks[new.\eright].sum\sub{enq}}}
+	\State \hangbox{\var{new.sum\sub{deq}} \assign\ \var{v.left.blocks[new.\eleft].sum\sub{deq}} + \\
+			\var{v.right.blocks[new.\eright].sum\sub{deq}}}
     \State \var{num\sub{enq}} \assign\ \var{new.sum\sub{enq} - v.blocks[i-1].sum\sub{enq}}
     \State \var{num\sub{deq}} \assign\ \var{new.sum\sub{deq} - v.blocks[i-1].sum\sub{deq}}
     \If{$\var{v} = \var{root}$}
@@ -412,11 +412,12 @@ We use \var{num\sub{deq}} similarly.
 	    \If{$\var{b} > \var{v.parent.blocks[sup].end\sub{dir}}$}
 	        \State{\var{sup} \assign\ $\var{sup}+1$}
 	    \EndIf
-	    \State \hangbox{\var{i += v.blocks[b-1].sum\sub{deq} - \\
-	    		v.blocks[v.parent.blocks[sup-1].end\sub{dir}].sum\sub{deq}}}
+	    \State \linecomment{compute index \var{i} of dequeue in superblock}
+	    \State \hangbox{\var{i += v.blocks[b-1].sum\sub{deq}} - \\
+	    		\var{v.blocks[v.parent.blocks[sup-1].end\sub{dir}].sum\sub{deq}}}
         \If{$\var{dir} = \var{right}$} 
-        	\State \hangbox{\var{i += v.blocks[v.parent.blocks[sup].end\sub{left}].sum\sub{deq} -\\
-					v.blocks[v.parent.blocks[sup-1].end\sub{left}].sum\sub{deq}}\label{considerLeftBeforeRight}}
+        	\State \hangbox{\var{i += v.blocks[v.parent.blocks[sup].end\sub{left}].sum\sub{deq}} -\\
+					\var{v.blocks[v.parent.blocks[sup-1].end\sub{left}].sum\sub{deq}}\label{considerLeftBeforeRight}}
         \EndIf \label{computeISuperEnd}
         \State \Return\Call{IndexDequeue}{v.parent, sup, i}
     \EndIf
@@ -430,9 +431,13 @@ We use \var{num\sub{deq}} similarly.
         \State \linecomment{queue is empty when the dequeue is linearized}
         \State \Return \var{null} \label{returnNull}
     \Else \ \linecomment{response is the \var{e}th enqueue in the root}
-        \State \hangbox{\var{e} \assign\ \var{i + root.blocks[b-1].sum\sub{enq} - \\
-	root.blocks[b-1].size}\label{computeE}}
-        \State \Return \var{root.GetEnqueue(root.\Call{DoublingSearch}{e, b})}\label{findAnswer}
+        \State $\var{e} \assign\ \var{i} + \var{root.blocks[b-1].sum\sub{enq}} - 
+	\var{root.blocks[b-1].size}$\label{computeE}
+		\State \linecomment{compute enqueue's block using binary search}
+		\State find min $\var{b}'\leq \var{b}$ with $\var{root.blocks}[\var{b}'].\var{sum\sub{enq}} \geq \var{e}$
+		\State \linecomment{find rank of enqueue within its block}
+		\State $\var{i}' \assign\ \var{e} - \var{root.blocks}[\var{b}'-1].\var{sum\sub{enq}}$
+        \State \Return \Call{GetEnqueue}{root, $\var{b}'$, $\var{i}'$}\label{findAnswer}
     \EndIf
 \EndFunction{FindResponse}
 
@@ -479,7 +484,7 @@ We use \var{num\sub{deq}} similarly.
 
 \Function{<int, int>}{DoublingSearch}{\sl{int} e, \sl{int} end}
 \State \tt{start \assign\ end-1} \label{dsearchStart}
-\While{\tt{root.blocks[start].sum\sub{enq}}$> \assign\ $\tt{e}}
+\While{\tt{root.blocks[start].sum\sub{enq}}$\geq$\tt{e}}
 \State \tt{start \assign\ max(start-(end-start), 0)} \label{doubling}
 \EndWhile \label{dsearchEnd}
 \State \tt{b \assign\ root.BinarySearch(e, start, end)} \label{dsearchBinarySearch}
@@ -496,7 +501,7 @@ We use \var{num\sub{deq}} similarly.
 \setcounter{ALG@line}{94}
 
 \Statex $\leadsto$ \textsf{Precondition:~\tt{blocks[b].num\sub{enq}$\geq$i$\geq 1$}}
-\Function{element}{GetEnqueue}{\sl{int} b, \sl{int} i} \cmt{Returns the \tt{element} of $E_\tt{i}(\tt{this},\tt{b})$.}
+\Function{element}{GetEnqueue}{\var{Node v, int b, int i}} \cmt{Returns the \tt{element} of $E_\tt{i}(\tt{this},\tt{b})$.}
 \If{\tt{this} \bf{is} \tt{leaf}}
 \State\Return \tt{blocks[b].element} \label{getBaseCase}
 \ElsIf{\tt{i <= blocks[b].num\sub{enq-left}}} \label{leftOrRight} \cmt{$E_\tt{i}(\tt{this},\tt{b})$ is in the left child of this node.}

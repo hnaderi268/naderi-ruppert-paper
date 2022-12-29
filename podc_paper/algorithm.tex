@@ -280,7 +280,7 @@ shall prove that it is close.
 
 \subsection{Details of the Implementation}
 
-We now discuss the queue implementation in more detail.  Pseudocode is provided in Figure \ref{pseudocode}.
+We now discuss the queue implementation in more detail.  Pseudocode is provided in Figure \ref{pseudocode1} and \ref{pseudocode2}.
 We use $v.\var{blocks[i].num\sub{enq}}$ as shorthand for 
 $v.\var{blocks[i].sum\sub{enq} - blocks[i-1].sum\sub{enq}}$, that is, 
 the number of enqueues in the block.  (For $\var{i}=0$, $v.\var{blocks[0].num\sub{enq}} = 0$.)
@@ -428,8 +428,7 @@ We use \var{num\sub{deq}} similarly.
 \Function{element}{FindResponse}{\var{int b, int i}}
     \State \linecomment{find response to \var{i}th dequeue in \var{root.blocks[b]}}
     \If{\var{root.blocks[b-1].\size + root.blocks[b].num\sub{enq}} $<$ \var{i}}\label{checkEmpty}
-        \State \linecomment{queue is empty when the dequeue is linearized}
-        \State \Return \var{null} \label{returnNull}
+        \State \Return \var{null} \hfill \com\ queue is empty when dequeue occurs\label{returnNull}
     \Else \ \linecomment{response is the \var{e}th enqueue in the root}
         \State $\var{e} \assign\ \var{i} + \var{root.blocks[b-1].sum\sub{enq}} - 
 	\var{root.blocks[b-1].size}$\label{computeE}
@@ -449,76 +448,82 @@ We use \var{num\sub{deq}} similarly.
 
 
 
-\begin{algorithm}
-\caption{\tt{\sl{Node}}}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{25}
-
-\Statex $\leadsto$ \textsf{Precondition: \tt{blocks[start..end]} contains a block with \tt{sum\sub{enq}} greater than or equal to \tt{x}}
-\Statex \com\ \textmd{Does a binary search for~the value \tt{x} of \tt{sum\sub{enq}} field and returns the index of the leftmost block in\\
-\com\ \tt{blocks[start..end]} whose \tt{sum\sub{enq}} is $\geq$ \tt{x}}.
-\Function{int}{BinarySearch}{\sl{int} x, \sl{int} start, \sl{int} end}
+%\begin{algorithm}
+%\caption{\tt{\sl{Node}}}
+%\begin{algorithmic}[1]
+%\setcounter{ALG@line}{25}
+%
+%\Statex $\leadsto$ \textsf{Precondition: \tt{blocks[start..end]} contains a block with \tt{sum\sub{enq}} greater than or equal to \tt{x}}
+%\Statex \com\ \textmd{Does a binary search for~the value \tt{x} of \tt{sum\sub{enq}} field and returns the index of the leftmost block in\\
+%\com\ \tt{blocks[start..end]} whose \tt{sum\sub{enq}} is $\geq$ \tt{x}}.
+%\Function{int}{BinarySearch}{\sl{int} x, \sl{int} start, \sl{int} end}
 % \State \Return \tt{min\{j: blocks[j].sum\sub{enq}$\geq$x\}}
-\While{\nf{start<end}}
-\State \tt{\sl{int}} \tt{mid \assign\ floor((start+end)/2)}
-\If{\nf{blocks[mid].sum\sub{enq}<x}}
-\State \nf{start \assign\ mid+1}
-\Else
-\State \nf{end \assign\ mid}
-\EndIf
-\EndWhile
-\State\Return \nf{start}
-\EndFunction{BinarySearch}
+%\While{\nf{start<end}}
+%\State \tt{\sl{int}} \tt{mid \assign\ floor((start+end)/2)}
+%\If{\nf{blocks[mid].sum\sub{enq}<x}}
+%\State \nf{start \assign\ mid+1}
+%\Else
+%\State \nf{end \assign\ mid}
+%\EndIf
+%\EndWhile
+%\State\Return \nf{start}
+%\EndFunction{BinarySearch}
+%
+%\end{algorithmic}
+%\end{algorithm}
 
-\end{algorithmic}
-\end{algorithm}
+%\begin{algorithm}
+%\caption{\tt{\sl{Root}}}
+%\begin{algorithmic}[1]
+%\setcounter{ALG@line}{36}
+%\Statex
+%\Statex $\leadsto$ \textsf{Precondition: \tt{root.blocks[end].sum\sub{enq} $\geq$ \tt{e}}}
+%\Statex \com\ \textmd{Returns \tt{<b,i>} such that $E_\nf{e}(\nf{root})$ is $E_\nf{i}(\nf{root},\nf{b})$, i.e., the \nf{e}th \nf{Enqueue} in the \nf{root} is the \nf{i}th \nf{Enqueue} within \\
+%\com\ the \nf{b}th block in the \nf{root}.}
+%
+%\Function{<int, int>}{DoublingSearch}{\sl{int} e, \sl{int} end}
+%\State \tt{start \assign\ end-1} \label{dsearchStart}
+%\While{\tt{root.blocks[start].sum\sub{enq}}$\geq$\tt{e}}
+%\State \tt{start \assign\ max(start-(end-start), 0)} \label{doubling}
+%\EndWhile \label{dsearchEnd}
+%\State \tt{b \assign\ root.BinarySearch(e, start, end)} \label{dsearchBinarySearch}
+%\State \tt{i \assign\ e- root.blocks[b-1].sum\sub{enq}} \label{DSearchComputei}
+%\State\Return \tt{<b,i>}
+%\EndFunction{DoublingSearch}
+%\end{algorithmic}
+%\end{algorithm}
 
-\begin{algorithm}
-\caption{\tt{\sl{Root}}}
+
+\begin{figure}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{36}
-\Statex
-\Statex $\leadsto$ \textsf{Precondition: \tt{root.blocks[end].sum\sub{enq} $\geq$ \tt{e}}}
-\Statex \com\ \textmd{Returns \tt{<b,i>} such that $E_\nf{e}(\nf{root})$ is $E_\nf{i}(\nf{root},\nf{b})$, i.e., the \nf{e}th \nf{Enqueue} in the \nf{root} is the \nf{i}th \nf{Enqueue} within \\
-\com\ the \nf{b}th block in the \nf{root}.}
+\setcounter{ALG@line}{101}
 
-\Function{<int, int>}{DoublingSearch}{\sl{int} e, \sl{int} end}
-\State \tt{start \assign\ end-1} \label{dsearchStart}
-\While{\tt{root.blocks[start].sum\sub{enq}}$\geq$\tt{e}}
-\State \tt{start \assign\ max(start-(end-start), 0)} \label{doubling}
-\EndWhile \label{dsearchEnd}
-\State \tt{b \assign\ root.BinarySearch(e, start, end)} \label{dsearchBinarySearch}
-\State \tt{i \assign\ e- root.blocks[b-1].sum\sub{enq}} \label{DSearchComputei}
-\State\Return \tt{<b,i>}
-\EndFunction{DoublingSearch}
-\end{algorithmic}
-\end{algorithm}
+\Function{element}{GetEnqueue}{\var{Node v, int b, int i}} \Comment{returns argument of ith enqueue in $E(\var{v.blocks[b]})$}
+    \State \linecomment{Precondition: $\var{i}\geq 1$ and $E(\var{v.blocks[b]})$ contains at least \var{i} enqueues}
 
-
-\begin{algorithm}
-\caption{\tt{\sl{Node}}}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{94}
-
-\Statex $\leadsto$ \textsf{Precondition:~\tt{blocks[b].num\sub{enq}$\geq$i$\geq 1$}}
-\Function{element}{GetEnqueue}{\var{Node v, int b, int i}} \cmt{Returns the \tt{element} of $E_\tt{i}(\tt{this},\tt{b})$.}
-\If{\tt{this} \bf{is} \tt{leaf}}
-\State\Return \tt{blocks[b].element} \label{getBaseCase}
-\ElsIf{\tt{i <= blocks[b].num\sub{enq-left}}} \label{leftOrRight} \cmt{$E_\tt{i}(\tt{this},\tt{b})$ is in the left child of this node.}
-\State \tt{subblockIndex \assign left.BinarySearch(i+blocks[b-1].sum\sub{enq-left}, blocks[b-1].\eleft+1,} \label{leftChildGet}
-\Statex \hspace{10.7em}\tt{blocks[b].\eleft)} 
-\State \Return\tt{left.}\Call{GetEnqueue}{subblockIndex, i} 
-\Else
-\State \tt{i \assign\ i-blocks[b].num\sub{enq-left}}
-\State\tt{subblockIndex \assign\ right.BinarySearch(i+blocks[b-1].sum\sub{enq-right}, blocks[b-1].\eright+1,} \label{rightChildGet}
-\Statex \hspace{11.1em}\tt{blocks[b].\eright)} 
-\State \Return\tt{right.}\Call{GetEnqueue}{subblockIndex, i} 
-\EndIf
+    \If{\var{v} is a leaf node}
+        \State\Return \var{blocks[b].element} \label{getBaseCase}
+    \Else 
+        \State \var{sum\sub{left}} \assign\ \var{v.left.blocks[v.blocks[b].\eleft].sum\sub{enq}} \Comment{\#\ of enqueues in \var{v.blocks}[1..$\var{b}$] from left child}
+        \State \var{prev\sub{left}} \assign\ \var{v.left.blocks[v.blocks[b-1].\eleft].sum\sub{enq}} \Comment{\#\ of enqueues in \var{v.blocks}[1..$\var{b}-1$] from left child}
+        \State \var{prev\sub{right}} \assign\ \var{v.right.blocks[v.blocks[b-1].\eright].sum\sub{enq}} \Comment{\#\ of enqueues in \var{v.blocks}[1..$\var{b}-1$] from right child}
+        \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \label{leftOrRight} \cmt{required enqueue is in \var{v.left}}
+        	\State \linecomment{Find enqueue's block in \var{v.left} and its rank within block}
+            \State find min $\var{b}'$ in range [\var{v.blocks[b-1].\eleft}+1..\var{v.blocks[b].\eleft}] s.t. $\var{v.left.blocks}[\var{b}'].\var{sum\sub{enq}} \geq \var{i} + \var{prev\sub{left}}$
+            \State $\var{i}'$ \assign\ $\var{i} - (\var{v.left.blocks}[\var{b}'-1].\var{sum\sub{enq}} - \var{prev\sub{left}})$
+            \State \Return\Call{GetEnqueue}{\var{v.left}, $\var{b}'$, $\var{i}'$} 
+        \Else \Comment{required enqueue is in \var{v.right}}
+            \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$
+        	\State \linecomment{Find enqueue's block in \var{v.right} and its rank within block}
+            \State find min $\var{b}'$ in range [\var{v.blocks[b-1].\eright}+1..\var{v.blocks[b].\eright}] s.t. $\var{v.right.blocks}[\var{b}'].\var{sum\sub{enq}} \geq \var{i} + \var{prev\sub{right}}$
+            \State $\var{i}'$ \assign\ $\var{i} - (\var{v.right.blocks}[\var{b}'-1].\var{sum\sub{enq}} - \var{prev\sub{right}})$
+            \State \Return\Call{GetEnqueue}{\var{v.right}, $\var{b}'$, $\var{i}'$} 
+        \EndIf
+    \EndIf
 \EndFunction{GetEnqueue}
-
-
 \end{algorithmic}
-\end{algorithm}
+\caption{\label{pseudocode2}Queue implementation, continued. \here{Would this routine be simpler to write if i parameter be the rank within whole node rather than within the block?}}
+\end{figure}
 
 An \op{Enqueue}($e$) operation appends a \block\ to the process's leaf.
 The block has $\var{element}=e$ and its \var{sum\sub{enq}} and \var{sum\sub{deq}} fields are set

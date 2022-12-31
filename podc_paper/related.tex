@@ -2,7 +2,7 @@
 
 \section{Related Work}
 
-\paragraph{List-based Queues}
+\emph{List-based Queues.}
 The MS-queue \cite{MS98} is a lock-free queue that has stood the test of time.
 A version of it is
 included in the standard Java Concurrency Package.  %java.util.concurrent.ConcurrentLinkedQueue
@@ -70,7 +70,7 @@ their amortized step complexity remains $\Omega(p)$.
 \Hossein{I get what this sentence means, but from a high overview i think it is inaccurate. Since the step complexity of MS-queue is infinite, so nothing can be added to it and a wait-free queue is always better than a lock-free queue in the worst-case.}
 \Eric{I modified the wording.  I also added the material about fast-path slow-path here (since I had forgotten that paper also applies it to a queue), and fixed the paragraph about FPSP method below when discussin array-based queues.}
 
-\paragraph{Array-Based Queues}
+\emph{Array-Based Queues.}
 Arrays can be used to implement queues with bounded capacity \cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01}.  
 %Similar to the front and back pointers of list-based queues, indices
 Dequeues and enqueues update
@@ -128,7 +128,7 @@ due either to the CAS retry problem or helping mechanisms.
 %is linearizable but not lock-free and they present experiments that
 %show their algorithm performs well in some situations. 
 
-\paragraph{Universal Constructions}
+\emph{Universal Constructions.}
 One can also build a queue using a universal construction \cite{10.1145/114005.102808}.
 Jayanti \cite{DBLP:conf/podc/Jayanti98a} observed that
 the universal construction of Afek, Dauber, and
@@ -139,7 +139,7 @@ Fatourou and Kallimanis \cite{FK14} used their universal construction based on f
 to implement a queue, but its step complexity is also $\Omega(p)$.
 \here{Double check this.}
 
-\paragraph{Restricted Queues}
+\emph{Restricted Queues.}
 David introduced the first sublinear-time queue
 \cite{DBLP:conf/wdag/David04}, but it works only for a single enqueuer.
 It uses fetch\&increment and swap  instructions and takes $O(1)$ steps per operation, but
@@ -153,7 +153,7 @@ operations.
 
 \here{Should we mention https://arxiv.org/abs/2103.11926 , which seems to have a queue for 2 enqueuers and 2 dequeuers ?  May not be worth mentioning because then $p$ is a constant, so complexity in terms of $p$ doesn't make sense.}
 
-\paragraph{Other Primitives}
+\emph{Other Primitives.}
 Khanchandani and Wattenhofer \cite{KW18} gave a wait-free queue implementation
 with $O(\sqrt{p})$ step complexity using non-standard synchronization primitives
 called half-increment and half-max, which can be viewed as particular kinds of
@@ -162,7 +162,7 @@ They use this as evidence that their primitives can be more efficient than CAS
 since previous CAS-based queues all required $\Omega(p)$ step complexity.
 Our new implementation counters this argument.
 
-\paragraph{Fetch\&Increment Objects}
+\emph{Fetch\&Increment Objects.}
 There are sublinear-time implementations of another object
 with consensus number 2.
 Two papers \cite{ERW12,10.1007/978-3-642-41527-2_20}

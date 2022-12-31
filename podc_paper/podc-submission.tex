@@ -77,12 +77,12 @@
 \algdef{S}[FOR]{ForEach}[1]{\algorithmicforeach\ #1\ \algorithmicdo}
 
 \algdef{S}[FUNCTION]{Function}
-   [3]{{\var{{#1}}} {\op{#2}}\ifthenelse{\equal{#3}{}}{}{\tt{(#3)}}}
+   [3]{{\typ{{#1}}} {\op{#2}}\ifthenelse{\equal{#3}{}}{}{(\var{#3})}}
   
 \algdef{E}[FUNCTION]{EndFunction}
    [1]{\algorithmicend\ \op{{#1}}}
 
-\algrenewcommand\Call[2]{\var{{#1}\ifthenelse{\equal{#2}{}}{}{(#2)}}}
+\algrenewcommand\Call[2]{\op{#1}\ifthenelse{\equal{#2}{}}{}{(#2)}}
 \usepackage{eqparbox}
 
 \newcommand\keywordfont{\sffamily\bfseries}
@@ -97,9 +97,6 @@
 \algrenewcommand\algorithmicelse{{\keywordfont else}}
 \algrenewcommand\algorithmicreturn{{\keywordfont return}}
 
-\newcommand{\eleft}{\var{end\sub{left}}}
-\newcommand{\eright}{\var{end\sub{right}}}
-\newcommand{\edir}{\var{end\sub{dir}}}
 
 
 \renewcommand\thealgorithm{}
@@ -114,14 +111,21 @@
 \renewcommand{\bf}[1]{\textbf{#1}}
 \newcommand{\nf}[1]{{\normalfont{\texttt{#1}}}}
 \newcommand{\cmt}[1]{\Comment{#1}}
-\newcommand{\head}{head}
-\newcommand{\size}{size }
+\newcommand{\head}{\fld{head}}
+\newcommand{\size}{\fld{size}}
+\newcommand{\eleft}{\fld{end\sub{left}}}
+\newcommand{\eright}{\fld{end\sub{right}}}
+\newcommand{\edir}{\fld{end\sub{dir}}}
 
+\newcommand{\var}[1]{\mbox{\it{#1}}}
+\newcommand{\fld}[1]{\mbox{\it{#1}}}
+\newcommand{\typ}[1]{\mbox{\sf #1}}
 \newcommand{\ceil}[1]{\lceil #1 \rceil}
-\newcommand{\nil}{nil}
-\newcommand{\opa}[2]{{\sf #1(#2)}}
+\newcommand{\nl}{\mbox{\sf null}}
+\newcommand{\tr}{\mbox{\sf true}}
+\newcommand{\opa}[2]{\op{#1}(\var{#2})}
 \newcommand{\op}[1]{{\sf #1}}
-\newcommand{\var}[1]{\mbox{\sf #1}}
+\newcommand{\opemph}[1]{{\sf \bf{#1}}}
 \newcommand{\com}{$\triangleright$}
 \newcommand{\linecomment}[1]{\com\ #1}
 

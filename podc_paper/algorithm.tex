@@ -313,7 +313,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 	    \fld{sum\sub{enq}} \assign\ \var{leaf}.\fld{blocks}[\var{leaf}.\head-1].\fld{sum\sub{enq}},\\
 	    \fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[\var{leaf}.\head-1].\fld{sum\sub{deq}}+1}
     \State \Call{Append}{\var{n}}
-    \State \var{<b, i>} \assign\ \Call{IndexDequeue}{\var{leaf}, \var{leaf}.\head, 1}
+    \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, \var{leaf}.\head, 1}
     \State \Return{ \Call{FindResponse}{\var{b, i}}}
     \label{deqRest}
 \EndFunction{Dequeue}
@@ -398,13 +398,13 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \spac
 
-\Function{<int, int>}{IndexDequeue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}}
-    \State \linecomment{return \var{<x, y>} such that \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$}
+\Function{$\langle\typ{int}, \typ{int}\rangle$}{IndexDequeue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}}
+    \State \linecomment{return $\langle\var{x, y}\rangle$ such that \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$}
     \State \linecomment{is \var{y}th dequeue of $D(\var{root}.\fld{blocks}[\var{x}])$}
     \State \linecomment{Precondition: \var{v}.\fld{blocks}[\var{b}] has been propagated to root}
     \State \linecomment{and $D(\var{v}.\fld{blocks}[\var{b}])$ has at least \var{i} dequeues}
     \If{$\var{v} = \var{root}$}
-        \State\Return \var{<b, i>} \label{indexBaseCase}
+        \State\Return $\langle\var{b, i}\rangle$ \label{indexBaseCase}
     \Else
 	    \State \fld{dir} \assign\ (\var{v}.\fld{parent.left} = \var{v} ? \fld{left} : \fld{right}) 
     	\State \var{sup} \assign\ \var{v}.\fld{blocks}[\var{b}].\fld{super}
@@ -415,7 +415,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 	    \State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{b}-1].\fld{sum\sub{deq}} -$ \\
 	    		$\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}-1].\edir].\fld{sum\sub{deq}}$}
         \If{$\fld{dir} = \fld{right}$} 
-        	\State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}].\eleft].\fld{sum\sub{deq}} -$\\
+        	\State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}].\eleft].\fld{sum\sub{deq}} - \mbox{ }$\\
 					$\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}-1].\eleft].\fld{sum\sub{deq}}$}\label{considerLeftBeforeRight}
         \EndIf \label{computeISuperEnd}
         \State \Return\Call{IndexDequeue}{\var{v}.\fld{parent}, \var{sup}, \var{i}}
@@ -426,7 +426,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \Function{element}{FindResponse}{\typ{int} \var{b}, \typ{int} \var{i}}
     \State \linecomment{find response to \var{i}th dequeue in \var{root}.\fld{blocks}[\var{b}]}
-    \State \hangbox{\var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} - $\\
+    \State \hangbox{\var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} - \mbox{ }$\\
     		$\var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$}
     \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmpty}
         \State \Return \nl \hfill \com\ queue is empty when dequeue occurs\label{returnNull}
@@ -521,7 +521,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \EndIf
 \EndFunction{GetEnqueue}
 \end{algorithmic}
-\caption{\label{pseudocode2}Queue implementation, continued. \here{Would this routine be simpler to write if i parameter be the rank within whole node rather than within the block?}}
+\caption{\label{pseudocode2}Queue implementation, continued. \here{Would this routine be simpler to write if i parameter was the rank within whole node rather than within the block?}}
 \end{figure}
 
 An \opemph{Enqueue}(\var{e}) appends a \block\ to the process's leaf.
@@ -631,6 +631,7 @@ The range of subblocks of a block is determined using the \fld{end\sub{left}} an
 \fld{end\sub{right}} fields of the block and its previous block. Then,
 the exact subblock is found using binary search on the \fld{sum\sub{enq}}
 field (line \ref{getChild}). 
+\here{explain a little more?}
 
 
 

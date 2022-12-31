@@ -377,9 +377,8 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \Function{Block}{CreateBlock}{\typ{Node} \var{v}, \typ{int} \var{i}} 
     \State\linecomment{create new block for a \op{Refresh} to install in \var{v}.\fld{blocks}[\var{i}]}
-    \State\linecomment{(return \nl\ if no blocks need to be propagated to \var{v})}
     \State let \var{new} be a new \typ{Block} \label{initNewBlock}
-    \State \var{new}.\eleft \assign\ $\var{v}.\fld{left}.\head - 1$
+    \State \var{new}.\eleft \assign\ $\var{v}.\fld{left}.\head - 1$\label{createEndLeft}
     \State \var{new}.\eright \assign\ $\var{v}.\fld{right}.\head - 1$
 	\State \hangbox{\var{new}.\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + \\
 			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{enq}}}
@@ -391,7 +390,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
         \State \hangbox{\var{new}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + \var{num\sub{enq}} - \var{num\sub{deq}}$)}\label{computeLength}
     \EndIf
     \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$}
-        \State \Return \nl
+        \State \Return \nl \hfill \com\ no blocks need to be propagated to \var{v}
     \Else
         \State \Return \var{new}
     \EndIf
@@ -516,7 +515,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
             \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$
         \EndIf
         \State \linecomment{Use binary search to find enqueue's block in \var{v}.\fld{dir} and its rank within block}
-        \State find minimum $\var{b}'$ in range [\var{v}.\fld{blocks}[\var{b}-1].\edir+1..\var{v}.\fld{blocks}[\var{b}].\edir] s.t. $\var{v}.\fld{dir.blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$
+        \State find minimum $\var{b}'$ in range [\var{v}.\fld{blocks}[\var{b}-1].\edir+1..\var{v}.\fld{blocks}[\var{b}].\edir] s.t. $\var{v}.\fld{dir.blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$\label{getChild}
         \State $\var{i}'$ \assign\ $\var{i} - (\var{v}.\fld{dir.blocks}[\var{b}'-1].\fld{sum\sub{enq}} - \var{prev\sub{dir}})$
         \State \Return\Call{GetEnqueue}{\var{v}.\fld{dir}, $\var{b}'$, $\var{i}'$} 
     \EndIf
@@ -568,7 +567,6 @@ The boolean value returned by \op{Refresh} indicates whether its CAS succeeded.
 Since a \op{Refresh} may do a successful CAS but pause before calling \op{Advance} at line \ref{advance},
 other processes help keep \fld{head} up to date by also calling \op{Advance}, 
 either at line \ref{helpAdvance} during a \op{Refresh} on \var{v}'s parent or line \ref{advance} during a \op{Refresh} on \var{v}.
-(The need for helping on line \ref{helpAdvance} is explained below, when we discuss the \op{IndexDequeue} routine.)
 
 \opemph{CreateBlock}(\var{v, i}) is used
 by \op{Refresh} to construct a block to be installed in \var{v}.\fld{blocks}[\var{i}].
@@ -592,78 +590,47 @@ Once a \op{Dequeue} has been appended to a block of the process's leaf and propa
 the \opemph{IndexDequeue} routine is used to find the \op{Dequeue}'s location in the root.
 More precisely, \opa{IndexDequeue}{v, b, i}
 computes the block in the root and the rank
-within that block  of the \var{i}th \op{Dequeue} of the block stored in \var{v}.\fld{blocks}[\var{b}].
+within that block  of the \var{i}th \op{Dequeue} of the block \var{B} stored in \var{v}.\fld{blocks}[\var{b}].
 Let $R\sub{\var{v}}$ be the successful \nf{Refresh} on node \var{v}
-whose CAS wrote a block $B$ into \var{v}.\fld{blocks}[\var{b}].
-\here{---}
-Let $par$ be $n$\nf{.parent}. Without loss of generality, assume for the
-rest of this section that ${n}$ is the left child of $par$. Let
-$R_{par}$ be the first successful \nf{$par$.Refresh} that reads some
-value greater than ${b}$ for \nf{left.head} and therefore contains
-${B}$ as a subblock of its created block in Line
-\ref{invokeCreateBlock}. Let $j$ be the index of the block that
-$R_{par}$ puts in $par$\nf{.blocks}. 
+whose CAS wrote a block \var{B} into \var{v}.\fld{blocks}[\var{b}].
+Let $par$ be \var{v}.\fld{parent}. Without loss of generality, assume 
+\var{v} is the left child of $par$. Let
+$R_{par}$ be the first successful \op{Refresh} on $par$ whose \op{CreateBlock} reads a
+value greater than \var{b} from $\var{par}.\fld{left.head}=\var{v}.\fld{head}$ at line \ref{createEndLeft} and therefore creates a block $B'$ that contains
+\var{B} as a subblock. 
+%Let $b'$ be the index of $B'$ in $par$.\fld{blocks}. 
  
-Since the index of the superblock of ${B}$ is not known until $B$ is
-propagated, $R_n$ cannot set the \nf{super} field of ${B}$ while
-creating $B$. One approach for $R_{par}$ is to set the \nf{super}
-field of ${B}$ after propagating $B$ to $par$. This solution would not
-be efficient because there might be up to $p$ subblocks that $R_{par}$
-propagated, which need to update their \nf{super} field. However,
-intuitively, once $B$ is installed, its superblock is going to be
-close to \nf{$n$.parent.head} at the time of installation. If we know
-the approximate position of the superblock of $B$ then we can search
-for the real superblock when it is needed. Thus, \nf{$B$.super} does
-not have to be the exact location of  the superblock of $B$, but we
-want it to be close to $j$. We can set \nf{$B$.super} to
-\nf{$par$.head} while creating $B$, but the problem is that there
-might be many \nf{Refresh}es on $par$ that could happen after $R_n$
-reads $par$\nf{.head} and before propagating $B$ to $par$. If $R_n$
-sets \nf{$B$.super} to \nf{$par$.head} after appending $B$ to
-\nf{$n$.blocks} (Line \ref{setSuper1}), $R_n$ might go to sleep at
-some time after installing $B$ and before setting \nf{$B$.super}. In
-this case, the next \nf{Refresh}es on $n$ and $par$ help fill in the
-value of \nf{$B$.super}. 
+Since the index of \var{B}'s superblock is not known until $B$ is
+propagated to $par$, $R_v$ cannot set the \nf{super} field of ${B}$ when
+it creates \var{B}. 
+It would be too costly to have $R_{par}$ set the \fld{super} field of all the direct subblocks of $B'$ (because
+there could be up to $p$ direct subblocks).
+Intuitively, the index of \var{B}'s superblock will be close to the value of \var{par}.\fld{head} has when \var{B} is installed.
+Since we can search for the precise superblock when we need it, it suffices that \var{B}.\fld{super}
+is close to the actual index of \var{B}'s superblock.
+Thus, after \var{B} is installed, the call to \op{Advance} at line \ref{advance} sets the value of \var{B}.\fld{super} by reading \var{par}.\fld{head}.
+As mentioned earlier, other processes may help fill in this field by calling \op{Advance} at line \ref{helpAdvance} or \ref{advance} to ensure that it is filled in soon after \var{B} is installed.
+We shall
+show that this ensures that \nf{$B$.super} differs
+from the index of $B'$ by at most~1. 
 
-Block $B$ is appended to \nf{$n$.blocks[$b$]} on Line \ref{cas}. After
-appending $B$, \nf{$B$.super} is set on Line \ref{setSuper1} of a call
-to \nf{Advance} from \nf{$n$.Refresh} by the same or another process
-or by Line \ref{helpAdvance} of a \nf{$n$.parent.Refresh}. We shall
-show that this is sufficient to ensure that \nf{$B$.super} differs
-from the index of $B$'s superblock by at most~1. 
-
-\paragraph{\tt{FindResponse($b, i$)}}
 To compute the response of the $i$th \nf{Dequeue} in the $b$th block
-of the root Line \ref{checkEmpty} computes whether the queue is empty
-or not. If there are more \nf{Dequeue}s than \nf{Enqueue}s the queue
-would become empty before the requested \nf{Dequeue}. If the queue is
-not empty, Line \ref{computeE} computes the rank $e$ of the
+of the root, \opemph{FindResponse}(\var{b, i}) determines at line \ref{checkEmpty} if the queue is empty.
+If the queue is
+not empty, Line \ref{computeE} computes the rank \var{e} of the
 \nf{Enqueue} whose argument is the response to the
-\nf{Dequeue}. Knowing the response is the $e$th \nf{Enqueue} in the
-root (which is before the $b$th block), we find the block and position
-containing the \nf{Enqueue} operation using \nf{DoublingSearch} and
-after that \nf{GetEnqueue} finds its \nf{element}. 
+\nf{Dequeue}. 
+A binary search is used on the \fld{sum\sub{enq}} fields of \var{root}.\fld{blocks} to find the index $b'$ of the block that contains 
+the \var{e}th enqueue.
+The index $b'$ is at most $b$ (since the enqueue is linearized before the dequeue).  To find the left end of the range for the binary search for $b'$, we can first do a doubling search \cite{BY76}, comparing \var{e} to the \fld{sum\sub{enq}} fields at indices $b-1, b-2, b-4, b-8, \ldots$.
+Then, \op{GetEnqueue} is used to trace down through the tree to find the required enqueue in a leaf.
 
-\paragraph{\tt{GetEnqueue($b,i$)} and \tt{DoublingSearch($e, end$)}}
-We can describe an operation in a node in two ways: the rank of the
-operation among all the operations in the node or the index of the
-block containing the operation in the node and the rank of the
-operation within that block. If we know the block and rank within the
-block of an operation, we can find the subblock containing the
-operation and the operation's rank within that subblock in poly-log
-time. To find the response of a \nf{Dequeue}, we know about the  rank
-of the response \nf{Enqueue} in the root (\nf{e} in Line
-\ref{computeE}). 
-We also know the \nf{e}th \nf{Enqueue} is in
-\nf{root.blocks[1..end]}. \nf{DoublingSearch} uses doubling to find
-the range that contains the answer block (Lines
-\ref{dsearchStart}--\ref{dsearchEnd}) and then tries to find the
-required indices with a binary search (Line
-\ref{dsearchBinarySearch}). 
-A call to \nf{$n$.GetEnqueue($b,i$)} returns the \nf{element} of the
-$i$th enqueue in the $b$th block of $n$. The range of subblocks of a
-block is determined using the \nf{end\sub{left}} and
-\nf{end\sub{right}} fields of the block and its previous block. Then,
-the subblock is found using binary search on the \nf{sum\sub{enq}}
-field (Lines \ref{leftChildGet} and \ref{rightChildGet}). 
+\opemph{GetEnqueue}(\var{v,b,i}) returns the argument of the
+$i$th enqueue in the $b$th block of \typ{Node} $v$. 
+The range of subblocks of a block is determined using the \fld{end\sub{left}} and
+\fld{end\sub{right}} fields of the block and its previous block. Then,
+the exact subblock is found using binary search on the \fld{sum\sub{enq}}
+field (line \ref{getChild}). 
+
+
 

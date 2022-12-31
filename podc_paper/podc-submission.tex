@@ -250,7 +250,7 @@ We achieve $O(\log^2 p +\log q)$ steps per operation, where $q$ is the size of t
 %%
 %% Keywords. The author(s) should pick words that accurately describe
 %% the work being presented. Separate the keywords with commas.
-\keywords{concurrent data structures, wait-free queues}
+%\keywords{concurrent data structures, wait-free queues}
 
 %%
 %% This command processes the author and affiliation and title
@@ -258,21 +258,10 @@ We achieve $O(\log^2 p +\log q)$ steps per operation, where $q$ is the size of t
 \maketitle
 
 \input{introduction}
+
 \input{related}
+
 \input{algorithm}
-
-
-\subsection{Pseudocode} \label{algQ}
-We present our algorithm in pseudocode. page~22 contains the description of the fields in the tree nodes and the blocks. The value of any uninitialized field is \nf{null}. page~23 contains major routines and the rest of this section consists of the auxiliary routines. The abbreviations below are used in the pseudocode and the proof of correctness.
-\begin{itemize}
- \item \tt{blocks[$b$].sum\sub{x}=blocks[$b$].sum\sub{x-left}+blocks[$b$].sum\sub{x-right}} (for internal blocks where $b\geq 0$ and \tt{x} $\in$ \tt{\{enq, deq\}})
-%  \item \tt{blocks[b].sum=blocks[b].sum\sub{enq}+blocks[b].sum\sub{deq}}  \tt{ (for b$\geq$0})
-  \item \tt{blocks[$b$].num\sub{x}=blocks[$b$].sum\sub{x}-blocks[$b-1$].sum\sub{x}}  (for all blocks where $b>0$ and \tt{x} $\in$ \tt{\{enq, deq, enq-left, enq-right, deq-left, deq-right\}})
-\end{itemize}
-
-
-
-
 
 \input{correctness}
 

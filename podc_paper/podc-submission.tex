@@ -45,10 +45,13 @@
 \usepackage{enumitem}
 \usepackage{bold-extra}
 \usepackage{showkeys}
+\usepackage{cleveref}
 \renewcommand*\contentsname{Table of Contents}
 
 \usepackage{multicol}
 \setlength\columnsep{24pt}
+
+\numberwithin{equation}{section}
 
 \def\draft{1}  % set to 1 for draft (include comments, color edits), 0 for clean final copy (omit comments, edits in black)
 \if\draft 1
@@ -117,27 +120,27 @@
 \newcommand{\eright}{\fld{end\sub{right}}}
 \newcommand{\edir}{\fld{end\sub{dir}}}
 
-\newcommand{\var}[1]{\mbox{\it{#1}}}
+\newcommand{\var}[1]{\mbox{\textnormal{\it{#1}}}}
 \newcommand{\fld}[1]{\mbox{\it{#1}}}
 \newcommand{\typ}[1]{\mbox{\sf #1}}
 \newcommand{\ceil}[1]{\lceil #1 \rceil}
 \newcommand{\nl}{\mbox{\sf null}}
 \newcommand{\tr}{\mbox{\sf true}}
-\newcommand{\opa}[2]{\op{#1}(\var{#2})}
+\newcommand{\opa}[2]{\op{#1(\var{#2})}}
 \newcommand{\op}[1]{{\sf #1}}
 \newcommand{\opemph}[1]{{\sf \bf{#1}}}
 \newcommand{\com}{$\triangleright$}
 \newcommand{\linecomment}[1]{\com\ #1}
 
 \usepackage{amsmath,amsthm}
-%\newtheorem{theorem}{Theorem}
-%\newtheorem{lemma}[theorem]{Lemma}
-%\newtheorem{corollary}[theorem]{Corollary}
-\newtheorem{observation}{Observation}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{observation}[theorem]{Observation}
 %\theoremstyle{definition}
-%\newtheorem{definition}[theorem]{Definition}
-\newtheorem{invariant}{Invariant}
-%\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{invariant}[theorem]{Invariant}
+\newtheorem{proposition}[theorem]{Proposition}
 
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs

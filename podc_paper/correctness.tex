@@ -2,112 +2,100 @@
 
 \section{Proof of Correctness}
 
-\here{following material from algorithm description in thesis might be useful in sketch of correctness proof}
-\begin{figure}[hbpt]
-  \center\includegraphics[width=4in]{pics/doublyrefresh-drawio.png}
-  \caption[Two consecutive failed \nf{Refresh}es by a
-    process.]{\label{fig::simpleDoubleRefresh}Time relations between
-    the concurrent successful \nf{Refresh}es and the two consecutive
-    failed \nf{Refresh}es.} 
-\end{figure}
-We use \nf{CAS} (Compare\&Swap) instructions to implement the
-\nf{Refresh}'s attempt to append  described in the previous
-paragraph. 
-The second failed \nf{Refresh} of $P$ is assuredly concurrent with a
-successful \texttt{Refresh} that has read its information after the
-invocation of the first failed \nf{Refresh} (see Figure
-\ref{fig::simpleDoubleRefresh}). This is because some process $L$ does
-a successful append during $P$'s first failed attempt, and some
-process $K$ performs a \nf{Refresh} that reads its information after
-$L$'s append and then performs a successful append during $P$'s second
-failed \nf{Refresh}. Process $K$'s \nf{Refresh} helps to append the
-new operations that were in $n$'s children before $P$'s first failed
-\nf{Refresh}, in case they were not already appended. After a process
-appends its operation into its leaf it can call \nf{Refresh} on the
-path up to the root at most two times on each node. So, with $O(\log
-p)$ \nf{CAS}es an operation can ensure it appears in the
-linearization. This cooperative solution allows us to overcome the CAS
-Retry Problem. 
+Consider any finite execution.  We must show that the linearization ordering $L$ defined in Section \ref{linearization} includes all operations that terminate and that 
+(1) if an operation $op_1$ terminates before another operation $op_2$ begins, then $op_2$ cannot appear
+before $op_1$ in $L$, and (2) each dequeue that terminates returns the same response as it would 
+in $L$.
 
-
-We adopt linearizability as our definition of correctness. In our case, where we create the linearization ordering in the root, we need to prove (1) the ordering is legal, i.e, for every execution on our queue if operation $op_1$ terminates before operation $op_2$ then $op_1$ is linearized before operation $op_2$ and (2) if we do operations sequentially in their linearization order, operations get the same results as in our queue. The proof is structured like this. First, we define and prove some facts about blocks and the node's \nf{head} field. Then, we introduce  the linearization ordering formally. Next, we prove double \nf{Refresh} on a node is enough to propagate its children's new operations up to the node, which is used to prove (1). After this, we prove some claims about the size and operations of each block, which we use to prove the correctness of \nf{DoublingSearch()}, \nf{GetEnqueue()} and \nf{IndexDequeue()}. Finally, we prove the correctness of the way we compute the response of a dequeue, which establishes (2).
+\here{need to update this outline later}
+First, we define and prove some facts about blocks and the node's \nf{head} field. Then, we introduce  the linearization ordering formally. Next, we prove double \nf{Refresh} on a node is enough to propagate its children's new operations up to the node, which is used to prove (1). After this, we prove some claims about the size and operations of each block, which we use to prove the correctness of \nf{DoublingSearch()}, \nf{GetEnqueue()} and \nf{IndexDequeue()}. Finally, we prove the correctness of the way we compute the response of a dequeue, which establishes (2).
 
 \subsection{Basic Properties}
-In this subsection, we talk about some properties of blocks and fields of the tree nodes.
 
-A block is an object storing some statistics, as described in Algorithm Queue. A block in a node implicitly represents a set of operations.
-\begin{definition}[Ordering of a block in a node]
-Let $B$ be \nf{$n$.blocks[$b$]} and $B^\prime$ be \nf{$n$.blocks[$j$]}. We call $i$ the \emph{index} of block $B$. Block $B$ is \it{before} block $B^\prime$ in node $n$ if and only if $i<j$.
-\end{definition}
-
-Next, we show that the value of \nf{head} in a node can only be increased. By the termination of a \nf{Refresh}, \nf{head} has been incremented by the process doing the \nf{Refresh} or by another process.
+Since \fld{head} fields are updated only on line \ref{incrementHead}, which increments it, we have the following observation.
 \begin{observation} \label{nonDecreasingHead}
-For each node $n$,  $n.\nf{head}$ is non-decreasing over time.
+For each node \var{v},  \var{v}.\fld{head} is non-decreasing over time.
 \end{observation}
-\begin{proof}
-  The claim follows trivially from the code since \nf{head} is only changed by incrementing in Line \ref{incrementHead} of \nf{Advance}.
-\end{proof}
 
 \begin{lemma} \label{lem::headInc}
-Let $R$ be an instance of \nf{Refresh} on a node $n$ that creates a non-empty block \nf{new} ($\nf{new.sum}\neq 0$). After $R$ terminates, \nf{$n$.head} is greater than the value read in Line \ref{readHead} of $R$.
+Let $R$ be an instance of \opa{Refresh}{v} whose call to \op{CreateBlock} returns a non-\nl\ block.  When $R$ terminates, \var{v}.\head\ is greater than the value $R$ reads from it at line \ref{readHead}.
 \end{lemma}
 \begin{proof}
-If the \nf{CAS} in Line \ref{incrementHead} is successful, then the claim holds. Otherwise, $n.\nf{head}$ has changed from the value read in Line \ref{readHead}. By Observation \ref{nonDecreasingHead} this means another process has incremented $n.\nf{head}$.
+After $R$'s \op{CAS} at line \ref{incrementHead}, \var{v}.\head\ is no longer equal to the value \var{h}
+read at line \ref{readHead}.  The claim follows from \Cref{nonDecreasingHead}.
 \end{proof}
 
-Now we show \nf{$n$.blocks[$n$.head]} is either the last block written into node $n$ or the first empty block in~$n$.
+Now we show $v.\fld{blocks}[v.\head]$ is either the last non-\nl\ block or the first \nl\ block in node $v$.
 
-\begin{invariant}[headPosition] \label{lem::headPosition} If the value of $n.\nf{head}$ is $h$ then $\nf{$n$.blocks[$i$]}=\nf{null}$ for ${i>h}$ and $\nf{$n$.blocks[$i$]}\neq\nf{null}$ for ${0\leq i<h}$.
+\begin{invariant}\label{lem::headPosition} 
+For $0 \leq i < v.\head$, $v.\fld{blocks}[i]\neq\nl$.  For $i>v.\head$, $v.\fld{blocks}[i]=\nl$.
 \end{invariant}
+
 \begin{proof}
-Initially the invariant is true since $n.\nf{head}=1$, $n.\nf{blocks[0]}\neq\nf{null}$  and $n.\nf{blocks[$x$]}=\nf{null}$ for every $x>0$. The truth of the invariant may be affected by writing into \nf{n.blocks} or incrementing \nf{n.head}. We show that if the invariant holds before such a change, then it still holds after the change.
+Initially, $v.\head=1$, $v.\fld{blocks}[0]\neq\nl$  and $v.\fld{blocks}[i]=\nl$ for  $i>0$, so the claim~holds.
 
-In the algorithm, $n.\nf{blocks}$ is modified only on Line \ref{cas}, which updates $n.\nf{blocks[$h$]}$ where $h$ is the value read from $n.\nf{head}$ in Line \ref{readHead}. Since the \nf{CAS} in Line \ref{cas} is successful, it means $n.\nf{head}$ has not changed from $h$ before doing the \nf{CAS}: if $n$\nf{.head} had changed before the \nf{CAS} then it would be greater than $h$ by Observation~\ref{nonDecreasingHead} and hence $n$\nf{.blocks[}$h$\nf{]}$\neq$\nf{null} and by the induction hypothesis, so the \nf{CAS} would fail. Writing into \nf{$n$.blocks[$h$]} when $h=n$\nf{.head} preserves the invariant, since the claim does not talk about the content of \nf{$n$.blocks[$n$.head]}.
+Assume the claim holds before a change to $v.\fld{blocks}$, which can be made only
+by a successful \op{CAS} at line \ref{cas}.
+The \op{CAS} changes $v.\fld{blocks}[h]$ from \nl\ to a non-\nl\ value.
+Since $v.\fld{blocks}[h]$ is \nl\ before the CAS, $v.\head \leq h$ by the hypothesis.
+Since $h$ was read from $v.\fld{blocks}[h]$ earlier at line \ref{readHead}, 
+$v.\head \geq h$ by \Cref{lem::headPosition}.
+So, $h=v.\head$ and a change to $v.\fld{blocks}[v.\head]$ preserves the invariant.
 
-The value of \nf{$n$.head} is modified only in Line \ref{incrementHead} of \nf{Advance}. If $n$\nf{.head} is incremented to $h+1$ it is sufficient to show \nf{n.blocks[$h$]}$\neq$\nf{null}. \nf{Advance} is called  in Lines \ref{helpAdvance} and \ref{advance}. For Line \ref{helpAdvance}, $n.\nf{blocks[h]}\neq\nf{null}$ because of the \nf{if} condition in Line \ref{ifHeadnotNull}. For Line \ref{advance}, Line \ref{cas} was finished  before doing Line \ref{advance}. Whether Line \ref{cas} is successful or not, $n.\nf{blocks[h]}\neq\nf{null}$ after the $n$\nf{.blocks[$h$].CAS}. 
+Now, assume the claim holds before a change to $v.\head$, which can only be an increment from $h$ to $h+1$
+by a successful \op{CAS} at line \ref{incrementHead} of \op{Advance}.
+It suffices to show that $v.\fld{blocks}[head] \neq \nl$.
+\nf{Advance} is called either at line \ref{helpAdvance} 
+after testing that $v.\fld{blocks}[h]\neq\nl$ at line \ref{ifHeadnotNull},
+or at line \ref{advance} after the \op{CAS} at line \ref{cas} ensures $v.\fld{blocks}[h]\neq\nl$. 
 \end{proof}
 
-We define the subblocks of a block recursively.
+It follows that blocks accessed by the \op{Enqueue}, \op{Dequeue} and \op{CreateBlock} routines are non-\nl.
 
-\begin{definition}[Subblock]\label{def::subblock}
-A block is a \emph{direct subblock} of the $i$th block in node $n$ if it is\\ in $$\texttt{$n$.left.blocks[$n$.blocks[$i-1$].end\textsubscript{left}+1$\cdots n$.blocks[$i$].end\textsubscript{left}]}$$ or in $$\texttt{$n$.right.blocks[$n$.blocks[$i-1$].end\textsubscript{right}+1$\cdots n$.blocks[$i$].end\textsubscript{right}]}.$$
-Block $B$ is a \emph{subblock} of block $C$ if $B$ is a direct subblock of $C$ or a subblock of a direct subblock of~$C$.  We say block $B$ has been \it{propagated} to node $n$ if $B$ is in $n.\nf{blocks}$ or is a subblock of a block in $n\nf{.blocks}$.
-\end{definition}
-
-The following lemma is used to prove that subblocks of two blocks in a node are disjoint.
+The following two lemmas show that no operation appears in more than one block of the root.
 \begin{lemma} \label{lem::headProgress}
- If $n\nf{.blocks[}b\nf{]}\neq\nf{null}$$(b>0)$ then $\nf{$n$.blocks[$i$].end\sub{left}} \geq \nf{$n$.blocks[$i-1$].end\sub{left}}$ and $\nf{$n$.blocks[$i$].end\sub{right}} \geq \nf{$n$.blocks[$i-1$].end\sub{right}}$.
+ If $b>0$ and $v.\fld{blocks}[b] \neq \nl$ then 
+ $v.\fld{blocks}[b-1].\fld{end\sub{left}} \leq v.\fld{blocks}[b].\fld{end\sub{left}}$ and 
+ $v.\fld{blocks}[b-1].\fld{end\sub{right}} \leq v.\fld{blocks}[b].\fld{end\sub{right}}$.
 \end{lemma}
 \begin{proof}
-Consider the block $B$ written into \nf{n.blocks[$b$]} by \nf{CAS} at Line \ref{cas}. Block $B$ is created by the \nf{CreateBlock($b$)} called at Line \ref{invokeCreateBlock}. Prior to this call to \nf{CreateBlock($b$)}, $\nf{n.head}=b$ at Line \ref{readHead}, so \nf{n.blocks[$b-1$]} is already a non-null value $B^\prime$ by Invariant \ref{lem::headPosition}. Thus, the \nf{CreateBlock($b-1$)} that created  $B^\prime$ has terminated before the invocation of \nf{CreateBlock($b$)} that created $B$. The value written into \nf{$B$.end\sub{left}} at Line \ref{lastLine} of \nf{CreateBlock($b$)}  was one less than the value of $n$\nf{.left.head} read at Line \ref{lastLine} of \nf{CreateBlock($b$)}. Similarly, the value in \nf{n.blocks[$b-1$].end\sub{left}} was one less than the value read from $\nf{n.left.head}$ during the call to \nf{CreateBlock($b-1$)}. By Observation \ref{nonDecreasingHead}, $n\nf{.left.head}$ is non-decreasing, so $B^\prime\nf{.end\sub{left}} \leq \nf{$B$.end\sub{left}}$. The proof for \nf{end\sub{right}} is similar.
+Let $B$ be the block in $v.\fld{blocks}[b]$.
+Before creating $B$ at line \ref{invokeCreateBlock}, the \op{Refresh} that installed $B$
+read $b$ from $v.\head$ at line \ref{readHead}.
+At that time, $v.\fld{blocks}[b-1]$ contained a block $B'$, by \Cref{lem::headPosition}.
+Thus, the \op{CreateBlock}($v,b-1$) that created $B'$ terminated before the \op{CreateBlock}($v,b$) that
+created $B$ started.
+It follows from \Cref{nonDecreasingHead} that the value that 
+line \ref{createEndLeft} of \op{CreateBlock}($v,b-1$) stores in $B'.\fld{end\sub{left}}$   
+is less than or equal to the value that line \ref{createEndLeft} of \op{CreateBlock}($v,b$) 
+stores in $B.\fld{end\sub{left}}$.
+Similarly, the values stored in $B'.\eright$ and $B.\eright$ at line \ref{createEndRight} 
+%of these calls to \op{CreateBlock} 
+satisfy the claim.
 \end{proof}
 
 \begin{lemma} \label{lem::subblocksDistinct}
-The sets of subblocks of any two blocks in a node are disjoint.  
+If $B$ and $B'$ are two blocks in nodes at the same depth, their sets of subblocks are disjoint.
 \end{lemma}
 \begin{proof}
-We are going to prove the lemma by contradiction. Consider the lowest \nf{node} $n$ in the tree that violates the claim. Then, subblocks of $n\nf{.blocks[}i\nf{]}$ and $n\nf{.blocks[}j\nf{]}$ overlap for some $i<j$. Since $n$ is the lowest node in the tree violating the claim, direct subblocks of blocks of $n\nf{.blocks[}i\nf{]}$ and $n\nf{.blocks[}j\nf{]}$ have to overlap. Without loss of generality, assume left child subblocks of $n\nf{.blocks[}i\nf{]}$ overlap with the left child subblocks of $n\nf{.blocks[}j\nf{]}$. By Lemma \ref{lem::headProgress} we have $ \nf{$n$.blocks[$i$].end\sub{left}} \leq \nf{$n$.blocks[$j-1$].end\sub{left}}$, so the range $[\nf{$n$.blocks[$i-1$].end\sub{left}}+1 \cdots \nf{$n$.blocks[$i$].end\sub{left}}]$ cannot have overlap with the range $[\nf{$n$.blocks[$j-1$].end\sub{left}}+1 \cdots \\ \nf{$n$.blocks[$j$].end\sub{left}}]$. Therefore, direct subblocks of \nf{$n$.blocks[$i$]} and \nf{$n$.blocks[$j$]} cannot overlap, which is in contradiction with the assumption.
+We prove the lemma by reverse induction.
+If $B$ and $B'$ are in leaves, they have no subblocks, so the claim is true.
+Assume the claim is true for nodes at depth $d+1$ and let $B$ and $B'$ be two blocks in nodes at depth $d$.
+Consider the direct subblocks of $B$ and $B'$ defined by (\ref{defsubblock}).
+If $B$ and $B'$ are in different nodes at depth $d$, then their direct subblocks are disjoint.
+If $B$ and $B'$ are in the same node, it follows from \Cref{lem::headProgress} that their direct subblocks are disjoint.
+Either way, their direct subblocks (at depth $d+1$) are disjoint, so the claim follows from the induction hypothesis.
 \end{proof}
 
-\begin{definition}[Superblock]
-  Block $B$ is \it{superblock} of block $C$ if $C$ is a direct subblock of $B$.
-\end{definition}
-\begin{corollary}
-Every block has at most one superblock.
-\end{corollary}
-\begin{proof}
-A block having more than one superblock contradicts Lemma \ref{lem::subblocksDistinct}.
-\end{proof}
+It follows that each block has at most one superblock.
+Moreover, we can now prove each operation is contained in at most one block of each node,
+and hence appears at most once in the linearization~$L$.
 
-Now we can define the operations of a block using the definition of subblocks.
-\begin{definition}[Operations of a block]\label{def::ops}
-A block $B$ in a leaf represents an \nf{Enqueue} if $B\nf{.element}\neq\nf{null}$. Otherwise, if $B\nf{.element}=\nf{null}$, $B$ represents a \nf{Dequeue}. The set of operations of block $B$ is the union of the operations in leaf subblocks of $B$. We denote the set of operations of block $B$ by ${ops(B)}$ and the union  of operations of a set of blocks $\mathcal{B}$ by $ops(\mathcal{B})$.  We also say $B$ contains ${op}$ if $op\in{ops(B)}$.
-\end{definition}
-
-The next lemma proves that each operation appears at most once in the blocks of a node.
 \begin{lemma}\label{lem::noDuplicates}
-For any node $n$, if $op$ is in $n.\nf{blocks[}i\nf{]}$ then there is no $j\neq i$ such that $op$ is in $n\nf{.blocks[}j\nf{]}$.
+For  $i\neq j$, $v.\fld{blocks}[i]$ and $v.\fld{blocks}[j]$ cannot both contain the same operation.
 \end{lemma}
+-------
+
 \begin{proof}
 We prove this claim by contradiction using Lemma \ref{lem::subblocksDistinct}. Assume $op$ is in the subblocks of both $n\nf{.blocks[}i\nf{]}$ and $n\nf{.blocks[}j\nf{]}$. From Lemma \ref{lem::subblocksDistinct} we know that the subblocks of these blocks are different, so there are two leaf blocks containing $op$. Since each process puts each operation in only one block of its leaf, $op$ cannot be in two leaf blocks. This is a contradiction.
 \end{proof}
@@ -228,6 +216,8 @@ We can prove (2) and (3) the same as (1).
 
 \subsection{Propagating Operations to the Root}
 This section explains why two \nf{Refresh}es are enough to propagate a node's operations to its parent.
+
+  We say block $B$ has been \it{propagated} to node $n$ if $B$ is in $n.\nf{blocks}$ or is a subblock of a block in $n\nf{.blocks}$.
 
 \begin{definition}
 Let $t^{op}$ be the time $op$ is invoked, $^{op}t$ be the time $op$ terminates, $t_{l}^{op}$ be the time immediately before running Line $l$ of operation $op$ and $^{op}_{l}t$ be the time immediately after running Line $l$ of operation $op$. We sometimes suppress $op$ and write $t_{l}$ or $_l t$ if $op$ is clear from the context. In the text, $v_l$ is the value of variable $v$ immediately after line $l$ for the process we are talking about and $v_t$ is the value of variable $v$ at time $t$.
@@ -366,7 +356,9 @@ $subblockIndex$ is the index of the block in $n.\nf{dir}$ containing $E_i(n,b)$.
 
 
 \subsection{Correctness of IndexDequeue}
-The next few results show that the \nf{super} field of a block is accurate within one of the actual index of the block's superblock in the parent node. Then we explain how it is used to compute the rank of a given \nf{Dequeue} in the root.
+The next few results show that the \nf{super} field of a block is accurate within one of the actual index of the block's superblock in the parent node. 
+\here{mention that precondition of IndexDequeue follows; also check that block of parent indexed by sup in that routine is non-null}
+Then we explain how it is used to compute the rank of a given \nf{Dequeue} in the root.
 \begin{definition}\label{orderRefresh} If a \nf{Refresh} instance $R_1$ does its \nf{CAS} at Line \ref{cas} earlier than \nf{Refresh} instance $R_2$ we say $R_1$ has \it{happened before} $R_2$.
 \end{definition}
 
@@ -531,5 +523,33 @@ The theorem follows from Lemmas \ref{linearSat} and \ref{linearCorrect}.
 \end{proof}
 
 \paragraph{Remark} In fact our algorithm is strongly linearizable as defined in \cite{DBLP:conf/stoc/GolabHW11}. By Definition \ref{ordering} the linearization ordering of operations will not change as blocks containing new operations are appended to the root.
+
+
+\here{following material from algorithm description in thesis might be useful in sketch of correctness proof}
+\begin{figure}[hbpt]
+  \center\includegraphics[width=4in]{pics/doublyrefresh-drawio.png}
+  \caption[Two consecutive failed \nf{Refresh}es by a
+    process.]{\label{fig::simpleDoubleRefresh}Time relations between
+    the concurrent successful \nf{Refresh}es and the two consecutive
+    failed \nf{Refresh}es.} 
+\end{figure}
+We use \nf{CAS} (Compare\&Swap) instructions to implement the
+\nf{Refresh}'s attempt to append  described in the previous
+paragraph. 
+The second failed \nf{Refresh} of $P$ is assuredly concurrent with a
+successful \texttt{Refresh} that has read its information after the
+invocation of the first failed \nf{Refresh} (see Figure
+\ref{fig::simpleDoubleRefresh}). This is because some process $L$ does
+a successful append during $P$'s first failed attempt, and some
+process $K$ performs a \nf{Refresh} that reads its information after
+$L$'s append and then performs a successful append during $P$'s second
+failed \nf{Refresh}. Process $K$'s \nf{Refresh} helps to append the
+new operations that were in $n$'s children before $P$'s first failed
+\nf{Refresh}, in case they were not already appended. After a process
+appends its operation into its leaf it can call \nf{Refresh} on the
+path up to the root at most two times on each node. So, with $O(\log
+p)$ \nf{CAS}es an operation can ensure it appears in the
+linearization. This cooperative solution allows us to overcome the CAS
+Retry Problem. 
 
 

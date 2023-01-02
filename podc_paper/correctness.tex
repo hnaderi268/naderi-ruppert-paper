@@ -91,26 +91,31 @@ It follows that each block has at most one superblock.
 Moreover, we can now prove each operation is contained in at most one block of each node,
 and hence appears at most once in the linearization~$L$.
 
-\begin{lemma}\label{lem::noDuplicates}
+\begin{corollary}\label{lem::noDuplicates}
 For  $i\neq j$, $v.\fld{blocks}[i]$ and $v.\fld{blocks}[j]$ cannot both contain the same operation.
-\end{lemma}
--------
-
+\end{corollary}
 \begin{proof}
-We prove this claim by contradiction using Lemma \ref{lem::subblocksDistinct}. Assume $op$ is in the subblocks of both $n\nf{.blocks[}i\nf{]}$ and $n\nf{.blocks[}j\nf{]}$. From Lemma \ref{lem::subblocksDistinct} we know that the subblocks of these blocks are different, so there are two leaf blocks containing $op$. Since each process puts each operation in only one block of its leaf, $op$ cannot be in two leaf blocks. This is a contradiction.
+The operations contained in a block $B$ are those that appear in subblocks of $B$ in the leaves of the tree.
+Since each process puts each of its operations in only one block of its own leaf, an operation 
+cannot be in two different leaf blocks. 
+By \Cref{lem::subblocksDistinct}, $v.\fld{blocks}[i]$ and $v.\fld{blocks}[j]$ have no subblocks in common, so the claim follows.
 \end{proof}
 
-\begin{definition}
-$n\nf{.blocks[}i\nf{]}$ is \emph{established} if $n\nf{.head}>i$. An operation is \it{established} in node $n$ if it is in an established block of $n$. $EST^t_n$ is the set of established operations in node $n$ at time $t$.
-\end{definition}
 
-Now we want to say that blocks of a node grow over time.
-\begin{observation}\label{lem::blocksOrder}
-  If  time $t<$ time $t^\prime$ ($t$ is before $t^\prime$), then $ops(n.blocks)$ at time $t$ is a subset of $ops(n.blocks)$ at time $t^\prime$.
-\end{observation}
-\begin{proof}
-Blocks are only appended (not modified) with \nf{CAS} to $n\nf{.blocks[}n\nf{.head]}$, so the set of the blocks of a node after the \nf{CAS} contains the set of the blocks before the \nf{CAS}.
-\end{proof}
+
+%\begin{definition}
+%$n\nf{.blocks[}i\nf{]}$ is \emph{established} if $n\nf{.head}>i$. An operation is \it{established} in node $n$ 
+%if it is in an established block of $n$. $EST^t_n$ is the set of established operations in node $n$ at time $t$.
+%\end{definition}
+%
+%Now we want to say that blocks of a node grow over time.
+%\begin{observation}\label{lem::blocksOrder}
+%  If  time $t<$ time $t^\prime$ ($t$ is before $t^\prime$), then $ops(n.blocks)$ at time $t$ is a subset of 
+%$ops(n.blocks)$ at time $t^\prime$.
+%\end{observation}
+%\begin{proof}
+%Blocks are only appended (not modified) with \nf{CAS} to $n\nf{.blocks[}n\nf{.head]}$, so the set of the blocks of a node after the \nf{CAS} contains the set of the blocks before the \nf{CAS}.
+%\end{proof}
 
 % \begin{corollary}\label{lem::establishedOrder}
 %   If  time $t<$ time $t^\prime$, then $EST_n^t\subseteq EST_n^{t^\prime}$.
@@ -119,99 +124,40 @@ Blocks are only appended (not modified) with \nf{CAS} to $n\nf{.blocks[}n\nf{.he
 % From Observations \ref{nonDecreasingHead}, \ref{lem::blocksOrder}.  
 % \end{proof}
 
+The following shows that the values stored in \fld{sum\sub{enq}} and \fld{sum\sub{deq}} fields are accurate.
+\here{If space is tight, could easily move next proof to appendix and just say it follows easily from the definition of subblocks and the values stored in the fields on lines \ref{enqNew}, \ref{deqNew}, \ref{createSumEnq}, \ref{createSumDeq}.}
 
-\subsection{Ordering Operations}
-
-\begin{figure}[hbt]
-  \center\includegraphics[width=5.5in]{pics/tree}
-  \caption[Order of operations in a block.]{Order of operations in the block $B$. Operations in the leaves are ordered in the numerical order shown in the drawing.}
-\end{figure}
-
-Now we define the ordering of operations stored in each node. In the non-root nodes, we only need to order operations of a type among themselves (that is, we order the \nf{Enqueue}s in the node and order the \nf{Dequeue}s in the node separately). Processes are numbered from 1 to $p$, and leaves of the tree are assigned from left to right. We will show in Lemma \ref{oneOpinBlock} that there is at most one operation from each process in a given block.
-\begin{definition} [Ordering of operations inside the nodes] \label{ordering}
-\end{definition}
-\begin{itemize}
-  \item $E(n,b)$ is the sequence of enqueue operations in $ops(n\nf{.blocks[}b\nf{]})$ defined recursively as follows. $E(leaf,b)$ is the single enqueue operation in $ops(leaf\nf{.blocks[}b\nf{]})$ or an empty sequence if $leaf\nf{.blocks[}b\nf{]}$ represents a dequeue operation. If $n$ is an internal node, then
-\begin{align*} 
-E(n,b) =&  E(n\nf{.left},n\nf{.blocks[}b-1\nf{].end\sub{left}}+1)\cdots E(n\nf{.left},n\nf{.blocks[}b\nf{].end\sub{left}})\cdot \\ 
-&E(n\nf{.right},n\nf{.blocks[}b-1\nf{].end\sub{right}}+1)\cdots E(n\nf{.right},n\nf{.blocks[}b\nf{].end\sub{right}}).
-\end{align*}
-  \item $E_i(n,b)$ is the $i$th enqueue in $E(n,b)$.
-\item The order of the enqueue operations in the node $n$ is $E(n)=E(n,1)\cdot E(n,2)\cdot E(n,3)\cdots$
-\item $E_i(n)$ is the $i$th enqueue in $E(n)$.
-  \item $D(n,b)$ is the sequence of dequeue operations in $ops(n\nf{.blocks[}b\nf{]})$ defined recursively as follows. $D(leaf,b)$ is the single dequeue operation in $ops(leaf\nf{.blocks[}b\nf{]})$ or an empty sequence if $leaf\nf{.blocks[}b\nf{]}$ represents an enqueue operation. If $n$ is an internal node, then
-\begin{align*} 
-D(n,b) =&  D(n\nf{.left},n\nf{.blocks[}b-1\nf{].end\sub{left}}+1)\cdots D(n\nf{.left}, n\nf{.blocks[}b\nf{].end\sub{left}})\cdot \\ 
-&D(n\nf{.right},n\nf{.blocks[}b-1\nf{].end\sub{right}}+1)\cdots D(n\nf{.right},n\nf{.blocks[}b\nf{].end\sub{right}}).
-\end{align*}
-    \item $D_i(n,b)$ is the $i$th enqueue in $D(n,b)$.
-\item The order of the dequeue operations in the node $n$ is $D(n)=D(n,1)\cdot D(n,2)\cdot D(n,3)...$
-\item $D_i(n)$ is the $i$th dequeue in $D(n)$.
-\end{itemize}
-
-The linearization ordering is given by the order in which operations appear in the blocks in the root.
-\begin{definition}[Linearization] \label{def::lin}
- $$L=E(root,1)\cdot D(root,1)\cdot E(root,2)\cdot D(root,2)\cdot E(root,3)\cdot D(root,3)\cdots$$
-\end{definition}
-
-The following observation follows from the Definition of \nf{num\sub{x}} on page 22.
-\begin{observation}\label{sumToNum}
-For any node $n$ and indices $i<j$ of \nf{blocks} in $n$, we have
-$$n.\nf{blocks[}j\nf{].sum\sub{x}}-n.\nf{blocks[}i\nf{].sum\sub{x}}=\mathlarger{\sum}_{k=i+1}^{j}  n\nf{.blocks[}k\nf{].num\sub{x}}$$ where $\nf{x}\in\{\nf{enq}, \nf{deq}, \nf{enq-left}, \nf{enq-right}, \nf{deq-left}, \nf{deq-right}\}$.
-\end{observation}
-
-The next claim is also valid if we replace \nf{enq} with \nf{deq} and $E$ with $D$.
-\begin{lemma}\label{lem::numX}
-Let $B$ and $B^\prime$ be $n\nf{.blocks[}b\nf{]}$ and $n\nf{.blocks[}b-1\nf{]}$, respectively.
-
-\hspace{-\parindent}If $n$ is an internal node, then
-\begin{enumerate}[label=(\arabic*)]
-    \item  $B\nf{.num\sub{enq-left}}=\Big|E(n.\nf{left},B^\prime.\nf{end\sub{left}}+1)\cdots E(n.\nf{left},B.\nf{end\sub{left}})\Big|$.
-    \item $B\nf{.num\sub{enq-right}}=\Big|E(n.\nf{right},B^\prime.\nf{end\sub{right}}+1)\cdots E(n.\nf{right},B.\nf{end\sub{right}})\Big|$.
-\end{enumerate}
-And for every node n, we have
-\begin{enumerate}[label=(3)]
-    \item $B\nf{.num\sub{enq}}=\Big|E(n,b)\Big|$.
-\end{enumerate}
-\end{lemma}
+\begin{invariant}\label{lem::sum}
+If $B$ is a block stored in $v.\fld{blocks}[i]$,
+$B.\fld{sum\sub{enq}} = | E(v.\fld{blocks}[0])\cdots E(v.\fld{blocks}[i]) |$ and
+$B.\fld{sum\sub{deq}} = | D(v.\fld{blocks}[0])\cdots D(v.\fld{blocks}[i]) |$.
+\end{invariant}
 \begin{proof}
- We prove the claim by induction on the height of node $n$. For the base case when $n$ is a leaf, statement (3) is trivial, and (1) and (2) are vacuously true. Supposing the claim is true for $n$'s children, we prove the claim for $n$.
-\begin{align*}
-    B\nf{.num\sub{enq-left}}&=B.\nf{sum\sub{enq-left}}-B^\prime.\nf{sum\sub{enq-left}}\\
-    &= B^\prime.\nf{sum\sub{enq-left}}+n\nf{.left.blocks[}B\nf{.end\sub{left}].sum\sub{enq}}\\
-    &\quad-n\nf{.left.blocks[}B^\prime\nf{.end\sub{left}].sum\sub{enq}}-B^\prime.\nf{sum\sub{enq-left}}\\
-    &= n.\nf{left.blocks[}B\nf{.end\sub{left}].sum\sub{enq}}- n.\nf{left.blocks[}B^\prime\nf{.end\sub{left}].sum\sub{enq}}\\
-    &= \sum_{i=B^\prime\nf{.end\sub{left}}+1}^{B\nf{.end\sub{left}}}  n\nf{.left.blocks[}i\nf{].num\sub{enq}} \\
-    &= \Big|E(n.\nf{left},B^\prime.\nf{end\sub{left}}+1)\cdots E(n.\nf{left},B.\nf{end\sub{left}})\Big|
-\end{align*}
-The first line follows from the Definition of \nf{num\sub{enq}}. The second line is similar to the way \nf{sum\sub{enq-left}} is computed in the \nf{CreateBlock} routine. Observation \ref{sumToNum} implies the third line and the last line holds because of the induction hypothesis (3). (2) is similar to (1). Now we prove (3) starting from the definition of $E(n,b)$.
-\begin{align*} 
-E(n,b) =&  E(n\nf{.left},n\nf{.blocks[}b-1\nf{].end\sub{left}}+1)\cdots E(n\nf{.left},n\nf{.blocks[}b\nf{].end\sub{left}})\cdot \\ 
-&E(n\nf{.right},n\nf{.blocks[}b-1\nf{].end\sub{right}}+1)\cdots E(n\nf{.right},n\nf{.blocks[}b\nf{].end\sub{right}}).
-\end{align*}
-By (1) and (2) we have $\Big|E(n,b)\Big|=B\nf{.num\sub{enq-left}}+B\nf{.num\sub{enq-right}}=B\nf{.num\sub{enq}}$.
+Initially, each \fld{blocks} array only contains an empty block $B_0$ in location 0.
+By definition, $E(B_0)$ and $D(B_0)$ are empty sequences.
+Moreover, $B_0.\fld{sum\sub{enq}} = B_0.\fld{sum\sub{deq}} = 0$, so the claim is true.
+
+We show that each installation of a block $B$ into some location $v.\fld{blocks}[i]$ preserves the claim,
+assuming the claim holds before this installation.  We consider two cases.
+
+If $v$ is a leaf, $B$ was created at line \ref{enqNew} or \ref{deqNew}.
+For line \ref{enqNew}, $B$ represents a single enqueue operation, so $|E(B)|=1$ and $|D(B)|=0$.
+Moreover, $B.\fld{sum\sub{enq}}$ is set to $v.\fld{blocks}[i-1]+1$ and
+$B.\fld{sum\sub{deq}}$ is set to $v.\fld{blocks}[i-1]$, so the claim follows from the hypothesis.
+The proof for line \ref{deqNew}, where $B$ represents a single dequeue operation is similar.
+
+Now suppose $v$ is an internal node. By the definition of subblocks in (\ref{defsubblock}), the
+subblocks of $v.\fld{blocks}[1..i]$ are $v.\fld{left.blocks}[1..B.\eleft]$ 
+and $v.\fld{right.blocks}[1..B.\eright]$.
+Thus, the enqueues in $E(v.\fld{blocks}[0])\cdots E(v.\fld{blocks}[i])$ are those in
+$E(v.\fld{left.blocks}[0]) \cdots E(v.\fld{left.blocks}[B.\eleft])$ and
+$E(v.\fld{left.blocks}[0]) \cdots E(v.\fld{left.blocks}[B.\eright])$.
+By the hypothesis, the total number of these enqueues is $v.\fld{left.blocks}[B.\eleft].\fld{sum\sub{enq}} + v.\fld{right.blocks}[B.\eright].\fld{sum\sub{enq}}$, which is the value that line \ref{createSumEnq} stored in $B.\fld{sum\sub{enq}}$ when $B$ was created.
+The proof for \fld{sum\sub{deq}} (stored on line~\ref{createSumDeq}) is similar.
 \end{proof}
 
-The next claim is also true if we replace \nf{enq} with \nf{deq} and $E$ with $D$.
-\begin{corollary}\label{lem::sumX}
-Let $B$ be $n\nf{.blocks[}b\nf{]}$.
-\begin{enumerate}[label=(\arabic*)]
-    \item If $n$ is an internal node then $B\nf{.sum\sub{enq-left}}=\Big|E(n.\nf{left},1)\cdots E(n.\nf{left},B.\nf{end\sub{left}})\Big|$.
-    \item If $n$ is an internal node then $B\nf{.sum\sub{enq-right}}=\Big|E(n.\nf{right},1)\cdots E(n.\nf{right},B.\nf{end\sub{right}})\Big|$.
-    \item $B\nf{.sum\sub{enq}}=\Big|E(n,1)\cdot E(n,2)\cdots E(n,b)\Big|$.
-\end{enumerate}
-\end{corollary}
-\begin{proof} Result (1) can be proved using the previous lemma.
-\begin{align*}
-    B\nf{.sum\sub{enq-left}}&=n\nf{.blocks[}1\nf{].num\sub{enq-left}}+\dots+ n\nf{.blocks[}b\nf{].num\sub{enq-left}}\\
-    &=\Big|E(n.\nf{left},1)\cdots E(n.\nf{left},n\nf{.blocks[}1\nf{].end\sub{left}})\Big| +\\
-    &\hspace{2em}\vdots\\
-    &\quad+\Big|E(n.\nf{left},n\nf{.blocks[}b-1\nf{].end\sub{left}})\cdots E(n.\nf{left},n\nf{.blocks[}b\nf{].end\sub{left}})\Big|\\
-    &=\Big|E(n.\nf{left},1)\cdots E(n.\nf{left},B.\nf{end\sub{left}})\Big|
-\end{align*}
+-------
 
-We can prove (2) and (3) the same as (1).
-\end{proof}
 
 
 \subsection{Propagating Operations to the Root}

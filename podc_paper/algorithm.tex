@@ -128,7 +128,8 @@ L=E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k).
 \label{sec:fields}
 
 Each \node\ of the tournament tree has an infinite array called \fld{blocks}.
-To simplify the code, each \node\ has an empty \block\ in \fld{blocks}[0].
+To simplify the code, each \node\ has an empty \block\ $B_0$ in \fld{blocks}[0].
+We define $E(B_0)$ and $D(B_0)$ to be the empty sequence.
 Each \node\ also has a \fld{head} index that stores the position in the \fld{blocks} array to be used
 for the next attempt to append a \block\ to this \node.
 
@@ -312,7 +313,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \Function{void}{Enqueue}{\typ{Object} \var{e}} 
     \State \hangbox{let \var{n} be a new \typ{Block} with \fld{element} \assign\ \var{e},\\
 		\fld{sum\sub{enq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}}+1,\\
-		\fld{sum\sub{deq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}}
+		\fld{sum\sub{deq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}}\label{enqNew}
     \State \Call{Append}{\var{n}}
 \EndFunction{Enqueue}
 
@@ -321,7 +322,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \Function{Object}{Dequeue()}{} 
     \State \hangbox{let \var{n} be a new \typ{Block} with \fld{element} \assign\ \nl,\\
 	    \fld{sum\sub{enq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}},\\
-	    \fld{sum\sub{deq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}+1}
+	    \fld{sum\sub{deq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}+1}\label{deqNew}
     \State \Call{Append}{\var{n}}
     \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, $\var{leaf.}\head-1$, 1}
     \State \Return{ \Call{FindResponse}{\var{b, i}}}
@@ -391,9 +392,9 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \State \var{new}.\eleft \assign\ $\var{v}.\fld{left}.\head - 1$\label{createEndLeft}
     \State \var{new}.\eright \assign\ $\var{v}.\fld{right}.\head - 1$\label{createEndRight}
 	\State \hangbox{\var{new}.\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + \\
-			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{enq}}}
+			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{enq}}}\label{createSumEnq}
 	\State \hangbox{\var{new}.\fld{sum\sub{deq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{deq}} + \\
-			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{deq}}}
+			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{deq}}}\label{createSumDeq}
     \State \var{num\sub{enq}} \assign\ $\var{new}.\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{enq}}$\label{computeNumEnq}
     \State \var{num\sub{deq}} \assign\ $\var{new}.\fld{sum\sub{deq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{deq}}$
     \If{$\var{v} = \var{root}$}

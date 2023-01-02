@@ -44,7 +44,7 @@
 \usepackage{relsize}
 \usepackage{enumitem}
 \usepackage{bold-extra}
-\usepackage{showkeys}
+%\usepackage{showkeys}
 \renewcommand*\contentsname{Table of Contents}
 
 \usepackage{multicol}
@@ -56,13 +56,15 @@
 \newcommand{\myedit}[2]{{\color{#1}{#2}}\normalcolor}
 \newcommand{\rebuttaledit}[2]{{\color{#1}{#2}}\normalcolor}
 \newcommand{\here}[1]{\bf{[[[#1]]]}}
-%\usepackage{showkeys}
+\newcommand{\gc}[1]{{\color{red} #1}} %HANDLE the vertical space problem
 \else
 \newcommand{\mycomment}[3]{}
 \newcommand{\rebuttaledit}[2]{#2}
 \newcommand{\myedit}[2]{#2}
 \newcommand{\here}[1]{}  % \here's include comments to ourselves that readers should not see.
+\newcommand{\gc}[1]{}
 \fi
+
 
 \newcommand{\Eric}[1]{\mycomment{Eric}{magenta}{#1}}
 \newcommand{\Hossein}[1]{\mycomment{Hossein}{blue}{#1}}

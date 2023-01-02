@@ -215,25 +215,34 @@ shall prove that it is close.
 
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTSINGLE}{\com\ #1}}
 \begin{figure}
-\here{Does \var{leaf} have to be shared for helping when doing GC?}
+%\here{Does \var{leaf} have to be shared for helping when doing GC?}
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{1}
 \Statex \linecomment{Shared variable}
 \begin{itemize}
-\item \typ{Node} \var{root} \Comment{root of a binary tree of \tt{Node}s with one leaf for each process}
+\item \typ{Node} \var{root} \Comment{root of a binary tree of \tt{Node}s with one leaf for each process} % TODO: indent these lines in order to be more readable. I tries some times and i could not figure out doing that in algorithm.
+\item \gc{\typ{*Node[]} \var{leafOfProcess[1..p]} \Comment{Pointer to the leaf assigned to each process.}}
+\item \gc{\typ{int[]} \var{lastDequeuedByProcess[1..p]}}
 \end{itemize}
+
+\vspace{0.8em} %TODO: clean code
 
 \Statex \linecomment{Thread-local variable}
 \begin{itemize}
 \item \typ{Node} \var{leaf} \Comment{process's leaf in the tree}
 \end{itemize}
 
+\vspace{0.4em} %TODO: clean code
+
 \Statex $\blacktriangleright$ \typ{Node}
 \begin{itemize}
 \item \typ{Node} \fld{left}, \fld{right}, \fld{parent} \Comment{children and parent pointers initialized  when creating the tree}
 \item \typ{Block}[0..$\infty$] \fld{blocks} \Comment{initially \var{blocks}[0] contains an empty block with all integer fields equal to 0}
+\gc{\item \typ{PBRT<Block, int>} \fld{blocks} \Comment{PBRT of blocks each node contains a block and an index key}}
 \item \typ{int} \head \Comment{position to attempt appending next \block\ to \fld{blocks}, initially 1}
 \end{itemize}
+
+\vspace{0.8em} %TODO: clean code
 
 \Statex $\blacktriangleright$ \typ{Block} 
 
@@ -248,6 +257,8 @@ shall prove that it is close.
   	\item[\com] Blocks in leaf \nodes\ have the following additional field
   	\item \typ{Object} \fld{element}
   		\Comment{if the block's operation is \opa{Enqueue}{x} then \fld{element}=\var{x}, otherwise \fld{element}=\nl}
+  	\gc{\item \typ{Object} \fld{response}
+  		\Comment{if the block's operation is \opa{Dequeue}{} then \fld{response} is the response of the\\ operation if it has been helped.}}
 	\item[\com] Blocks in the root \node\ have the following additional field
 	\item \typ{int} \size%
   		\Comment{size of the queue after performing all operations up to the end of this block}
@@ -287,6 +298,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 %We use \var{num\sub{deq}} similarly.
 %\here{Check if the num abbreviation is really needed in the code--how many times do we use it?}
 
+
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTDOUBLE}{\com\ #1}}
 \newcommand{\hangbox}[1]{\parbox[t]{\dimexpr\linewidth-\algorithmicindent\relax}{%
     \setlength{\hangindent}{\algorithmicindent}%
@@ -323,6 +335,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \Function{void}{Append}{\typ{Block} \var{B}} 
     \State \linecomment{append block to leaf and propagate to root}
     \State \var{leaf}.\fld{blocks}[\var{leaf}.\head] \assign\ \var{B}\label{appendLeaf}
+    \gc{\State \var{leaf}.\fld{blocks}.\Call{TryAppend}{\var{B}, \var{leaf}.\head}\label{appendLeafGC}}
     \State \var{leaf}.\head\ \assign\ \var{leaf}.\head+1 \label{appendEnd} 
     \State \Call{Propagate}{\var{leaf}.\fld{parent}} 
 \EndFunction{Append}
@@ -344,6 +357,12 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \Function{boolean}{Refresh}{\typ{Node} \var{v}}
     \State \linecomment{try to append a new block to \var{v}.\fld{blocks}}
     \State \var{h} \assign\ \var{v}.\head \label{readHead}
+    
+\gc{\If{ \var{v} is root and \var{h}\%p\textsuperscript{2}==0}
+\State \Call{Help()}{}
+\State \Call{FreeMemory}{root, MAX(lastDequeuedByProcess)-1}
+\EndIf}
+
     \ForEach{\fld{dir} {\keywordfont{in}} \fld{\{left, right\}}} \label{startHelpChild1}
         \State \var{childHead} \assign\ \var{v}.\fld{dir}.\head \label{readChildHead}
         \If{\var{v}.\fld{dir.blocks}[\var{childHead}] $\neq$ \nl} \label{ifHeadnotNull}
@@ -354,6 +373,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \If{\var{new = \nl}} \Return{\tr} \label{addOP} 
     \EndIf
     \State \var{result} \assign\ \Call{CAS}{\var{v}.\fld{blocks}[\var{h}], \nl, \var{new}} \label{cas}
+    \gc{\State \var{result} \assign\ \var{v}.\fld{blocks}.\Call{TryAppend}{\var{new}, [\var{h}]} \label{GCcas}}
     \State \var{\Call{Advance}{\var{v, h}}}\label{advance}
     \State \Return{ \var{result}}
 \EndFunction{Refresh}
@@ -429,16 +449,20 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \State \hangbox{\var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} - \mbox{ }$\\
     		$\var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$}
     \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmpty}
+    \gc{\State \var{lastDequeuedByProcess[this process id]} \assign\ \var{b}}
         \State \Return \nl \hfill \com\ queue is empty when dequeue occurs\label{returnNull}
-    \Else \ \linecomment{response is the \var{e}th enqueue in the root}
+            \EndIf
+\State \linecomment{response is the \var{e}th enqueue in the root}
         \State \var{e} \assign\ \var{i} + \var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}} - 
 			\var{root}.\fld{blocks}[\var{b}-1].\size\label{computeE}
 		\State \linecomment{compute enqueue's block using binary search}
 		\State find min $\var{b}'\leq \var{b}$ with $\var{root}.\fld{blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{e}$
 		\State \linecomment{find rank of enqueue within its block}
 		\State $\var{i}' \assign\ \var{e} - \var{root}.\fld{blocks}[\var{b}'-1].\fld{sum\sub{enq}}$
-        \State \Return \Call{GetEnqueue}{\var{root}, $\var{b}'$, $\var{i}'$}\label{findAnswer}
-    \EndIf
+        \State \var{e} \assign\ \Call{GetEnqueue}{\var{root}, $\var{b}'$, $\var{i}'$}\label{findAnswer}
+        \gc{\State \var{lastDequeuedByProcess[this process id]} \assign\ $\var{b}'$}
+        \State \Return{\var{e}}
+
 \EndFunction{FindResponse}
 
 
@@ -514,12 +538,34 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
             \State \fld{dir} \assign\ \fld{right}
             \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$
         \EndIf
-        \State \linecomment{Use binary search to find enqueue's block in \var{v}.\fld{dir} and its rank within block}
+        \State \linecomment{Use binary search to find enqueue's block in \var{v}.\fld{dir.blocks} and its rank within block}
         \State find minimum $\var{b}'$ in range [\var{v}.\fld{blocks}[\var{b}-1].\edir+1..\var{v}.\fld{blocks}[\var{b}].\edir] s.t. $\var{v}.\fld{dir.blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$\label{getChild}
         \State $\var{i}'$ \assign\ $\var{i} - (\var{v}.\fld{dir.blocks}[\var{b}'-1].\fld{sum\sub{enq}} - \var{prev\sub{dir}})$
         \State \Return\Call{GetEnqueue}{\var{v}.\fld{dir}, $\var{b}'$, $\var{i}'$} 
     \EndIf
 \EndFunction{GetEnqueue}
+
+\gc{
+\Function{void}{Help}{}
+\State \bf{for} \var{i} \assign\ 1 to $p$
+\State h=leafOfProcess[\var{i}]
+\If{leafOfProcess[\var{i}].blocks[h].num\sub{deq}==1 and leafOfProcess[\var{i}].IndexDequeue(h,1)!=null}
+\State <b, i> \assign\ \Call{IndexDequeue}{leafOfProcess[\var{i}], h, 1}
+\State output \assign\ \Call{FindResponse}{b, i} 
+\State leafOfProcess[\var{i}].blocks[h].response \assign\ output
+\EndIf
+\State \bf{end for}
+\EndFunction{Help}
+
+\Function{}{FreeMemory}{\typ{Node} \var{n}, \typ{int} \var{i}}
+\State Split \var{n}.blocks.split over \var{i} and assign the grater tree to \var{n}.blocks with \tt{CAS}.
+\If{\var{n} is not a leaf}
+\State \Call{FreeMemory}{\var{n}.left, n.blocks[i].end\sub{left}}
+\State \Call{FreeMemory}{\var{n}.left, n.blocks[i].end\sub{right}}
+\EndIf
+\EndFunction{FreeMemory}
+
+}
 \end{algorithmic}
 \caption{\label{pseudocode2}Queue implementation, continued. \here{Would this routine be simpler to write if i parameter was the rank within whole node rather than within the block?}}
 \end{figure}

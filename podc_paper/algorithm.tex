@@ -378,8 +378,10 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \Function{void}{Advance}{\typ{Node} \var{v}, \typ{int} \var{h}} 
     \State \linecomment{set \var{v}.\fld{blocks}[\var{h}].\fld{super} and }
     \State \linecomment{increment \var{v}.\fld{head} from \var{h} to \var{h}+1}
-    \State \var{h\sub{p}} \assign\ \var{v}.\fld{parent}.\head \label{readParentHead}
-    \State \Call{CAS}{\var{v}.\fld{blocks}[\var{h}].\fld{super}, \nl, \var{h\sub{p}}} \label{setSuper1}
+    \If{$\var{v}\neq \var{root}$}
+	    \State \var{h\sub{p}} \assign\ \var{v}.\fld{parent}.\head \label{readParentHead}
+    	\State \Call{CAS}{\var{v}.\fld{blocks}[\var{h}].\fld{super}, \nl, \var{h\sub{p}}} \label{setSuper1}
+	\EndIf
     \State \Call{CAS}{\var{v}.\head, \var{h}, \var{h}+1} \label{incrementHead}
 \EndFunction{Advance}
 
@@ -388,7 +390,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \begin{minipage}[t]{0.529\textwidth}
 
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{48}
+\setcounter{ALG@line}{50}
 
 \Function{Block}{CreateBlock}{\typ{Node} \var{v}, \typ{int} \var{i}} 
     \State\linecomment{create new block for a \op{Refresh} to install in \var{v}.\fld{blocks}[\var{i}]}
@@ -512,7 +514,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \begin{figure}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{99}
+\setcounter{ALG@line}{103}
 
 \Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
     \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] is non-\nl\ and contains at least \var{i} enqueues}

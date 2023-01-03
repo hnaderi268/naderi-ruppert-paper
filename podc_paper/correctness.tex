@@ -37,10 +37,11 @@ Now we show $v.\fld{blocks}[v.\head]$ is either the last non-\nl\ block or the f
 
 \begin{invariant}\label{lem::headPosition} 
 For $0 \leq i < v.\head$, $v.\fld{blocks}[i]\neq\nl$.  For $i>v.\head$, $v.\fld{blocks}[i]=\nl$.
+If $v\neq \var{root}$,  $v.\fld{blocks}[i].super \neq \nl$ for $0<i<v.head$.
 \end{invariant}
 
 \begin{proof}
-Initially, $v.\head=1$, $v.\fld{blocks}[0]\neq\nl$  and $v.\fld{blocks}[i]=\nl$ for  $i>0$, so the claim~holds.
+Initially, $v.\head=1$, $v.\fld{blocks}[0]\neq\nl$  and $v.\fld{blocks}[i]=\nl$ for  $i>0$, so the claims~hold.
 
 Assume the claim holds before a change to $v.\fld{blocks}$, which can be made only
 by a successful \op{CAS} at line \ref{cas}.
@@ -52,10 +53,12 @@ So, $h=v.\head$ and a change to $v.\fld{blocks}[v.\head]$ preserves the invarian
 
 Now, assume the claim holds before a change to $v.\head$, which can only be an increment from $h$ to $h+1$
 by a successful \op{CAS} at line \ref{incrementHead} of \op{Advance}.
-It suffices to show that $v.\fld{blocks}[head] \neq \nl$.
+For the first two claims, it suffices to show that $v.\fld{blocks}[head] \neq \nl$.
 \nf{Advance} is called either at line \ref{helpAdvance} 
 after testing that $v.\fld{blocks}[h]\neq\nl$ at line \ref{ifHeadnotNull},
-or at line \ref{advance} after the \op{CAS} at line \ref{cas} ensures $v.\fld{blocks}[h]\neq\nl$. 
+or at line \ref{advance} after the \op{CAS} at line \ref{cas} ensures $v.\fld{blocks}[h]\neq\nl$.
+For the third claim, observe that prior to incrementing $v.\head$ at line \ref{incrementHead},
+the \op{CAS} at line \ref{setSuper1} ensures that $v.\fld{blocks}[i].super\neq \nl$.
 \end{proof}
 
 It follows that blocks accessed by the \op{Enqueue}, \op{Dequeue} and \op{CreateBlock} routines are non-\nl.
@@ -288,40 +291,31 @@ Thus, the recursive call on line \ref{getRecurse} satisfies its precondition, an
 returns the required result, by the induction hypothesis.
 \end{proof}
 
+\subsection{Correctness of IndexDequeue}
+
+The next few results show that the \nf{super} field of a block is accurate within one of the actual index of the block's superblock in the parent node. 
+
+\begin{lemma}
+  If $B=v.\var{blocks}[b]$ is a direct subblock of $v.\fld{parent.blocks}[s]$ then $B.\fld{super}\leq s$.
+\end{lemma}
 -------
 
-\subsection{Correctness of IndexDequeue}
-The next few results show that the \nf{super} field of a block is accurate within one of the actual index of the block's superblock in the parent node. 
-\here{mention that precondition of IndexDequeue follows; also check that block of parent indexed by sup in that routine is non-null}
+\begin{proof}
+Let $R_p$ be the instance of $n$\nf{.parent.Refresh} that does a successful \nf{CAS}(Line~\ref{cas}) and puts the superblock of $B$ which is $n$\nf{.parent.blocks[$s$]} into $n\nf{.parent}$. By Observation~\ref{lem::createBlockHead} if $R_p$ propagates $B$ it has to read a greater value than $b$ from \nf{$n$.head}, which means \nf{$n$.head} was incremented from $b$ to $b+1$ in Line \ref{incrementHead}. By Observation \ref{setSupBeforeIncHead} \nf{$B$.super} was already set in Line \ref{setSuper1}. The value written in \nf{$B$.super}, was read in Line \ref{readParentHead} before the \nf{CAS} that sets \nf{$B$.super} in Line \ref{setSuper1}. From Observation \ref{nonDecreasingHead} we know \nf{$n$.parent.head} is non-decreasing so $B\nf{.super}\leq s$, since \nf{$n$.parent.head} is still equal to $s$ when $R_p$ executes its \nf{CAS} at Line \ref{cas} by Lemma \ref{lem::headProgress}. The reader may wonder when the case $b\nf{.super}=s$ happens. This can happen when $\nf{$n$.parent.blocks[$B$.super]}=\nf{null}$ when $B$\nf{.super} is written and $R_p$ puts its created block into \nf{$n$.parent.blocks[$B$\nf{.super}]} afterwards.
+\end{proof}
+
+
 Then we explain how it is used to compute the rank of a given \nf{Dequeue} in the root.
 \begin{definition}\label{orderRefresh} If a \nf{Refresh} instance $R_1$ does its \nf{CAS} at Line \ref{cas} earlier than \nf{Refresh} instance $R_2$ we say $R_1$ has \it{happened before} $R_2$.
 \end{definition}
 
-\begin{observation} \label{setSupBeforeIncHead}
-After \nf{$n$.blocks[$i$].CAS(null, $B$)} succeeds, \nf{$n$.head} cannot increase from ${i}$ to ${i+1}$ until \nf{$B$.super} is set.
-\end{observation}
-\begin{proof}
-From Observation \ref{nonDecreasingHead} we know that \nf{$n$.head} changes only by the increment on Line \ref{incrementHead}. Before an instance of \nf{Advance} increments \nf{n.head} on Line \ref{incrementHead}, Line \ref{setSuper1} ensures that \nf{n.blocks[head].super} was set at Line \ref{setSuper1}.
-\end{proof}
 
-\begin{corollary}
-  If \nf{$n$.blocks[$i$].super} is \nf{null}, then $\nf{$n$.head}\leq i$ and \nf{$n$.blocks[$i+1$]} is \nf{null}.
-\end{corollary}
-\begin{proof}
-By Invariant \ref{lem::headPosition} and Observation \ref{setSupBeforeIncHead}.
-\end{proof}
 Now let us consider how the \nf{Refresh}es that took place on the parent of node $n$ after block $B$ was stored in $n$ will help to set \nf{$B$.super} and propagate $B$ to the parent.
 
 \begin{observation}\label{lem::createBlockHead}
 If the block created by an instance $R_p$ of $n$\nf{.parent.Refresh} contains block $B=n$\nf{.blocks[}$b$\nf{]} then $R_p$ reads a value greater than $b$ from $n$\nf{.head} in Line \ref{lastLine}. 
 \end{observation}
 
-\begin{lemma}
-  If $B=n$\nf{.blocks[}$b$\nf{]} is a direct subblock of \nf{$n$.parent.blocks[$superblock$]} then $\nf{$B$.super}\leq superblock$.
-\end{lemma}
-\begin{proof}
-Let $R_p$ be the instance of $n$\nf{.parent.Refresh} that does a successful \nf{CAS}(Line~\ref{cas}) and puts the superblock of $B$ which is $n$\nf{.parent.blocks[$superblock$]} into $n\nf{.parent}$. By Observation~\ref{lem::createBlockHead} if $R_p$ propagates $B$ it has to read a greater value than $b$ from \nf{$n$.head}, which means \nf{$n$.head} was incremented from $b$ to $b+1$ in Line \ref{incrementHead}. By Observation \ref{setSupBeforeIncHead} \nf{$B$.super} was already set in Line \ref{setSuper1}. The value written in \nf{$B$.super}, was read in Line \ref{readParentHead} before the \nf{CAS} that sets \nf{$B$.super} in Line \ref{setSuper1}. From Observation \ref{nonDecreasingHead} we know \nf{$n$.parent.head} is non-decreasing so $B\nf{.super}\leq superblock$, since \nf{$n$.parent.head} is still equal to $superblock$ when $R_p$ executes its \nf{CAS} at Line \ref{cas} by Lemma \ref{lem::headProgress}. The reader may wonder when the case $b\nf{.super}=superblock$ happens. This can happen when $\nf{$n$.parent.blocks[$B$.super]}=\nf{null}$ when $B$\nf{.super} is written and $R_p$ puts its created block into \nf{$n$.parent.blocks[$B$\nf{.super}]} afterwards.
-\end{proof}
 
 \begin{lemma}\label{lem::secondRefreshSuper}
 Let $R_n$ be a \nf{Refresh} that puts $B$ in \nf{$n$.blocks[$b$]} at Line \ref{cas}. Then, the block created by one of the next two successful \nf{$n$.parent.Refresh}es according to Definition \ref{orderRefresh} contains $B$ and \nf{$B$.super} is set when the second successful \nf{$n$.parent.Refresh} reaches Line \ref{invokeCreateBlock}.
@@ -361,6 +355,7 @@ From Lemma \ref{lem::secondRefreshSuper} we know that $B$ is propagated by the s
 \end{proof}
 
 We prove \nf{IndexDequeue}'s correctness using Corollary \ref{superRelation} on each step of the \nf{IndexDequeue}.
+\here{mention somewhere why precondition of IndexDequeue is true; also check that block of parent indexed by sup in that routine is non-null}
 
 \begin{lemma}[\nf{IndexDequeue} correctness]
  If $1\leq i \leq\nf{$n$.blocks[$b$].num\sub{deq}}$ then \nf{$n$.IndexDequeue($b$,$i$)} returns $<x,y>$ such that $D_i(n,b)=D_y(\nf{root},x)$.

@@ -77,7 +77,7 @@ Enq(a) Enq(e) Deq\sub{2} $\mid$ Enq(b) Deq\sub{4} Deq\sub{5} $\mid$ Enq(d) Enq(f
 The leaf blocks simply show the \fld{element} field.
 Internal blocks show the \fld{sum\sub{enq}} and \fld{sum\sub{deq}} fields,
 and \eleft\ and \eright\ fields are shown using arrows as before.
-Root blocks also contain the additional \fld{size} field.
+Root blocks also have the additional \fld{size} field.
 The \fld{super} field is not shown.}
 \end{figure}
 
@@ -400,7 +400,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \If{$\var{v} = \var{root}$}
         \State \hangbox{\var{new}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + \var{num\sub{enq}} - \var{num\sub{deq}}$)}\label{computeLength}
     \EndIf
-    \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$}
+    \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$}\label{testEmpty}
         \State \Return \nl \hfill \com\ no blocks need to be propagated to \var{v}
     \Else
         \State \Return \var{new}

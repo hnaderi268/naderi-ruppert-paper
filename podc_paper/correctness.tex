@@ -12,7 +12,15 @@ First, we define and prove some facts about blocks and the node's \nf{head} fiel
 
 \subsection{Basic Properties}
 
-Since \fld{head} fields are updated only on line \ref{incrementHead}, which increments it, we have the following observation.
+A \typ{Block} object's fields, except for \fld{super}, are immutable:  they are written only 
+when the block is created at line \ref{enqNew} or \ref{deqNew} (for a leaf's block) or lines \ref{initNewBlock}--\ref{computeLength} (for an internal node's block).  
+Moreover, only a \op{CAS} at line \ref{setSuper1} can modify the \fld{super} field 
+(from \nl\ to a non-\nl\ value), so it remains fixed once a value is stored in it.
+Similarly, only a \op{CAS} at line \ref{cas} can modify an element of a node's \fld{blocks} array 
+(from \nl\ to a non-\nl\ value), so once a block is stored in a node, it remains there forever.
+Only a \op{CAS} at line \ref{incrementHead} can update a node's \head\ field by incrementing it,
+which implies the following.
+
 \begin{observation} \label{nonDecreasingHead}
 For each node \var{v},  \var{v}.\fld{head} is non-decreasing over time.
 \end{observation}
@@ -156,66 +164,95 @@ By the hypothesis, the total number of these enqueues is $v.\fld{left.blocks}[B.
 The proof for \fld{sum\sub{deq}} (stored on line~\ref{createSumDeq}) is similar.
 \end{proof}
 
--------
+This allows us to prove that every block a Refresh installs contains at least one operation.
+
+\begin{corollary}\label{blockNotEmpty}
+If a block $B$ is in $v.\fld{blocks}[i]$ where $i>0$, then $E(B)$ and $D(B)$ are not both empty.
+\end{corollary}
+\begin{proof}
+The \op{Refresh} that installed $B$ got $B$ as the response to its call to \op{CreateBlock} on line \ref{invokeCreateBlock}.
+Thus, at line \ref{testEmpty} $\var{num\sub{enq}}+\var{num\sub{deq}}\neq 0$.
+By \Cref{lem::sum}, $\var{num\sub{enq}} = |E(B)|$ and $\var{num\sub{deq}} = |D(B)|$,
+so these sequences cannot both be empty.
+\end{proof}
 
 
 
 \subsection{Propagating Operations to the Root}
-This section explains why two \nf{Refresh}es are enough to propagate a node's operations to its parent.
+Next, we show two \op{Refresh}es suffice to propagate operations from a child to its parent.
+We say that node $v$ \emph{contains} an operation if some block in $v.\fld{blocks}$ contains the operation.
+\here{move this defn earlier and just recall it here?}
+Once a block is added to a node, it remains there forever.  Thus, if $v$ contains an operation at some time, it contains the operation at all later times too.
 
-  We say block $B$ has been \it{propagated} to node $n$ if $B$ is in $n.\nf{blocks}$ or is a subblock of a block in $n\nf{.blocks}$.
-
-\begin{definition}
-Let $t^{op}$ be the time $op$ is invoked, $^{op}t$ be the time $op$ terminates, $t_{l}^{op}$ be the time immediately before running Line $l$ of operation $op$ and $^{op}_{l}t$ be the time immediately after running Line $l$ of operation $op$. We sometimes suppress $op$ and write $t_{l}$ or $_l t$ if $op$ is clear from the context. In the text, $v_l$ is the value of variable $v$ immediately after line $l$ for the process we are talking about and $v_t$ is the value of variable $v$ at time $t$.
-\end{definition} 
-
-\begin{definition} [Successful Refresh]
-  An instance of \nf{Refresh} is \it{successful} if its \nf{CAS} in Line \ref{cas} returns \nf{true}.
-  % If a successful instance of \nf{Refresh} terminates, we say it is \it{complete.}
-\end{definition}
-
-In the next two results, we show that for every successful \nf{Refresh}, all the operations established  in the children before the \nf{Refresh} are in the parent after the \nf{Refresh}'s successful \nf{CAS} at Line \ref{cas}.
-
-\begin{lemma} \label{lem::trueRefresh}
-If $R$ is a successful instance of \nf{$n$.Refresh}, then we have $EST_{n\nf{.left}}^{t^R} \; \cup \; EST_{n\nf{.right}}^{t^R} \subseteq ops(n\nf{.blocks}_{\ref{cas}})$.
+\begin{lemma}\label{successfulRefresh}
+Let $R$ be a call to \op{Refresh}($v$) that performs a successful \op{CAS} on line \ref{cas} (or terminates at line \ref{addOP}).
+In the configuration after that CAS (or termination, respectively), $v$ contains all operations that $v$'s children contained 
+when $R$ executed line~\ref{readHead}.
 \end{lemma}
 \begin{proof}
+Suppose $v$'s child (without loss of generality, $v.\fld{left}$) contained an operation $op$ 
+in the configuration $C$ immediately before $R$ executed line \ref{readHead}.
+Then some block $B$ in $v.\fld{left.blocks}[i]$ contains $op$.
+By \Cref{nonDecreasingHead} and \Cref{lem::headProgress}, the value of $childHead$ that $R$ reads from
+$v.\fld{left.head}$ in line \ref{readChildHead} is at least $i$.
+If it is equal to $i$, $R$ calls \op{Advance} at line \ref{helpAdvance}, which ensures that 
+$v.\fld{left.head} > i$.
+Then, $R$ calls \op{CreateBlock}($v,h$) in line \ref{invokeCreateBlock}, where $h$ is the value $R$ reads at line \ref{readHead}.
+\op{CreateBlock} reads a value greater than $i$ from $v.\fld{left.head}$ at line \ref{createEndLeft}.
+Thus, $new.\eleft \geq i$.  We consider two cases.
 
-We show 
-\vspace{-2em}\begin{align*}
-EST_{n\nf{.left}}^{t^R}&= ops(n\nf{.left.blocks[0..n.left.head$_{t^R}-1$]}) \\
-&\subseteq ops(n\nf{.blocks}_{\ref{cas}}) = ops(n\nf{.blocks[0..}n\nf{.head}_{\ref{cas}}\nf{]}).
-\end{align*}
+Suppose $R$'s call to \op{CreateBlock} returns the new block $B'$ and $R$'s \op{CAS} at line \ref{cas} 
+installs $B'$ in $v.\fld{blocks}$.
+Then, $B$ is a subblock of some block in $v$, since  $B'.\eleft$ is greater than or equal to $B$'s index
+in $v.\fld{left.blocks}$.
+Hence $B'$ contains $op$, as required.
 
-In every node, \nf{blocks[$0$]} is an empty block without any operations. Line \ref{cas} stores a block \nf{new} in $n$ that has $\nf{end\sub{left}}=n\nf{.left.head}_{\ref{lastLine}}-1$. Therefore, by Definition \ref{def::subblock}, after the successful \nf{CAS} in Line \ref{cas} we know all blocks in \nf{$n$.left.blocks[$1\cdots n\nf{.left.head}_{\ref{lastLine}}-1$]} are subblocks of \nf{$n$.blocks[$1\cdots n\nf{.head}_{\ref{readHead}}$]}. Because of Observation \ref{nonDecreasingHead} we have $n\nf{.left.head}_{t^R}-1\leq n\nf{.left.head}_{\ref{lastLine}}-1$ and $n\nf{.head}_{\ref{readHead}}\leq n\nf{.head}_{\ref{cas}}$. From Observation \ref{lem::blocksOrder} the claim follows.  The proof for the right child is the same.
+\Eric{I think this case was missing from the proof in the thesis}
+Now suppose $R$'s call to \op{CreateBlock} returns \nl, causing $R$ to terminate at line \ref{addOP}.
+Intuitively, since there are no operations in $v$'s children to promote, $op$ is already in $v$.
+We formalize this intuition.
+The value computed at line \ref{createSumEnq} is
+\begin{eqnarray*}
+\var{num\sub{enq}} 
+&=& v.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}} + v.\fld{right.blocks}[new.\eright].\fld{sum\sub{enq}} - v.\fld{blocks}[h-1].\fld{sum\sub{enq}} \\
+&=& v.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}} + v.\fld{right.blocks}[new.\eright].\fld{sum\sub{enq}} \\
+&&\mbox{ }- v.\fld{left.blocks}[v.\fld{blocks}[h-1].\eleft].\fld{sum\sub{enq}} - v.\fld{right.blocks}[v.\fld{blocks}[h-1].\eright].\fld{sum\sub{enq}}
+\end{eqnarray*}
+It follows from \Cref{lem::sum} that $num\sub{enq}$ is the total number of enqueues contained in the blocks
+$v.\fld{left.blocks}[v.\fld{blocks}[h-1].\eleft+1..new.\eleft]$ and
+$v.\fld{right.blocks}[v.\fld{blocks}[h-1].\eright+1..new.\eright]$.
+Similarly, $num\sub{deq}$ is the total number of dequeues contained in these blocks.
+Since $num\sub{enq}+num\sub{deq}=0$ at line \ref{testEmpty},
+these blocks contain no operations.
+By \Cref{blockNotEmpty}, this means the ranges of blocks are empty, so that $v.\fld{blocks}[h-1].\eleft \geq new.\eleft \geq i$.
+Hence, $B$ is already a subblock of some block in $v$, so $v$ contains $op$.
 \end{proof}
 
+We now show that if a process fails its \op{Refresh}($v$) twice, some other process must have succeeded.
 
-\begin{corollary}\label{lem::prectrueRefresh}
-If $R$ is a successful instance of \nf{$n$.Refresh} that terminates, then we have $$EST_{n\nf{.left}}^{t^R} \; \cup \; EST_{n\nf{.right}}^{t^R} \subseteq EST_{n}^{^Rt}.$$
-\end{corollary}
-\begin{proof}
-The left-hand side is the same as Lemma \ref{lem::trueRefresh}, so it is sufficient to show when $R$ terminates the established blocks in $n$ are a superset of $n$\nf{.blocks}$_{\ref{cas}}$. Line \ref{cas} writes the block \nf{new} in $n$\nf{.blocks[$h$]} where $h$ is value of $n$\nf{.head} read at Line \ref{readHead}.  Because of Lemma \ref{lem::headInc}  we are sure that $n\nf{.head}>h$ when $R$ terminates. So the block \nf{new} appended to $n$ at Line \ref{cas} is established at $^Rt$. 
-\end{proof}
-
-In the next lemma, we show that if two consecutive instances of \nf{Refresh} by the same process on node $n$ fail, then the blocks established in the children of $n$ before the first \nf{Refresh} are guaranteed to be in $n$ after the second \nf{Refresh}.
-
-\begin{lemma} \label{doubleRefresh}
-  Consider two consecutive terminating instances $R_1$, $R_2$ of \nf{Refresh} by a process on an internal node $n$. If neither $R_1$ nor $R_2$ is a successful \nf{Refresh}, then we have $EST_{n\nf{.left}}^{t^{R{_1}}} \; \cup \; EST_{n\nf{.right}}^{t^{R{_1}}} \subseteq EST_{n}^{^{R{_2}}t}$.
+\begin{lemma}
+Consider two consecutive terminating calls $R_1$, $R_2$ to \nf{Refresh}($v$) by the same process.
+When $R_2$ terminates, $v$ contains all operations that $v$'s children contained when $R_1$ was invoked.
 \end{lemma}
 \begin{proof}
-Let $R_1$ read $i$ from $n\nf{.head}$ at Line \ref{readHead}. By Lemma \ref{lem::headInc}, $R_1$ and $R_2$ cannot both read the same value $i$. By Observation \ref{nonDecreasingHead}, $R_2$ reads a larger value of $n$\nf{.head} than $R_1$.
-
-Consider the case where $R_1$ reads $i$ and $R_2$ reads $i+1$ from Line \ref{readHead}. As $R_2$'s \nf{CAS} in Line \ref{cas} returns \nf{false}, there is another successful instance $R_2^\prime$ of \nf{$n$.Refresh} that has done a \nf{CAS} successfully into \nf{$n$.blocks[$i+1$]} before $R_2$ tries to \nf{CAS}. $R_2^\prime$ creates its block \nf{new} after reading the value $i+1$ from $n$\nf{.head} (Line \ref{readHead}) and $R_1$ reads the value $i$ from $n$\nf{.head}. By Observation \ref{nonDecreasingHead} we have $^{R_1}t<t^{R_1}_{\ref{readHead}}< t^{R2^\prime}_{\ref{readHead}}$ (see Figure \ref{fig::doubleRefresh}). By Lemma \ref{lem::trueRefresh} we have $EST^{n.\nf{left}}_{^{R_2^\prime}_{\ref{readHead}}t} \cup EST^{n.\nf{right}}_{^{R_2^\prime}_{\ref{readHead}}t} \subseteq ops(n.\nf{blocks}_{t_{\ref{cas}}^{R_2^\prime}})$. Also by Lemma \ref{lem::headInc} on $R_2$, the value  of \nf{$n$.head} is more than $i+1$ after $R_2$ terminates, so the block appended by $R_2^\prime$ into $n$\nf{.blocks[$i$]} is established by the time $R_2$ terminates. To summarize, $^{R_1}t$ is before $R_2^\prime$'s read of \nf{$n$.head} ($t_{\ref{readHead}}^{R_2^\prime}$), so we have $EST_{n.\nf{left}}^{t^{R_1}} \cup EST_{n.\nf{right}}^{t^{R_1}} \subseteq ops(n.\nf{blocks}_{t^{R_2^\prime}_{\ref{cas}}})$. $R_2^\prime$'s successful \nf{CAS} ($t^{R_2^\prime}_{\ref{cas}}$) is before $R_2$'s termination ($t^{R_2}$), so by Lemma \ref{lem::headInc} $n$\nf{.head} has been incremented when $R_2$ terminates and the block $R_2^\prime$ put into $n$ is established by then. So we have
-$ops(n.\nf{blocks}_{t^{R_2^\prime}_{\ref{cas}}}) \subseteq EST_{n}^{^{R_2}t}$.
-
-If $R_2$ reads some value greater than $i+1$ in Line \ref{readHead} it means $n\nf{.head}$ has been incremented at least two times since $_{\ref{readHead}}^{R_1}t$. By Invariant \ref{lem::headPosition}, when $n.$\nf{head} is incremented from $i+1$ to $i+2$, $n\nf{.blocks[$i+1$]}$ is non-null. Let $R_3$ be the \nf{Refresh} on $n$ that has put the block in $n\nf{.blocks[}i+1\nf{]}$. $R_3$ read $n\nf{.head}=i+1$ at Line \ref{readHead} and has put its block in $n\nf{.blocks[}i+1\nf{]}$ before $R_2$'s read of $n.$\nf{head} at Line \ref{readHead}. So we have $t^{R_1}<_{\ref{readHead}}^{R_3}t<_{\ref{cas}}^{R_3}t<t^{R_2}_{\ref{readHead}}<^{R_{2}}t$. From Observation \ref{lem::blocksOrder}  on the operations before and after $R_3$'s \nf{CAS} and Lemmas \ref{lem::trueRefresh} and \ref{lem::headInc} on $R_3$ the claim holds.
+If either $R_1$ or $R_2$ performs a successful \op{CAS} at line \ref{cas} or terminates at line \ref{addOP}, the claim follows
+from Lemma \ref{successfulRefresh}.
+So suppose both $R_1$ and $R_2$ perform a failed \op{CAS} at line \ref{cas}.
+Let $h_1$ and $h_2$ be the values $R_1$ and $R_2$ read from $v.\head$ at line \ref{readHead}.
+By \Cref{lem::headInc}, $h_2>h_1$.
+By \Cref{lem::headProgress}, $v.blocks[h_2]=\nl$ when $R_1$ executes line \ref{readHead}.
+Since $R_2$ fails its \op{CAS} on $v.blocks[h_2]$, some other \op{Refresh} $R_3$ must have done
+a successful \op{CAS} on $v.blocks[h_2]$ before $R_2$'s \op{CAS}.
+$R_3$ must have executed line \ref{readHead} after $R_1$, since $R_3$ read the value $h_2$ from $v.\head$ and the value of $v.\head$ is non-decreasing, by \Cref{nonDecreasingHead}.
+Thus, all operations contained in $v$'s children when $R_1$ begins
+are also contained in $v$'s children when $R_3$ later executes line \ref{readHead}.
+By \Cref{successfulRefresh}, these operations are contained in $v$ when $R_3$ performs its successful \op{CAS},
+which is before $R_2$ terminates.
 \end{proof}
 
-\begin{figure}[hbt]
-  \center\includegraphics[width=6in]{pics/compactdouble.png}
-  \caption[Time relations of the \nf{CAS}es when a process fails to \nf{Refresh} a node two times.]{\label{fig::doubleRefresh}$_{R_1}t<$ $t_{\ref{readHead}}^{R_1}$ $<$ incrementing \nf{$n$.head} from $i$ to $i+1$ $<$ $t_{\ref{readHead}}^{R_2^\prime}$ $<$ $t_{\ref{cas}}^{R_2^\prime}$ $<$ incrementing \nf{$n$.head} from $i+1$ to $i+2$ $<t_{R_2}$} 
-\end{figure}
+
+-------
+
 
 \begin{corollary} \label{lem::propagateStep}
   $EST_{n\nf{.left}}^{_{\ref{firstRefresh}}t} \cup EST_{n\nf{.right}}^ {_{\ref{firstRefresh}}t} \subseteq EST_{n}^{t_{\ref{secondRefresh}}}$

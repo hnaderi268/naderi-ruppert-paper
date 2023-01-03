@@ -27,6 +27,6 @@ provides three operations: \opa{append}{e} to add an element \var{e} to the end 
 An \opa{append}{e} is implemented like \opa{Enqueue}{e} in $O(\log p)$ steps.  
 A \opa{get}{i} calls \nf{DoublingSearch} but with a \nf{BinarySearch} on the entire \nf{root.blocks} array, taking $O(\log n + \log^2p)$ when the vector has $n$ elements.  
 An \opa{index}{e} is similar to \op{IndexDequeue} (except operating on enqueues instead of dequeues) and takes $O(\log p)$ steps.
-\here{doublecheck all preceding claims for accuracy}.
+\here{doublecheck all preceding claims for accuracy.}
 As future work we would like to investigate whether a similar approach could be used for stacks or deques.
 

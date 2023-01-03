@@ -144,11 +144,10 @@ David introduced the first sublinear-time queue
 \cite{DBLP:conf/wdag/David04}, but it works only for a single enqueuer.
 It uses fetch\&increment and swap  instructions and takes $O(1)$ steps per operation, but
 uses unbounded memory.  Bounding the space increases the steps per operation to $\Omega(p)$.
-
-Jayanti and Petrovic introduced a wait-free poly-logarithmic
+Jayanti and Petrovic gave a wait-free poly-logarithmic
 queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but it works only for a single dequeuer. 
-Our implementation uses their idea of having
-a tournament tree among processes to agree on the linearization of
+We adapt their idea of processes using
+a tournament tree to agree on a linearization of
 operations.
 
 \here{Should we mention https://arxiv.org/abs/2103.11926 , which seems to have a queue for 2 enqueuers and 2 dequeuers ?  May not be worth mentioning because then $p$ is a constant, so complexity in terms of $p$ doesn't make sense.}

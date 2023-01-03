@@ -105,12 +105,17 @@ each block represents at least one operation and it follows that a block can hav
 As mentioned above, we are free to order operations within a block however we like.
 For convenience, we order the enqueues and dequeues separately, and put the 
 operations that were propagated from the left child before the operations from the right child.
-More formally, we inductively define an sequence $E(B)$ of the enqueues represented by a block $B$.
-If $B$ is a block in a leaf representing an enqueue operation, its enqueue sequence $E(B)$ is either the single
-enqueue represented by the block (if $B$ stores an enqueue), or the empty sequence (if $B$ stores a dequeue).
+More formally, we inductively define an sequences $E(B)$ and $D(B)$ of the enqueues and dequeues
+represented by a block $B$.
+If $B$ is a block in a leaf representing an enqueue operation, its enqueue sequence $E(B)$ is that operation
+and its dequeue sequence $D(B)$ is empty.  If $B$ is a block in a leaf representing a dequeue, $D(B)$ is that single operation and $E(B)$ is empty.
 If $B$ is a block in an internal node $v$ with direct subblocks $B^L_1, \ldots, B^L_\ell$ from the left child of $v$
-and $B^R_1,\ldots,B^R_r$ from the right child of $v$, then $B$'s enqueue sequence is the concatenation $E(B^L_1)\cdots E(B^L_\ell)\cdot E(B^R_1) \cdots E(B^R_r)$.
-The dequeue sequence $D(B)$ of a block $B$ is defined symmetrically.  We say the block $B$ \emph{contains} the operations in $E(B)$ and $D(B)$.
+and $B^R_1,\ldots,B^R_r$ from the right child of $v$, then $B$'s operation sequences are defined by the concatenations 
+\begin{eqnarray}
+E(B) &=& E(B^L_1)\cdots E(B^L_\ell)\cdot E(B^R_1) \cdots E(B^R_r)\nonumber\\
+D(B) &=& D(B^L_1)\cdots D(B^L_\ell)\cdot D(B^R_1) \cdots D(B^R_r)\label{defSeqs}
+\end{eqnarray}
+We say the block $B$ \emph{contains} the operations in $E(B)$ and $D(B)$.
 
 Finally, when designing a total order for the operations propagated to the root, we choose
 to put each block's enqueues before its dequeues.
@@ -145,15 +150,15 @@ enqueued for an enqueue operation, or \nl\ if the operation is a dequeue.
 \here{If space permits, we might want to add some examples in the following paragraphs that refer back to Figure \ref{implicit}.}
 
 Each block in an internal \node\ $v$ stores the indices of the last direct subblock in $v$'s left and right child in the fields \eleft\ and \eright.  
-Thus, the direct subblocks of $v.\fld{blocks}[i]$ are
+Thus, the direct subblocks of $v.\fld{blocks}[b]$ are
 \begin{eqnarray}\label{defsubblock}
-v.\fld{left.blocks}[v.\fld{blocks}[i-1].\fld{end\sub{left}}+1..v.\fld{blocks}[i].\fld{end\sub{left}}] \mbox{ and}\nonumber\\
-v.\fld{right.blocks}[v.\fld{blocks}[i-1].\fld{end\sub{right}}+1..v.\fld{blocks}[i].\fld{end\sub{right}}].
+v.\fld{left.blocks}[v.\fld{blocks}[b-1].\fld{end\sub{left}}+1..v.\fld{blocks}[b].\fld{end\sub{left}}] \mbox{ and}\nonumber\\
+v.\fld{right.blocks}[v.\fld{blocks}[b-1].\fld{end\sub{right}}+1..v.\fld{blocks}[b].\fld{end\sub{right}}].
 \end{eqnarray}
 This allows us to navigate to the direct subblocks of any block easily.
 Blocks also store prefix sums of the numbers of enqueues and dequeues:
-the block in $v.\fld{blocks}[i]$ has two fields \fld{sum\sub{enq}} and \fld{sum\sub{deq}}
-that store the total number of enqueues and dequeues in $\var{v}.\fld{blocks}[1..\var{i}]$.
+the block in $v.\fld{blocks}[b]$ has two fields \fld{sum\sub{enq}} and \fld{sum\sub{deq}}
+that store the total number of enqueues and dequeues in $\var{v}.\fld{blocks}[1..\var{b}]$.
 These fields allow us to pinpoint the exact location of an operation among the subblocks of a given block.
 For example, consider finding the $r$th enqueue in the linearization ordering.
 We use the \fld{sum\sub{enq}} fields of the root's blocks to do a binary search
@@ -523,15 +528,16 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
         \Else
             \State \fld{dir} \assign\ \fld{right}
             \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$
-        \EndIf
+        \EndIf \label{endChooseDir}
         \State \linecomment{Use binary search to find enqueue's block in \var{v}.\fld{dir} and its rank within block}
         \State find minimum $\var{b}'$ in range [\var{v}.\fld{blocks}[\var{b}-1].\edir+1..\var{v}.\fld{blocks}[\var{b}].\edir] s.t. $\var{v}.\fld{dir.blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$\label{getChild}
-        \State $\var{i}'$ \assign\ $\var{i} - (\var{v}.\fld{dir.blocks}[\var{b}'-1].\fld{sum\sub{enq}} - \var{prev\sub{dir}})$
-        \State \Return\Call{GetEnqueue}{\var{v}.\fld{dir}, $\var{b}'$, $\var{i}'$} 
+        \State $\var{i}'$ \assign\ $\var{i} - (\var{v}.\fld{dir.blocks}[\var{b}'-1].\fld{sum\sub{enq}} - \var{prev\sub{dir}})$\label{getChildIndex}
+        \State \Return\Call{GetEnqueue}{\var{v}.\fld{dir}, $\var{b}'$, $\var{i}'$} \label{getRecurse}
     \EndIf
 \EndFunction{GetEnqueue}
 \end{algorithmic}
-\caption{\label{pseudocode2}Queue implementation, continued. \here{Would this routine be simpler to write if i parameter was the rank within whole node rather than within the block?}}
+\caption{\label{pseudocode2}Queue implementation, continued.}
+%\here{Would this routine be simpler to write if i parameter was the rank within whole node rather than within the block?  Not much; I tried it.}
 \end{figure}
 
 An \opemph{Enqueue}(\var{e}) appends a \block\ to the process's leaf.

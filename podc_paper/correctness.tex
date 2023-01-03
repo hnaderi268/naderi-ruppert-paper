@@ -261,44 +261,34 @@ By \Cref{lem::noDuplicates}, it is contained in exactly one block in each node.
 \end{proof}
 
 \subsection{Correctness of GetEnqueue}
+
+\begin{lemma}\label{lem::get}
+If $1\leq i\leq |E(v.\fld{blocks}[b])|$ then \op{getEnqueue}($v,b,i$) returns the argument of the $i$th enqueue in $E(v.\fld{blocks}[b])$.
+\end{lemma}
+\begin{proof}
+We prove the claim by induction on the height of node $v$.
+If $v$ is a leaf, the hypothesis implies that $i=1$ and the block $v.\fld{blocks}[b]$ represents 
+an enqueue whose argument is stored in $v.\fld{blocks}[b].\fld{element}$.
+\op{GetEnqueue} returns the argument of this enqueue at line \ref{getBaseCase}.
+
+Assuming the claim holds for $v$'s children, we prove it for $v$.
+Let $B$ be $v.\fld{blocks}[b]$.
+By (\ref{defSeqs}),
+$E(B)$ is obtained by concatenating the enqueue sequences of the direct subblocks
+of $B$, which are listed in (\ref{defsubblock}).
+By \Cref{lem::sum}, $\var{sum\sub{left}}-\var{prev\sub{left}}$ is the number
+of enqueues in $E(B)$ that come from $B$'s subblocks in $v$'s left child.
+Thus, $dir$ is set to the direction for the child of $v$ that contains the required enqueue.
+Moreover, when line \ref{endChooseDir} is reached, $i$ is the position of the required enqueue within the portion $E'$ of $E(B)$ that comes from that child.
+Thus,  line \ref{getChild} finds the index $b'$ of the subblock $B'$ containing the required enqueue.
+By \Cref{lem::sum}, $v.\var{dir.blocks}[b'-1].\var{sum\sub{enq}} - \var{prev\sub{dir}}$ is the number of 
+enqueues in $E'$ before the enqueues of block $B'$, so
+the value $i'$ computed on line \ref{getChildIndex} is the position of the required enqueue within $E(B')$.
+Thus, the recursive call on line \ref{getRecurse} satisfies its precondition, and 
+returns the required result, by the induction hypothesis.
+\end{proof}
+
 -------
-
-
-\nf{DoublingSearch($e$, $end$)} returns a pair \nf{<$b$, $i$>} such that the $i$th \nf{Enqueue} in the $b$th block of the root is the $e$th \nf{Enqueue} in the sequence stored in the root. 
-
-\begin{lemma}[\nf{DoublingSearch} correctness]\label{dsearch}
-If $1\leq e \leq \nf{root.blocks[$end$].sum\sub{enq}}$, then \nf{Doubling-}\\\nf{Search($e$, $end$)} returns \nf{<$b$, $i$>} such that $E_i(root,b)= E_e(root)$.
-\end{lemma}
-\begin{proof}
- From Lines \ref{setSumEnqLeft} and \ref{setSumEnqRight} we know the \nf{sum\sub{enq-left}}, and \nf{sum\sub{enq-right}} fields of \nf{blocks} in each node are sorted in non-decreasing order. Since $\nf{sum\sub{enq}}=\nf{sum\sub{enq-left}}+ \nf{sum\sub{enq-right}}$, the $\nf{sum\sub{enq}}$ values of \nf{root.blocks[$0\cdot\cdot end$]} are also non-decreasing. By Corollary~\ref{lem::sumX} we know that the \nf{sum\sub{enq}} field in a block is the sum of the number of \nf{Enqueue} operations in that block and the all blocks before that block in the node. Furthermore, since $\nf{root.blocks[$0$].sum\sub{enq}}=0$ and $\nf{root.blocks[$end$].sum\sub{enq}} \geq e$, there is a $b$ such that $\nf{root.blocks[$b-1$].sum\sub{enq}}<e$ and $e\leq\nf{root.blocks[$b$].sum\sub{enq}}$. Block \nf{root.blocks[$b$]} contains $E_i(root,b)$.  Lines \ref{dsearchStart}--\ref{dsearchEnd} doubles the search range in Line \ref{doubling} and will eventually reach \nf{start} such that $\nf{root.blocks[start].sum\sub{enq}}\leq e \leq\nf{root.blocks[end].sum\sub{enq}}$. Then, in Line \ref{dsearchBinarySearch}, the binary search finds the $b$ such that \nf{root.blo- cks[$b-1$].sum\sub{enq}$<e\leq$root.blocks[$b$].sum\sub{enq}}. By Corollary \ref{lem::sumX}, \nf{root.blocks[$b$]} is the block that contains $E_e(root)$. Finally, $i$ is computed using the definition of \nf{sum\sub{enq}} and Corollary \ref{lem::sumX}.
-\end{proof}
-
-\begin{lemma}[\nf{GetEnqueue} correctness] \label{get}
-If $1\leq i \leq \nf{$n$.blocks[$b$].num\sub{enq}}$ then \nf{$n$.GetEnqueue($b$, $i$)} returns $E_i(n,b)$\nf{.element}.
-\end{lemma}
-\begin{proof}
-We will prove this lemma by induction on the node $n$'s height. For the base case, suppose $n$ is a leaf. Leaf blocks each contain exactly one operation, $n\nf{.blocks[$b$].sum\sub{enq}}\leq 1$, which means only \nf{$n$.GetEnqueue(b,1)} can be called when $n$ is a leaf and $n$\nf{.blocks[$b$]} must contain an \nf{Enqueue} operation. Line \ref{getBaseCase} of \nf{$n$.GetEnqueue($b$, $1$)} returns the \nf{element} of the \nf{Enqueue} operation stored in the $b$th block of leaf ${n}$, as required.
-
-For the induction step, we prove if \nf{$n$.dir.GetEnqueue($b^\prime$, $i$)} returns $E_i(n.\nf{dir}, b^\prime)$ then \nf{$n$.GetE-}\\\nf{nqueue($b$,~$i$)} returns $E_i(n,b)$.  From Definition \ref{ordering} of $E(n,b)$, we know that operations from the left subblocks come before the operations from the right subblocks in a block (see Figure \ref{figGet}). By Lemma \ref{lem::numX}, the \nf{num\sub{enq-left}} field  in \nf{$n$.blocks[$b$]} is the number of \nf{Enqueue} operations from the blocks' subblocks in the left child of $n$. So the $i$th \nf{Enqueue} operation in $n\nf{.blocks[}b\nf{]}$ is propagated from the right child if and only if $i$ is greater than $n\nf{.blocks[}b\nf{]}$\nf{.num\sub{enq-left}}. Line \ref{leftOrRight} decides whether the $i$th enqueue in the $b$th block  of internal node $n$ is in the  left child or right child subblocks of \nf{$n$.blocks[$b$]}. By Definitions \ref{def::subblock} and \ref{def::ops}, to find an operation in the subblocks of \nf{$n$.blocks[$b$]} we need to search in the range
-\begin{align*}
-&\texttt{$n$.left.blocks[$n$.blocks[$b$-1].end\textsubscript{left}+1..$n$.blocks[$b$].end\textsubscript{left}]}  \textrm{ or } \\
-&\texttt{$n$.right.blocks[$n$.blocks[$b$-1].end\textsubscript{right}+1..$n$.blocks[$b$].end\textsubscript{right}]}.
- \end{align*}
-First, we consider the case where the \nf{Enqueue} we are looking for is in the left child. There are $eb=n.\nf{blocks[}b-1\nf{].sum\sub{enq-left}}$ \nf{Enqueue}s in the blocks of $n$\nf{.left} before the left subblocks of $n$\nf{.blocks[$b$]}, so $E_i(n,b)$ is $E_{i+eb}(n.\tt{left})$ which is $E_{i^\prime}(n.\tt{left},b^\prime)$ for some $b^\prime$ and $i^\prime$. We can compute $b^\prime$ and then search for the $i^\prime$th \nf{Enqueue} in \tt{$n$.left.blocks[$b^\prime$]}, where $i^\prime$ is $i+eb-n$\tt{.left.blocks[}$b^\prime-1$\tt{].sum\sub{enq}}. The parameters in Line~\ref{leftChildGet} are for searching $E_{i+eb}(n\nf{.left})$ in \nf{$n$.left.blocks} in the range of left subblocks of $n$\nf{.blocks[}$b$\nf{]}, so this \nf{BinarySearch} returns the index of the subblock containing $E_i(n,b)$.
-
-Otherwise, the \nf{Enqueue} we are looking for is in the right child. Because \nf{Enqueue}s from the left subblocks are ordered before the ones from the right subblocks, there are \nf{n.blocks[b].num\sub{enq-left}} enqueues ahead of $E_i(n,b)$ from the left child. So we need to search for $i-n\nf{.blocks[}b\nf{].num\sub{enq-left}}+ n\nf{.blocks[}b-1\nf{].sum\sub{enq-right}}$ in the right child (Line \ref{rightChildGet}). Other parameters for the right child are chosen similarly to the left child. 
-
-So, in both cases, the direct subblock containing $E_i(n,b)$ is computed in Line \ref{leftChildGet} or \ref{rightChildGet}.
-$subblockIndex$ is the index of the block in $n.\nf{dir}$ containing $E_i(n,b)$. Finally, \nf{$n$.child.GetEnqueue( $subblockIndex$, $i$)} is invoked  and it returns $E_i(n,b)$\nf{.element} by the hypothesis of the induction.
-\end{proof}
-
-\begin{figure}[hbt]  
-  \center\includegraphics[width=6in]{pics/blockSumEnq.png}
-  
-  \caption[\nf{Enqueue} operations propagated from the left and the right child to a node.]{The number and order of the \nf{Enqueue} operations propagated from the left and the right child to \nf{$n$.blocks[$b$]}. Both \nf{$n$.blocks[$b$]} and its subblocks are shown in grey. \nf{Enqueue} operations from the left child (colored red), are ordered before the \nf{Enqueue} operations from the right child (colored blue).
-  }\label{figGet}
-\end{figure}
-
 
 \subsection{Correctness of IndexDequeue}
 The next few results show that the \nf{super} field of a block is accurate within one of the actual index of the block's superblock in the parent node. 

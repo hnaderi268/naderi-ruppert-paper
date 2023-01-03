@@ -230,7 +230,7 @@ Hence, $B$ is already a subblock of some block in $v$, so $v$ contains $op$.
 
 We now show that if a process fails its \op{Refresh}($v$) twice, some other process must have succeeded.
 
-\begin{lemma}
+\begin{lemma}\label{lem::doubleRefresh}
 Consider two consecutive terminating calls $R_1$, $R_2$ to \nf{Refresh}($v$) by the same process.
 When $R_2$ terminates, $v$ contains all operations that $v$'s children contained when $R_1$ was invoked.
 \end{lemma}
@@ -250,57 +250,19 @@ By \Cref{successfulRefresh}, these operations are contained in $v$ when $R_3$ pe
 which is before $R_2$ terminates.
 \end{proof}
 
-
--------
-
-
-\begin{corollary} \label{lem::propagateStep}
-  $EST_{n\nf{.left}}^{_{\ref{firstRefresh}}t} \cup EST_{n\nf{.right}}^ {_{\ref{firstRefresh}}t} \subseteq EST_{n}^{t_{\ref{secondRefresh}}}$
-\end{corollary}
+\begin{lemma} \label{lem::appendExactlyOnce}
+When an \op{Append}($B$) terminates, $B$'s operation is contained in exactly one block in each node along the path from the process's leaf to the root.
+\end{lemma}
 \begin{proof}
-  If the first \nf{Refresh} in line \ref{firstRefresh} returns \nf{true}, then by Corollary \ref{lem::prectrueRefresh} the claim holds. If the first \nf{Refresh} failed and the second \nf{Refresh} succeeded, the claim still holds by Corollary \ref{lem::prectrueRefresh}. Otherwise, both failed, and the claim is implied by Lemma \ref{doubleRefresh}.
-\end{proof}
-
-Now we show that after \nf{Append($B$)} on a leaf finishes, the operation contained in $B$ will be established in \nf{root}.
-
-\begin{corollary}\label{lem::append}
-For $A=l\nf{.Append(}B\nf{)}$ we have ${ops(b)} \subseteq EST_{n}^{t^A}$ for each node $n$ in the path from $l$ to \nf{root}.
-\end{corollary}
-\begin{proof}
-$A$ adds $B$ to the assigned leaf of the process, establishes it at Line \ref{appendEnd} and then calls \nf{Propagate} on the parent of the leaf where it appended $B$. For every node $n$, $n.$\nf{Propagate} appends $B$ to $n$, establishes it in $n$ by Corollary \ref{lem::propagateStep} and then calls $n.$\nf{parent.Propagate} until $n$ is \nf{root}.
-\end{proof}
-
-\begin{corollary} \label{lem::appendExactlyOnce}
- After $l$\nf{.Append($B$)} finishes, $B$ is a subblock of exactly one block in each node along the path from $l$ to the \nf{root}.
-\end{corollary}
-\begin{proof}
-By the previous corollary and Lemma \ref{lem::noDuplicates} there is exactly one block in each node containing~$B$.
+The \op{Append} adds $B$ to the process's leaf and calls \op{Propagate}, which
+performs a double \op{Refresh} on each node along the path from the leaf's parent to the root.
+By \Cref{lem::doubleRefresh}, this ensures $B$'s operation is contained in each node along this path.
+By \Cref{lem::noDuplicates}, it is contained in exactly one block in each node.
 \end{proof}
 
 \subsection{Correctness of GetEnqueue}
+-------
 
-First, we prove some claims about the size and operations of a block. These lemmas will be used later for the correctness and analysis of \nf{GetEnqueue()}.
-
-\begin{lemma}\label{oneOpinBlock}
-Each block contains at most one operation of each process.
-\end{lemma}
-\begin{proof}
-To derive a contradiction, assume there are two operations $op_1$ and $op_2$ of process $P$ in block $B$ in node $n$. Without loss of generality $op_1$ is invoked earlier than $op_2$. Process $P$ cannot invoke more than one operation concurrently, so $op_1$ has to be finished before $op_2$ begins. By Corollary \ref{lem::appendExactlyOnce}, before $op_2$ calls \nf{Append}, $op_1$ exists in every node of the tree on the path from $P$'s leaf to the root. Since $b$ contains $op_2$, it must be created after $op_2$ is invoked. The fact that $op_2$\nf{.Append} is invoked after $op_1$\nf{.Append} terminated means that there is some block $B^\prime$ in $n$ before $B$ that contains $op_1$. The existence of $op_1$ in $B$ and $B^\prime$ contradicts Lemma~\ref{lem::noDuplicates}.
-\end{proof}
-
-\begin{lemma}\label{blockSize}
-    Each block contains at most $c$ operations, where $c$ is the maximum number of concurrent operations at any time in the whole execution ($c\leq p$).
-\end{lemma}
-\begin{proof}
-There is a time that all the operations in a block are concurrent, because otherwise if there is an operation in a block that has ended before another operation in that block starts, then by Corollary \ref{lem::appendExactlyOnce} these two operations couldn't be in the same block. From the definition of $c$ we know at any time in the execution there cannot be more than $c$ concurrent operations, and from the previous lemma we know a process has at most one operation in a block, so there cannot be a block with more than $c$ operations.
-\end{proof}
-
-\begin{lemma}\label{subBlocksBound}
-Each block has at most $c$ direct subblocks, where $c$ is the maximum number of concurrent operations at any time in the whole execution ($c\leq p$).
-\end{lemma}
-\begin{proof}
-From Definition \ref{def::ops} we know the operations in a block are the union of the operations in the direct subblocks of the block. We can see that each block appended to an internal node contains at least one operation due to the test on Line~\ref{addOP}. Also, blocks in the leaves contain only one \nf{Enqueue} or \nf{Dequeue} operation. By Lemma \ref{blockSize} each block in an internal node contains at most $c$ operations and each one of its direct subblocks has at least one operation, so by pigeonhole principle the number of direct subblocks in a block is at most $c$.
-\end{proof}
 
 \nf{DoublingSearch($e$, $end$)} returns a pair \nf{<$b$, $i$>} such that the $i$th \nf{Enqueue} in the $b$th block of the root is the $e$th \nf{Enqueue} in the sequence stored in the root. 
 

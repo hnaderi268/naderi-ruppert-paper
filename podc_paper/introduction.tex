@@ -27,29 +27,29 @@ rely on slower mechanisms to handle worst-case executions and still have $\Omega
 Many concurrent data structures that keep track of a set of elements also have an $\Omega(p)$ term in their step complexity, as observed by Ruppert \cite{Rup16}.
 For example, lock-free lists \cite{FR04,Sha15}, stacks \cite{Tre86} and search trees \cite{EFHR14} 
 have an $\Omega(c)$ term in their step complexity, where $c$ represents contention,
-the number of processes that access the data structure concurrently (which can be $p$ in the worst case).
+the number of processes that access the data structure concurrently, which can be $p$ in the worst case.
 Attiya and Fouren \cite{DBLP:conf/opodis/AttiyaF17} proved 
 that amortized $\Omega(c)$ steps per operation are indeed necessary
-for CAS-based implementations of lock-free bag data structures, which provide operations
+for any CAS-based implementation of a lock-free bag data structure, which provide operations
 to insert an element or remove an arbitrary element (chosen non-deterministically).
 Since a queue trivially implements a bag, this lower bound also holds for queues.
 At first glance, this would seem to settle the question of the step complexity of lock-free queues.
 However, the lower bound leaves a loophole:  it holds only if $c$ is $O(\log\log p)$.
 Thus, the lower bound could be stated more precisely as an amortized bound of $\Omega(\min(c,\log\log p))$ steps per operation.
 
-In this paper, we exploit this loophole.  We show that it is in fact possible to implement a linearizable, lock-free queue
+We exploit this loophole.  We show that it is, in fact, possible to implement a linearizable, wait-free queue
 whose step complexity does not depend linearly on $p$.
 Our implementation is the first to have step complexity that is polylogarithmic in $p$ and in $q$, the number of elements
 stored in the queue.
-For simplicity of presentation, we first give an unbounded-space construction that uses
+For ease of presentation, we first give an unbounded-space construction that uses
 $O(\log^2 p + \log q)$ steps per operation.
 Then, we show how to modify the implementation to use 
 \here{$O(?)$ space} and \here{$O(?)$ steps per operation}.
-Both implementations use single-word CAS instructions and reasonably-sized words.
+Both implementations use single-word CAS and reasonably-sized words.
 Moreover, they use $O(\log p)$ CAS instructions per operation in the worst case, whereas previous
 lock-free queues use 
 %an unbounded number of CAS instructions in the worst case and 
-$\Omega(p)$ CAS instructions in an amortized sense.
+$\Omega(p)$ CAS instructions, even in an amortized sense.
 For the space-bounded implementation, we unlink unneeded memory from our data structure.
 We do not address the orthogonal problem of reclaiming unlinked memory; we assume a safe
 garbage collector, such as the highly optimized one that Java provides.
@@ -62,7 +62,7 @@ and this ordering is used to linearize the operations and compute their response
 To ensure wait-freedom, we use a helping mechanism:  a process propagating its operation 
 to a node $n$ helps propagate all operations from both of $n$'s children.
 If we explicitly stored all operations in the nodes, this helping would become very costly.
-Instead, we use an implicit representation of collections
+Instead, we use a novel implicit representation of collections
 of operations that allows for quickly merging two collections from the two children of a node,
 and for quickly accessing any particular operation in the collection.
 \here{Maybe say a little more about techniques used in the implementation, if space permits}

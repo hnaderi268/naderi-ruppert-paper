@@ -9,12 +9,11 @@ assigned to each process.
 Each tree node  stores an array of \emph{blocks}, where each block represents a 
 sequence of enqueues and a sequence of dequeues.
 See Figure \ref{tournament} for an example.
-In this section, we assume for simplicity that each node has an infinite blocks array.
-Section \ref{reducing} describes how to replace the infinite array by a representation that uses bounded space.
+In this section, we use an infinite array of blocks in each node.
+Section \ref{reducing} describes how to replace the infinite array by a representation with bounded space.
 
-
-To perform an operation on the queue, a process $P$ creates a block containing that single 
-operation and appends it to the blocks array in $P$'s leaf.
+To perform an operation on the queue, a process $P$ appends a new block containing that  
+operation to the blocks array in $P$'s leaf.
 Then, $P$ attempts to propagate the operation to each node along the path from that leaf to the root of the tree.
 We shall define a total order on all operations that have been propagated to the root, which 
 will serve as the linearization ordering of the operations.

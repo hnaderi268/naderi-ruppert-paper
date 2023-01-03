@@ -1,7 +1,32 @@
 % !TEX root =  podc-submission.tex
 
 \section{Analysis}
-In this section, we analyze the number of \nf{CAS} invocations and the time complexity of our algorithm.
+In this section, we analyze the number of \nf{CAS} invocations and the step complexity of our algorithm.
+
+
+First, we prove some claims about the size and operations of a block. These lemmas will be used later for the correctness and analysis of \nf{GetEnqueue()}.
+
+\begin{lemma}\label{blockSize}
+Each block $B$ in each node contains at most one operation of each process.
+If $c$ is the execution's maximum point contention, $B$ has at most $c$ direct~subblocks.
+\end{lemma}
+\begin{proof}
+Suppose $B$ contains an operation of process $p$.
+Let $op$ be the earliest operation by $p$ contained in $B$.
+When $op$ terminates, $op$ is contained in $B$ by \Cref{lem::appendExactlyOnce}.
+Thus, $B$ cannot contain any later operations by $p$, since $B$ is created before
+those operations are invoked.
+
+Let $t$ be the earliest termination of any operation contained in $B$.
+By \Cref{lem::appendExactlyOnce}, $B$ is created before $t$, so all operations contained in $B$
+are invoked before $t$.  Thus, they are all concurrently running at $t$, so there are at most
+$c$ operations contained in $B$.
+By definition, the direct subblocks of $B$ contain these $c$ operations, and each operation is contained
+in exactly one of these subblocks, by Lemma \ref{lem::subblocksDistinct}.
+By \Cref{blockNotEmpty}, each direct subblock of $B$ contains at least one operation,
+so there are at most $c$ direct subblocks.
+\end{proof}
+
 \begin{proposition}
 An \nf{Enqueue} or \nf{Dequeue} operation does at most $14\log p$ \nf{CAS} operations.
 \end{proposition}

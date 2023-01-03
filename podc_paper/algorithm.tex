@@ -23,8 +23,8 @@ the blocks in both of $v$'s children that are not already in $v$,
 creates a new block by combining information from those blocks, and attempts to append this 
 new block to $v$'s blocks array using a CAS instruction.
 Following \cite{}, we call this a 3-step sequence a
-\op{refresh} on $v$. %(see Figure \ref{fig::propagstep}).
-A successful \op{refresh} by $P$ may propagate pending operations by several other processes to $v$.
+\op{Refresh} on $v$. %(see Figure \ref{fig::propagstep}).
+A successful \op{Refresh} by $P$ may propagate pending operations by several other processes to $v$.
 This cooperative approach is sufficient to ensure that if $P$ fails to CAS a 
 new block into $v$'s array twice,
 then its operation has been propagated to $v$ by some other process, so $P$ can continue 
@@ -46,7 +46,7 @@ the following tasks can be done efficiently (in a polylogarithmic number of step
 \begin{enumerate}[label={(T\arabic*)}]
 \item
 \label{construct}
-Construct a block for node $v$ that represents the operations contained in $O(p)$ consecutive blocks in $v$'s children, as required for a \op{refresh}.
+Construct a block for node $v$ that represents the operations contained in $O(p)$ consecutive blocks in $v$'s children, as required for a \op{Refresh}.
 \item
 \label{findinroot}
 Given a dequeue in a leaf that has been propagated to the root, find that operation's position in the root's blocks array.
@@ -96,7 +96,7 @@ A block $B'$ in a descendant of $v$ is a \emph{subblock} of $B$ if it is a direc
 or a subblock of a direct subblock of $B$.
 A block $B$ represents the set of operations in all of $B$'s subblocks in leaves of the tree.
 
-The operations propagated by a \op{refresh} are all pending when the \op{refresh} occurs,
+The operations propagated by a \op{Refresh} are all pending when the \op{Refresh} occurs,
 so there is at most one operation per process.
 Hence, a block represents at most $p$ operations in total.  
 Moreover, we never append empty blocks, so 
@@ -209,10 +209,10 @@ Then, for any non-null dequeue in $B_d$, we can use this information to determin
 rank among all non-null dequeues in the linearization ordering, and hence the rank of the enqueue
 whose value it should return (among all enqueues).
 
-Now that we have defined the fields required for tasks \ref{findinroot}, \ref{findrank} and \ref{findenqueue},
-we can easily see how to construct a new block $B$ during a \op{refresh} in $O(1)$ time.
-A \op{refresh} on \node\ $v$ reads the value $h$ of the \fld{head} field of each of $v$'s children and stores 
-$h-1$ in the $B.\eleft$ and $B.\eright$ fields of the new block.
+Having defined the fields required for tasks \ref{findinroot}, \ref{findrank} and \ref{findenqueue},
+we can easily see how to construct a new block $B$ during a \op{Refresh} in $O(1)$ time.
+A \op{Refresh} on \node\ $v$ reads the values $h_{\ell}$ and $h_{r}$ of the \fld{head} fields of $v$'s children and stores 
+$h_{\ell}-1$ and $h_{r}-1$ in $B.\eleft$ and $B.\eright$.
 Then, we can compute $B.\fld{sum\sub{enq}}$ as $v.\fld{left}.\fld{blocks}[B.\eleft].\fld{sum\sub{enq}} + v.\fld{right}.\fld{blocks}[B.\eright].\fld{sum\sub{enq}}$.
 For a block $B$ in the root, $B.\fld{size}$ can be computed using the \fld{size} field of the previous block $B'$ and
 the number of enqueues and dequeues in $B$:
@@ -221,10 +221,10 @@ $B.\fld{size} = \max(0, B'.\fld{size} + (B.\fld{sum\sub{enq}}-B'.\fld{sum\sub{en
 The only remaining field is $B.\fld{super}$.  When the block 
 $B$ is created for a \node\ $v$, we do not yet know where its
 superblock will eventually be installed in $B$'s parent.
-So, we leave this field blank.  After $B$ is installed 
-in $v.\fld{blocks}[\var{i}]$, processes cooperate to fill it in 
-when they attempt to advance $v.\fld{head}$ from $i$ to $i+1$.
-They use the value read from the \fld{head} field of $v$'s parent at that time.
+So, we leave $B.\fld{super}$ blank.  After $B$ is installed 
+in $v.\fld{blocks}[\var{i}]$, processes cooperate to fill in $B.\fld{super}$ 
+when they attempt to advance $v.\fld{head}$ from $i$ to $i+1$,
+using a value they read from the \fld{head} field of $v$'s parent.
 As mentioned above, this might not be exactly the right index for $B$'s superblock, but we
 shall prove that it is close.
 
@@ -440,9 +440,10 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \spac
 
 \Function{element}{FindResponse}{\typ{int} \var{b}, \typ{int} \var{i}}
-    \State \linecomment{find response to \var{i}th dequeue in \var{root}.\fld{blocks}[\var{b}]}
-    \State \linecomment{Preconditions:  $i\geq 1$ and \var{root}.\fld{blocks}[\var{b}] is non-null and}
-    \State \linecomment{contains at least \var{i} dequeues}
+    \State \linecomment{find response to \var{i}th dequeue in $D(\var{root}.\fld{blocks}[\var{b}])$}
+    \State \linecomment{Precondition:  $1\leq i\leq |D(\var{root}.\fld{blocks}[\var{b}])|$}
+    %  $i\geq 1$ and \var{root}.\fld{blocks}[\var{b}] is non-null and}
+    %  \State \linecomment{contains at least \var{i} dequeues}
     \State \hangbox{\var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} - \mbox{ }$\\
     		$\var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$}
     \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmpty}
@@ -514,7 +515,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \begin{figure}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{103}
+\setcounter{ALG@line}{102}
 
 \Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
     \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] is non-\nl\ and contains at least \var{i} enqueues}

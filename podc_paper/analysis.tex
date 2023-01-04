@@ -1,11 +1,44 @@
 % !TEX root =  podc-submission.tex
 
 \section{Analysis}
-In this section, we analyze the number of \nf{CAS} invocations and the step complexity of our algorithm.
+In this section, we analyze the number of steps and the number of \op{CAS} instructions performed by operations.
+First, we prove some claims about the size and operations of a block. 
+
+\begin{proposition}
+Each \nf{Enqueue} or \nf{Dequeue} operation performs $O(\log p)$ \nf{CAS} instructions.
+\end{proposition}
+\begin{proof}
+An operation invokes \nf{Refresh} at most twice at each of the $\ceil{\log_2 p}$ levels of the tree.
+A \nf{Refresh} does at most 7 \nf{CAS} steps: one in line \ref{cas} and two from each \nf{Advance} in line \ref{helpAdvance} or~\ref{advance}.
+\end{proof}
 
 
-First, we prove some claims about the size and operations of a block. These lemmas will be used later for the correctness and analysis of \nf{GetEnqueue()}.
 
+\begin{lemma}\label{dsearchTime}
+The search that \op{FindResponse}$(b,i)$ does at line \ref{FRb} to find the index $b_e$ of the block in the root containing the $e$th enqueue takes $O(\log (\var{root}.\fld{blocks}[b_e].\size + \var{root}.\fld{blocks}[b-1].\size))$ steps.
+\end{lemma}
+\begin{proof}
+Let the blocks in the root be $B_1, \ldots, B_\ell$.
+The doubling search used to compute $b_e$ takes $O(\log (b-b_e))$ steps,
+so we prove $b - b_e \leq 2 \cdot B_{b_e}.\size + B_{b-1}.\size + 1$.
+If $b \leq b_e+1$, then this is trivial, so assume for the rest of the proof that $b>b_e+1$.
+
+As shown in \Cref{linearCorrect}, the dequeue that calls \op{FindResponse} is in $B_b$ and is supposed to return an enqueue in $B_{b_e}$.
+Thus, there can be at most $B_{b_e}.\size$ dequeues in 
+$D(B_{b_e+1}) \cdots D(B_{b-1})$; otherwise in the sequential execution $L$,
+all elements enqueued before the end of
+$E(B_{b_e})$ would be dequeued before $D(B_b)$. 
+Furthermore, by \Cref{sizeCorrectness}, the size of the queue  after the prefix of $L$ corresponding to 
+$B_1,\ldots,B_{b-1}$  is 
+$B_{b-1}.\size \geq B_{b_e}.size + |E(B_{b_e+1})\cdots E(B_{b-1})| - |D(B_{b_e+1})\cdots D(B_{b-1})|$.
+Thus, $|E(B_{b_e+1})\cdots E(B_{b-1})| \leq B_{b-1}.\size + |D(B_{b_e+1})\cdots D(B_{b-1})| \leq B_{b-1}.\size + B_{b_e}.\size$.
+So, the total number of operations in $B_{b_e+1}, \ldots, B_{b-1}$ is at most
+$B_{b-1}.\size + 2\cdot B_{b_e}.\size$.
+Each of these $b-1-b_e$ blocks contains at least one operation, by \Cref{blockNotEmpty}.
+So, $b-1-b_e \leq B_{b-1}.\size + 2\cdot B_{b_e}.\size$
+\end{proof}
+
+The following lemma is useful in bounding the time to \op{GetEnqueue}
 \begin{lemma}\label{blockSize}
 Each block $B$ in each node contains at most one operation of each process.
 If $c$ is the execution's maximum point contention, $B$ has at most $c$ direct~subblocks.
@@ -19,34 +52,14 @@ those operations are invoked.
 
 Let $t$ be the earliest termination of any operation contained in $B$.
 By \Cref{lem::appendExactlyOnce}, $B$ is created before $t$, so all operations contained in $B$
-are invoked before $t$.  Thus, they are all concurrently running at $t$, so there are at most
-$c$ operations contained in $B$.
+are invoked before $t$.  Thus, all are  running concurrently at $t$, so $B$ contains at most $c$ operations.
 By definition, the direct subblocks of $B$ contain these $c$ operations, and each operation is contained
 in exactly one of these subblocks, by Lemma \ref{lem::subblocksDistinct}.
 By \Cref{blockNotEmpty}, each direct subblock of $B$ contains at least one operation,
-so there are at most $c$ direct subblocks.
+$B$ has at most $c$ direct subblocks.
 \end{proof}
 
-\begin{proposition}
-An \nf{Enqueue} or \nf{Dequeue} operation does at most $14\log p$ \nf{CAS} operations.
-\end{proposition}
-\begin{proof}
-  In each level of the tree  \nf{Refresh} is invoked at most two times, and every \nf{Refresh} invokes at most seven \nf{CAS}es, one in Line \ref{cas} and two from each \nf{Advance} in Line \ref{helpAdvance} or \ref{advance}.
-\end{proof}
-
-\begin{lemma}[\nf{DoublingSearch} Analysis]\label{dsearchTime}
-If the \nf{element} enqueued by $E_i(root,b)=E_e(root)$ is the response to some \nf{Dequeue} operation in \nf{root.blocks[$end$]}, then \nf{DoublingSearch($e$, $end$)} takes $O\big(\log ( \nf{root.blocks[$b$].size}+ \nf{root.blocks[$end$].size})\big )$ steps.
-\end{lemma}
-\begin{proof}
-First we show $end - b -1\leq 2 \times \nf{root.blocks[$b-1$].size}+\nf{root.blocks[$end$].size}$. There can be at most \nf{root.blocks[$b$].size}  \nf{Dequeue}s in \nf{root.blocks[$b+1\cdots end-1$]}; otherwise all elements enqueued by \nf{root.blocks[$b$]} would be dequeued before \nf{root.blocks[$end$]}. Furthermore, in the execution of queue operations in the linearization ordering, the size of the queue becomes \nf{root.blocks[$end$].size} after the operations of \nf{root.blocks[$end$]}. The final size of the queue after \nf{root.blocks[$1\cdots end$]} is \nf{root.blocks[$end$].size}. After an execution on a queue, the $size$ of the queue is greater than or equal to $\#enqueues -\#dequeues$ in the execution. We know the number of dequeues in \nf{root.blocks[$b+1\cdots end-1$]} is less than \nf{root.blocks[$b$].size}, therefore in \nf{root.blocks[$b+1\cdots end-1$]} there cannot be more than $\nf{root.blocks[$b$].size} + \nf{root.blocks[$end$].size}$ \nf{Enqueue}s. Overall there can be at most $2 \times\nf{root.blocks[$b$].size}+ \nf{root.blocks[$end$].size}$ operations in \nf{root.blocks[$b+1\cdots end-1$]} and since from Line \ref{addOP} we know that the \nf{num} field of every block in the tree is greater than 0, each block has at least one operation, so there are at most $2 \times\nf{root.blocks[$b$].size}+ \nf{root.blocks[$end$].size}$ blocks in between \nf{root.blocks[$b$]} and \nf{root.blocks[$end$]}. So, $end-b-1\leq 2 \times\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size}$.
-
-Thus, the doubling search reaches \nf{start} such that the \nf{root.blocks[start].sum\sub{enq}} is less than $e$ in $O \big(\log(\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size})\big)$ steps. See Figure \ref{fig::doubling}. After Line \ref{dsearchEnd}, the binary search that finds $b$ also takes $O\big(\log(\nf{root.blocks[$b$].size}+\nf{root.blocks[$end$].size})\big)$. Next, \nf{i} is computed via the definition of \nf{sum\sub{enq}} in constant time (Line \ref{DSearchComputei}).
-\end{proof}
-\begin{figure}[hbt]  
-  \center\includegraphics[width=6in]{pics/doubling.png}
-  \caption{Distance relations between \nf{start}$,b,end$.}
-  \label{fig::doubling}
-\end{figure}
+--------
 
 \begin{lemma}[Worst Case Time Analysis] \label{enqDeqTime}
 The worst case number of steps for an \nf{Enqueue} is $O(\log^2 p)$ and for a \nf{Dequeue}, is $O(\log^2 p + \log q_e+ \log q_d)$, where $q_d$ is the size of the queue when the \nf{Dequeue} is linearized and $q_e$ is the size of the queue at the time the response of the \nf{Dequeue} is linearized.

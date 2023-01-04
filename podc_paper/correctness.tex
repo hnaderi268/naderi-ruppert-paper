@@ -259,7 +259,9 @@ By \Cref{lem::doubleRefresh}, this ensures $B$'s operation is contained in each 
 By \Cref{lem::noDuplicates}, it is contained in exactly one block in each node.
 \end{proof}
 
-\subsection{Correctness of GetEnqueue}
+\subsection{Correctness of Helping Routines}
+
+We first show that \op{getEnqueue} works correctly.
 
 \begin{lemma}\label{lem::get}
 If $1\leq i\leq |E(v.\fld{blocks}[b])|$ then \op{getEnqueue}($v,b,i$) returns the argument of the $i$th enqueue in $E(v.\fld{blocks}[b])$.
@@ -286,8 +288,6 @@ the value $i'$ computed on line \ref{getChildIndex} is the position of the requi
 Thus, the recursive call on line \ref{getRecurse} satisfies its precondition, and 
 returns the required result, by the induction hypothesis.
 \end{proof}
-
-\subsection{Correctness of IndexDequeue}
 
 Next, we prove the \fld{super} field of a block is within one of the true index of the block's superblock.
 \here{An alternative would be modify the code
@@ -338,7 +338,7 @@ We prove \op{IndexDequeue}'s correctness using \Cref{superRelation} on each step
 
 \begin{lemma}\label{lem::indexDequeue}
 If $v.\fld{blocks}[b]$ has been propagated to the root and $1\leq i\leq |D(v.\fld{blocks}[b])|$, 
- then \op{IndexDequeue}($v, b, i$) returns $\langle b',i'\rangle$ such that the \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$ is the $(i')$th dequeue of $D(\var{root}.\fld{blocks}[b'])$.
+ then \op{IndexDequeue}($v, b, i$) returns $\langle b',i' \rangle$ such that the \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$ is the $(i')$th dequeue of $D(\var{root}.\fld{blocks}[b'])$.
 \end{lemma}
 \begin{proof}
 We prove the claim by induction on the depth of node $v$. The base case where $v$ is the root is trivial (see Line \ref{indexBaseCase}).
@@ -399,6 +399,8 @@ Hence, the size of the queue after the operations of $B$ are performed (with enq
 is $\max(0, \var{root}.\fld{blocks}[b-1].\size + \var{num\sub{enq}} - \var{num\sub{deq}})$.
 \end{proof}
 
+Next, we show operations return the same response as they would in the sequential execution $L$.
+
 \begin{lemma}\label{linearCorrect}
 Each terminating dequeue returns the response it would in the sequential execution $L$.
 \end{lemma}
@@ -423,13 +425,13 @@ in the sequential execution $L$ is $\var{root}.\fld{blocks}[b-1].\fld{sum\sub{en
 the number of non-\nl\ dequeues in that prefix of $L$.
 Hence, line \ref{computeE} sets $e$ to the rank of $D$ among all the non-\nl\ dequeues in $L$.
 Thus, in the sequential execution~$L$, $D$ returns the value enqueued by the $e$th enqueue in $L$.
-By \Cref{lem::sum}, this enqueue is the ($i'$)the enqueue 
-in $E(\var{root}.\fld{blocks}[b'])$, where
-$b'$ and $i'$ are the values $D$ computes on line \ref{FRb} and \ref{FRi}.
+By \Cref{lem::sum}, this enqueue is the $i_e$th enqueue 
+in $E(\var{root}.\fld{blocks}[b_e])$, where
+$b_e$ and $i_e$ are the values $D$ computes on line \ref{FRb} and \ref{FRi}.
 By \Cref{lem::get}, the call to \op{GetEnqueue} returns the argument of the required enqueue.
 \end{proof}
 
-Combining \Cref{linearSat} and \Cref{linearCorrect} gives us our main result.
+Combining \Cref{linearSat} and \Cref{linearCorrect} provides our main result.
 
 \begin{theorem}
 The queue implementation is linearizable.

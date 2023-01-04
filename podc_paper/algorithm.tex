@@ -449,10 +449,10 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
         \State \var{e} \assign\ \var{i} + \var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}} - 
 			\var{root}.\fld{blocks}[\var{b}-1].\size\label{computeE}
 		\State \linecomment{compute enqueue's block using binary search}
-		\State find min $\var{b}'\leq \var{b}$ with $\var{root}.\fld{blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{e}$\label{FRb}
+		\State find min $b_e\leq \var{b}$ with $\var{root}.\fld{blocks}[b_e].\fld{sum\sub{enq}} \geq \var{e}$\label{FRb}
 		\State \linecomment{find rank of enqueue within its block}
-		\State $\var{i}' \assign\ \var{e} - \var{root}.\fld{blocks}[\var{b}'-1].\fld{sum\sub{enq}}$\label{FRi}
-        \State \Return \Call{GetEnqueue}{\var{root}, $\var{b}'$, $\var{i}'$}\label{findAnswer}
+		\State $i_e \assign\ \var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$\label{FRi}
+        \State \Return \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}\label{findAnswer}
     \EndIf
 \EndFunction{FindResponse}
 
@@ -636,9 +636,9 @@ If the queue is
 not empty, Line \ref{computeE} computes the rank \var{e} of the
 \nf{Enqueue} whose argument is the response to the
 \nf{Dequeue}. 
-A binary search is used on the \fld{sum\sub{enq}} fields of \var{root}.\fld{blocks} to find the index $b'$ of the block that contains 
+A binary search is used on the \fld{sum\sub{enq}} fields of \var{root}.\fld{blocks} to find the index $b_e$ of the block that contains 
 the \var{e}th enqueue.
-The index $b'$ is at most $b$ (since the enqueue is linearized before the dequeue).  To find the left end of the range for the binary search for $b'$, we can first do a doubling search \cite{BY76}, comparing \var{e} to the \fld{sum\sub{enq}} fields at indices $b-1, b-2, b-4, b-8, \ldots$.
+The index $b_e$ is at most $b$ (since the enqueue is linearized before the dequeue).  To find the left end of the range for the binary search for $b_e$, we can first do a doubling search \cite{BY76}, comparing \var{e} to the \fld{sum\sub{enq}} fields at indices $b-1, b-2, b-4, b-8, \ldots$.
 Then, \op{GetEnqueue} is used to trace down through the tree to find the required enqueue in a leaf.
 
 \opemph{GetEnqueue}(\var{v, b, i}) returns the argument of the

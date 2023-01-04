@@ -2,10 +2,6 @@
 
 \section{Proof of Correctness}
 
-Consider any finite execution.  We must show that the linearization ordering $L$ defined in Section \ref{linearization} includes all operations that terminate and that 
-(1) if an operation $op_1$ terminates before another operation $op_2$ begins, then $op_2$ cannot appear
-before $op_1$ in $L$, and (2) each dequeue that terminates returns the same response as it would 
-in $L$.
 
 \here{need to update this outline later}
 First, we define and prove some facts about blocks and the node's \nf{head} field. Then, we introduce  the linearization ordering formally. Next, we prove double \nf{Refresh} on a node is enough to propagate its children's new operations up to the node, which is used to prove (1). After this, we prove some claims about the size and operations of each block, which we use to prove the correctness of \nf{DoublingSearch()}, \nf{GetEnqueue()} and \nf{IndexDequeue()}. Finally, we prove the correctness of the way we compute the response of a dequeue, which establishes (2).
@@ -239,7 +235,7 @@ When $R_2$ terminates, $v$ contains all operations that $v$'s children contained
 \end{lemma}
 \begin{proof}
 If either $R_1$ or $R_2$ performs a successful \op{CAS} at line \ref{cas} or terminates at line \ref{addOP}, the claim follows
-from Lemma \ref{successfulRefresh}.
+from \Cref{successfulRefresh}.
 So suppose both $R_1$ and $R_2$ perform a failed \op{CAS} at line \ref{cas}.
 Let $h_1$ and $h_2$ be the values $R_1$ and $R_2$ read from $v.\head$ at line \ref{readHead}.
 By \Cref{lem::headInc}, $h_2>h_1$.
@@ -316,7 +312,7 @@ Since the value stored $B.\fld{super}$ was read from $v.\fld{parent.head}$ befor
 
 Next, we show that $B.\fld{super}\geq s-1$.
 The value stored in $B.\fld{super}$ at line \ref{setSuper1} is read from $v.\fld{parent}.\head$ at line \ref{readParentHead} and \head\ values are always at least 1, so $B.\fld{super} \geq 1$.
-So, if $s\leq 2$, the claim is trivial.  Assume for the remainder that $s>2$.
+So, if $s\leq 2$, the claim is trivial.  Assume $s>2$ for the remainder of the proof.
 By \Cref{lem::headProgress}, $v.\fld{parent.blocks}[s-1]\neq \nl$.  Let $R_{s-1}$ be the call to
 $\op{Refresh}(v.\fld{parent})$ that installed the block in $v.\fld{parent.blocks}[s-1]$.
 Let $r'$ be the step when $R_{s-1}$ reads $s-1$ in $v.\fld{parent}.\head$ at line \ref{readHead}.
@@ -340,7 +336,7 @@ writes in $B.\fld{super}$ is greater than or equal to the value $s-1$ that $r'$ 
 We prove \op{IndexDequeue}'s correctness using \Cref{superRelation} on each step of the \op{IndexDequeue}.
 \here{mention somewhere why precondition of IndexDequeue is true; also check that block of parent indexed by sup in that routine is non-null}
 
-\begin{lemma}
+\begin{lemma}\label{lem::indexDequeue}
 If $v.\fld{blocks}[b]$ has been propagated to the root and $1\leq i\leq |D(v.\fld{blocks}[b])|$, 
  then \op{IndexDequeue}($v, b, i$) returns $\langle b',i'\rangle$ such that the \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$ is the $(i')$th dequeue of $D(\var{root}.\fld{blocks}[b'])$.
 \end{lemma}
@@ -363,111 +359,78 @@ Since $B$ has been propagated to the root, so has its superblock $B'$.
 Thus, all preconditions of the recursive call are met.
 By the induction hypothesis, the recursive call returns the location of the required dequeue in the root.\end{proof}
 
-----------
-
 \subsection{Linearizability}
-We now prove the two properties needed for linearizability.
+
+Consider any finite execution.  We must show that the linearization ordering $L$ defined in 
+(\ref{linearization}) is a legal permutation of a subset of the operations in 
+the execution, i.e., that it includes all operations that terminate and 
+if one operation $op_1$ terminates before another operation $op_2$ begins, then $op_2$ does appear
+before $op_1$ in $L$.  Then we must show that each dequeue that terminates returns the 
+same response as it would in the sequential execution described by $L$.
 
 \begin{lemma} \label{linearSat}
 $L$ is a legal linearization ordering.
 \end{lemma}
 \begin{proof}
-We must show for any execution that every operation that terminates is in $L$ exactly once. Also, if $op_{1}$ terminates before $op_{2}$ in starts in the execution, then $op_{1}$ is before $op_{2}$ in the linearization. The first claim is directly reasoned from Corollary \ref{lem::appendExactlyOnce}. For the latter, if $op_{1}$ terminates before $op_{2}$ starts,  $op_{1}$\nf{.Append} has terminated before $op_{2}$\nf{.Append} started. From Corollary \ref{lem::append}, $op_{1}$ is in \nf{root.blocks} before $op_{2}$ starts to propagate. By definition of $L$, $op_{1}$ is linearized before $op_{2}$.
+By \Cref{lem::noDuplicates}, $L$ is a permutation of a subset of the operations in the execution.
+Since each operation creates a block $B$ containing the operation and then calls \op{Append}($B$), 
+the operation is propagated to the root before the operation terminates, by \Cref{lem::appendExactlyOnce},
+so it appears in $L$.
+Also, if $op_{1}$ terminates before $op_{2}$ begins, then $op_{1}$ 
+is propagated to the root before $op_2$ begins, so $op_2$ appears before $op_2$ in $L$.
 \end{proof}
-Once some operations are aggregated in one block, they will get propagated up to the root together, and they can be linearized in any order among themselves. We have chosen to put \nf{Enqueue}s in a block before \nf{Dequeue}s (see Definition \ref{ordering}).
 
-\begin{definition}\label{defNullDeq}
-If a \nf{Dequeue} operation returns \nf{null} it is called a \it{null} \nf{Dequeue}, otherwise it is called \it{non-null}~\nf{Dequeue}.
-\end{definition}
-
-Next, we define the responses that \nf{Dequeue}s should return, according to the linearization.
-\begin{definition}
-   Assume the operations in \nf{root.blocks} are applied sequentially on an empty queue in the order of $L$.  ${Resp(d)=e}$\nf{.element} if the element of \nf{Enqueue} $e$ is the response to \nf{Dequeue} $d$. Otherwise if ${d}$ is a null \nf{Dequeue} then ${Resp(d)=\nf{null}}$. 
-\end{definition}
-
-In the next lemma, we show that the \nf{size} field in each \nf{root block} is computed correctly.
+In the next lemma, we show that the \fld{size} field in each block in the root is computed correctly.
 \begin{lemma}\label{sizeCorrectness}
-  \nf{root.blocks[$b$].\size}is the \size of the queue after the operations in \nf{root.blocks[$0 \cdot$\\$\cdot\cdot b$]} are applied in the order of~$L$.  
+If the operations of $\var{root}.\fld{blocks}[0..b]$ are applied sequentially in the order of~$L$ on an initially empty queue, the resulting queue has $\var{root}.\fld{blocks}[b].\size$ elements.  
 \end{lemma}
 \begin{proof}
-We prove the claim by induction on $b$. The base case when ${b=0}$ is trivial since the queue is initially empty and $\nf{root.blocks[}0\nf{]}$ contains an empty block with \nf{size} field equal to $0$. We are going to show the correctness when $b=i$ assuming  correctness when $b=i-1$. By Definition \ref{ordering} \nf{Enqueue} operations come before \nf{Dequeue} operations in a block in $L$. By Lemma~\ref{lem::numX} \nf{num\sub{enq}} and \nf{num\sub{deq}} fields in a block show the number of \nf{Enqueue} and \nf{Dequeue} operations in it. If there are more than $\nf{root.blocks[}i-1\nf{].size}+\nf{root.blocks[}i\nf{].num\sub{enq}}$ dequeue operations in \nf{root.blocks[$i$]} then the queue would become empty after \nf{root.blocks[$i$]}. Otherwise, the size of the queue after the $b$th block in the root is $\nf{root.blocks[}b-1\nf{].size}+ \nf{root.blocks[}b\nf{].num\sub{enq}}- \nf{root.blocks[}b\nf{].num\sub{deq}}$. In both cases, this is the same as the assignment on Line \ref{computeLength}.
+We prove the claim by induction on $b$. 
+The base case when ${b=0}$ is trivial, since the queue is initially empty and 
+$\var{root}.\fld{blocks}[0]$ contains an empty block whose \size\ field is $0$. 
+Assuming the claim holds for $b-1$, we prove it for $b$.
+The \fld{size} field of the block $B$ installed in $\var{root}.\fld{blocks}[b]$ is computed
+at line \ref{computeLength} of a call to \op{CreateBlock}(\var{root, b}).
+By the induction hypothesis, $root.\fld{blocks}[b-1].\size$ gives the size of the queue before the operations
+of block $B$ are performed.
+By \Cref{lem::sum}, the values of \var{num\sub{enq}} and \var{num\sub{deq}}
+are the number of enqueues and dequeues contained in $B$.
+Hence, the size of the queue after the operations of $B$ are performed (with enqueues before dequeues as specified by $L$)
+is $\max(0, \var{root}.\fld{blocks}[b-1].\size + \var{num\sub{enq}} - \var{num\sub{deq}})$.
 \end{proof}
-
-The next lemma is useful to compute the number of non-null dequeues.
-\begin{lemma} \label{numberOfNND}
-If operations in the root are applied in the order of $L$, the number of non-null \nf{Dequeue}s in $\nf{root.blocks[}0\cdots b\nf{]}$ is \nf{root.blocks[$b$].sum\sub{enq} $-$ root.blocks[$b$].size}.
-\end{lemma}
-\begin{proof}
-There are \nf{root.blocks[$b$]}\nf{.sum\sub{enq}} \nf{Enqueue} operations in $\nf{root.blocks[}0\cdots b\nf{]}$ by Corollary~\ref{lem::sumX}. The size of the queue after doing $\nf{root.blocks[}0\cdots b\nf{]}$ in the order of $L$ is 
-the number of $\it{enqueues}$ in $\nf{root.blocks[}0\cdots b\nf{]}$ minus the number of $\it{non-null \nf{Dequeue}s}$ in $\nf{root.blocks[}0\cdots b\nf{]}$. By the correctness of the \nf{size} field from Lemma \ref{sizeCorrectness} and \nf{sum\sub{enq}} field from Lemma \ref{lem::numX}, the number of $\it{non-null \nf{Dequeue}s}$ is \nf{root.blocks[$b$]}\nf{.sum\sub{enq}} $-$ \nf{root.blocks[$b$]}\nf{.size}. 
-\end{proof}
-
-\begin{corollary}\label{numNullDeqBlock}
-  If operations in the root are applied in the order of $L$, the number of non-null dequeues in $\nf{root.blocks[}b\nf{]}$ is \nf{root.blocks[$b$].num\sub{enq} $-$ root.blocks[$b$].\size $+$ root.blocks[$b-1$].size}.
-\end{corollary}
-
-\begin{lemma}\label{nullReturn}
-$Resp(D_i(\nf{root},b))$ is \nf{null} iff \nf{root.blocks[$b-1$].\size $+$ root.blocks[$b$].num\sub{enq}$- i$ $<0$}.
-\end{lemma}
-\begin{proof}
-The claim follows immediately from Corollary  \ref{numNullDeqBlock} and Lemma \ref{lem::numX}.
-\end{proof}
-
-\begin{lemma}\label{computeHead}
-\nf{FindResponse($b$, $i$)} returns $Resp(D_i(root,b))$.
-\end{lemma}
-\begin{proof}
-$D_i(root,b)$ is $D_{\nf{root.blocks[}b-1\nf{].sum\sub{deq}}+i}(root)$ by Definition \ref{ordering} and Lemma \ref{lem::sumX}. $D_i(root,b)$ returns \nf{null} at Line \ref{returnNull} if $\nf{root.blocks[}b-1\nf{].size}+ \nf{root.blocks[}b\nf{].num\sub{enq}}- i <0$ and $Resp(D_i(root,b))=\nf{null}$ in this case by Lemma \ref{nullReturn}. Otherwise, if $D_i(root,b)$ is the $e$th non-null \nf{Dequeue} in $L$ it should return the $e$th enqueued value. By Lemma \ref{numberOfNND} there are \nf{root.blocks[$b-1$].sum\sub{enq} $-$ root.blocks[$b-1$].\size} non-null \nf{Dequeue} operations in $\nf{root.blocks[}0\cdots b-1\nf{]}$. The \nf{Dequeue}s in \nf{root.blocks[$b$]} before $D_i(root,b)$ are non-null \nf{Dequeue}s. So $D_i(root,b)$ is the $e$th non-null \nf{Dequeue} where $e= i + \nf{root.blocks[}b-1\nf{].sum\sub{deq}} - \nf{root.blocks[}b-1\nf{].size}$ (Line \ref{computeE}). See Figure \ref{computeResponseDetail}.
-
-After computing $e$ at Line \ref{computeE}, the code finds \nf{$b$,$i$} such that $E_i(root,b)=E_e(root)$ using \nf{DoublingSearch} and then finds its \nf{element} using \nf{GetEnqueue} (Line \ref{findAnswer}). Correctness of \nf{DoublingS-}\\\nf{earch} and \nf{GetEnqueue} routines are shown in Lemmas \ref{dsearch} and \ref{get}.
-\end{proof}
-
-\begin{figure}[hbt]  
-  \center\includegraphics[width=4in, height=2.5in]{pics/computeResponseDetail.png}\caption{The position of $D_i(root,b)$.}
-\label{computeResponseDetail}
-\end{figure}
-\vspace{-1em}
 
 \begin{lemma}\label{linearCorrect}
-The responses to operations in our algorithm are the same as in the sequential execution in the order given by $L$.
+Each terminating dequeue returns the response it would in the sequential execution $L$.
 \end{lemma}
 \begin{proof}
-\nf{Enqueue} operations do not return any value. By Lemma \ref{computeHead}, the response of a \nf{Dequeue} in our algorithm is the same as its response in the sequential execution of $L$.  
+If a dequeue $D$ terminates, it is contained in some block in the root, by \Cref{lem::appendExactlyOnce}.
+By \Cref{lem::indexDequeue}, $D$'s call to \op{IndexDequeue} on line \ref{invokeIndexDequeue}
+returns a pair $\langle b,i\rangle$ such that $D$ is the $i$th dequeue in the block 
+$B=\var{root}.\fld{blocks}[b]$.
+$D$ then calls \op{FindResponse}($b,i$) on line \ref{deqRest}.
+By \Cref{sizeCorrectness}, the queue contains $\var{root}.\fld{blocks}[b-1].\fld{size}$ elements
+after the operations in $\var{root}.\fld{blocks}[1..b-1]$ are performed sequentially 
+in the order given by $L$.
+By \Cref{lem::sum}, the value of \var{num\sub{enq}} computed on line \ref{FRNum}
+is the number of enqueues in $B$.
+Since the enqueues in block $B$ precede the dequeues,
+the queue is empty when the $i$th dequeue of $B$ occurs if 
+$\var{root}.\fld{blocks}[b-1].\fld{size} + \var{num\sub{enq}} < i$.
+So $D$ returns \nl\ on line \ref{returnNull} if and only if it would do so in the sequential
+execution $L$.
+Otherwise, the size of the queue after doing the operations in $\var{root}.\fld{blocks}[0..b-1]$
+in the sequential execution $L$ is $\var{root}.\fld{blocks}[b-1].\fld{sum\sub{enq}}$ minus
+the number of non-\nl\ dequeues in that prefix of $L$.
+Hence, line \ref{computeE} sets $e$ to the rank of $D$ among all the non-\nl\ dequeues in $L$.
+Thus, in the sequential execution~$L$, $D$ returns the value enqueued by the $e$th enqueue in $L$.
+By \Cref{lem::sum}, this enqueue is the ($i'$)the enqueue 
+in $E(\var{root}.\fld{blocks}[b'])$, where
+$b'$ and $i'$ are the values $D$ computes on line \ref{FRb} and \ref{FRi}.
+By \Cref{lem::get}, the call to \op{GetEnqueue} returns the argument of the required enqueue.
 \end{proof}
 
-\begin{theorem}[Main]
+Combining \Cref{linearSat} and \Cref{linearCorrect} gives us our main result.
+
+\begin{theorem}
 The queue implementation is linearizable.
 \end{theorem}
-\begin{proof}
-The theorem follows from Lemmas \ref{linearSat} and \ref{linearCorrect}.
-\end{proof}
-
-
-\here{following material from algorithm description in thesis might be useful in sketch of correctness proof}
-\begin{figure}[hbpt]
-  \center\includegraphics[width=4in]{pics/doublyrefresh-drawio.png}
-  \caption[Two consecutive failed \nf{Refresh}es by a
-    process.]{\label{fig::simpleDoubleRefresh}Time relations between
-    the concurrent successful \nf{Refresh}es and the two consecutive
-    failed \nf{Refresh}es.} 
-\end{figure}
-We use \nf{CAS} (Compare\&Swap) instructions to implement the
-\nf{Refresh}'s attempt to append  described in the previous
-paragraph. 
-The second failed \nf{Refresh} of $P$ is assuredly concurrent with a
-successful \texttt{Refresh} that has read its information after the
-invocation of the first failed \nf{Refresh} (see Figure
-\ref{fig::simpleDoubleRefresh}). This is because some process $L$ does
-a successful append during $P$'s first failed attempt, and some
-process $K$ performs a \nf{Refresh} that reads its information after
-$L$'s append and then performs a successful append during $P$'s second
-failed \nf{Refresh}. Process $K$'s \nf{Refresh} helps to append the
-new operations that were in $n$'s children before $P$'s first failed
-\nf{Refresh}, in case they were not already appended. After a process
-appends its operation into its leaf it can call \nf{Refresh} on the
-path up to the root at most two times on each node. So, with $O(\log
-p)$ \nf{CAS}es an operation can ensure it appears in the
-linearization. This cooperative solution allows us to overcome the CAS
-Retry Problem. 
-
-

@@ -44,7 +44,6 @@
 \usepackage{relsize}
 \usepackage{enumitem}
 \usepackage{bold-extra}
-\usepackage{showkeys}
 \usepackage{cleveref}
 \renewcommand*\contentsname{Table of Contents}
 
@@ -55,6 +54,7 @@
 
 \def\draft{1}  % set to 1 for draft (include comments, color edits), 0 for clean final copy (omit comments, edits in black)
 \if\draft 1
+\usepackage{showkeys}
 \newcommand{\mycomment}[3]{{\color{#2}{[\bf{#1: #3}]}}}
 \newcommand{\myedit}[2]{{\color{#1}{#2}}\normalcolor}
 \newcommand{\rebuttaledit}[2]{{\color{#1}{#2}}\normalcolor}

@@ -293,87 +293,77 @@ returns the required result, by the induction hypothesis.
 
 \subsection{Correctness of IndexDequeue}
 
-The next few results show that the \nf{super} field of a block is accurate within one of the actual index of the block's superblock in the parent node. 
+Next, we prove the \fld{super} field of a block is within one of the true index of the block's superblock.
+\here{An alternative would be modify the code
+so that the correct index of the superblock is computed before storing it in $B.super$.
+In Advance, we could check if $h>v.parent.blocks[h_p].end_{left/right}$ and if so write $h_p+1$ instead of $h_p$ in $v.blocks[h].super$.  Then, in IndexDequeue there would be no need to correct the value read from the super field.  If we do this, the following lemma would be modified to prove that the value is perfectly accurate.}
 
-\begin{lemma}
-  If $B=v.\var{blocks}[b]$ is a direct subblock of $v.\fld{parent.blocks}[s]$ then $B.\fld{super}\leq s$.
+\begin{lemma}\label{superRelation}
+Let $B=v.\var{blocks}[b]$.
+  If $v.\fld{parent.blocks}[s]$ is the superblock of $B$ then $s-1\leq B.\fld{super}\leq s$.
 \end{lemma}
--------
-
 \begin{proof}
-Let $R_p$ be the instance of $n$\nf{.parent.Refresh} that does a successful \nf{CAS}(Line~\ref{cas}) and puts the superblock of $B$ which is $n$\nf{.parent.blocks[$s$]} into $n\nf{.parent}$. By Observation~\ref{lem::createBlockHead} if $R_p$ propagates $B$ it has to read a greater value than $b$ from \nf{$n$.head}, which means \nf{$n$.head} was incremented from $b$ to $b+1$ in Line \ref{incrementHead}. By Observation \ref{setSupBeforeIncHead} \nf{$B$.super} was already set in Line \ref{setSuper1}. The value written in \nf{$B$.super}, was read in Line \ref{readParentHead} before the \nf{CAS} that sets \nf{$B$.super} in Line \ref{setSuper1}. From Observation \ref{nonDecreasingHead} we know \nf{$n$.parent.head} is non-decreasing so $B\nf{.super}\leq s$, since \nf{$n$.parent.head} is still equal to $s$ when $R_p$ executes its \nf{CAS} at Line \ref{cas} by Lemma \ref{lem::headProgress}. The reader may wonder when the case $b\nf{.super}=s$ happens. This can happen when $\nf{$n$.parent.blocks[$B$.super]}=\nf{null}$ when $B$\nf{.super} is written and $R_p$ puts its created block into \nf{$n$.parent.blocks[$B$\nf{.super}]} afterwards.
+We first show $B.\fld{super}\leq s$.
+Let $R_s$ be the instance of \op{Refresh}($v.\fld{parent}$) that installs the superblock of $B$ 
+in $v.\fld{parent.blocks}[s]$.
+By the definition of subblocks (\ref{defsubblock}), $R_s$'s read $r$ of $v.head$ at line \ref{createEndLeft} or \ref{createEndRight} obtains a value greater than $b$.
+By \Cref{lem::headPosition}, $B.\fld{super} \neq \nl$ when $r$ occurs, which means
+that $B.\fld{super}$ was set (by line~\ref{setSuper1}) to a value read from $v.\fld{parent}.\head$ before $r$.
+When $r$ occurs, $v.\fld{parent.blocks}[s] = \nl$, since the later \op{CAS} by $R_s$ at line
+\ref{cas} succeeds.
+So, by \Cref{lem::headPosition}, $v.\fld{parent}.\head \leq s$ when $r$ occurs.
+Since the value stored $B.\fld{super}$ was read from $v.\fld{parent.head}$ before $r$ and the \head\ field is non-decreasing by \Cref{nonDecreasingHead}, it follows that $B.super\leq s$.
+
+Next, we show that $B.\fld{super}\geq s-1$.
+The value stored in $B.\fld{super}$ at line \ref{setSuper1} is read from $v.\fld{parent}.\head$ at line \ref{readParentHead} and \head\ values are always at least 1, so $B.\fld{super} \geq 1$.
+So, if $s\leq 2$, the claim is trivial.  Assume for the remainder that $s>2$.
+By \Cref{lem::headProgress}, $v.\fld{parent.blocks}[s-1]\neq \nl$.  Let $R_{s-1}$ be the call to
+$\op{Refresh}(v.\fld{parent})$ that installed the block in $v.\fld{parent.blocks}[s-1]$.
+Let $r'$ be the step when $R_{s-1}$ reads $s-1$ in $v.\fld{parent}.\head$ at line \ref{readHead}.
+This read $r'$ must be before $B$ is installed in $v$;
+otherwise, \Cref{successfulRefresh} would imply that $B$ is a subblock of one of 
+$v.\fld{parent.blocks}[1..s-1]$, contrary to the hypothesis.
+Now, consider the call to \op{Advance}($v, b$) that writes $B.\fld{super}$.
+It is invoked either 
+at line \ref{helpAdvance} after seeing $v.\fld{blocks}[h]\neq \nl$ at line \ref{ifHeadnotNull}
+or at line \ref{advance} after ensuring $v.\fld{blocks}[h]\neq \nl$ at line~\ref{cas}.
+Either way, the \op{Advance} is invoked after $B$ is installed, and therefore after $r'$.
+By \Cref{nonDecreasingHead}, $v.\fld{parent}.\head$ is non-decreasing, so 
+the value this \op{Advance} reads in $v.\fld{parent}.\head$ and
+writes in $B.\fld{super}$ is greater than or equal to the value $s-1$ that $r'$ reads in $v.\fld{parent}.\head$.
 \end{proof}
 
+%The reader may wonder when the case $b\nf{.super}=s$ happens. This can happen when $
+%\nf{$n$.parent.blocks[$B$.super]}=\nf{null}$ when $B$\nf{.super} is written and $R_p$ puts its created block 
+%into \nf{$n$.parent.blocks[$B$\nf{.super}]} afterwards.
 
-Then we explain how it is used to compute the rank of a given \nf{Dequeue} in the root.
-\begin{definition}\label{orderRefresh} If a \nf{Refresh} instance $R_1$ does its \nf{CAS} at Line \ref{cas} earlier than \nf{Refresh} instance $R_2$ we say $R_1$ has \it{happened before} $R_2$.
-\end{definition}
-
-
-Now let us consider how the \nf{Refresh}es that took place on the parent of node $n$ after block $B$ was stored in $n$ will help to set \nf{$B$.super} and propagate $B$ to the parent.
-
-\begin{observation}\label{lem::createBlockHead}
-If the block created by an instance $R_p$ of $n$\nf{.parent.Refresh} contains block $B=n$\nf{.blocks[}$b$\nf{]} then $R_p$ reads a value greater than $b$ from $n$\nf{.head} in Line \ref{lastLine}. 
-\end{observation}
-
-
-\begin{lemma}\label{lem::secondRefreshSuper}
-Let $R_n$ be a \nf{Refresh} that puts $B$ in \nf{$n$.blocks[$b$]} at Line \ref{cas}. Then, the block created by one of the next two successful \nf{$n$.parent.Refresh}es according to Definition \ref{orderRefresh} contains $B$ and \nf{$B$.super} is set when the second successful \nf{$n$.parent.Refresh} reaches Line \ref{invokeCreateBlock}.
-\end{lemma}
-
-\begin{proof}
-Let $R_{p1}$ and $R_{p2}$ be the next two successful \nf{$n$.parent.Refresh}es after $R_n$. To derive a contradiction assume $B$ was neither propagated to $n$\nf{.parent} by $R_{p1}$ nor by $R_{p2}$.
-
-Since $R_{p2}$'s created block does not contain $B$, by Observation \ref{lem::createBlockHead} the value $R_{p2}$ reads from $n$\nf{.head} in Line \ref{lastLine} is at most $b$. From Observation \ref{nonDecreasingHead} the value $R_{p2}$ reads in Line \ref{readChildHead} is also at most~$b$.
-
-$R_n$ puts $B$ into $n$\nf{.blocks[}$b$\nf{]} so ${R_n}$ reads the value $b$ from $n.$\nf{head}. Since $R_{p2}$'s \nf{CAS} into $n$\nf{.parent.blocks} is successful there should be a \nf{Refresh} instance $R_p^\prime$ on $n$\nf{.parent} that increments $n$\nf{.parent.head} (Line \ref{incrementHead}) after $R_{p1}$'s Line \ref{cas} and before $R_{p2}$'s Line \ref{readHead}. We assumed $t^{R_n}_{\ref{cas}}<t^{R_{p1}}_{\ref{cas}}<t^{R_{p2}}_{\ref{cas}}$ by Definition \ref{orderRefresh}. Finally, Line \ref{readChildHead} is after Line \ref{readHead} and $R_{p2}$'s Line \ref{readHead} is after $R_p^\prime$'s Line \ref{incrementHead}, which is after ${R_n}$'s $n$\nf{.blocks.CAS}. 
-\begin{align*}
-\left.
-\begin{array}{r}
- _{\ref{cas}}^{R_n}t<_{\ref{cas}}^{R_{p1}}t\\
-_{\ref{cas}}^{R_{p1}}t<_{\ref{incrementHead}}^{R_{p^\prime}}t<_{\ref{readHead}}^{R_{p2}}t\\
-_{\ref{readHead}}^{R_{p2}}t<_{\ref{readChildHead}}^{R_{p2}}t\\
-\end{array}
-\right\} &\Longrightarrow  _{\ref{cas}}^{R_n}t<_{\ref{readChildHead}}^{R_{p2}}t
-\end{align*}
-
-So $R_{p2}$ reads a value greater than or equal to $b$ for $n.\nf{head}$ by Observation \ref{nonDecreasingHead}.
-
-Therefore $R_{p2}$ reads $n\nf{.head}=b$. $R_{p2}$ calls $n$\nf{.Advance} at Line \ref{helpAdvance}, which ensures $n$\nf{.head} is incremented from $b$. So the value $R_{p2}$ reads in Line \ref{lastLine} of \nf{CreateBlock} is greater than $b$ and $R_{p2}$'s created block contains $B$. This is in contradiction with our hypothesis.
-
-Furthermore, if $B$\nf{.super} was not set earlier, it is set by $R_{p2}$'s call to $n$\nf{.Advance} invoked from Line~\ref{helpAdvance}.
-\end{proof}
-
-\begin{corollary} \label{superRelation}
-If \nf{$B=n$.blocks[$b$]} is propagated to $n$\nf{.parent}, then \nf{$B$.super} is equal to or one less than the index of the superblock of $B$.
-\end{corollary}
-\begin{proof}
-% After that $B$ is installed, $n$\nf{.parent.head} is read, and $B.$\nf{super} field is set to the value read from the parent's \nf{head} (see Lines \ref{readParentHead} and \ref{setSuper1} of\nf{Advance}).
-Let $R_n$ be the \nf{$n$.Refresh} that put $B$ in $n$\nf{.blocks} and let $R_{p1}$ be the first successful \nf{$n$.parent.Refresh} after $R_n$ and $R_{p2}$ be the second next successful \nf{$n$.parent.Refresh}.
-Before $B$ can be propagated to $n$'s \nf{parent}, $n$\nf{.head}  must be greater than $b$, so by Observation \ref{setSupBeforeIncHead} $B$\nf{.super} is set.
-From Lemma \ref{lem::secondRefreshSuper} we know that $B$ is propagated by the second next successful \nf{Refresh}'s \nf{CAS} on $n$\nf{.parent.blocks}. To summarize, we have $n\nf{.parent.head}_{_{\ref{cas}}^{R_{p2}}t}= n\nf{.parent.head}_{_{\ref{cas}}^{R_{p1}}t}+1$ and  $n\nf{.parent.head}_{_{\ref{cas}}^{R_{p1}}t}\leq n\nf{.parent.head}_{_{\ref{cas}}^{R_n}t}$ from Definition \ref{orderRefresh} and Observation \ref{nonDecreasingHead}. The value that is set in $B$\nf{.super} is read from $n$\nf{.parent.head} after ${_{\ref{cas}}^{R_n}t}$. So $B$\nf{.super} is equal to or one less than the index of the superblock of $B$.
-\end{proof}
-
-We prove \nf{IndexDequeue}'s correctness using Corollary \ref{superRelation} on each step of the \nf{IndexDequeue}.
+We prove \op{IndexDequeue}'s correctness using \Cref{superRelation} on each step of the \op{IndexDequeue}.
 \here{mention somewhere why precondition of IndexDequeue is true; also check that block of parent indexed by sup in that routine is non-null}
 
-\begin{lemma}[\nf{IndexDequeue} correctness]
- If $1\leq i \leq\nf{$n$.blocks[$b$].num\sub{deq}}$ then \nf{$n$.IndexDequeue($b$,$i$)} returns $<x,y>$ such that $D_i(n,b)=D_y(\nf{root},x)$.
+\begin{lemma}
+If $v.\fld{blocks}[b]$ has been propagated to the root and $1\leq i\leq |D(v.\fld{blocks}[b])|$, 
+ then \op{IndexDequeue}($v, b, i$) returns $\langle b',i'\rangle$ such that the \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$ is the $(i')$th dequeue of $D(\var{root}.\fld{blocks}[b'])$.
 \end{lemma}
 \begin{proof}
-We will prove this by induction on the distance of $n$ from the \nf{root}. The base case where $n$ is \nf{root} is trivial (see Line \ref{indexBaseCase}).
-For the non-root nodes \nf{$n$.IndexDequeue($b$, $i$)} computes $superblockIndex$, the index of the superblock of the $b$th block in $n$, in Line \ref{computeSuper} by Corollary \ref{superRelation}. After that, the position of $D_i(n,b)$ in $D(n.\nf{parent}, superblockIndex)$ is computed in Lines \ref{computeISuperStart}--\ref{computeISuperEnd}. By Definition \ref{ordering}, \nf{Dequeue}s in a block are ordered based on the order of its subblocks  from left to right. If $D_i(n,b)$ was propagated from the left child, the number of dequeues in the left subblocks of \nf{$n$.parent.blocks[$superblockIndex$]} before \nf{$n$.blocks[$b$]} is considered in Line \ref{considerPreviousLeft} (see Figure \ref{fig::blockSumDeqLeft}). Otherwise, if $D_i(n,b)$ was propagated from the right child, the number of dequeues in the subblocks from the left child is considered to be ahead of the computed index (Line \ref{considerRight}) (see Figure \ref{fig::blockSumDeqRight}). Finally, \nf{IndexDequeue} is called on \nf{$n$.parent} recursively, and it returns the correct response by the induction hypothesis. 
-\end{proof}
-\begin{figure}[hbt]  
-  \center\includegraphics[width=6in]{pics/blockSumDeqLeft.png}
-  
-  \caption[Number of \nf{Dequeue} operations before a \nf{Dequeue} in a left child.]{The number of \nf{Dequeue} operations before $D_i(n,b)$ shown in the case where $n$ is a left child. The index of the superblock is shown with $sb$. }\label{fig::blockSumDeqLeft}
-\end{figure}
-\begin{figure}[hbt]  
-  \center\includegraphics[width=6in]{pics/blockSumDeqRight.png}
-  
-  \caption[Number of \nf{Dequeue} operations before a \nf{Dequeue} in a right child.]{The number of \nf{Dequeue} operations before $D_i(n,b)$ shown in the case where $n$ is a right child. The index of the superblock is shown with $sb$. }\label{fig::blockSumDeqRight}
-\end{figure}
+We prove the claim by induction on the depth of node $v$. The base case where $v$ is the root is trivial (see Line \ref{indexBaseCase}).
+Assuming the claim holds for $v$'s parent, we prove it for $v$.
+Let $B=v.\fld{blocks}[b]$ and $B'$ be the superblock of $B$.
+\op{IndexDequeue}($v, b, i$) first computes the index $sup$ of $B'$ in $v.\fld{parent}$.
+By \Cref{superRelation}, this index is either $B.super$ or $B.super+1$.
+The correct index is determined by testing on line \ref{supertest} whether $B$ is not a subblock of $v.\fld{parent.blocks}[B.\fld{super}]$.
+
+Next, the position of the required dequeue in $D(B')$ is computed in 
+lines \ref{computeISuperStart}--\ref{computeISuperEnd}. 
+We first add the number of dequeues in the subblocks of $B'$ in $v$ that preced $B$ on line \ref{computeISuperStart}.
+If $v$ is the right child of its parent, then all of the subblocks of $B'$ from $v$'s left sibling
+also precede the required dequeue, so we add the number of dequeues in those subblocks in line \ref{considerLeftBeforeRight}.
+
+Finally, \op{IndexDequeue} is called recursively on $v$'s parent.
+Since $B$ has been propagated to the root, so has its superblock $B'$.
+Thus, all preconditions of the recursive call are met.
+By the induction hypothesis, the recursive call returns the location of the required dequeue in the root.\end{proof}
+
+----------
 
 \subsection{Linearizability}
 We now prove the two properties needed for linearizability.
@@ -451,8 +441,6 @@ The queue implementation is linearizable.
 \begin{proof}
 The theorem follows from Lemmas \ref{linearSat} and \ref{linearCorrect}.
 \end{proof}
-
-\paragraph{Remark} In fact our algorithm is strongly linearizable as defined in \cite{DBLP:conf/stoc/GolabHW11}. By Definition \ref{ordering} the linearization ordering of operations will not change as blocks containing new operations are appended to the root.
 
 
 \here{following material from algorithm description in thesis might be useful in sketch of correctness proof}

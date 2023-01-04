@@ -82,7 +82,7 @@ The \fld{super} field is not shown.}
 
 \subsection{Linearization Ordering}
 
-An operation can terminate only after a block containing it has been appended to the root's blocks array.
+We shall show that an operation terminates only after a block containing it has been appended to the root's blocks array.
 So, if an operation $op_1$ terminates before another operation $op_2$ begins, 
 $op_1$ will be in an earlier block than $op_2$ in root's blocks array.
 Thus, our linearization orders operations according to the block they belong to in the root's blocks array.
@@ -222,10 +222,10 @@ The only remaining field is $B.\fld{super}$.  When the block
 $B$ is created for a \node\ $v$, we do not yet know where its
 superblock will eventually be installed in $B$'s parent.
 So, we leave $B.\fld{super}$ blank.  After $B$ is installed 
-in $v.\fld{blocks}[\var{i}]$, processes cooperate to fill in $B.\fld{super}$ 
-when they attempt to advance $v.\fld{head}$ from $i$ to $i+1$,
+in $v.\fld{blocks}[\var{h}]$, processes cooperate to fill in $B.\fld{super}$ 
+when they attempt to advance $v.\fld{head}$ from $h$ to $h+1$,
 using a value they read from the \fld{head} field of $v$'s parent.
-As mentioned above, this might not be exactly the right index for $B$'s superblock, but we
+As mentioned above, this might not be the exact index of $B$'s superblock, but we
 shall prove that it is close.
 
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTSINGLE}{\com\ #1}}
@@ -416,19 +416,19 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \spac
 
 \Function{$\langle\typ{int}, \typ{int}\rangle$}{IndexDequeue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}}
-    \State \linecomment{return $\langle\var{x, y}\rangle$ such that \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$}
-    \State \linecomment{is \var{y}th dequeue of $D(\var{root}.\fld{blocks}[\var{x}])$}
+    \State \linecomment{return $\langle\var{b}', \var{i}'\rangle$ such that \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$}
+    \State \linecomment{is $(\var{i}')$th dequeue of $D(\var{root}.\fld{blocks}[\var{b}'])$}
     \State \linecomment{Precondition: $\var{v}.\fld{blocks}[\var{b}]$ is not \nl, has been }
     \State \linecomment{propagated to root and contains at least \var{i} dequeues}
     \If{$\var{v} = \var{root}$} \Return $\langle\var{b, i}\rangle$ \label{indexBaseCase}
     \Else
 	    \State \fld{dir} \assign\ (\var{v}.\fld{parent.left} = \var{v} ? \fld{left} : \fld{right}) 
     	\State \var{sup} \assign\ \var{v}.\fld{blocks}[\var{b}].\fld{super}
-	    \If{$\var{b} > \var{v}.\fld{parent.blocks}[\var{sup}].\fld{end\sub{dir}}$} \var{sup} \assign\ $\var{sup}+1$
+	    \If{$\var{b} > \var{v}.\fld{parent.blocks}[\var{sup}].\fld{end\sub{dir}}$} \var{sup} \assign\ $\var{sup}+1$\label{supertest}
 	    \EndIf
 	    \State \linecomment{compute index \var{i} of dequeue in superblock}
 	    \State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{b}-1].\fld{sum\sub{deq}} -$ \\
-	    		$\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}-1].\edir].\fld{sum\sub{deq}}$}
+	    		$\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}-1].\edir].\fld{sum\sub{deq}}$}\label{computeISuperStart}
         \If{$\fld{dir} = \fld{right}$} 
         	\State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}].\eleft].\fld{sum\sub{deq}} - \mbox{ }$\\
 					$\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}-1].\eleft].\fld{sum\sub{deq}}$}\label{considerLeftBeforeRight}
@@ -644,12 +644,12 @@ the \var{e}th enqueue.
 The index $b'$ is at most $b$ (since the enqueue is linearized before the dequeue).  To find the left end of the range for the binary search for $b'$, we can first do a doubling search \cite{BY76}, comparing \var{e} to the \fld{sum\sub{enq}} fields at indices $b-1, b-2, b-4, b-8, \ldots$.
 Then, \op{GetEnqueue} is used to trace down through the tree to find the required enqueue in a leaf.
 
-\opemph{GetEnqueue}(\var{v,b,i}) returns the argument of the
+\opemph{GetEnqueue}(\var{v, b, i}) returns the argument of the
 $i$th enqueue in the $b$th block of \typ{Node} $v$. 
 The range of subblocks of a block is determined using the \fld{end\sub{left}} and
 \fld{end\sub{right}} fields of the block and its previous block. Then,
 the exact subblock is found using binary search on the \fld{sum\sub{enq}}
-field (line \ref{getChild}). 
+field (line~\ref{getChild}). 
 \here{explain a little more?}
 
 

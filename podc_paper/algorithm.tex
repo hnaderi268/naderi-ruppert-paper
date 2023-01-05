@@ -302,6 +302,8 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTDOUBLE}{\com\ #1}}
 
+\here{For consistency of notation, perhaps change $n$ to $B$ in code for Enqueue, Dequeue.  Maybe also new to B for CreateBlock, Refresh.}
+
 \begin{figure}
 \begin{minipage}[t]{0.465\textwidth}
 \begin{algorithmic}[1]
@@ -351,7 +353,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \Function{boolean}{Refresh}{\typ{Node} \var{v}}
     \State \linecomment{try to append a new block to \var{v}.\fld{blocks}}
     \State \var{h} \assign\ \var{v}.\head \label{readHead}
-    \ForEach{\fld{dir} {\keywordfont{in}} \fld{\{left, right\}}} \label{startHelpChild1}
+    \ForEach{\fld{dir} {\keywordfont{in}} $\{\fld{left, right}\}$} \label{startHelpChild1}
         \State \var{childHead} \assign\ \var{v}.\fld{dir}.\head \label{readChildHead}
         \If{\var{v}.\fld{dir.blocks}[\var{childHead}] $\neq$ \nl} \label{ifHeadnotNull}
             \State \Call{Advance}{\var{v}.\fld{dir}, \var{childHead}} \label{helpAdvance}
@@ -361,7 +363,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \If{\var{new = \nl}} \Return{\tr} \label{addOP} 
     \EndIf
     \State \var{result} \assign\ \Call{CAS}{\var{v}.\fld{blocks}[\var{h}], \nl, \var{new}} \label{cas}
-    \State \var{\Call{Advance}{\var{v, h}}}\label{advance}
+    \State \Call{Advance}{\var{v, h}}\label{advance}
     \State \Return{ \var{result}}
 \EndFunction{Refresh}
 

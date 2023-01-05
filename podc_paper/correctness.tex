@@ -8,6 +8,9 @@ First, we define and prove some facts about blocks and the node's \nf{head} fiel
 
 \subsection{Basic Properties}
 
+\Eric{I'm using immutable to mean that they are written only when the object is created.  The \fld{super} field does change from null to some value after the block is created, so it 
+is written once, rather than 0 times.  In other words, we could have initialized
+ all the other fields when the Block constructor is called.}
 A \typ{Block} object's fields, except for \fld{super}, are immutable:  they are written only 
 when the block is created at line \ref{enqNew} or \ref{deqNew} (for a leaf's block) or lines \ref{initNewBlock}--\ref{computeLength} (for an internal node's block).  
 Moreover, only a \op{CAS} at line \ref{setSuper1} can modify the \fld{super} field 

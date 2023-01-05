@@ -14,7 +14,7 @@ A \nf{Refresh} does at most 7 \nf{CAS} steps: one in line \ref{cas} and two from
 
 
 
-\begin{lemma}\label{dsearchTime}
+\begin{lemma}\label{dSearchTime}
 The search that \op{FindResponse}$(b,i)$ does at line \ref{FRb} to find the index $b_e$ of the block in the root containing the $e$th enqueue takes $O(\log (\var{root}.\fld{blocks}[b_e].\size + \var{root}.\fld{blocks}[b-1].\size))$ steps.
 \end{lemma}
 \begin{proof}
@@ -59,35 +59,37 @@ By \Cref{blockNotEmpty}, each direct subblock of $B$ contains at least one opera
 $B$ has at most $c$ direct subblocks.
 \end{proof}
 
---------
+We now bound operations' running times in terms of the number of processes $p$, the maximum contention $c\leq p$ and the size of the queue. 
 
-\begin{lemma}[Worst Case Time Analysis] \label{enqDeqTime}
-The worst case number of steps for an \nf{Enqueue} is $O(\log^2 p)$ and for a \nf{Dequeue}, is $O(\log^2 p + \log q_e+ \log q_d)$, where $q_d$ is the size of the queue when the \nf{Dequeue} is linearized and $q_e$ is the size of the queue at the time the response of the \nf{Dequeue} is linearized.
+\begin{lemma}\label{enqDeqTime}
+Each \op{Enqueue} and null Dequeue takes $O(\log p)$ steps 
+\Eric{In the thesis, Lemma 52 said enqueues take $O(\log^2 p)$ steps.  Was this a typo?}
+and each non-null \op{Dequeue} takes
+$O(\log p\log c + \log q_e+ \log q_d)$ steps,
+where $q_d$ is the size of the queue when the \nf{Dequeue} is linearized and 
+$q_e$ is the size of the queue when the \op{Enqueue} of the value returned is linearized.
 \end{lemma}
 \begin{proof}
-\nf{Enqueue} consists of creating a block and appending it to the tree. The first part takes constant time. To propagate the operation to the root the algorithm tries at most two \nf{Refresh}es in each node of the path from the leaf to the root (Lines \ref{firstRefresh}, \ref{secondRefresh}). We can see from the code  that each \nf{Refresh} takes a constant number of steps and does $O(1)$ \nf{CAS}es. Since the height of the tree is $\Theta(\log p)$, \nf{Enqueue} takes $O(\log p)$ steps.
+An \op{Enqueue} or null \op{Dequeue} creates a block, appends it to the process's 
+leaf and propagates it to the root.  The \op{Propagate} routine does $O(1)$ steps 
+at each node along the path from the process's leaf to the root.
+A null \op{Dequeue} additionally calls \op{IndexDequeue}, which also does $O(1)$ steps
+at each node along this path. 
+So, the total number of steps for either type of operation is $O(\log p)$.
 
-A \nf{Dequeue} creates a block whose \nf{element} is \nf{null}, appends it to the tree, computes its rank among non-null dequeues, finds the corresponding enqueue and returns the response. The first two parts are similar to an \nf{Enqueue} operation and take $O(\log p)$ steps. To compute the rank of a \nf{Dequeue} in $D(n)$, the \nf{Dequeue} calls \nf{IndexDequeue()}. \nf{IndexDequeue} does $O(1)$ steps in each level which takes $O(\log p)$ steps. If the response to the \nf{Dequeue} is \nf{null}, \nf{FindResponse} returns \nf{null} in $O(1)$ steps. Otherwise, if the response to a dequeue in \nf{root.blocks[end]} is in \nf{root.blocks[b]} the \nf{DoublingSearch} takes $\Theta(\log$(\nf{root.blocks[b].size+root.blocks} \nf{[end].size}) by Lemma~\ref{dsearchTime}, which is $O(\log q_e+\log q_d)$. Each search in \nf{GetEnqueue()} takes $O(\log p)$ steps since there are at most $p$ subblocks in a block (Lemma \ref{subBlocksBound}), so \nf{GetEnqueue()} takes $O(\log^2 p)$ steps.
+A non-null \op{Dequeue} must, in addition, do a search at line \ref{FRb} and call \op{GetEnqueue}
+at line \ref{findAnswer}.
+\Eric{Modified:}
+By \Cref{dSearchTime}, the search takes $O(\log(q_e+q_d+p))$ steps,
+since the size of the queue can change by at most $p$ within one block of operations
+(by \Cref{blockSize}).
+\op{GetEnqueue} does a binary search within each node along a path from the root to a leaf.
+The search in each node $v$ is within the subblocks of one block in $v$'s parent.
+By \Cref{blockSize}, each search takes $O(\log c)$ time, for a total of $O(\log p\log c)$ steps.
 \end{proof}
 
+\Eric{I left out the amortized bound, since the worst-case bound seems stronger}
 
-\begin{lemma}[Amortized Worst-case Analysis]
-The amortized number of steps for an \nf{Enqueue} or \nf{Dequeue} is $O(\log^2 p + \log q)$,  where $q$ is the size of the queue when the operation is linearized.
-\end{lemma}
-\begin{proof}
-If we split the \nf{DoublingSearch} time cost between the corresponding \nf{Enqueue} and \nf{Dequeue}, each operation takes $O(\log^2 p +q)$ steps.
-\end{proof}
-
-\begin{observation}
-    If the maximum number of concurrent processes at any time in an execution is $c$, then the amortized worst-case step complexity is $O(\log p\log c + \log q)$ per operations. Furthermore, in a sequential, execution where $c=1$, the step complexity of our algorithm is $\Theta(\log p + \log q)$ per operation.
-\end{observation}
-\begin{proof}
-    The analysis is similar to the two previous Lemmas, but by Lemma \ref{subBlocksBound} each \nf{BinarySearch} in each call of \nf{GetEnqueue} takes $O(\log c)$ steps.
-\end{proof}
-
-\begin{theorem}
+\begin{corollary}
 The queue implementation is wait-free.
-\end{theorem}
-\begin{proof}
-To prove the claim, it is sufficient to show that every \nf{Enqueue} and \nf{Dequeue} operation terminates after a finite number of its own steps. This is directly concluded from Lemma \ref{enqDeqTime}.
-\end{proof}
+\end{corollary}

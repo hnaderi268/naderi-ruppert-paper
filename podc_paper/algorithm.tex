@@ -301,11 +301,6 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 %\here{Check if the num abbreviation is really needed in the code--how many times do we use it?}
 
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTDOUBLE}{\com\ #1}}
-\newcommand{\hangbox}[1]{\parbox[t]{\dimexpr\linewidth-\algorithmicindent\relax}{%
-    \setlength{\hangindent}{\algorithmicindent}%
-    #1}}
-\newcommand{\spac}{\medskip}
-\newcommand{\assign}{\mbox{:=}}
 
 \begin{figure}
 \begin{minipage}[t]{0.465\textwidth}

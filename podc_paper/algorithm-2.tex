@@ -1,0 +1,445 @@
+% !TEX root =  podc-submission.tex
+
+\section{Garbage Collection}
+
+\renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTSINGLE}{\com\ #1}}
+\begin{figure}
+%\here{Does \var{leaf} have to be shared for helping when doing GC?}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{1}
+\Statex \linecomment{Shared variable}
+\begin{itemize}
+\item \typ{Node} \var{root} \Comment{root of a binary tree of \tt{Node}s with one leaf for each process} % TODO: indent these lines in order to be more readable. I tries some times and i could not figure out doing that in algorithm.
+\item \gc{\typ{*Node[]} \var{leafOfProcess[1..p]} \Comment{Pointer to the leaf assigned to each process.}}
+\item \gc{\typ{int[]} \var{lastDequeuedByProcess[1..p]}}
+\end{itemize}
+
+\vspace{0.8em} %TODO: clean code
+
+\Statex \linecomment{Thread-local variable}
+\begin{itemize}
+\item \typ{Node} \var{leaf} \Comment{process's leaf in the tree}
+\end{itemize}
+
+\vspace{0.4em} %TODO: clean code
+
+\Statex $\blacktriangleright$ \typ{Node}
+\begin{itemize}
+\item \typ{Node} \fld{left}, \fld{right}, \fld{parent} \Comment{children and parent pointers initialized  when creating the tree}
+\item \typ{Block}[0..$\infty$] \fld{blocks} \Comment{initially \var{blocks}[0] contains an empty block with all integer fields equal to 0}
+\gc{\item \typ{PBRT<Block, int>} \fld{blocks} \Comment{PBRT of blocks each node contains a block and an index key}}
+\item \typ{int} \head \Comment{position to attempt appending next \block\ to \fld{blocks}, initially 1}
+\end{itemize}
+
+\vspace{0.8em} %TODO: clean code
+
+\Statex $\blacktriangleright$ \typ{Block} 
+
+\begin{itemize}
+  	\item \typ{int} \fld{sum\sub{enq}, sum\sub{deq}}
+  		\Comment{number of enqueue, dequeue operations in \fld{blocks} array up to this block (inclusive)}
+  	\item \typ{int} \fld{super}
+  		\Comment{approximate index of the block's superblock in \fld{parent.blocks}}
+	\item[\com] Blocks in internal \nodes\ have the following additional fields
+	\item \typ{int} \eleft, \eright
+  		\Comment{index of last direct subblock in the left and right child}
+  	\item[\com] Blocks in leaf \nodes\ have the following additional field
+  	\item \typ{Object} \fld{element}
+  		\Comment{if the block's operation is \opa{Enqueue}{x} then \fld{element}=\var{x}, otherwise \fld{element}=\nl}
+  	\gc{\item \typ{Object} \fld{response}
+  		\Comment{if the block's operation is \opa{Dequeue}{} then \fld{response} is the response of the\\ operation if it has been helped.}}
+	\item[\com] Blocks in the root \node\ have the following additional field
+	\item \typ{int} \size%
+  		\Comment{size of the queue after performing all operations up to the end of this block}
+\end{itemize}
+
+%\Statex {\com\  Blocks in internal nodes have the following additional fields}
+%\Statex $\blacktriangleright$ \tt{\sl{InternalBlock} extends \sl{Block}} \sf{\com\ the following additional fields are used only for blocks in internal nodes}
+%\begin{itemize}
+%	\item \tt{int} \eleft, \eright
+%  		\Comment{index of last direct subblock in the left and right child}
+%\end{itemize}
+
+%\Statex {\com\ Blocks in leaf nodes have the following additional field}
+%\Statex $\blacktriangleright$ \tt{\sl{LeafBlock} extends \sl{Block}} \sf{\com\ the following additional field is used only for blocks in leaves}
+%\begin{itemize}
+%  \item \tt{\sl{Object} element}
+%  \Comment{if the block's operation is \tt{enqueue(x)} then \tt{element=x}, otherwise \tt{element=null}.}
+%\end{itemize}
+
+%\Statex {\com\ Blocks in the root node have the following additional field}
+%\Statex $\blacktriangleright$ \tt{\sl{RootBlock} extends \sl{InternalBlock}} \sf{\com\ the following additional field is used only for blocks in the root}
+%\begin{itemize}
+%  \item \tt{\sl{int} \size}%
+%  \Comment{size of the queue after performing all operations up to the end of this block}
+%\end{itemize}
+
+\end{algorithmic}
+\caption{Objects used in tournament tree data structure \label{object-fields}}
+\end{figure}
+
+\subsection{Details of the Implementation}
+
+We now discuss the queue implementation in more detail.  Pseudocode is provided in Figure \ref{pseudocode1} and \ref{pseudocode2}.
+%We use $v.\var{blocks[i].num\sub{enq}}$ as shorthand for 
+%$v.\var{blocks[i].sum\sub{enq} - blocks[i-1].sum\sub{enq}}$, that is, 
+%the number of enqueues in the block.  (For $\var{i}=0$, $v.\var{blocks[0].num\sub{enq}} = 0$.)
+%We use \var{num\sub{deq}} similarly.
+%\here{Check if the num abbreviation is really needed in the code--how many times do we use it?}
+
+
+\renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTDOUBLE}{\com\ #1}}
+\newcommand{\hangbox}[1]{\parbox[t]{\dimexpr\linewidth-\algorithmicindent\relax}{%
+    \setlength{\hangindent}{\algorithmicindent}%
+    #1}}
+\newcommand{\spac}{\medskip}
+\newcommand{\assign}{\mbox{:=}}
+
+\begin{figure}
+\begin{minipage}[t]{0.465\textwidth}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{0}
+
+\Function{void}{Enqueue}{\typ{Object} \var{e}} 
+    \State \hangbox{let \var{n} be a new \typ{Block} with \fld{element} \assign\ \var{e},\\
+		\fld{sum\sub{enq}} \assign\ \var{leaf}.\fld{blocks}[\var{leaf}.\head-1].\fld{sum\sub{enq}}+1,\\
+		\fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[\var{leaf}.\head-1].\fld{sum\sub{deq}}}
+    \State \Call{Append}{\var{n}}
+\EndFunction{Enqueue}
+
+\spac
+
+\Function{Object}{Dequeue()}{} 
+    \State \hangbox{let \var{n} be a new \typ{Block} with \fld{element} \assign\ \nl,\\
+	    \fld{sum\sub{enq}} \assign\ \var{leaf}.\fld{blocks}[\var{leaf}.\head-1].\fld{sum\sub{enq}},\\
+	    \fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[\var{leaf}.\head-1].\fld{sum\sub{deq}}+1}
+    \State \Call{Append}{\var{n}}
+    \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, \var{leaf}.\head, 1}
+    \State \Return{ \Call{FindResponse}{\var{b, i}}}
+    \label{deqRest}
+\EndFunction{Dequeue}
+
+\spac
+
+\Function{void}{Append}{\typ{Block} \var{B}} 
+    \State \linecomment{append block to leaf and propagate to root}
+    \State \var{leaf}.\fld{blocks}[\var{leaf}.\head] \assign\ \var{B}\label{appendLeaf}
+    \gc{\State \var{leaf}.\fld{blocks}.\Call{TryAppend}{\var{B}, \var{leaf}.\head}\label{appendLeafGC}}
+    \State \var{leaf}.\head\ \assign\ \var{leaf}.\head+1 \label{appendEnd} 
+    \State \Call{Propagate}{\var{leaf}.\fld{parent}} 
+\EndFunction{Append}
+
+\spac
+
+\Function{void}{Propagate}{\typ{Node} \var{v}}
+    \State \linecomment{propagate blocks from \var{v}'s children to root}
+    \If{\bf{not} \Call{Refresh}{\var{v}}} \label{firstRefresh}  \hfill \com\ double refresh
+        \State \Call{Refresh}{\var{v}} \label{secondRefresh}
+    \EndIf
+    \If{\var{v} \bf{is not} \var{root}} \hfill \com\ recurse up tree
+        \State \Call{Propagate}{\var{v}.\fld{parent}}
+    \EndIf
+\EndFunction{Propagate}
+
+\spac
+
+\Function{boolean}{Refresh}{\typ{Node} \var{v}}
+    \State \linecomment{try to append a new block to \var{v}.\fld{blocks}}
+    \State \var{h} \assign\ \var{v}.\head \label{readHead}
+    
+\gc{\If{ \var{v} is root and \var{h}\%p\textsuperscript{2}==0}
+\State \Call{Help()}{}
+\State \Call{FreeMemory}{root, MAX(lastDequeuedByProcess)-1}
+\EndIf}
+
+    \ForEach{\fld{dir} {\keywordfont{in}} \fld{\{left, right\}}} \label{startHelpChild1}
+        \State \var{childHead} \assign\ \var{v}.\fld{dir}.\head \label{readChildHead}
+        \If{\var{v}.\fld{dir.blocks}[\var{childHead}] $\neq$ \nl} \label{ifHeadnotNull}
+            \State \Call{Advance}{\var{v}.\fld{dir}, \var{childHead}} \label{helpAdvance}
+        \EndIf
+    \EndFor \label{endHelpChild1}
+    \State \var{new} \assign\ \Call{CreateBlock}{\var{v, h}} \label{invokeCreateBlock}
+    \If{\var{new = \nl}} \Return{\tr} \label{addOP} 
+    \EndIf
+    \State \var{result} \assign\ \Call{CAS}{\var{v}.\fld{blocks}[\var{h}], \nl, \var{new}} \label{cas}
+    \gc{\State \var{result} \assign\ \var{v}.\fld{blocks}.\Call{TryAppend}{\var{new}, [\var{h}]} \label{GCcas}}
+    \State \var{\Call{Advance}{\var{v, h}}}\label{advance}
+    \State \Return{ \var{result}}
+\EndFunction{Refresh}
+
+\spac
+
+\Function{void}{Advance}{\typ{Node} \var{v}, \typ{int} \var{h}} 
+    \State \linecomment{set \var{v}.\fld{blocks}[\var{h}].\fld{super} and }
+    \State \linecomment{increment \var{v}.\fld{head} from \var{h} to \var{h}+1}
+    \State \var{h\sub{p}} \assign\ \var{v}.\fld{parent}.\head \label{readParentHead}
+    \State \Call{CAS}{\var{v}.\fld{blocks}[\var{h}].\fld{super}, \nl, \var{h\sub{p}}} \label{setSuper1}
+    \State \Call{CAS}{\var{v}.\head, \var{h}, \var{h}+1} \label{incrementHead}
+\EndFunction{Advance}
+
+\end{algorithmic}
+\end{minipage}
+\begin{minipage}[t]{0.529\textwidth}
+
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{48}
+
+\Function{Block}{CreateBlock}{\typ{Node} \var{v}, \typ{int} \var{i}} 
+    \State\linecomment{create new block for a \op{Refresh} to install in \var{v}.\fld{blocks}[\var{i}]}
+    \State let \var{new} be a new \typ{Block} \label{initNewBlock}
+    \State \var{new}.\eleft \assign\ $\var{v}.\fld{left}.\head - 1$\label{createEndLeft}
+    \State \var{new}.\eright \assign\ $\var{v}.\fld{right}.\head - 1$
+	\State \hangbox{\var{new}.\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + \\
+			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{enq}}}
+	\State \hangbox{\var{new}.\fld{sum\sub{deq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{deq}} + \\
+			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{deq}}}
+    \State \var{num\sub{enq}} \assign\ $\var{new}.\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{enq}}$\label{computeNumEnq}
+    \State \var{num\sub{deq}} \assign\ $\var{new}.\fld{sum\sub{deq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{deq}}$
+    \If{$\var{v} = \var{root}$}
+        \State \hangbox{\var{new}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + \var{num\sub{enq}} - \var{num\sub{deq}}$)}\label{computeLength}
+    \EndIf
+    \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$}
+        \State \Return \nl \hfill \com\ no blocks need to be propagated to \var{v}
+    \Else
+        \State \Return \var{new}
+    \EndIf
+\EndFunction{CreateBlock}
+
+\spac
+
+\Function{$\langle\typ{int}, \typ{int}\rangle$}{IndexDequeue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}}
+    \State \linecomment{return $\langle\var{x, y}\rangle$ such that \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$}
+    \State \linecomment{is \var{y}th dequeue of $D(\var{root}.\fld{blocks}[\var{x}])$}
+    \State \linecomment{Precondition: \var{v}.\fld{blocks}[\var{b}] has been propagated to root}
+    \State \linecomment{and $D(\var{v}.\fld{blocks}[\var{b}])$ has at least \var{i} dequeues}
+    \If{$\var{v} = \var{root}$}
+        \State\Return $\langle\var{b, i}\rangle$ \label{indexBaseCase}
+    \Else
+	    \State \fld{dir} \assign\ (\var{v}.\fld{parent.left} = \var{v} ? \fld{left} : \fld{right}) 
+    	\State \var{sup} \assign\ \var{v}.\fld{blocks}[\var{b}].\fld{super}
+	    \If{$\var{b} > \var{v}.\fld{parent.blocks}[\var{sup}].\fld{end\sub{dir}}$}
+	        \State{\var{sup} \assign\ $\var{sup}+1$}
+	    \EndIf
+	    \State \linecomment{compute index \var{i} of dequeue in superblock}
+	    \State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{b}-1].\fld{sum\sub{deq}} -$ \\
+	    		$\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}-1].\edir].\fld{sum\sub{deq}}$}
+        \If{$\fld{dir} = \fld{right}$} 
+        	\State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}].\eleft].\fld{sum\sub{deq}} - \mbox{ }$\\
+					$\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}-1].\eleft].\fld{sum\sub{deq}}$}\label{considerLeftBeforeRight}
+        \EndIf \label{computeISuperEnd}
+        \State \Return\Call{IndexDequeue}{\var{v}.\fld{parent}, \var{sup}, \var{i}}
+    \EndIf
+\EndFunction{IndexDequeue}
+
+\spac
+
+\Function{element}{FindResponse}{\typ{int} \var{b}, \typ{int} \var{i}}
+    \State \linecomment{find response to \var{i}th dequeue in \var{root}.\fld{blocks}[\var{b}]}
+    \State \hangbox{\var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} - \mbox{ }$\\
+    		$\var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$}
+    \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmpty}
+    \gc{\State \var{lastDequeuedByProcess[this process id]} \assign\ \var{b}}
+        \State \Return \nl \hfill \com\ queue is empty when dequeue occurs\label{returnNull}
+            \EndIf
+\State \linecomment{response is the \var{e}th enqueue in the root}
+        \State \var{e} \assign\ \var{i} + \var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}} - 
+			\var{root}.\fld{blocks}[\var{b}-1].\size\label{computeE}
+		\State \linecomment{compute enqueue's block using binary search}
+		\State find min $\var{b}'\leq \var{b}$ with $\var{root}.\fld{blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{e}$
+		\State \linecomment{find rank of enqueue within its block}
+		\State $\var{i}' \assign\ \var{e} - \var{root}.\fld{blocks}[\var{b}'-1].\fld{sum\sub{enq}}$
+        \State \var{e} \assign\ \Call{GetEnqueue}{\var{root}, $\var{b}'$, $\var{i}'$}\label{findAnswer}
+        \gc{\State \var{lastDequeuedByProcess[this process id]} \assign\ $\var{b}'$}
+        \State \Return{\var{e}}
+
+\EndFunction{FindResponse}
+
+
+\end{algorithmic}
+\end{minipage}
+\caption{Queue implementation.\label{pseudocode1}}
+\end{figure}
+
+
+
+%\begin{algorithm}
+%\caption{\tt{\sl{Node}}}
+%\begin{algorithmic}[1]
+%\setcounter{ALG@line}{25}
+%
+%\Statex $\leadsto$ \textsf{Precondition: \tt{blocks[start..end]} contains a block with \tt{sum\sub{enq}} greater than or equal to \tt{x}}
+%\Statex \com\ \textmd{Does a binary search for~the value \tt{x} of \tt{sum\sub{enq}} field and returns the index of the leftmost block in\\
+%\com\ \tt{blocks[start..end]} whose \tt{sum\sub{enq}} is $\geq$ \tt{x}}.
+%\Function{int}{BinarySearch}{\sl{int} x, \sl{int} start, \sl{int} end}
+% \State \Return \tt{min\{j: blocks[j].sum\sub{enq}$\geq$x\}}
+%\While{\nf{start<end}}
+%\State \tt{\sl{int}} \tt{mid \assign\ floor((start+end)/2)}
+%\If{\nf{blocks[mid].sum\sub{enq}<x}}
+%\State \nf{start \assign\ mid+1}
+%\Else
+%\State \nf{end \assign\ mid}
+%\EndIf
+%\EndWhile
+%\State\Return \nf{start}
+%\EndFunction{BinarySearch}
+%
+%\end{algorithmic}
+%\end{algorithm}
+
+%\begin{algorithm}
+%\caption{\tt{\sl{Root}}}
+%\begin{algorithmic}[1]
+%\setcounter{ALG@line}{36}
+%\Statex
+%\Statex $\leadsto$ \textsf{Precondition: \tt{root.blocks[end].sum\sub{enq} $\geq$ \tt{e}}}
+%\Statex \com\ \textmd{Returns \tt{<b,i>} such that $E_\nf{e}(\nf{root})$ is $E_\nf{i}(\nf{root},\nf{b})$, i.e., the \nf{e}th \nf{Enqueue} in the \nf{root} is the \nf{i}th \nf{Enqueue} within \\
+%\com\ the \nf{b}th block in the \nf{root}.}
+%
+%\Function{<int, int>}{DoublingSearch}{\sl{int} e, \sl{int} end}
+%\State \tt{start \assign\ end-1} \label{dsearchStart}
+%\While{\tt{root.blocks[start].sum\sub{enq}}$\geq$\tt{e}}
+%\State \tt{start \assign\ max(start-(end-start), 0)} \label{doubling}
+%\EndWhile \label{dsearchEnd}
+%\State \tt{b \assign\ root.BinarySearch(e, start, end)} \label{dsearchBinarySearch}
+%\State \tt{i \assign\ e- root.blocks[b-1].sum\sub{enq}} \label{DSearchComputei}
+%\State\Return \tt{<b,i>}
+%\EndFunction{DoublingSearch}
+%\end{algorithmic}
+%\end{algorithm}
+
+
+\begin{figure}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{101}
+
+\Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
+    \State \linecomment{Precondition: $\var{i}\geq 1$ and $E(\var{v}.\fld{blocks}[\var{b}])$ contains at least \var{i} enqueues}
+
+    \If{\var{v} is a leaf node}
+        \State\Return \var{v}.\fld{blocks}[\var{b}].\fld{element} \label{getBaseCase}
+    \Else 
+        \State \var{sum\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[\var{b}].\eleft].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}$] from left child}
+        \State \var{prev\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eleft].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from left child}
+        \State \var{prev\sub{right}} \assign\ \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eright].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from right child}
+        \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \label{leftOrRight} \cmt{required enqueue is in \var{v}.\fld{left}}
+            \State \fld{dir} \assign\ \fld{left}
+        \Else
+            \State \fld{dir} \assign\ \fld{right}
+            \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$
+        \EndIf
+        \State \linecomment{Use binary search to find enqueue's block in \var{v}.\fld{dir.blocks} and its rank within block}
+        \State find minimum $\var{b}'$ in range [\var{v}.\fld{blocks}[\var{b}-1].\edir+1..\var{v}.\fld{blocks}[\var{b}].\edir] s.t. $\var{v}.\fld{dir.blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$\label{getChild}
+        \State $\var{i}'$ \assign\ $\var{i} - (\var{v}.\fld{dir.blocks}[\var{b}'-1].\fld{sum\sub{enq}} - \var{prev\sub{dir}})$
+        \State \Return\Call{GetEnqueue}{\var{v}.\fld{dir}, $\var{b}'$, $\var{i}'$} 
+    \EndIf
+\EndFunction{GetEnqueue}
+
+\gc{
+\Function{void}{Help}{}
+\State \bf{for} \var{i} \assign\ 1 to $p$
+\State h=leafOfProcess[\var{i}]
+\If{leafOfProcess[\var{i}].blocks[h].num\sub{deq}==1 and leafOfProcess[\var{i}].IndexDequeue(h,1)!=null}
+\State <b, i> \assign\ \Call{IndexDequeue}{leafOfProcess[\var{i}], h, 1}
+\State output \assign\ \Call{FindResponse}{b, i} 
+\State leafOfProcess[\var{i}].blocks[h].response \assign\ output
+\EndIf
+\State \bf{end for}
+\EndFunction{Help}
+
+\Function{}{FreeMemory}{\typ{Node} \var{n}, \typ{int} \var{i}}
+\State Split \var{n}.blocks.split over \var{i} and assign the grater tree to \var{n}.blocks with \tt{CAS}.
+\If{\var{n} is not a leaf}
+\State \Call{FreeMemory}{\var{n}.left, n.blocks[i].end\sub{left}}
+\State \Call{FreeMemory}{\var{n}.left, n.blocks[i].end\sub{right}}
+\EndIf
+\EndFunction{FreeMemory}
+
+}
+\end{algorithmic}
+\caption{\label{pseudocode2}Queue implementation, continued. \here{Would this routine be simpler to write if i parameter was the rank within whole node rather than within the block?}}
+\end{figure}
+
+
+In our algorithm an \nf{Enqueue} or a \nf{Dequeue} remains in the \nf{blocks} array in the tree nodes even after they terminate. This makes the space used by the algorithm factor of the number of operations of invoked on the queue. Here in this section, we want to add a mechanism to free the memory allocated by the operations that are no longer needed and make the overall space used polynomial of $p+q$.
+
+It is a common way to do garbage collection in batches. If we garbage collect the unnecessary blocks in the nodes every $p^2$ block appended to the root, the garbage collection cost is amortized over $p^2$ blocks which is $O(p^3)$ and $\Omega(p^2)$ operations.
+
+In our design a process attempts to collect the garbage, when it is going to to append a block in the $kp^2$ position in \nf{root.blocks} (see Line \ref{}). Every $p^2$  block appended to the root, one \nf{GarbageCollect} terminates because \nf{root.head} cannot advance until a \nf{GarbageCollect} garbage collect is done (see Lines ).
+
+%\begin{lemma}
+%Size of \nf{root.blocks} after \nf{GarbageCollect} is $O(p^2+q)$.
+%\end{lemma}
+%
+%\begin{lemma}
+%Total number of the blocks in the tree is $O(p^3+pq)$.
+%\end{lemma}
+
+\nf{Enqueue} operation $e$ can be removed from the tree after termination of \nf{Dequeue} $d$ where $Resp(d)=e$. It is safe to remove \nf{Dequeue} $d$ from the tree after the $d$ terminates. We can remove a block after the conditions told are satisfied for all of its \nf{Enqueue}s and \nf{Dequeue}s. A \nf{Dequeue} may go to sleep for a long time and prevent a \nf{block} to be removed (the block it is in or the block its response is in). In that situation other processes can help the \nf{Dequeue} by computing its response and writing it down somewhere. After writing down the response of th \nf{Dequeue} can be removed, since if the process wanted the response it can read from the helped response.
+
+\begin{definition}
+A block  is \it{finished} if all of its \nf{Enqueue}s have been computed to be the response of some \nf{Dequeue} and all of its \nf{Dequeues} responses have been computed.  
+\end{definition}
+
+\begin{corollary}
+If a block is finished, then all of its subblocks are also finished.  
+\end{corollary}
+
+\begin{lemma}
+It is safe to remove a finished block from the non-leaf nodes.
+\end{lemma}
+
+If the $i$th \nf{Enqueue} gets dequeued in a FIFO queue, it means the first $i-1$ \nf{Enqueue} operations have been already dequeued. This gives us the idea that if a block is finished then all the blocks before it are also finished. If an operation in a block goes to sleep for a long time then other processes help the operation so the block gets finished. There are less than $p$ idle operations, we can help them before garbage collection and then remove all the finished blocks safely in an amortized poly-log time.
+
+\begin{lemma}
+    If all \nf{Dequeue} operations in the root are helped, then all the blocks before a finished block in the root are also finished.
+\end{lemma}
+
+\begin{lemma}
+  Blocks before the most recent block that has been dequeued(computed to be dequeue) from are finished. If the most current \nf{Dequeue} returned(computed) \nf{null} then all the blocks before the block containing the \nf{Dequeue} are finished.
+\end{lemma}
+
+The idea above leads us to a poly-log data structure that supports throwing away all the blocks with keys smaller than an index. Red-black trees do this for us. \nf{Get(i)}, \nf{Append()} and \nf{Split(i)} are logarithmic in block trees.
+We can create a shared red-black tree just creating a new path for the operation and then using \nf{CAS} to change the root of the tree. See [this] for more.
+
+\begin{observation}
+PBRT supports poly-log operations ....
+\end{observation}
+
+\begin{lemma}
+    If we replace the arrays we used to implement \nf{blocks} with red-black trees the amortized complexity of the algorithm would be $PolyLog(p,q)$. And also the algorithm is correct.
+\end{lemma}
+
+We can help a \nf{Dequeue} by computing its response and writing it down. If the process in future failed to execute, it can read the helped value written down.
+
+\begin{lemma}
+The \nf{response} written is correct.
+\end{lemma}
+
+But how can we know which blocks in each node are finished or not? 
+
+\begin{observation}
+Every $p^2$ block appended to the root, \nf{FreeMemory} is invoked.  
+\end{observation}
+
+To know the last block dequeied from we can implement a shared array among processes which they write the last root block they have dequeued from. 
+
+\begin{lemma}
+    $\nf{Max(LastDequeuedFrom)} - \text{index of the last finished block}$ in the node $n$ is $O(p)$.
+\end{lemma}
+
+\begin{lemma}
+    After \nf{FreeMemory}, the space taken by each node of the tree is $O(p+q)$.
+\end{lemma}
+
+\begin{corollary}
+The space taken by each node of the tree is $O(p^2+q)$. The total space in the tree is $PolyLog(p+q)$.
+\end{corollary}
+
+\begin{lemma}
+  The amortized step per process for the algorithm with garbage collection is $PolyLog(p+q)$.
+\end{lemma}
+
+\begin{lemma}
+  Algorithm is wait-free and linearizable.
+\end{lemma}
+

@@ -49,12 +49,13 @@
 
 \usepackage{multicol}
 \setlength\columnsep{24pt}
+%\renewcommand{\baselinestretch}{2}
 
 \numberwithin{equation}{section}
 
 \def\draft{1}  % set to 1 for draft (include comments, color edits), 0 for clean final copy (omit comments, edits in black)
 \if\draft 1
-\usepackage{showkeys}
+%\usepackage{showkeys}
 \newcommand{\mycomment}[3]{{\color{#2}{[\bf{#1: #3}]}}}
 \newcommand{\myedit}[2]{{\color{#1}{#2}}\normalcolor}
 \newcommand{\rebuttaledit}[2]{{\color{#1}{#2}}\normalcolor}
@@ -131,6 +132,7 @@
 \newcommand{\opemph}[1]{{\sf \bf{#1}}}
 \newcommand{\com}{$\triangleright$}
 \newcommand{\linecomment}[1]{\com\ #1}
+\newcommand{\gc}[1]{\color{blue} #1}
 
 \usepackage{amsmath,amsthm}
 \newtheorem{theorem}{Theorem}
@@ -264,13 +266,15 @@ We achieve $O(\log^2 p +\log q)$ steps per operation, where $q$ is the size of t
 
 \input{related}
 
-\input{algorithm}
+%\input{algorithm}
 
 \input{correctness}
 
 \input{analysis}
 
 \input{boundedspace}
+
+\input{algorithm-2}
 
 \input{conclusion}
 

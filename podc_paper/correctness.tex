@@ -2,11 +2,15 @@
 
 \section{Proof of Correctness}
 
-
-\here{need to update this outline later}
-First, we define and prove some facts about blocks and the node's \nf{head} field. Then, we introduce  the linearization ordering formally. Next, we prove double \nf{Refresh} on a node is enough to propagate its children's new operations up to the node, which is used to prove (1). After this, we prove some claims about the size and operations of each block, which we use to prove the correctness of \nf{DoublingSearch()}, \nf{GetEnqueue()} and \nf{IndexDequeue()}. Finally, we prove the correctness of the way we compute the response of a dequeue, which establishes (2).
+After proving some basic invariants in Section \ref{sec::basicProperties},
+we show in Section \ref{sec::propagating} that performing a double refresh at each node
+is sufficient to propagate an operation to the root.
+In Section \ref{sec::helpingCorrect} we show that the \op{getEnqueue} and \op{indexDequeue}
+routines correctly navigate through the tournament tree.
+Finally, we show that the implementation is linearizable in Section \ref{sec::linearizability}.
 
 \subsection{Basic Properties}
+\label{sec::basicProperties}
 
 \Eric{I'm using immutable to mean that they are written only when the object is created.  The \fld{super} field does change from null to some value after the block is created, so it 
 is written once, rather than 0 times.  In other words, we could have initialized
@@ -181,6 +185,8 @@ so these sequences cannot both be empty.
 
 
 \subsection{Propagating Operations to the Root}
+\label{sec::propagating}
+
 Next, we show two \op{Refresh}es suffice to propagate operations from a child to its parent.
 We say that node $v$ \emph{contains} an operation if some block in $v.\fld{blocks}$ contains the operation.
 \here{move this defn earlier and just recall it here?}
@@ -263,6 +269,7 @@ By \Cref{lem::noDuplicates}, it is contained in exactly one block in each node.
 \end{proof}
 
 \subsection{Correctness of Helping Routines}
+\label{sec::helpingCorrect}
 
 We first show that \op{getEnqueue} works correctly.
 
@@ -363,6 +370,7 @@ Thus, all preconditions of the recursive call are met.
 By the induction hypothesis, the recursive call returns the location of the required dequeue in the root.\end{proof}
 
 \subsection{Linearizability}
+\label{sec::linearizability}
 
 Consider any finite execution.  We must show that the linearization ordering $L$ defined in 
 (\ref{linearization}) is a legal permutation of a subset of the operations in 

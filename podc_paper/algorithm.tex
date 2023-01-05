@@ -23,7 +23,7 @@ To propagate operations from a node $v$'s children to $v$, $P$ first observes
 the blocks in both of $v$'s children that are not already in $v$,
 creates a new block by combining information from those blocks, and attempts to append this 
 new block to $v$'s blocks array using a \op{CAS} instruction.
-Following \cite{}, we call this a 3-step sequence a
+Following \cite{DBLP:conf/fsttcs/JayantiP05}, we call this a 3-step sequence a
 \op{Refresh} on $v$. %(see Figure \ref{fig::propagstep}).
 A \op{Refresh}'s \op{CAS} may fail if there is another concurrent \op{Refresh} on $v$.
 However, since a successful \op{Refresh} propagates multiple pending operations 

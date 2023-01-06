@@ -66,7 +66,7 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
     \If{\bf{not} \Call{Refresh}{\var{v}}} \label{firstRefreshGC}  \hfill \com\ double refresh
         \State \Call{Refresh}{\var{v}} \label{secondRefreshGC}
     \EndIf
-    \If{\var{v} \bf{is not} \var{root}} \hfill \com\ recurse up tree
+    \If{$\var{v} \neq \var{root}$} \hfill \com\ recurse up tree
         \State \Call{Propagate}{\var{v}.\fld{parent}}
     \EndIf
 \EndFunction{Propagate}
@@ -83,8 +83,8 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 	\For {$k \assign 1..p$}
 		\State $\var{max} \assign \max(\var{max}, \var{last}[k])$
 	\EndFor 
-	\State \Call{Help()}{}
-	\State \Call{Discard}{$\var{root}, \var{max}-1$}
+	\State \Call{Help}{}
+	\State \Call{Discard}{$\var{root}, \var{max}-2$}
 	\EndIf
 	\State
 }
@@ -194,7 +194,7 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 
 \end{algorithmic}
 \end{minipage}
-\caption{Queue implementation.\label{pseudocode1GC}}
+\caption{Bounded-space queue implementation.\label{pseudocode1GC}}
 \end{figure}
 
 
@@ -271,30 +271,56 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
     \EndIf
 \EndFunction{GetEnqueue}
 
+\spac
+
 \gc{
+\Function{boolean}{Propagated}{\typ{Node} \var{v}, \typ{int} \var{b}}
+    \State \linecomment{check if $\var{v}.\fld{blocks}[b]$ has been propagated to \var{root}}
+    \State \linecomment{Precondition:  $\var{v}.\fld{blocks}[b]\neq \nl$}
+    \If {$\var{v} = \var{root}$} \Return{true}
+    \Else
+    	\State \fld{dir} \assign\ (\var{v}.\fld{parent.left} = \var{v} ? \fld{left} : \fld{right}) 
+	    \State \var{sup} \assign\ \var{v}.\fld{blocks}[\var{b}].\fld{super}
+	    \If{$\var{v}.\fld{parent.blocks}[\var{sup}] \neq \nl$ and $\var{b} > \var{v}.\fld{parent.blocks}[\var{sup}].\edir$} \var{sup} \assign\ $\var{sup}+1$
+	    \EndIf
+
+	    \State \Return{$\var{v}.\fld{parent.blocks}[\var{sup}] \neq \nl$ and $\var{b} \leq \var{v}.\fld{parent.blocks}[\var{sup}].\edir$ and \Call{Propagated}{\var{v}.\fld{parent}, \var{sup}}}
+    \EndIf
+\EndFunction{Propagated}
+
+\spac
+
 \Function{void}{Help}{}
-\State \bf{for} \var{i} \assign\ 1 to $p$
-\State h=leafOfProcess[\var{i}]
-\If{leafOfProcess[\var{i}].blocks[h].num\sub{deq}==1 and leafOfProcess[\var{i}].IndexDequeue(h,1)!=null}
-\State <b, i> \assign\ \Call{IndexDequeue}{leafOfProcess[\var{i}], h, 1}
-\State output \assign\ \Call{FindResponse}{b, i} 
-\State leafOfProcess[\var{i}].blocks[h].response \assign\ output
-\EndIf
-\State \bf{end for}
+    \State \linecomment{help pending dequeues that have been propagated to root}
+    \For{\bf{each} $\ell$ in $\var{leaf}[1..k]$}
+        \State $\var{h} \assign \ell.\head$
+        \If{$\ell.\fld{blocks}[\var{h}].\fld{element} = \nl$ and \Call{Propagated}{$\ell, h$}}
+            \State $\langle\var{b}, \var{i}\rangle \assign\ \Call{IndexDequeue}{\ell, h, 1}$
+            \State \var{output} \assign\ \Call{FindResponse}{$b, i$} 
+            \State $\ell.\fld{blocks}[\var{h}].\fld{response} \assign\ \var{output}$
+        \EndIf
+    \EndFor
 \EndFunction{Help}
 
-\Function{void}{Discard}{\typ{Node} \var{v}, \typ{int} \var{i}}
-    \State $T \assign \var{v}.\fld{blocks}$
-    \State $\langle T_1, T_2\rangle \assign \Call{Split}{T,i}$
-    \State \Call{CAS}{\var{v}.\fld{blocks}, $T$, $T_2$}
-    \If{\var{v} is an internal \typ{Node}}
-        \State \Call{Discard}{\var{v}.\fld{left}, \var{v}.\fld{blocks}[\var{i}].\eleft}
-        \State \Call{Discard}{\var{v}.\fld{right}, \var{v}.\fld{blocks}[\var{i}].\eright}
+\spac 
+
+\Function{void}{Discard}{\typ{Node} \var{v}, \typ{int} \var{t}}
+    \State \linecomment{discard blocks with index less than or equal to threshold $t$ from RBT \var{v}.\fld{blocks} and all subblocks of those blocks}
+    \State \var{t\sub{left}} = \var{v}.\fld{blocks}[\var{t}].\eleft
+    \State \var{t\sub{right}} = \var{v}.\fld{blocks}[\var{t}].\eright
+	\For{\var{j} \assign 1 to $p$}
+        \State $T \assign \var{v}.\fld{blocks}$
+        \State $T'  \assign \Call{Split}{T,t}$ \Comment{$T'$ is the root of new RBT containing $T$'s blocks with $\var{index} > t$}
+        \State \bf{exit when} \Call{CAS}{\var{v}.\fld{blocks}, $T$, $T'$}\label{splitCASGC}
+    \EndFor
+    \If{\var{v} is an internal \typ{Node}} \Comment{discard subblocks in descendants of $v$}
+        \State \Call{Discard}{\var{v}.\fld{left}, \var{t\sub{left}}}
+        \State \Call{Discard}{\var{v}.\fld{right}, \var{t\sub{right}}}
     \EndIf
 \EndFunction{Discard}
 }
 \end{algorithmic}
-\caption{\label{pseudocode2GC}Queue implementation, continued. \here{Would this routine be simpler to write if i parameter was the rank within whole node rather than within the block?}}
+\caption{\label{pseudocode2GC}Bounded-space queue implementation, continued. }
 \end{figure}
 
 If we garbage collect the unnecessary blocks in the nodes every $p^2$ block appended to the root, the garbage collection cost is amortized over $p^2$ blocks which is $O(p^3)$ and $\Omega(p^2)$ operations.

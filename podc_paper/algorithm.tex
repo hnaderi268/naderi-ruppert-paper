@@ -347,7 +347,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \If{\bf{not} \Call{Refresh}{\var{v}}} \label{firstRefresh}  \hfill \com\ double refresh
         \State \Call{Refresh}{\var{v}} \label{secondRefresh}
     \EndIf
-    \If{\var{v} \bf{is not} \var{root}} \hfill \com\ recurse up tree
+    \If{$\var{v} \neq \var{root}$} \hfill \com\ recurse up tree
         \State \Call{Propagate}{\var{v}.\fld{parent}}
     \EndIf
 \EndFunction{Propagate}

@@ -77,4 +77,5 @@ Since all processes may run GC,
 a total of $\tilde{O}(p^2)$ steps is spent on a GC phase.
 There are at least $p^2$ operations between two GC phases,  so
 GC contributes only $\tilde{O}(1)$ steps per operation in an amortized sense.
+Doing GC less frequently would yield better constant factors in the amortized number of steps per operation but use more space.
 

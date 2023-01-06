@@ -1,92 +1,24 @@
 % !TEX root =  podc-submission.tex
 
-\section{Garbage Collection}
+\section{Detailed Description of the Bounded-Space Implementation}
+\label{reducing-details}
 
-\renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTSINGLE}{\com\ #1}}
-\begin{figure}
-%\here{Does \var{leaf} have to be shared for helping when doing GC?}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{1}
-\Statex \linecomment{Shared variable}
+Here, we give more details of the bounded-space construction sketched in Section \ref{reducing}.
+We first describe the modifications to the implementation.
+It uses two additional shared arrays.
 \begin{itemize}
-\item \typ{Node} \var{root} \Comment{root of a binary tree of \tt{Node}s with one leaf for each process} % TODO: indent these lines in order to be more readable. I tries some times and i could not figure out doing that in algorithm.
-\item \gc{\typ{*Node[]} \var{leafOfProcess}$[1..p]$ \Comment{Pointer to the leaf assigned to each process.}}
-\item \gc{\typ{int[]} \var{last}$[1..p]$ \Comment{index of last block each process has dequeued an element from}}
+\item \typ{Node[]} \var{leaf}$[1..p]$ \Comment{\var{leaf}$[k]$ is the leaf assigned to process $k$}
+\item \typ{int[]} \var{last}$[1..p]$ \Comment{\var{last}$[k]$ indexes last block in $root$ that process $k$ has dequeued from}
 \end{itemize}
-
-\vspace{0.8em} %TODO: clean code
-
-\Statex \linecomment{Thread-local variable}
+The \fld{blocks} field is implemented as a pointer to the root of a RBT of \typ{Blocks} rather than an infinite array.
+Each \typ{Block} has an additional field.
 \begin{itemize}
-\item \typ{Node} \var{leaf} \Comment{process's leaf in the tree}
+\item \typ{int} \var{index} \Comment{position this block would have in the \fld{blocks} array}
 \end{itemize}
-
-\vspace{0.4em} %TODO: clean code
-
-\Statex $\blacktriangleright$ \typ{Node}
+To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 \begin{itemize}
-\item \typ{Node} \fld{left}, \fld{right}, \fld{parent} \Comment{children and parent pointers initialized  when creating the tree}
-\item \typ{Block}[0..$\infty$] \fld{blocks} \Comment{initially \var{blocks}[0] contains an empty block with all integer fields equal to 0}
-\gc{\item \typ{PBRT<Block, int>} \fld{blocks} \Comment{PBRT of blocks each node contains a block and an index key}}
-\item \typ{int} \head \Comment{position to attempt appending next \block\ to \fld{blocks}, initially 1}
+\item \typ{Object} \var{response} \Comment{response of the operation in the block, if it is a dequeue}
 \end{itemize}
-
-\vspace{0.8em} %TODO: clean code
-
-\Statex $\blacktriangleright$ \typ{Block} 
-
-\begin{itemize}
-  	\item \typ{int} \fld{sum\sub{enq}, sum\sub{deq}}
-  		\Comment{number of enqueue, dequeue operations in \fld{blocks} array up to this block (inclusive)}
-  	\item \typ{int} \fld{super}
-  		\Comment{approximate index of the block's superblock in \fld{parent.blocks}}
-	\item[\com] Blocks in internal \nodes\ have the following additional fields
-	\item \typ{int} \eleft, \eright
-  		\Comment{index of last direct subblock in the left and right child}
-  	\item[\com] Blocks in leaf \nodes\ have the following additional field
-  	\item \typ{Object} \fld{element}
-  		\Comment{if the block's operation is \opa{Enqueue}{x} then \fld{element}=\var{x}, otherwise \fld{element}=\nl}
-  	\gc{\item \typ{Object} \fld{response}
-  		\Comment{if the block's operation is \opa{Dequeue}{} then \fld{response} is the response of the\\ operation if it has been helped.}}
-	\item[\com] Blocks in the root \node\ have the following additional field
-	\item \typ{int} \size%
-  		\Comment{size of the queue after performing all operations up to the end of this block}
-\end{itemize}
-
-%\Statex {\com\  Blocks in internal nodes have the following additional fields}
-%\Statex $\blacktriangleright$ \tt{\sl{InternalBlock} extends \sl{Block}} \sf{\com\ the following additional fields are used only for blocks in internal nodes}
-%\begin{itemize}
-%	\item \tt{int} \eleft, \eright
-%  		\Comment{index of last direct subblock in the left and right child}
-%\end{itemize}
-
-%\Statex {\com\ Blocks in leaf nodes have the following additional field}
-%\Statex $\blacktriangleright$ \tt{\sl{LeafBlock} extends \sl{Block}} \sf{\com\ the following additional field is used only for blocks in leaves}
-%\begin{itemize}
-%  \item \tt{\sl{Object} element}
-%  \Comment{if the block's operation is \tt{enqueue(x)} then \tt{element=x}, otherwise \tt{element=null}.}
-%\end{itemize}
-
-%\Statex {\com\ Blocks in the root node have the following additional field}
-%\Statex $\blacktriangleright$ \tt{\sl{RootBlock} extends \sl{InternalBlock}} \sf{\com\ the following additional field is used only for blocks in the root}
-%\begin{itemize}
-%  \item \tt{\sl{int} \size}%
-%  \Comment{size of the queue after performing all operations up to the end of this block}
-%\end{itemize}
-
-\end{algorithmic}
-\caption{Objects used in tournament tree data structure \label{object-fields}}
-\end{figure}
-
-\subsection{Details of the Implementation}
-
-We now discuss the queue implementation in more detail.  Pseudocode is provided in Figure \ref{pseudocode1} and \ref{pseudocode2}.
-%We use $v.\var{blocks[i].num\sub{enq}}$ as shorthand for 
-%$v.\var{blocks[i].sum\sub{enq} - blocks[i-1].sum\sub{enq}}$, that is, 
-%the number of enqueues in the block.  (For $\var{i}=0$, $v.\var{blocks[0].num\sub{enq}} = 0$.)
-%We use \var{num\sub{deq}} similarly.
-%\here{Check if the num abbreviation is really needed in the code--how many times do we use it?}
-
 
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTDOUBLE}{\com\ #1}}
 
@@ -360,10 +292,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \caption{\label{pseudocode2}Queue implementation, continued. \here{Would this routine be simpler to write if i parameter was the rank within whole node rather than within the block?}}
 \end{figure}
 
-
-In our algorithm an \nf{Enqueue} or a \nf{Dequeue} remains in the \nf{blocks} array in the tree nodes even after they terminate. This makes the space used by the algorithm factor of the number of operations of invoked on the queue. Here in this section, we want to add a mechanism to free the memory allocated by the operations that are no longer needed and make the overall space used polynomial of $p+q$.
-
-It is a common way to do garbage collection in batches. If we garbage collect the unnecessary blocks in the nodes every $p^2$ block appended to the root, the garbage collection cost is amortized over $p^2$ blocks which is $O(p^3)$ and $\Omega(p^2)$ operations.
+If we garbage collect the unnecessary blocks in the nodes every $p^2$ block appended to the root, the garbage collection cost is amortized over $p^2$ blocks which is $O(p^3)$ and $\Omega(p^2)$ operations.
 
 In our design a process attempts to collect the garbage, when it is going to to append a block in the $kp^2$ position in \nf{root.blocks} (see Line \ref{}). Every $p^2$  block appended to the root, one \nf{GarbageCollect} terminates because \nf{root.head} cannot advance until a \nf{GarbageCollect} garbage collect is done (see Lines ).
 

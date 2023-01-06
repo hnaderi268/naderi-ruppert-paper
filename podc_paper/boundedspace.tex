@@ -3,7 +3,11 @@
 \section{Reducing Space Usage}
 \label{reducing}
 
-We now consider how to modify our implementation to bound the space it uses.
+In our implementation, an operation remains in the \nf{blocks} arrays forever. 
+Thus, the space used is proportional to the number of operations that have been invoked.
+Now, we sketch a mechanism to remove blocks that are no longer needed to use space
+polynomial in $p$ and $q$, while maintaining polylogarithmic (amortized) step complexity.  For lack of space, details are in Appendix~\ref{reducing-details}.
+
 We replace the \fld{blocks} array in each node by a red-black tree (RBT)
 that stores the blocks.
 Each block has an additional \fld{index} field
@@ -57,6 +61,14 @@ of $p^2$, it does GC by first helping all pending dequeue operations by other pr
 then reading $\var{last}[1..p]$.
 
 \here{need to complete the description of GC}
+
+Each process takes $\tilde{O}(p)$ to run GC.\footnote{We use $\tilde{O}$ notation
+to omit polylogarithmic factors; see Appendix \ref{reducing-details} for precise bounds.}
+Since all processes may run GC,
+a total of $\tilde{O}(p^2)$ steps is spent on a GC phase.
+Between two of these GC phases, there are at least $p^2$ operations, so
+GC contributes only $\tilde{O}(1)$ steps per operation in an amortized sense.
+
 
 \paragraph{Garbage Collection}
 We did not handle garbage collection: \nf{Enqueue} operations  remain in the nodes even after their elements have been dequeued.

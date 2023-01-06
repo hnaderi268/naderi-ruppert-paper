@@ -41,26 +41,32 @@ To prevent RBTs from growing without bound, we would like to discard
 blocks that are no longer needed.
 Ensuring the size of the RBT is polynomial in $p$ and $q$ will 
 also keep the running time of our operations polylogarithmic.
-We msut keep a block $B$ if any element enqueued by the operations in $E(B)$ has
-not yet been dequeued, since a later dequeue may need to traverse the block to 
-find its response.
-Because of the FIFO nature of queues, this means that we can throw away 
-blocks whose indices are smaller than the block containing the oldest enqueue whose
-value is still in the queue.
-Fortunately, there is an efficient \op{Split} operation that can remove
-all nodes with indices less than a given threshold from an RBT in logarithmic time \cite[Sec.~4.2]{Tar83}.
+Blocks should be kept if they contain operations still in progress.
+Moreover, a block containing an \op{Enqueue}($x$) must be kept until $x$ is dequeued.
 
 To maintain good amortized time per operation, we periodically do a garbage collection (GC) phase.
-After every $p^2$ successful insertions into the RBT representing $\var{root}.\fld{blocks}$,
-processes cooperate to perform \op{Split} operations on all nodes of the tournament tree  
-to discard unneeded blocks.
-We keep an array $\var{last}[1..p]$ where each process writes the index of the last block in
-\var{root} that it dequeued an element from.
 If a process performing a \op{Refresh} on the root finds that $root.\head$ is a multiple
-of $p^2$, it does GC by first helping all pending dequeue operations by other processes,
-then reading $\var{last}[1..p]$.
+of $p^2$, it does GC.
+To determine which blocks can be thrown away, we keep an array $\var{last}[1..p]$ where 
+each process writes the index of the last block in
+\var{root} containing an enqueue whose element it dequeued.
+To perform GC, a process reads $\var{last}[1..p]$ and finds the maximum entry $m$.
+Then, it helps complete every other process's pending dequeue 
+by computing the dequeue's response and writing it in the block in the leaf that represents the dequeue.
+Once this helping is complete, it follows from the FIFO property of the queue that elements enqueued 
+in $\var{root}.\fld{blocks}[1..m-1]$ have all been dequeued, so GC can discard all blocks in the root's RBT 
+with indices smaller than $m$.
+Fortunately, there is an efficient \op{Split} operation that can remove
+all nodes with indices less than $m$ from an RBT in logarithmic time \cite[Sec.~4.2]{Tar83}.
+Then, GC can work its way down the tournament tree, using \op{Split} operations to discard all subblocks
+of the discarded root blocks.
 
-\here{need to complete the description of GC}
+\here{Have to talk about repeating CAS to do GC at each node up to p times}
+
+Because of GC, an operation may not find a block $B$ that it requires when it searches a RBT.  If the operation
+is a dequeue, it must have been helped before $B$ was discarded, so it can simply read its response from
+its own leaf.
+\here{What about enqueues not finding required block?}
 
 Each process takes $\tilde{O}(p)$ to run GC.\footnote{We use $\tilde{O}$ notation
 to omit polylogarithmic factors; see Appendix \ref{reducing-details} for precise bounds.}
@@ -69,14 +75,3 @@ a total of $\tilde{O}(p^2)$ steps is spent on a GC phase.
 Between two of these GC phases, there are at least $p^2$ operations, so
 GC contributes only $\tilde{O}(1)$ steps per operation in an amortized sense.
 
-
-\paragraph{Garbage Collection}
-We did not handle garbage collection: \nf{Enqueue} operations  remain in the nodes even after their elements have been dequeued.
-We can keep track of the \nf{block}s in the \nf{root} whose operations are all terminated, i.e., all enqueues have been dequeued, and the responses of all dequeues have been computed. We call these blocks \it{finished blocks}. If we help the operations of all processes to compute their responses, then we can say if block $B$ is finished, then all blocks before $B$ are also finished. Knowing the most recent finished block in a node, we can reclaim the memory taken by finished blocks. We cannot use arrays (or vectors) to throw the garbage blocks away. We need a data structure that supports \nf{tryAppend()}, \nf{read(i)}, \nf{write(i)} and \nf{split(i)} operations in $O(\log n)$ time, where \nf{split(i)} removes all the indices less than~\nf{i}. If each process tries to do the garbage collection once every $p^2$ operations on the queue, then the amortized complexity remains the same. We can use a concurrent implementation of a persistent red-black trees for this~\cite{DBLP:conf/afp/Okasaki96}. Bashari and Woelfel ~\cite{DBLP:conf/podc/BashariW21} used persistent red-black trees in a similar way.
-
-
-\begin{figure}[hbt]  
-  \center\includegraphics[width=3.5in]{pics/finishedBlocks.png}
-  \caption[Blocks that can be safely garbage collected.]{Finished blocks are shown with red color and unfinished blocks are shown with green color. All the subblocks of a finished block are also finished.}
-  \label{fig::finishedBlock}
-\end{figure}

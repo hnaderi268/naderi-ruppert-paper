@@ -54,7 +54,7 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 
 \Function{void}{Append}{\typ{Block} \var{B}} 
     \State \linecomment{append block to leaf and propagate to root}
-    \State \gc{\var{leaf}.\fld{blocks}.\Call{TryInsert}{\var{B}}\label{appendLeafGC}}
+    \gc{\State \var{leaf}.\fld{blocks}.\Call{TryInsert}{\var{B}}\label{appendLeafGC}}
     \State \var{leaf}.\head\ \assign\ \var{leaf}.\head+1 \label{appendEndGC} 
     \State \Call{Propagate}{\var{leaf}.\fld{parent}} 
 \EndFunction{Append}
@@ -77,17 +77,14 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
     \State \linecomment{try to append a new block to \var{v}.\fld{blocks}}
     \State \var{h} \assign\ \var{v}.\head \label{readHeadGC}
 
-\gc{    
-	\If{ \var{v} is root and $\var{h} \mbox{ mod } p^2=0$}
-	\State \var{max} \assign 0
-	\For {$k \assign 1..p$}
-		\State $\var{max} \assign \max(\var{max}, \var{last}[k])$
-	\EndFor 
-	\State \Call{Help}{}
-	\State \Call{Discard}{$\var{root}, \var{max}-1$}
-	\EndIf
-	\State
-}
+	\gc{\If{ \var{v} is root and $\var{h} \mbox{ mod } p^2=0$}}
+	\gc{\State \var{max} \assign 0}
+	\gc{\For {$k \assign 1..p$}}
+		\gc{\State $\var{max} \assign \max(\var{max}, \var{last}[k])$}
+	\gc{\EndFor}
+	\gc{\State \Call{Help}{}}
+	\gc{\State \Call{Discard}{$\var{root}, \var{max}-1$}}
+	\gc{\EndIf}
 
     \ForEach{\fld{dir} {\keywordfont{in}} \{\fld{left}, \fld{right}\}} \label{startHelpChild1GC}
         \State \var{childHead} \assign\ \var{v}.\fld{dir}.\head \label{readChildHeadGC}
@@ -98,8 +95,8 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
     \State \var{new} \assign\ \Call{CreateBlock}{\var{v, h}} \label{invokeCreateBlockGC}
     \If{\var{new = \nl}} \Return{\tr} \label{addOPGC} 
     \EndIf
-    \State \gc{\var{result} \assign\ \var{v}.\fld{blocks}.\Call{TryInsert}{\var{new}} \label{casGC}}
-    \State \var{\Call{Advance}{\var{v, h}}}\label{advanceGC}
+    \gc{\State \var{result} \assign\ \var{v}.\fld{blocks}.\Call{TryInsert}{\var{new}} \label{casGC}}
+    \State \Call{Advance}{\var{v, h}}\label{advanceGC}
     \State \Return{ \var{result}}
 \EndFunction{Refresh}
 
@@ -131,7 +128,7 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{enq}}}
 	\State \hangbox{\var{new}.\fld{sum\sub{deq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{deq}} + \\
 			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{deq}}}
-    \State \gc{\var{new}.\fld{index} \assign \var{h}}
+    \gc{\State \var{new}.\fld{index} \assign \var{h}}
     \State \var{num\sub{enq}} \assign\ $\var{new}.\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{enq}}$\label{computeNumEnqGC}
     \State \var{num\sub{deq}} \assign\ $\var{new}.\fld{sum\sub{deq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{deq}}$
     \If{$\var{v} = \var{root}$}
@@ -176,7 +173,7 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
     \State \hangbox{\var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} - \mbox{ }$\\
     		$\var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$}
     \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmptyGC}
-        \State \gc{\var{last[this process id]} \assign\ \var{b}}
+        \gc{\State \var{last}[\var{this process id}] \assign\ \var{b}}
         \State \Return \nl \hfill \com\ queue is empty when dequeue occurs\label{returnNullGC}
     \Else \ \linecomment{response is the \var{e}th enqueue in the root}
         \State \var{e} \assign\ \var{i} + \var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}} - 
@@ -185,9 +182,11 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 		\State find min $b_e \leq \var{b}$ with $\var{root}.\fld{blocks}[b_e].\fld{sum\sub{enq}} \geq \var{e}$
 		\State \linecomment{find rank of enqueue within its block}
 		\State $i_e \assign\ \var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$
-        \State \gc{\var{e} \assign\ \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}}\label{findAnswerGC}
-        \State \gc{\var{last[this process id]} \assign\ $b_e$}
-        \State \gc{\Return{\var{e}}}
+        \gc{
+        \State \var{e} \assign\ \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}\label{findAnswerGC}
+        \State \var{last}[\var{this process id}] \assign\ $b_e$
+        \State \Return{\var{e}}
+        }
     \EndIf
 \EndFunction{FindResponse}
 
@@ -292,7 +291,7 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 
 \Function{void}{Help}{}
     \State \linecomment{help pending dequeues that have been propagated to root}
-    \For{\bf{each} $\ell$ in $\var{leaf}[1..k]$}
+    \For{$\ell$ in $\var{leaf}[1..k]$}
         \State $\var{h} \assign \ell.\head$
         \If{$\ell.\fld{blocks}[\var{h}].\fld{element} = \nl$ and \Call{Propagated}{$\ell, h$}}
             \State $\langle\var{b}, \var{i}\rangle \assign\ \Call{IndexDequeue}{\ell, h, 1}$
@@ -306,8 +305,8 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 
 \Function{void}{Discard}{\typ{Node} \var{v}, \typ{int} \var{t}}
     \State \linecomment{discard blocks with index less than or equal to threshold $t$ from RBT \var{v}.\fld{blocks} and all subblocks of those blocks}
-    \State \var{t\sub{left}} = \var{v}.\fld{blocks}[\var{t}].\eleft
-    \State \var{t\sub{right}} = \var{v}.\fld{blocks}[\var{t}].\eright
+    \State \var{t\sub{left}} \assign \var{v}.\fld{blocks}[\var{t}].\eleft
+    \State \var{t\sub{right}} \assign \var{v}.\fld{blocks}[\var{t}].\eright
 	\For{\var{j} \assign 1 to $p$}
         \State $T \assign \var{v}.\fld{blocks}$
         \State $T'  \assign \Call{Split}{T,t}$ \Comment{$T'$ is the root of new RBT containing $T$'s blocks with $\var{index} \geq t$}
@@ -323,7 +322,13 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 \caption{\label{pseudocode2GC}Bounded-space queue implementation, continued. }
 \end{figure}
 
-If we garbage collect the unnecessary blocks in the nodes every $p^2$ block appended to the root, the garbage collection cost is amortized over $p^2$ blocks which is $O(p^3)$ and $\Omega(p^2)$ operations.
+\begin{lemma}
+
+\end{lemma}
+
+
+
+-------
 
 In our design a process attempts to collect the garbage, when it is going to to append a block in the $kp^2$ position in \nf{root.blocks} (see Line \ref{}). Every $p^2$  block appended to the root, one \nf{GarbageCollect} terminates because \nf{root.head} cannot advance until a \nf{GarbageCollect} garbage collect is done (see Lines ).
 

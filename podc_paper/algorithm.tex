@@ -314,19 +314,19 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \setcounter{ALG@line}{0}
 
 \Function{void}{Enqueue}{\typ{Object} \var{e}} 
-    \State \hangbox{let \var{n} be a new \typ{Block} with \fld{element} \assign\ \var{e},\\
+    \State \hangbox{let \var{B} be a new \typ{Block} with \fld{element} \assign\ \var{e},\\
 		\fld{sum\sub{enq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}}+1,\\
 		\fld{sum\sub{deq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}}\label{enqNew}
-    \State \Call{Append}{\var{n}}
+    \State \Call{Append}{\var{B}}
 \EndFunction{Enqueue}
 
 \spac
 
 \Function{Object}{Dequeue()}{} 
-    \State \hangbox{let \var{n} be a new \typ{Block} with \fld{element} \assign\ \nl,\\
+    \State \hangbox{let \var{B} be a new \typ{Block} with \fld{element} \assign\ \nl,\\
 	    \fld{sum\sub{enq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}},\\
 	    \fld{sum\sub{deq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}+1}\label{deqNew}
-    \State \Call{Append}{\var{n}}
+    \State \Call{Append}{\var{B}}
     \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, $\var{leaf.}\head-1$, 1}\label{invokeIndexDequeue}
     \State \Return{ \Call{FindResponse}{\var{b, i}}}\label{deqRest}
 \EndFunction{Dequeue}

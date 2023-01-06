@@ -53,7 +53,7 @@ For the space-bounded implementation, we unlink unneeded memory from our data st
 We do not address the orthogonal problem of reclaiming unlinked memory; we assume a safe
 garbage collector, such as the highly optimized one that Java provides.
 
-Our queue uses a tournament tree where each process has its own leaf.\here{Is "tournament tree" the right word here?  Maybe call it an ordering tree?}
+Our queue uses a tournament tree where each process has its own leaf.\here{Is "tournament tree" the right word here?  Maybe call it a merge tree? or a linearization tree?}
 Each process propagates its operations along the path from its leaf up to the root.
 Operations in the root are ordered, 
 and this order is used to linearize the operations and compute their responses.

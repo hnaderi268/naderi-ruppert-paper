@@ -30,31 +30,32 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 \setcounter{ALG@line}{0}
 
 \Function{void}{Enqueue}{\typ{Object} \var{e}} 
-    \State \hangbox{let \var{n} be a new \typ{Block} with \fld{element} \assign\ \var{e},\\
+    \State \hangbox{let \var{B} be a new \typ{Block} with \fld{element} \assign\ \var{e},\\
 		\fld{sum\sub{enq}} \assign\ \var{leaf}.\fld{blocks}[\var{leaf}.\head-1].\fld{sum\sub{enq}}+1,\\
-		\fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[\var{leaf}.\head-1].\fld{sum\sub{deq}}}
-    \State \Call{Append}{\var{n}}
+		\fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[\var{leaf}.\head-1].\fld{sum\sub{deq}},\\
+		\gc{\fld{index} \assign\ \var{leaf}.\head}}
+    \State \Call{Append}{\var{B}}
 \EndFunction{Enqueue}
 
 \spac
 
 \Function{Object}{Dequeue()}{} 
-    \State \hangbox{let \var{n} be a new \typ{Block} with \fld{element} \assign\ \nl,\\
+    \State \hangbox{let \var{B} be a new \typ{Block} with \fld{element} \assign\ \nl,\\
 	    \fld{sum\sub{enq}} \assign\ \var{leaf}.\fld{blocks}[\var{leaf}.\head-1].\fld{sum\sub{enq}},\\
-	    \fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[\var{leaf}.\head-1].\fld{sum\sub{deq}}+1}
-    \State \Call{Append}{\var{n}}
+	    \fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[\var{leaf}.\head-1].\fld{sum\sub{deq}}+1,\\
+	    \gc{\fld{index}\assign \var{leaf}.\head}}
+    \State \Call{Append}{\var{B}}
     \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, \var{leaf}.\head, 1}
     \State \Return{ \Call{FindResponse}{\var{b, i}}}
-    \label{deqRest}
+    \label{deqRestGC}
 \EndFunction{Dequeue}
 
 \spac
 
 \Function{void}{Append}{\typ{Block} \var{B}} 
     \State \linecomment{append block to leaf and propagate to root}
-    \State \var{leaf}.\fld{blocks}[\var{leaf}.\head] \assign\ \var{B}\label{appendLeaf}
-    \gc{\State \var{leaf}.\fld{blocks}.\Call{TryAppend}{\var{B}, \var{leaf}.\head}\label{appendLeafGC}}
-    \State \var{leaf}.\head\ \assign\ \var{leaf}.\head+1 \label{appendEnd} 
+    \State \gc{\var{leaf}.\fld{blocks}.\Call{TryInsert}{\var{B}}\label{appendLeafGC}}
+    \State \var{leaf}.\head\ \assign\ \var{leaf}.\head+1 \label{appendEndGC} 
     \State \Call{Propagate}{\var{leaf}.\fld{parent}} 
 \EndFunction{Append}
 
@@ -62,8 +63,8 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 
 \Function{void}{Propagate}{\typ{Node} \var{v}}
     \State \linecomment{propagate blocks from \var{v}'s children to root}
-    \If{\bf{not} \Call{Refresh}{\var{v}}} \label{firstRefresh}  \hfill \com\ double refresh
-        \State \Call{Refresh}{\var{v}} \label{secondRefresh}
+    \If{\bf{not} \Call{Refresh}{\var{v}}} \label{firstRefreshGC}  \hfill \com\ double refresh
+        \State \Call{Refresh}{\var{v}} \label{secondRefreshGC}
     \EndIf
     \If{\var{v} \bf{is not} \var{root}} \hfill \com\ recurse up tree
         \State \Call{Propagate}{\var{v}.\fld{parent}}
@@ -74,31 +75,31 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 
 \Function{boolean}{Refresh}{\typ{Node} \var{v}}
     \State \linecomment{try to append a new block to \var{v}.\fld{blocks}}
-    \State \var{h} \assign\ \var{v}.\head \label{readHead}
+    \State \var{h} \assign\ \var{v}.\head \label{readHeadGC}
 
 \gc{    
 	\If{ \var{v} is root and $\var{h} \mbox{ mod } p^2=0$}
 	\State \var{max} \assign 0
 	\For {$k \assign 1..p$}
-		\State $\var{max} \assign \max(\var{max}, last[k])$
+		\State $\var{max} \assign \max(\var{max}, \var{last}[k])$
 	\EndFor 
 	\State \Call{Help()}{}
-	\State \Call{FreeMemory}{$\var{root}, \var{max}-1$}
+	\State \Call{Discard}{$\var{root}, \var{max}-1$}
 	\EndIf
+	\State
 }
 
-    \ForEach{\fld{dir} {\keywordfont{in}} \fld{\{left, right\}}} \label{startHelpChild1}
-        \State \var{childHead} \assign\ \var{v}.\fld{dir}.\head \label{readChildHead}
-        \If{\var{v}.\fld{dir.blocks}[\var{childHead}] $\neq$ \nl} \label{ifHeadnotNull}
-            \State \Call{Advance}{\var{v}.\fld{dir}, \var{childHead}} \label{helpAdvance}
+    \ForEach{\fld{dir} {\keywordfont{in}} \{\fld{left}, \fld{right}\}} \label{startHelpChild1GC}
+        \State \var{childHead} \assign\ \var{v}.\fld{dir}.\head \label{readChildHeadGC}
+        \If{\var{v}.\fld{dir.blocks}[\var{childHead}] $\neq$ \nl} \label{ifHeadnotNullGC}
+            \State \Call{Advance}{\var{v}.\fld{dir}, \var{childHead}} \label{helpAdvanceGC}
         \EndIf
-    \EndFor \label{endHelpChild1}
-    \State \var{new} \assign\ \Call{CreateBlock}{\var{v, h}} \label{invokeCreateBlock}
-    \If{\var{new = \nl}} \Return{\tr} \label{addOP} 
+    \EndFor \label{endHelpChild1GC}
+    \State \var{new} \assign\ \Call{CreateBlock}{\var{v, h}} \label{invokeCreateBlockGC}
+    \If{\var{new = \nl}} \Return{\tr} \label{addOPGC} 
     \EndIf
-    \State \var{result} \assign\ \Call{CAS}{\var{v}.\fld{blocks}[\var{h}], \nl, \var{new}} \label{cas}
-    \gc{\State \var{result} \assign\ \var{v}.\fld{blocks}.\Call{TryAppend}{\var{new}, [\var{h}]} \label{GCcas}}
-    \State \var{\Call{Advance}{\var{v, h}}}\label{advance}
+    \State \gc{\var{result} \assign\ \var{v}.\fld{blocks}.\Call{TryInsert}{\var{new}} \label{casGC}}
+    \State \var{\Call{Advance}{\var{v, h}}}\label{advanceGC}
     \State \Return{ \var{result}}
 \EndFunction{Refresh}
 
@@ -107,9 +108,11 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 \Function{void}{Advance}{\typ{Node} \var{v}, \typ{int} \var{h}} 
     \State \linecomment{set \var{v}.\fld{blocks}[\var{h}].\fld{super} and }
     \State \linecomment{increment \var{v}.\fld{head} from \var{h} to \var{h}+1}
-    \State \var{h\sub{p}} \assign\ \var{v}.\fld{parent}.\head \label{readParentHead}
-    \State \Call{CAS}{\var{v}.\fld{blocks}[\var{h}].\fld{super}, \nl, \var{h\sub{p}}} \label{setSuper1}
-    \State \Call{CAS}{\var{v}.\head, \var{h}, \var{h}+1} \label{incrementHead}
+    \If{$\var{v}\neq \var{root}$}
+        \State \var{h\sub{p}} \assign\ \var{v}.\fld{parent}.\head \label{readParentHeadGC}
+        \State \Call{CAS}{\var{v}.\fld{blocks}[\var{h}].\fld{super}, \nl, \var{h\sub{p}}} \label{setSuper1GC}
+    \EndIf
+    \State \Call{CAS}{\var{v}.\head, \var{h}, \var{h}+1} \label{incrementHeadGC}
 \EndFunction{Advance}
 
 \end{algorithmic}
@@ -121,17 +124,18 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 
 \Function{Block}{CreateBlock}{\typ{Node} \var{v}, \typ{int} \var{i}} 
     \State\linecomment{create new block for a \op{Refresh} to install in \var{v}.\fld{blocks}[\var{i}]}
-    \State let \var{new} be a new \typ{Block} \label{initNewBlock}
-    \State \var{new}.\eleft \assign\ $\var{v}.\fld{left}.\head - 1$\label{createEndLeft}
+    \State let \var{new} be a new \typ{Block} \label{initNewBlockGC}
+    \State \var{new}.\eleft \assign\ $\var{v}.\fld{left}.\head - 1$\label{createEndLeftGC}
     \State \var{new}.\eright \assign\ $\var{v}.\fld{right}.\head - 1$
 	\State \hangbox{\var{new}.\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + \\
 			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{enq}}}
 	\State \hangbox{\var{new}.\fld{sum\sub{deq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{deq}} + \\
 			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{deq}}}
-    \State \var{num\sub{enq}} \assign\ $\var{new}.\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{enq}}$\label{computeNumEnq}
+    \State \gc{\var{new}.\fld{index} \assign \var{h}}
+    \State \var{num\sub{enq}} \assign\ $\var{new}.\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{enq}}$\label{computeNumEnqGC}
     \State \var{num\sub{deq}} \assign\ $\var{new}.\fld{sum\sub{deq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{deq}}$
     \If{$\var{v} = \var{root}$}
-        \State \hangbox{\var{new}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + \var{num\sub{enq}} - \var{num\sub{deq}}$)}\label{computeLength}
+        \State \hangbox{\var{new}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + \var{num\sub{enq}} - \var{num\sub{deq}}$)}\label{computeLengthGC}
     \EndIf
     \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$}
         \State \Return \nl \hfill \com\ no blocks need to be propagated to \var{v}
@@ -147,21 +151,19 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
     \State \linecomment{is \var{y}th dequeue of $D(\var{root}.\fld{blocks}[\var{x}])$}
     \State \linecomment{Precondition: \var{v}.\fld{blocks}[\var{b}] has been propagated to root}
     \State \linecomment{and $D(\var{v}.\fld{blocks}[\var{b}])$ has at least \var{i} dequeues}
-    \If{$\var{v} = \var{root}$}
-        \State\Return $\langle\var{b, i}\rangle$ \label{indexBaseCase}
+    \If{$\var{v} = \var{root}$} \Return $\langle\var{b, i}\rangle$ \label{indexBaseCaseGC}
     \Else
 	    \State \fld{dir} \assign\ (\var{v}.\fld{parent.left} = \var{v} ? \fld{left} : \fld{right}) 
     	\State \var{sup} \assign\ \var{v}.\fld{blocks}[\var{b}].\fld{super}
-	    \If{$\var{b} > \var{v}.\fld{parent.blocks}[\var{sup}].\fld{end\sub{dir}}$}
-	        \State{\var{sup} \assign\ $\var{sup}+1$}
+	    \If{$\var{b} > \var{v}.\fld{parent.blocks}[\var{sup}].\fld{end\sub{dir}}$} \var{sup} \assign\ $\var{sup}+1$
 	    \EndIf
 	    \State \linecomment{compute index \var{i} of dequeue in superblock}
 	    \State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{b}-1].\fld{sum\sub{deq}} -$ \\
 	    		$\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}-1].\edir].\fld{sum\sub{deq}}$}
         \If{$\fld{dir} = \fld{right}$} 
         	\State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}].\eleft].\fld{sum\sub{deq}} - \mbox{ }$\\
-					$\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}-1].\eleft].\fld{sum\sub{deq}}$}\label{considerLeftBeforeRight}
-        \EndIf \label{computeISuperEnd}
+					$\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}-1].\eleft].\fld{sum\sub{deq}}$}\label{considerLeftBeforeRightGC}
+        \EndIf \label{computeISuperEndGC}
         \State \Return\Call{IndexDequeue}{\var{v}.\fld{parent}, \var{sup}, \var{i}}
     \EndIf
 \EndFunction{IndexDequeue}
@@ -169,30 +171,30 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 \spac
 
 \Function{element}{FindResponse}{\typ{int} \var{b}, \typ{int} \var{i}}
-    \State \linecomment{find response to \var{i}th dequeue in \var{root}.\fld{blocks}[\var{b}]}
+    \State \linecomment{find response to \var{i}th dequeue in $D(\var{root}.\fld{blocks}[\var{b}])$}
+    \State \linecomment{Precondition:  $1\leq i\leq |D(\var{root}.\fld{blocks}[\var{b}])|$}
     \State \hangbox{\var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} - \mbox{ }$\\
     		$\var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$}
-    \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmpty}
-    \gc{\State \var{last[this process id]} \assign\ \var{b}}
-        \State \Return \nl \hfill \com\ queue is empty when dequeue occurs\label{returnNull}
-            \EndIf
-\State \linecomment{response is the \var{e}th enqueue in the root}
+    \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmptyGC}
+        \State \gc{\var{last[this process id]} \assign\ \var{b}}
+        \State \Return \nl \hfill \com\ queue is empty when dequeue occurs\label{returnNullGC}
+    \Else \ \linecomment{response is the \var{e}th enqueue in the root}
         \State \var{e} \assign\ \var{i} + \var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}} - 
-			\var{root}.\fld{blocks}[\var{b}-1].\size\label{computeE}
+			\var{root}.\fld{blocks}[\var{b}-1].\size\label{computeEGC}
 		\State \linecomment{compute enqueue's block using binary search}
-		\State find min $\var{b}'\leq \var{b}$ with $\var{root}.\fld{blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{e}$
+		\State find min $b_e \leq \var{b}$ with $\var{root}.\fld{blocks}[b_e].\fld{sum\sub{enq}} \geq \var{e}$
 		\State \linecomment{find rank of enqueue within its block}
-		\State $\var{i}' \assign\ \var{e} - \var{root}.\fld{blocks}[\var{b}'-1].\fld{sum\sub{enq}}$
-        \State \var{e} \assign\ \Call{GetEnqueue}{\var{root}, $\var{b}'$, $\var{i}'$}\label{findAnswer}
-        \gc{\State \var{last[this process id]} \assign\ $\var{b}'$}
-        \State \Return{\var{e}}
-
+		\State $i_e \assign\ \var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$
+        \State \gc{\var{e} \assign\ \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}}\label{findAnswerGC}
+        \State \gc{\var{last[this process id]} \assign\ $b_e$}
+        \State \gc{\Return{\var{e}}}
+    \EndIf
 \EndFunction{FindResponse}
 
 
 \end{algorithmic}
 \end{minipage}
-\caption{Queue implementation.\label{pseudocode1}}
+\caption{Queue implementation.\label{pseudocode1GC}}
 \end{figure}
 
 
@@ -248,22 +250,22 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 \setcounter{ALG@line}{101}
 
 \Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
-    \State \linecomment{Precondition: $\var{i}\geq 1$ and $E(\var{v}.\fld{blocks}[\var{b}])$ contains at least \var{i} enqueues}
+    \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] is non-\nl\ and contains at least \var{i} enqueues}
 
     \If{\var{v} is a leaf node}
-        \State\Return \var{v}.\fld{blocks}[\var{b}].\fld{element} \label{getBaseCase}
+        \State\Return \var{v}.\fld{blocks}[\var{b}].\fld{element} \label{getBaseCaseGC}
     \Else 
         \State \var{sum\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[\var{b}].\eleft].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}$] from left child}
         \State \var{prev\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eleft].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from left child}
         \State \var{prev\sub{right}} \assign\ \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eright].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from right child}
-        \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \label{leftOrRight} \cmt{required enqueue is in \var{v}.\fld{left}}
+        \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \label{leftOrRightGC} \cmt{required enqueue is in \var{v}.\fld{left}}
             \State \fld{dir} \assign\ \fld{left}
         \Else
             \State \fld{dir} \assign\ \fld{right}
             \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$
         \EndIf
         \State \linecomment{Use binary search to find enqueue's block in \var{v}.\fld{dir.blocks} and its rank within block}
-        \State find minimum $\var{b}'$ in range [\var{v}.\fld{blocks}[\var{b}-1].\edir+1..\var{v}.\fld{blocks}[\var{b}].\edir] s.t. $\var{v}.\fld{dir.blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$\label{getChild}
+        \State find minimum $\var{b}'$ in range [\var{v}.\fld{blocks}[\var{b}-1].\edir+1..\var{v}.\fld{blocks}[\var{b}].\edir] s.t. $\var{v}.\fld{dir.blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$\label{getChildGC}
         \State $\var{i}'$ \assign\ $\var{i} - (\var{v}.\fld{dir.blocks}[\var{b}'-1].\fld{sum\sub{enq}} - \var{prev\sub{dir}})$
         \State \Return\Call{GetEnqueue}{\var{v}.\fld{dir}, $\var{b}'$, $\var{i}'$} 
     \EndIf
@@ -281,17 +283,18 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 \State \bf{end for}
 \EndFunction{Help}
 
-\Function{}{FreeMemory}{\typ{Node} \var{n}, \typ{int} \var{i}}
-\State Split \var{n}.blocks.split over \var{i} and assign the grater tree to \var{n}.blocks with \tt{CAS}.
-\If{\var{n} is not a leaf}
-\State \Call{FreeMemory}{\var{n}.left, n.blocks[i].end\sub{left}}
-\State \Call{FreeMemory}{\var{n}.left, n.blocks[i].end\sub{right}}
-\EndIf
-\EndFunction{FreeMemory}
-
+\Function{void}{Discard}{\typ{Node} \var{v}, \typ{int} \var{i}}
+    \State $T \assign \var{v}.\fld{blocks}$
+    \State $\langle T_1, T_2\rangle \assign \Call{Split}{T,i}$
+    \State \Call{CAS}{\var{v}.\fld{blocks}, $T$, $T_2$}
+    \If{\var{v} is an internal \typ{Node}}
+        \State \Call{Discard}{\var{v}.\fld{left}, \var{v}.\fld{blocks}[\var{i}].\eleft}
+        \State \Call{Discard}{\var{v}.\fld{right}, \var{v}.\fld{blocks}[\var{i}].\eright}
+    \EndIf
+\EndFunction{Discard}
 }
 \end{algorithmic}
-\caption{\label{pseudocode2}Queue implementation, continued. \here{Would this routine be simpler to write if i parameter was the rank within whole node rather than within the block?}}
+\caption{\label{pseudocode2GC}Queue implementation, continued. \here{Would this routine be simpler to write if i parameter was the rank within whole node rather than within the block?}}
 \end{figure}
 
 If we garbage collect the unnecessary blocks in the nodes every $p^2$ block appended to the root, the garbage collection cost is amortized over $p^2$ blocks which is $O(p^3)$ and $\Omega(p^2)$ operations.

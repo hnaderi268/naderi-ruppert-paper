@@ -12,11 +12,11 @@ Thus, it is lock-free but not wait-free and has an amortized\Hossein{Maybe we ca
 \Eric{Amortized step complexity is defined in first parag of paper to be worst case over all executions of the average number of steps per operation, so I think the worst-case aspect of it is clear.  Also, if we just said ``worst-case'' without ``amortized'' it would be confused with worst-case of an individual operation, which is infinite in this case.  By the way, saying that previous implementations have $\Omega(p)$ step complexity, even in the amortized sense, makes the new contribution even more of a contrast.}
 step complexity of $\Theta(p)$ per operation.
 
-A number of papers have described ways to reduce contention in the MS-queue.
+Many papers have described ways to reduce contention in the MS-queue.
 Moir et al.~\cite{DBLP:conf/spaa/MoirNSS05} 
 added an elimination array that allows an enqueue to pass its enqueued value directly
-to a concurrent dequeue when the queue is empty or when concurrent operations 
-can be linearized to empty the queue.
+to a concurrent dequeue when the queue is empty.
+% or when concurrent operations can be linearized to empty the queue.
 However, when there are $p$ concurrent enqueues (and no dequeues), the CAS retry problem
 is still present.
 The baskets queue of

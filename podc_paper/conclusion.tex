@@ -6,7 +6,7 @@ Our focus in constructing our queue was on optimizing step complexity for worst-
 However, our approach does have a higher cost in the best case (for example, when an operation
 runs in isolation).
 It may be possible to make our queue adaptive by having an operation capture a starting node
-in the tournament tree (as in \cite{??}) rather than having a statically assigned leaf as its starting point.
+in the tournament tree (as in \cite{DBLP:conf/stoc/AfekDT95}) rather than having a statically assigned leaf as its starting point.
 Another way to make our queue more practical might be to use it as the slow path in the
 fast-path slow-path methodology of Kogan and Petrank \cite{10.1145/2370036.2145835} to
 get a queue that has good performance in practice while also having good worst-case step complexity.
@@ -17,16 +17,16 @@ It would be interesting to determine how the true step complexity of lock-free q
 depends on $p$.
 
 We believe the approach used here to implement a lock-free queue 
-could also be applied to obtain other lock-free
+could be applied to obtain other lock-free
 data structures with a polylogarithmic number of steps per operation.
-For example, we could implement a kind of vector data structure that stores a sequence and
+For example, we could implement a  vector data structure that stores a sequence and
 provides three operations: \opa{append}{e} to add an element \var{e} to the end of the sequence,
 \opa{get}{i} to read the \var{i}th element in the sequence, and
 \opa{index}{e} to compute the position of element \var{e} in the sequence.
 \here{Can omit rest of this paragraph to save space}
 An \opa{append}{e} is implemented like \opa{Enqueue}{e} in $O(\log p)$ steps.  
-A \opa{get}{i} calls \nf{DoublingSearch} but with a \nf{BinarySearch} on the entire \nf{root.blocks} array, taking $O(\log n + \log^2p)$ when the vector has $n$ elements.  
-An \opa{index}{e} is similar to \op{IndexDequeue} (except operating on enqueues instead of dequeues) and takes $O(\log p)$ steps.
+A \opa{get}{i} is similar to \op{GetEnqueue}, taking $O(\log n + \log^2p)$ steps when the vector has $n$ elements.  
+An \opa{index}{e} is similar to \op{IndexDequeue} (except operating on enqueues instead of dequeues) and would take $O(\log p)$ steps.
 \here{doublecheck all preceding claims for accuracy.}
-As future work we would like to investigate whether a similar approach could be used for stacks or deques.
+We would like to investigate whether a similar approach could be used for stacks, deques or even priority queues.
 

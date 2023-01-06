@@ -19,7 +19,7 @@ and divide the number of steps in the execution by the number of operations init
 Numerous papers have suggested modifications to the MS-queue \cite{DBLP:conf/opodis/HoffmanSS07,DBLP:conf/podc/KoganH14,DBLP:conf/ppopp/KoganP11,DBLP:journals/dc/Ladan-MozesS08,MKLLP22,DBLP:conf/spaa/MoirNSS05,RC17}, but 
 all still have $\Omega(p)$ amortized step complexity as a result of
 contention on the front and back of the queue.
-Morrison and Afek \cite{DBLP:conf/ppopp/MorrisonA13} called this the CAS retry problem.
+Morrison and Afek \cite{DBLP:conf/ppopp/MorrisonA13} called this the \emph{CAS retry problem}.
 The same problem occurs in array-based implementations of queues \cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01,DBLP:conf/opodis/GidenstamST10}.
 Solutions that tried to sidestep this problem using fetch\&increment \cite{DBLP:conf/ppopp/MorrisonA13,DBLP:conf/ppopp/YangM16,Nik19,10.1145/3490148.3538572}
 rely on slower mechanisms to handle worst-case executions and still have $\Omega(p)$ step complexity.
@@ -39,8 +39,7 @@ Thus, the lower bound could be stated more precisely as an amortized bound of $\
 
 We exploit this loophole.  We show that it is, in fact, possible to implement a linearizable, wait-free queue
 whose step complexity does not depend linearly on $p$.
-Our implementation is the first to have step complexity that is polylogarithmic in $p$ and in $q$, the number of elements
-stored in the queue.
+Our implementation is the first with step complexity that is polylogarithmic in $p$ and in $q$, the number of elements in the queue.
 For ease of presentation, we first give an unbounded-space construction that uses
 $O(\log^2 p + \log q)$ steps per operation.
 Then, we show how to modify the implementation to use 
@@ -54,15 +53,15 @@ For the space-bounded implementation, we unlink unneeded memory from our data st
 We do not address the orthogonal problem of reclaiming unlinked memory; we assume a safe
 garbage collector, such as the highly optimized one that Java provides.
 
-Our queue uses a tournament tree where each process has its own leaf.
+Our queue uses a tournament tree where each process has its own leaf.\here{Is "tournament tree" the right word here?  Maybe call it an ordering tree?}
 Each process propagates its operations along the path from its leaf up to the root.
-The root of the tree provides an ordering for all the operations,
-and this ordering is used to linearize the operations and compute their responses.
+Operations in the root are ordered, 
+and this order is used to linearize the operations and compute their responses.
 \here{Either here or in related work section, talk about previous usage of tournament tree and how ours differs from it}
-To ensure wait-freedom, we use a helping mechanism:  a process propagating its operation 
-to a node $n$ helps propagate all operations from both of $n$'s children.
-If we explicitly stored all operations in the nodes, this helping would become very costly.
-Instead, we use a novel implicit representation of collections
-of operations that allows for quickly merging two collections from the two children of a node,
-and for quickly accessing any particular operation in the collection.
+Helping  ensures wait-freedom and avoids the CAS retry problem:  a process propagating its operation 
+to a node $v$ helps propagate all operations from both of $v$'s children.
+Explicitly storing all operations in the nodes would be too costly.
+Instead, we use a novel implicit representation of sets
+of operations that allows us to quickly merge two sets from the children of a node,
+and quickly access any  operation in a~set.
 \here{Maybe say a little more about techniques used in the implementation, if space permits}

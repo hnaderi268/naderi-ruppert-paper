@@ -13,10 +13,12 @@ that stores the blocks.
 Each block has an additional \fld{index} field
 that represents its position within the original \fld{blocks} array, and
 blocks in a RBT are sorted by \fld{index}.
-Accessing the block in entry $i$ in the \fld{blocks} array can then be 
-replaced by searching the RBT for the block with index $i$.
 The attempt to append a new block in entry $i$ of the \fld{blocks} array on line \ref{cas}
 is replaced by an attempt to insert a new block with index $i$ into the RBT.
+Accessing the block in entry $i$ in the \fld{blocks} array can then be 
+replaced by searching the RBT for the block with index $i$.
+The binary searches for a block in line \ref{FRb} and \ref{getChild} can simply search the RBT
+using the \fld{sum\sub{enq}} field, since the RBT is also sorted with respect to this field, by \Cref{lem::sum}.
  
 Known lock-free search trees have step complexity that includes a term linear in $p$ \cite{EFHR14,Ko20}.  
 However, we do not require all the standard search tree functions.
@@ -45,7 +47,7 @@ Blocks should be kept if they contain operations still in progress.
 Moreover, a block containing an \op{Enqueue}($x$) must be kept until $x$ is dequeued.
 
 To maintain good amortized time per operation, we periodically do a garbage collection (GC) phase.
-If a process performing a \op{Refresh} on the root finds that $root.\head$ is a multiple
+If a process performing a \op{Refresh} on the root finds that $\var{root}.\head$ is a multiple
 of $p^2$, it does GC.
 To determine which blocks can be thrown away, we keep an array $\var{last}[1..p]$ where 
 each process writes the index of the last block in
@@ -63,15 +65,16 @@ of the discarded root blocks.
 
 \here{Have to talk about repeating CAS to do GC at each node up to p times}
 
-Because of GC, an operation may not find a block $B$ that it requires when it searches a RBT.  If the operation
-is a dequeue, it must have been helped before $B$ was discarded, so it can simply read its response from
+An operation $op$'s search of a RBT may fail to find the required block $B$ that has been removed 
+by another process's GC phase.  If $op$
+is a dequeue, $op$ must have been helped before $B$ was discarded, so $op$ can simply read its response from
 its own leaf.
 \here{What about enqueues not finding required block?}
 
-Each process takes $\tilde{O}(p)$ to run GC.\footnote{We use $\tilde{O}$ notation
+Each process takes $\tilde{O}(p)$ steps during a GC phase.\footnote{We use $\tilde{O}$ notation
 to omit polylogarithmic factors; see Appendix \ref{reducing-details} for precise bounds.}
 Since all processes may run GC,
 a total of $\tilde{O}(p^2)$ steps is spent on a GC phase.
-Between two of these GC phases, there are at least $p^2$ operations, so
+There are at least $p^2$ operations between two GC phases,  so
 GC contributes only $\tilde{O}(1)$ steps per operation in an amortized sense.
 

@@ -62,7 +62,7 @@ Find the $r$th enqueue in the linearization ordering.
 \end{enumerate}
 Since these tasks depends on the linearization ordering, we describe that ordering next.
 
-\begin{figure}[tb]
+\begin{figure}[t]
 \input{tournamentTree.pdf_t}
 \caption{An example tournament tree with four processes. 
 We show explicitly the enqueue sequence and dequeue sequence represented by each block in the \fld{blocks} arrays of the seven nodes.  The leftmost element of each \fld{blocks} array is a dummy block.
@@ -71,8 +71,9 @@ The fourth process's Deq\sub{6} is still propagating towards the root.
 The linearization order for this tree is
 Enq(a) Enq(e) Deq\sub{2} $\mid$ Enq(b) Deq\sub{4} Deq\sub{5} $\mid$ Enq(d) Enq(f) Enq(h) Deq\sub{1} $\mid$ Enq(c) Deq\sub{3} $\mid$ Enq(g), where vertical bars indicate boundaries of blocks in the root.\label{tournament}}
 \end{figure}
+\here{Make sure two figures appear on same page of final version}
 
-\begin{figure}
+\begin{figure}[t]
 \input{implicit.pdf_t}
 \caption{\label{implicit}The actual, implicit representation of the tree shown in Figure \ref{tournament}.
 The leaf blocks simply show the \fld{element} field.
@@ -85,10 +86,10 @@ The \fld{super} field is not shown.}
 \subsection{Linearization Ordering}
 
 Performing a double refresh at each node along the path from the leaf to the root ensures 
-a block containing the operation is appended to the root before the operation termintes.
+a block containing the operation is appended to the root before the operation completes.
 So, if an operation $op_1$ terminates before another operation $op_2$ begins, 
-$op_1$ will be in an earlier block than $op_2$ in root's blocks array.
-Thus, we linearize operations according to the block they belong to in the root's blocks array.
+$op_1$ will be in an earlier block than $op_2$ in the root's blocks array.
+Thus, we linearize operations according to the block they belong to in the root's array.
 We can choose how to order operations in the same block, since they must be concurrent.
 
 Each block in a leaf represents one operation.
@@ -132,11 +133,11 @@ L=E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k).
 \subsection{Designing a Block Representation to Solve Tasks \ref{construct} to \ref{findenqueue}}
 \label{sec:fields}
 
-Each \node\ of the tournament tree has an infinite array called \fld{blocks}.
+Each tournament tree \node\ has an infinite array called \fld{blocks}.
 To simplify the code, each \node\ has an empty \block\ $B_0$ in \fld{blocks}[0].
 We define $E(B_0)$ and $D(B_0)$ to be the empty sequence.
-Each \node\ also has a \fld{head} index that stores the position in the \fld{blocks} array to be used
-for the next attempt to append a \block\ to this \node.
+Each \node's \fld{head} index  stores the position in the \fld{blocks} array to be used
+for the next attempt to append a \block.
 
 If a block contained an explicit representation of its sequences of enqueues and dequeues,
 it would take $\Omega(p)$ time to construct a block, which would be too slow for task \ref{construct}.
@@ -523,7 +524,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
         \State \var{sum\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[\var{b}].\eleft].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}$] from left child}
         \State \var{prev\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eleft].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from left child}
         \State \var{prev\sub{right}} \assign\ \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eright].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from right child}
-        \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \label{leftOrRight} \cmt{required enqueue is in \var{v}.\fld{left}}
+        \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \label{leftOrRight} \Comment{required enqueue is in \var{v}.\fld{left}}
             \State \fld{dir} \assign\ \fld{left}
         \Else
             \State \fld{dir} \assign\ \fld{right}
@@ -602,8 +603,8 @@ represents the number of elements in the queue after the operations in the block
 Finally, if the newly created block contains no operations, \op{CreateBlock} returns \nl\ to indicate
 that there is no need to append it to \var{v}.\fld{blocks}.
 
-Once a \op{Dequeue} has been appended to a block of the process's leaf and propagated to the root,
-the \opemph{IndexDequeue} routine is used to find the \op{Dequeue}'s location in the root.
+Once a \op{Dequeue} is appended to a block of the process's leaf and propagated to the root,
+the \opemph{IndexDequeue} routine finds the \op{Dequeue}'s location in the root.
 More precisely, \opa{IndexDequeue}{v, b, i}
 computes the block in the root and the rank
 within that block  of the \var{i}th \op{Dequeue} of the block \var{B} stored in \var{v}.\fld{blocks}[\var{b}].
@@ -634,11 +635,10 @@ To compute the response of the $i$th \nf{Dequeue} in the $b$th block
 of the root, \opemph{FindResponse}(\var{b, i}) determines at line \ref{checkEmpty} if the queue is empty.
 If the queue is
 not empty, Line \ref{computeE} computes the rank \var{e} of the
-\nf{Enqueue} whose argument is the response to the
-\nf{Dequeue}. 
-A binary search is used on the \fld{sum\sub{enq}} fields of \var{root}.\fld{blocks} to find the index $b_e$ of the block that contains 
+\op{Enqueue} whose argument is the \op{Dequeue}'s response. 
+A binary search on the \fld{sum\sub{enq}} fields of \var{root}.\fld{blocks} finds the index $b_e$ of the block that contains 
 the \var{e}th enqueue.
-The index $b_e$ is at most $b$ (since the enqueue is linearized before the dequeue).  To find the left end of the range for the binary search for $b_e$, we can first do a doubling search \cite{BY76}, comparing \var{e} to the \fld{sum\sub{enq}} fields at indices $b-1, b-2, b-4, b-8, \ldots$.
+Since the enqueue is linearized before the dequeue, $b_e\leq b$.  To find the left end of the range for the binary search for $b_e$, we can first do a doubling search \cite{BY76}, comparing \var{e} to the \fld{sum\sub{enq}} fields at indices $b-1, b-2, b-4, b-8, \ldots$.
 Then, \op{GetEnqueue} is used to trace down through the tree to find the required enqueue in a leaf.
 
 \opemph{GetEnqueue}(\var{v, b, i}) returns the argument of the

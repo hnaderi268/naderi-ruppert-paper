@@ -155,10 +155,10 @@ We show that each installation of a block $B$ into some location $v.\fld{blocks}
 assuming the claim holds before this installation.  We consider two cases.
 
 If $v$ is a leaf, $B$ was created at line \ref{enqNew} or \ref{deqNew}.
-For line \ref{enqNew}, $B$ represents a single enqueue operation, so $|E(B)|=1$ and $|D(B)|=0$.
-Moreover, $B.\fld{sum\sub{enq}}$ is set to $v.\fld{blocks}[i-1]+1$ and
-$B.\fld{sum\sub{deq}}$ is set to $v.\fld{blocks}[i-1]$, so the claim follows from the hypothesis.
-The proof for line \ref{deqNew}, where $B$ represents a single dequeue operation is similar.
+For line \ref{enqNew}, $B$ represents a single enqueue, so $|E(B)|=1$ and $|D(B)|=0$.
+Since $B.\fld{sum\sub{enq}}$ is set to $v.\fld{blocks}[i-1]+1$ and
+$B.\fld{sum\sub{deq}}$ is set to $v.\fld{blocks}[i-1]$, the claim follows from the hypothesis.
+The proof for line \ref{deqNew}, where $B$ has a single dequeue, is similar.
 
 Now suppose $v$ is an internal node. By the definition of subblocks in (\ref{defsubblock}), the
 subblocks of $v.\fld{blocks}[1..i]$ are $v.\fld{left.blocks}[1..B.\eleft]$ 
@@ -262,10 +262,10 @@ which is before $R_2$ terminates.
 When an \op{Append}($B$) terminates, $B$'s operation is contained in exactly one block in each node along the path from the process's leaf to the root.
 \end{lemma}
 \begin{proof}
-The \op{Append} adds $B$ to the process's leaf and calls \op{Propagate}, which
-performs a double \op{Refresh} on each node along the path from the leaf's parent to the root.
-By \Cref{lem::doubleRefresh}, this ensures $B$'s operation is contained in each node along this path.
-By \Cref{lem::noDuplicates}, it is contained in exactly one block in each node.
+\op{Append} adds $B$ to the process's leaf and calls \op{Propagate}, which
+does a double \op{Refresh}~on each internal node on the path $P$ from the leaf to the root.
+By \Cref{lem::doubleRefresh}, this ensures a block in each node on $P$ contains $B$'s operation.
+There is at most one such block in each node, by \Cref{lem::noDuplicates}.
 \end{proof}
 
 \subsection{Correctness of Helping Routines}

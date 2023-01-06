@@ -84,7 +84,7 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 		\State $\var{max} \assign \max(\var{max}, \var{last}[k])$
 	\EndFor 
 	\State \Call{Help}{}
-	\State \Call{Discard}{$\var{root}, \var{max}-2$}
+	\State \Call{Discard}{$\var{root}, \var{max}-1$}
 	\EndIf
 	\State
 }
@@ -310,7 +310,7 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
     \State \var{t\sub{right}} = \var{v}.\fld{blocks}[\var{t}].\eright
 	\For{\var{j} \assign 1 to $p$}
         \State $T \assign \var{v}.\fld{blocks}$
-        \State $T'  \assign \Call{Split}{T,t}$ \Comment{$T'$ is the root of new RBT containing $T$'s blocks with $\var{index} > t$}
+        \State $T'  \assign \Call{Split}{T,t}$ \Comment{$T'$ is the root of new RBT containing $T$'s blocks with $\var{index} \geq t$}
         \State \bf{exit when} \Call{CAS}{\var{v}.\fld{blocks}, $T$, $T'$}\label{splitCASGC}
     \EndFor
     \If{\var{v} is an internal \typ{Node}} \Comment{discard subblocks in descendants of $v$}

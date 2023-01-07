@@ -3,6 +3,11 @@
 \section{Detailed Description of the Bounded-Space Implementation}
 \label{reducing-details}
 
+\HERE{Idea:  replace last array with a bit in blocks that gets set when somebody dequeues an element in the block.  then can use the max index of any marked block minus 1 as the last completed block.  
+In order to ensure that blocks of dequeues are also cleared out,
+maybe dequeues that return null have to mark all blocks along the dequeue's path?
+}
+
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTSINGLEAPP}{\com\ #1}}
 
 Here, we give more details of the bounded-space construction sketched in Section \ref{reducing}.
@@ -33,6 +38,10 @@ we can simply use the maximum \fld{index} of any block in the \fld{blocks} RBT.
 We could keep a pointer to the maximum block in the root of the RBT so that \op{MaxBlock}
 can be done in constant time.
 
+\here{Emphasize that RBT nodes have \emph{pointers to} blocks.  Thus when RBT does node copying,
+it copies the pointer to the block; it does not make a copy of the block itself.
+This is important because if we mark a block that has been node-copied, we want the block to still be marked.  Similarly for super field.}
+
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTDOUBLE}{\com\ #1}}
 
 \begin{figure}
@@ -41,25 +50,35 @@ can be done in constant time.
 \setcounter{ALG@line}{0}
 
 \Function{void}{Enqueue}{\typ{Object} \var{e}} 
-	\gc{\State \var{h} \assign \Call{MaxBlock}{\var{leaf}.\fld{blocks}}.\fld{index}
-    \State \hangbox{let \var{B} be a new \typ{Block} with \fld{element} \assign\ \var{e},\\
+    \gc{
+    \State \var{h} \assign \Call{MaxBlock}{\var{leaf}.\fld{blocks}}.\fld{index}
+	\State \hangbox{let \var{B} be a new \typ{Block} with \fld{element} \assign\ \var{e},\\
 		$\fld{sum\sub{enq}} \assign\ \var{leaf}.\fld{blocks}[h].\fld{sum\sub{enq}}+1,$\\
-		$\fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[h].\fld{sum\sub{deq}},$\\
-		$\fld{index} \assign\ h+1$}}\label{enqNewGC}
+		$\fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[h].\fld{sum\sub{deq}}$,\\
+		$\fld{index}\assign h+1$}\label{enqNewGC}
+	}
     \State \Call{Append}{\var{B}}
 \EndFunction{Enqueue}
 
 \spac
 
 \Function{Object}{Dequeue()}{} 
-	\gc{\State \var{h} \assign \Call{MaxBlock}{\var{leaf}.\fld{blocks}}.\fld{index}
+    \gc{
+    \State \var{h} \assign \Call{MaxBlock}{\var{leaf}.\fld{blocks}}.\fld{index}
     \State \hangbox{let \var{B} be a new \typ{Block} with \fld{element} \assign\ \nl,\\
 	    $\fld{sum\sub{enq}} \assign\ \var{leaf}.\fld{blocks}[h].\fld{sum\sub{enq}},$\\
-	    $\fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[h].\fld{sum\sub{deq}}+1,$\\
-	    $\fld{index}\assign h+1$}}\label{deqNewGC}
+	    $\fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[h].\fld{sum\sub{deq}}+1$,\\
+	    $\fld{index}\assign h+1$}\label{deqNewGC}
+	}
     \State \Call{Append}{\var{B}}
-    \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, \gc{$h+1$}, 1}
-    \State \Return{ \Call{FindResponse}{\var{b, i}}}
+    \State $\langle \var{b}, \var{i}\rangle \assign\ \Call{IndexDequeue}{\var{leaf}, \gc{h+1}, 1, \fa}$
+    \gc{
+    \State $\var{res} \assign \Call{FindResponse}{b, i}$
+	\If{$\var{res} = \nl$} \linecomment{mark blocks}
+		\State $\Call{IndexDequeue}{\var{leaf}, h+1, 1, \tr}$
+	\EndIf
+	\State \Return{\var{res}}
+    }
     \label{deqRestGC}
 \EndFunction{Dequeue}
 
@@ -67,17 +86,32 @@ can be done in constant time.
 
 \Function{void}{Append}{\typ{Block} \var{B}} 
     \State \linecomment{append block to leaf and propagate to root}
-    \gc{\State \var{leaf}.\fld{blocks} \assign \Call{Insert}{\var{leaf}.\fld{blocks}, \var{B}}\label{appendLeafGC}}
+    \gc{\State \var{leaf}.\fld{blocks} \assign \Call{AddBlock}{\var{leaf}.\fld{blocks}, \var{B}}\label{appendLeafGC}}
     \State \Call{Propagate}{\var{leaf}.\fld{parent}} 
-    \gc{\State \here{Need to clean out my own leaf sometimes--how to determine what threshold to use for the split?}}
 \EndFunction{Append}
 
 \spac
 
+\gc{
+\Function{RBT}{AddBlock}{\typ{RBT} \var{T}, \typ{Block} \var{B}}
+    \State \linecomment{add block $\var{B}\neq\nl$ to \var{T}, doing GC if necessary}
+    \If{\var{B}.\fld{index} is a multiple of $p^2$}
+    	\State \linecomment{Do garbage collection}
+        \State \Call{Help}{}
+        \State $m$ \assign\ maximum \fld{index} of marked block in $T$
+        \State $T' \assign\ \Call{Split}{T,m-1}$
+        \State \linecomment{\op{Split} removes blocks with $\fld{index} < m-1$}
+        \State \Return \Call{Insert}{$T',B$}
+	\Else\ \Return \Call{Insert}{$T, B$}
+    \EndIf
+\EndFunction{AddBlock}
+}
+\spac
+
 \Function{void}{Propagate}{\typ{Node} \var{v}}
     \State \linecomment{propagate blocks from \var{v}'s children to root}
-    \If{\bf{not} \Call{\gc{GCRefresh}}{\var{v}}} \label{firstRefreshGC}  \hfill \com\ double refresh
-        \State \Call{\gc{GCRefresh}}{\var{v}} \label{secondRefreshGC}
+    \If{\bf{not} \Call{Refresh}{\var{v}}} \label{firstRefreshGC}  \hfill \com\ double refresh
+        \State \Call{Refresh}{\var{v}} \label{secondRefreshGC}
     \EndIf
     \If{$\var{v} \neq \var{root}$} \hfill \com\ recurse up tree
         \State \Call{Propagate}{\var{v}.\fld{parent}}
@@ -86,29 +120,23 @@ can be done in constant time.
 
 \spac
 
+\Function{boolean}{Refresh}{\typ{Node} \var{v}}
+	\State \linecomment{try to append a new block to $v.\fld{blocks}$}
 	\gc{
-\Function{boolean}{GCRefresh}{\typ{Node} \var{v}}
-    \State \linecomment{try to append a new block to \var{v}.\fld{blocks}, with GC}
-	\State $\var{T} \assign\ \var{v}.\fld{blocks}$\label{readTGC}
-    \State $\var{h} \assign\ \Call{MaxBlock}{T}.\fld{index}$ \label{readHeadGC}
-	\If{\var{v} is root and $\var{h} \mbox{ mod } p^2=0$}
-		\State \linecomment{garbage collection phase}
-		\State \var{max} \assign 0
-		\For {$k \assign 1..p$}
-			\State $\var{max} \assign \max(\var{max}, \var{last}[k])$
-		\EndFor
-		\State \Call{Help}{}
-		\State \Return $\Call{Discard}{\var{root}, \var{max}-1}$\label{discard}
-    \Else\ \linecomment{do a standard refresh}
-        \State $T' \assign \Call{RefreshUpdate}{T, v}$\label{RU1}
-        \If{$T' = \nl$} \Return{\tr}\label{emptyblockGC}
-    	\Else\ \Return $\Call{CAS}{\var{v}.\fld{blocks}, T, T'}$\label{casGC}
-		\EndIf
-	\EndIf
-%    \State \Call{Advance}{\var{v, h}}\label{advanceGC}
-\EndFunction{GCRefresh}
-} 
+	\State $T \assign v.\fld{blocks}$
+    \State \Call{SetSuper}{$v$, $T$}
+    \State $\var{h} \assign \Call{MaxBlock}{T}.\fld{index}+1$ \label{refreshReadMax}
+    }
+    \State \var{new} \assign\ \Call{CreateBlock}{\var{v, h}} \label{invokeCreateBlockGC}
+    \If{\var{new = \nl}} \Return{\nl} \label{addOPGC}
+    \Else  
+    	\gc{
+	    \State $T' \assign \Call{AddBlock}{T, \var{new}}$
+		\State \Return{\Call{CAS}{\var{v}.\fld{blocks}, $T$, $T'$}}
+		}
+    \EndIf
 
+\EndFunction{Refresh}
 
 \end{algorithmic}
 \end{minipage}
@@ -116,17 +144,6 @@ can be done in constant time.
 
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{48}
-\gc{\Function{RBT}{RefreshUpdate}{\typ{RBT} \var{T}, \typ{Node} \var{v}}
-    \State \linecomment{append new block to RBT $T$ read from $v.\fld{blocks}$}
-    \State \Call{SetSuper}{$v$, $T$}
-    \State $\var{h} \assign \Call{MaxBlock}{T}.\fld{index}+1$ \label{refreshReadMax}
-    \State \var{new} \assign\ \Call{CreateBlock}{\var{v, h}} \label{invokeCreateBlockGC}
-    \If{\var{new = \nl}} \Return{\nl} \label{addOPGC}
-    \Else \ \Return \Call{Insert}{$T$, \var{new}}\label{refreshInsertGC}
-    \EndIf
-\EndFunction{RefreshUpdate}
-}
-\spac
 
 \gc{
 \Function{void}{SetSuper}{\typ{Node} \var{v}, \typ{RBT} $T$} 
@@ -152,7 +169,7 @@ can be done in constant time.
     \gc{
     \State \var{new}.\eleft \assign\ $\Call{MaxBlock}{\var{v}.\fld{left}.\fld{blocks}}.\fld{index}$\label{createEndLeftGC}
     \State \var{new}.\eright \assign\ $\Call{MaxBlock}{\var{v}.\fld{right}.\fld{blocks}}.\fld{index}$\label{createEndRightGC}
-    \State \var{new}.\fld{index} \assign \var{i}
+    \State $\var{new}.\fld{index} \assign i$
     }
 	\State \hangbox{\var{new}.\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + \\
 			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{enq}}}
@@ -169,6 +186,28 @@ can be done in constant time.
         \State \Return \var{new}
     \EndIf
 \EndFunction{CreateBlock}
+
+\spac
+
+
+\Function{element}{FindResponse}{\typ{int} \var{b}, \typ{int} \var{i}}
+    \State \linecomment{find response to \var{i}th dequeue in $D(\var{root}.\fld{blocks}[\var{b}])$}
+    \State \linecomment{Precondition:  $1\leq i\leq |D(\var{root}.\fld{blocks}[\var{b}])|$}
+    \State \hangbox{\var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} - \mbox{ }$\\
+    		$\var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$}
+    \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmptyGC}
+        \State \Return \nl \hfill \com\ queue is empty when dequeue occurs\label{returnNullGC}
+    \Else \ \linecomment{response is the \var{e}th enqueue in the root}
+        \State \var{e} \assign\ \var{i} + \var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}} - 
+			\var{root}.\fld{blocks}[\var{b}-1].\size\label{computeEGC}
+		\State \linecomment{compute enqueue's block using binary search}
+		\State find min $b_e \leq \var{b}$ with $\var{root}.\fld{blocks}[b_e].\fld{sum\sub{enq}} \geq \var{e}$
+		\State \linecomment{find rank of enqueue within its block}
+		\State $i_e \assign\ \var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$
+        \State \Return \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}\label{findAnswerGC}
+    \EndIf
+\EndFunction{FindResponse}
+
 \end{algorithmic}
 \end{minipage}
 \caption{Bounded-space queue implementation.\label{pseudocode1GC}}
@@ -192,33 +231,6 @@ can be done in constant time.
         \EndIf
     \EndFor
 \EndFunction{Help}
-
-\spac 
-
-\Function{boolean}{Discard}{\typ{Node} \var{v}, \typ{int} \var{t}}
-    \State \linecomment{discard blocks with index less than or equal}
-    \State \linecomment{to $t$ from $v$'s RBT and their subblocks}
-    \If{$v$ is an internal node}
-	    \State \var{t\sub{left}} \assign \var{v}.\fld{blocks}[\var{t}].\eleft
-    	\State \var{t\sub{right}} \assign \var{v}.\fld{blocks}[\var{t}].\eright
-		\For{\var{j} \assign 1 to $p$}
-        	\State $T \assign \var{v}.\fld{blocks}$\label{readT2GC}
-        	\State $T'  \assign \Call{Split}{T,t}$\label{split}
-			\State \linecomment{\op{Split} removes blocks with $\var{index} < t$}
-			\State $T'' \assign \Call{RefreshUpdate}{T',v}$ \label{RU2}
-        	\State \hangbox{$\var{result} \assign \Call{CAS}{\var{v}.\fld{blocks}, T, \\
-					\hspace*{10mm}(T'' = \nl\ ?\ T' : T'')$}}\label{splitCASGC}
-        	\State \bf{exit when} \var{result} 
-	        \State \linecomment{if \op{CAS} succeeds go to line \ref{discardrecursecomment}}
-    	\EndFor
-    	\If{\var{v} is an internal \typ{Node}} 
-			\State \linecomment{discard subblocks in descendants of $v$}\label{discardrecursecomment}
-        	\State \Call{Discard}{\var{v}.\fld{left}, \var{t\sub{left}}}\label{discardrecurse1}
-        	\State \Call{Discard}{\var{v}.\fld{right}, \var{t\sub{right}}}\label{discardrecurse2}
-    	\EndIf
-	\EndIf
-	\State \Return \var{result}
-\EndFunction{Discard}
 }
 \end{algorithmic}
 \end{minipage}
@@ -226,11 +238,15 @@ can be done in constant time.
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{48}
 
-\Function{$\langle\typ{int}, \typ{int}\rangle$}{IndexDequeue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}}
+\Function{$\langle\typ{int}, \typ{int}\rangle$}{IndexDequeue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}, \gc{\typ{boolean} \var{mark}}}
     \State \linecomment{return $\langle\var{x, y}\rangle$ such that \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$}
     \State \linecomment{is \var{y}th dequeue of $D(\var{root}.\fld{blocks}[\var{x}])$}
     \State \linecomment{Precondition: \var{v}.\fld{blocks}[\var{b}] has been propagated to root}
     \State \linecomment{and $D(\var{v}.\fld{blocks}[\var{b}])$ has at least \var{i} dequeues}
+    \gc{
+    \If{\var{mark}} \var{v}.\fld{blocks}[\var{b}].\fld{mark} \assign \tr
+    \EndIf
+    }
     \If{$\var{v} = \var{root}$} \Return $\langle\var{b, i}\rangle$ \label{indexBaseCaseGC}
     \Else
 	    \State \fld{dir} \assign\ (\var{v}.\fld{parent.left} = \var{v} ? \fld{left} : \fld{right}) 
@@ -247,31 +263,6 @@ can be done in constant time.
         \State \Return\Call{IndexDequeue}{\var{v}.\fld{parent}, \var{sup}, \var{i}}
     \EndIf
 \EndFunction{IndexDequeue}
-
-\spac
-
-\Function{element}{FindResponse}{\typ{int} \var{b}, \typ{int} \var{i}}
-    \State \linecomment{find response to \var{i}th dequeue in $D(\var{root}.\fld{blocks}[\var{b}])$}
-    \State \linecomment{Precondition:  $1\leq i\leq |D(\var{root}.\fld{blocks}[\var{b}])|$}
-    \State \hangbox{\var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} - \mbox{ }$\\
-    		$\var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$}
-    \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmptyGC}
-        \gc{\State \var{last}[\var{this process id}] \assign\ \var{b}}\label{setlast1}
-        \State \Return \nl \hfill \com\ queue is empty when dequeue occurs\label{returnNullGC}
-    \Else \ \linecomment{response is the \var{e}th enqueue in the root}
-        \State \var{e} \assign\ \var{i} + \var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}} - 
-			\var{root}.\fld{blocks}[\var{b}-1].\size\label{computeEGC}
-		\State \linecomment{compute enqueue's block using binary search}
-		\State find min $b_e \leq \var{b}$ with $\var{root}.\fld{blocks}[b_e].\fld{sum\sub{enq}} \geq \var{e}$
-		\State \linecomment{find rank of enqueue within its block}
-		\State $i_e \assign\ \var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$
-        \gc{
-        \State \var{e} \assign\ \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}\label{findAnswerGC}
-        \State \var{last}[\var{this process id}] \assign\ $b_e$\label{setlast2}
-        \State \Return{\var{e}}
-        }
-    \EndIf
-\EndFunction{FindResponse}
 
 \end{algorithmic}
 \end{minipage}
@@ -333,7 +324,7 @@ can be done in constant time.
 
 \Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
     \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] is non-\nl\ and contains at least \var{i} enqueues}
-
+	\gc{\State $\var{v}.\fld{blocks}[\var{b}].\fld{marked} := \tr$}
     \If{\var{v} is a leaf node}
         \State\Return \var{v}.\fld{blocks}[\var{b}].\fld{element} \label{getBaseCaseGC}
     \Else 

@@ -364,10 +364,11 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \EndFor \label{endHelpChild1}
     \State \var{new} \assign\ \Call{CreateBlock}{\var{v, h}} \label{invokeCreateBlock}
     \If{\var{new = \nl}} \Return{\tr} \label{addOP} 
-    \EndIf
-    \State \var{result} \assign\ \Call{CAS}{\var{v}.\fld{blocks}[\var{h}], \nl, \var{new}} \label{cas}
-    \State \Call{Advance}{\var{v, h}}\label{advance}
-    \State \Return{ \var{result}}
+	\Else
+	    \State \var{result} \assign\ \Call{CAS}{\var{v}.\fld{blocks}[\var{h}], \nl, \var{new}} \label{cas}
+    	\State \Call{Advance}{\var{v, h}}\label{advance}
+    	\State \Return{ \var{result}}
+	\EndIf
 \EndFunction{Refresh}
 
 \spac
@@ -516,7 +517,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
     \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] is non-\nl\ and contains at least \var{i} enqueues}
-
+	
     \If{\var{v} is a leaf node}
         \State\Return \var{v}.\fld{blocks}[\var{b}].\fld{element} \label{getBaseCase}
     \Else 

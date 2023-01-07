@@ -198,7 +198,7 @@ when $R$ executed line~\ref{readHead}.
 \begin{proof}
 Suppose $v$'s child (without loss of generality, $v.\fld{left}$) contained an operation $op$ 
 in the configuration $C$ immediately before $R$ executed line \ref{readHead}.
-Then some block $B$ in $v.\fld{left.blocks}[i]$ contains $op$.
+Then for some $i$, the block $B$ in $v.\fld{left.blocks}[i]$ contains $op$.
 By \Cref{nonDecreasingHead} and \Cref{lem::headProgress}, the value of $childHead$ that $R$ reads from
 $v.\fld{left.head}$ in line \ref{readChildHead} is at least $i$.
 If it is equal to $i$, $R$ calls \op{Advance} at line \ref{helpAdvance}, which ensures that 
@@ -230,14 +230,14 @@ $v.\fld{right.blocks}[v.\fld{blocks}[h-1].\eright+1..new.\eright]$.
 Similarly, $num\sub{deq}$ is the total number of dequeues contained in these blocks.
 Since $num\sub{enq}+num\sub{deq}=0$ at line \ref{testEmpty},
 these blocks contain no operations.
-By \Cref{blockNotEmpty}, this means the ranges of blocks are empty, so that $v.\fld{blocks}[h-1].\eleft \geq new.\eleft \geq i$.
+By \Cref{blockNotEmpty}, this means the ranges of blocks are empty, so that $v.\fld{blocks}[h-1].\eleft \geq \var{new}.\eleft \geq i$.
 Hence, $B$ is already a subblock of some block in $v$, so $v$ contains $op$.
 \end{proof}
 
 We now show that if a process fails its \op{Refresh}($v$) twice, some other process must have succeeded.
 
 \begin{lemma}\label{lem::doubleRefresh}
-Consider two consecutive terminating calls $R_1$, $R_2$ to \nf{Refresh}($v$) by the same process.
+Consider two consecutive terminating calls $R_1$, $R_2$ to \op{Refresh}($v$) by the same process.
 When $R_2$ terminates, $v$ contains all operations that $v$'s children contained when $R_1$ was invoked.
 \end{lemma}
 \begin{proof}

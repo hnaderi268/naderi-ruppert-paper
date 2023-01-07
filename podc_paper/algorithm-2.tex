@@ -27,6 +27,12 @@ The \fld{blocks} field of each node in the \ordering\ tree is implemented as a p
 We also apply an optimization:  instead of storing a \head\ field separate from \fld{blocks},
 we can simply use the maximum \fld{index} of any block in the \fld{blocks} RBT.
 
+\here{Walk reader through the code (and how it is different from basic versino)}
+
+\op{MaxBlock} is a query operation on a RBT that returns the block with the maximum \fld{index}.
+We could keep a pointer to the maximum block in the root of the RBT so that \op{MaxBlock}
+can be done in constant time.
+
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTDOUBLE}{\com\ #1}}
 
 \begin{figure}
@@ -135,7 +141,7 @@ we can simply use the maximum \fld{index} of any block in the \fld{blocks} RBT.
     	\State \var{lastChildBlock} \assign\ \Call{MaxBlock}{\var{v}.\fld{dir}.\fld{blocks}}
 		\State \Call{CAS}{\var{lastChildBlock}.\fld{super}, \nl, \var{lastBlock}.\fld{index}}
     \EndFor \label{endHelpChild1GC}
-\EndFunction{SetChildrenSuper}
+\EndFunction{SetSuper}
 }
 
 \spac

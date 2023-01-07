@@ -87,8 +87,6 @@ Each node $v$'s search is within the subblocks of one block in $v$'s parent.
 By \Cref{blockSize}, each search takes $O(\log c)$ steps, for a total of $O(\log p\log c)$ steps.
 \end{proof}
 
-\Eric{I left out the amortized bound, since the worst-case bound seems stronger}
-
 \begin{corollary}
 The queue implementation is wait-free.
 \end{corollary}

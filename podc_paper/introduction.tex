@@ -53,11 +53,11 @@ For the space-bounded implementation, we unlink unneeded memory from our data st
 We do not address the orthogonal problem of reclaiming unlinked memory; we assume a safe
 garbage collector, such as the highly optimized one that Java provides.
 
-Our queue uses a tournament tree where each process has its own leaf.\here{Is "tournament tree" the right word here?  Maybe call it a merge tree? or a linearization tree?}
+Our queue uses a binary tree, called the \emph{\ordering\ tree}, where each process has its own leaf.
 Each process propagates its operations along the path from its leaf up to the root.
 Operations in the root are ordered, 
 and this order is used to linearize the operations and compute their responses.
-\here{Either here or in related work section, talk about previous usage of tournament tree and how ours differs from it}
+\here{Either here or in related work section, talk about previous usage of ordering tree and how ours differs from it}
 Helping  ensures wait-freedom and avoids the CAS retry problem:  a process propagating its operation 
 to a node $v$ helps propagate all operations from both of $v$'s children.
 Explicitly storing all operations in the nodes would be too costly.

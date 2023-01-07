@@ -33,7 +33,7 @@ as each node along the path from the root to $v$.
 The tree reachable from the new copy of the root is the result of applying the tree operation.
 This only adds a constant factor to the running time of any routine designed for a (sequential) RBT.
 Once a process has performed an update to the RBT representing the blocks of a node 
-$v$ in the tournament tree, 
+$v$ in the \ordering\ tree, 
 it uses a CAS to swing $v$'s pointer from the previous RBT root to the new RBT root.
 A search in the RBT can simply read the pointer to the RBT root and perform a standard
 sequential search on it.
@@ -60,7 +60,7 @@ in $\var{root}.\fld{blocks}[1..m-1]$ have all been dequeued, so GC can discard a
 with indices smaller than $m$.
 Fortunately, there is an efficient \op{Split} operation that can remove
 all nodes with indices less than $m$ from an RBT in logarithmic time \cite[Sec.~4.2]{Tar83}.
-Then, GC can work its way down the tournament tree, using \op{Split} operations to discard all subblocks
+Then, GC can work its way down the \ordering\ tree, using \op{Split} operations to discard all subblocks
 of the discarded root blocks.
 
 \here{Have to talk about repeating CAS to do GC at each node up to p times}

@@ -326,8 +326,9 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 
 \end{lemma}
 
-
-
+\here{don't GC leaves of other processes}
+\here{insertion into rbt should only work if it is larger than any node already there}
+\here{line 39 checking if child head is not written should instead check if max node is = childHead}
 -------
 
 In our design a process attempts to collect the garbage, when it is going to to append a block in the $kp^2$ position in \nf{root.blocks} (see Line \ref{}). Every $p^2$  block appended to the root, one \nf{GarbageCollect} terminates because \nf{root.head} cannot advance until a \nf{GarbageCollect} garbage collect is done (see Lines ).

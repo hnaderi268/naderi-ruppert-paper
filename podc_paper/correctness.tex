@@ -6,15 +6,12 @@ After proving some basic invariants in Section \ref{sec::basicProperties},
 we show in Section \ref{sec::propagating} that performing a double refresh at each node
 is sufficient to propagate an operation to the root.
 In Section \ref{sec::helpingCorrect} we show that the \op{getEnqueue} and \op{indexDequeue}
-routines correctly navigate through the tournament tree.
+routines correctly navigate through the \ordering\ tree.
 Finally, we show that the implementation is linearizable in Section \ref{sec::linearizability}.
 
 \subsection{Basic Properties}
 \label{sec::basicProperties}
 
-\Eric{I'm using immutable to mean that they are written only when the object is created.  The \fld{super} field does change from null to some value after the block is created, so it 
-is written once, rather than 0 times.  In other words, we could have initialized
- all the other fields when the Block constructor is called.}
 A \typ{Block} object's fields, except for \fld{super}, are immutable:  they are written only 
 when the block is created at line \ref{enqNew} or \ref{deqNew} (for a leaf's block) or lines \ref{initNewBlock}--\ref{computeLength} (for an internal node's block).  
 Moreover, only a \op{CAS} at line \ref{setSuper1} can modify the \fld{super} field 
@@ -105,6 +102,7 @@ It follows that each block has at most one superblock.
 Moreover, we can now prove each operation is contained in at most one block of each node,
 and hence appears at most once in the linearization~$L$.
 
+\here{Might be able to get rid of this corollary and just cite previous lemma instead to save space}
 \begin{corollary}\label{lem::noDuplicates}
 For  $i\neq j$, $v.\fld{blocks}[i]$ and $v.\fld{blocks}[j]$ cannot both contain the same operation.
 \end{corollary}
@@ -300,9 +298,6 @@ returns the required result, by the induction hypothesis.
 \end{proof}
 
 Next, we prove the \fld{super} field of a block is within one of the true index of the block's superblock.
-\here{An alternative would be modify the code
-so that the correct index of the superblock is computed before storing it in $B.super$.
-In Advance, we could check if $h>v.parent.blocks[h_p].end_{left/right}$ and if so write $h_p+1$ instead of $h_p$ in $v.blocks[h].super$.  Then, in IndexDequeue there would be no need to correct the value read from the super field.  If we do this, the following lemma would be modified to prove that the value is perfectly accurate.}
 
 \begin{lemma}\label{superRelation}
 Let $B=v.\var{blocks}[b]$.

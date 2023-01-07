@@ -3,12 +3,12 @@
 \section{Queue Implementation} \label{DescriptQ}
 
 \subsection{Overview}
-We use a \emph{tournament tree} to agree on a total ordering of the operations performed on the queue.
-The tree is a static binary tree of height $\ceil{\log_2 p}$ with one leaf 
-assigned to each process. 
+Our \emph{\ordering\ tree} data structure is used to agree on a total ordering of the operations performed on the queue.
+It is a static binary tree of height $\ceil{\log_2 p}$ with one leaf 
+for each process. 
 Each tree node  stores an array of \emph{blocks}, where each block represents a 
 sequence of enqueues and a sequence of dequeues.
-See Figure \ref{tournament} for an example.
+See Figure \ref{orderingtree} for an example.
 In this section, we use an infinite array of blocks in each node.
 Section \ref{reducing} describes how to replace the infinite array by a representation with bounded space.
 
@@ -64,18 +64,18 @@ Since these tasks depends on the linearization ordering, we describe that orderi
 
 \begin{figure}[t]
 \input{tournamentTree.pdf_t}
-\caption{An example tournament tree with four processes. 
+\caption{An example \ordering\ tree with four processes. 
 We show explicitly the enqueue sequence and dequeue sequence represented by each block in the \fld{blocks} arrays of the seven nodes.  The leftmost element of each \fld{blocks} array is a dummy block.
 Arrows represent the indices stored in \eleft\ and \eright\ fields of blocks (as described in Section \ref{sec:fields}).
 The fourth process's Deq\sub{6} is still propagating towards the root.
 The linearization order for this tree is
-Enq(a) Enq(e) Deq\sub{2} $\mid$ Enq(b) Deq\sub{4} Deq\sub{5} $\mid$ Enq(d) Enq(f) Enq(h) Deq\sub{1} $\mid$ Enq(c) Deq\sub{3} $\mid$ Enq(g), where vertical bars indicate boundaries of blocks in the root.\label{tournament}}
+Enq(a) Enq(e) Deq\sub{2} $\mid$ Enq(b) Deq\sub{4} Deq\sub{5} $\mid$ Enq(d) Enq(f) Enq(h) Deq\sub{1} $\mid$ Enq(c) Deq\sub{3} $\mid$ Enq(g), where vertical bars indicate boundaries of blocks in the root.\label{orderingtree}}
 \end{figure}
 \here{Make sure two figures appear on same page of final version}
 
 \begin{figure}[t]
 \input{implicit.pdf_t}
-\caption{\label{implicit}The actual, implicit representation of the tree shown in Figure \ref{tournament}.
+\caption{\label{implicit}The actual, implicit representation of the tree shown in Figure \ref{orderingtree}.
 The leaf blocks simply show the \fld{element} field.
 Internal blocks show the \fld{sum\sub{enq}} and \fld{sum\sub{deq}} fields,
 and \eleft\ and \eright\ fields are shown using arrows as before.
@@ -133,9 +133,9 @@ L=E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k).
 \subsection{Designing a Block Representation to Solve Tasks \ref{construct} to \ref{findenqueue}}
 \label{sec:fields}
 
-Each tournament tree \node\ has an infinite array called \fld{blocks}.
-To simplify the code, each \node\ has an empty \block\ $B_0$ in \fld{blocks}[0].
-We define $E(B_0)$ and $D(B_0)$ to be the empty sequence.
+Each \node\ of the \ordering\ tree has an infinite array called \fld{blocks}.
+To simplify the code, \fld{blocks}[0] is initialized with an empty \block\ $B_0$, 
+where $E(B_0)$ and $D(B_0)$ are empty sequences.
 Each \node's \fld{head} index  stores the position in the \fld{blocks} array to be used
 for the next attempt to append a \block.
 
@@ -143,7 +143,7 @@ If a block contained an explicit representation of its sequences of enqueues and
 it would take $\Omega(p)$ time to construct a block, which would be too slow for task \ref{construct}.
 Instead, the block stores an implicit representation of the sequences.
 We now explain how we designed the fields for this implicit representation. 
-Refer to Figure \ref{implicit} for an example showing how the tree in Figure \ref{tournament} is actually represented, and Figure \ref{object-fields} for the definitions of the fields of \blocks\ and \nodes.
+Refer to Figure \ref{implicit} for an example showing how the tree in Figure \ref{orderingtree} is actually represented, and Figure \ref{object-fields} for the definitions of the fields of \blocks\ and \nodes.
 
 The information stored in a \block\ depends on whether it is in an internal node or a leaf.
 A block in a leaf represents a single enqueue or dequeue.  The \fld{element} field stores the value
@@ -232,7 +232,6 @@ shall prove that it is close.
 
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTSINGLE}{\com\ #1}}
 \begin{figure}
-\here{Does \var{leaf} have to be shared for helping when doing GC?}
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{1}
 \Statex \linecomment{Shared variable}
@@ -292,7 +291,7 @@ shall prove that it is close.
 %\end{itemize}
 
 \end{algorithmic}
-\caption{Objects used in tournament tree data structure \label{object-fields}}
+\caption{Objects used in the \ordering\ tree data structure \label{object-fields}}
 \end{figure}
 
 \subsection{Details of the Implementation}

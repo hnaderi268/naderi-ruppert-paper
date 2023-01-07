@@ -12,7 +12,6 @@ It uses two additional shared arrays.
 \item \typ{Node[]} \var{leaf}$[1..p]$ \Comment{\var{leaf}$[k]$ is the leaf assigned to process $k$}
 \item \typ{int[]} \var{last}$[1..p]$ \Comment{\var{last}$[k]$ indexes last block in $root$ that process $k$ has dequeued from}
 \end{itemize}
-The \fld{blocks} field is implemented as a pointer to the root of a RBT of \typ{Blocks} rather than an infinite array.
 Each \typ{Block} has an additional field.
 \begin{itemize}
 \item \typ{int} \var{index} \Comment{position this block would have in the \fld{blocks} array}
@@ -21,6 +20,12 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 \begin{itemize}
 \item \typ{Object} \var{response} \Comment{response of the operation in the block, if it is a dequeue}
 \end{itemize}
+The \fld{blocks} field of each node in the \ordering\ tree is implemented as a pointer to the root of a RBT of \typ{Blocks} rather than an infinite array.  Each RBT is initialized with an empty block with index 0.
+
+\here{Talk about what happens if a block is not found in an RBT}
+
+We also apply an optimization:  instead of storing a \head\ field separate from \fld{blocks},
+we can simply use the maximum \fld{index} of any block in the \fld{blocks} RBT.
 
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTDOUBLE}{\com\ #1}}
 
@@ -30,22 +35,24 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 \setcounter{ALG@line}{0}
 
 \Function{void}{Enqueue}{\typ{Object} \var{e}} 
+	\gc{\State \var{h} \assign \Call{MaxBlock}{\var{leaf}.\fld{blocks}}.\fld{index}
     \State \hangbox{let \var{B} be a new \typ{Block} with \fld{element} \assign\ \var{e},\\
-		\fld{sum\sub{enq}} \assign\ \var{leaf}.\fld{blocks}[\var{leaf}.\head-1].\fld{sum\sub{enq}}+1,\\
-		\fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[\var{leaf}.\head-1].\fld{sum\sub{deq}},\\
-		\gc{\fld{index} \assign\ \var{leaf}.\head}}
+		$\fld{sum\sub{enq}} \assign\ \var{leaf}.\fld{blocks}[h].\fld{sum\sub{enq}}+1,$\\
+		$\fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[h].\fld{sum\sub{deq}},$\\
+		$\fld{index} \assign\ h+1$}}\label{enqNewGC}
     \State \Call{Append}{\var{B}}
 \EndFunction{Enqueue}
 
 \spac
 
 \Function{Object}{Dequeue()}{} 
+	\gc{\State \var{h} \assign \Call{MaxBlock}{\var{leaf}.\fld{blocks}}.\fld{index}
     \State \hangbox{let \var{B} be a new \typ{Block} with \fld{element} \assign\ \nl,\\
-	    \fld{sum\sub{enq}} \assign\ \var{leaf}.\fld{blocks}[\var{leaf}.\head-1].\fld{sum\sub{enq}},\\
-	    \fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[\var{leaf}.\head-1].\fld{sum\sub{deq}}+1,\\
-	    \gc{\fld{index}\assign \var{leaf}.\head}}
+	    $\fld{sum\sub{enq}} \assign\ \var{leaf}.\fld{blocks}[h].\fld{sum\sub{enq}},$\\
+	    $\fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[h].\fld{sum\sub{deq}}+1,$\\
+	    $\fld{index}\assign h+1$}}\label{deqNewGC}
     \State \Call{Append}{\var{B}}
-    \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, \var{leaf}.\head, 1}
+    \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, \gc{$h+1$}, 1}
     \State \Return{ \Call{FindResponse}{\var{b, i}}}
     \label{deqRestGC}
 \EndFunction{Dequeue}
@@ -54,17 +61,17 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 
 \Function{void}{Append}{\typ{Block} \var{B}} 
     \State \linecomment{append block to leaf and propagate to root}
-    \gc{\State \var{leaf}.\fld{blocks}.\Call{TryInsert}{\var{B}}\label{appendLeafGC}}
-    \State \var{leaf}.\head\ \assign\ \var{leaf}.\head+1 \label{appendEndGC} 
+    \gc{\State \var{leaf}.\fld{blocks} \assign \Call{Insert}{\var{leaf}.\fld{blocks}, \var{B}}\label{appendLeafGC}}
     \State \Call{Propagate}{\var{leaf}.\fld{parent}} 
+    \gc{\State \here{Need to clean out my own leaf sometimes--how to determine what threshold to use for the split?}}
 \EndFunction{Append}
 
 \spac
 
 \Function{void}{Propagate}{\typ{Node} \var{v}}
     \State \linecomment{propagate blocks from \var{v}'s children to root}
-    \If{\bf{not} \Call{Refresh}{\var{v}}} \label{firstRefreshGC}  \hfill \com\ double refresh
-        \State \Call{Refresh}{\var{v}} \label{secondRefreshGC}
+    \If{\bf{not} \Call{\gc{GCRefresh}}{\var{v}}} \label{firstRefreshGC}  \hfill \com\ double refresh
+        \State \Call{\gc{GCRefresh}}{\var{v}} \label{secondRefreshGC}
     \EndIf
     \If{$\var{v} \neq \var{root}$} \hfill \com\ recurse up tree
         \State \Call{Propagate}{\var{v}.\fld{parent}}
@@ -73,44 +80,29 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 
 \spac
 
-\Function{boolean}{Refresh}{\typ{Node} \var{v}}
-    \State \linecomment{try to append a new block to \var{v}.\fld{blocks}}
-    \State \var{h} \assign\ \var{v}.\head \label{readHeadGC}
+	\gc{
+\Function{boolean}{GCRefresh}{\typ{Node} \var{v}}
+    \State \linecomment{try to append a new block to \var{v}.\fld{blocks}, with GC}
+	\State $\var{T} \assign\ \var{v}.\fld{blocks}$\label{readTGC}
+    \State $\var{h} \assign\ \Call{MaxBlock}{T}.\fld{index}$ \label{readHeadGC}
+	\If{\var{v} is root and $\var{h} \mbox{ mod } p^2=0$}
+		\State \linecomment{garbage collection phase}
+		\State \var{max} \assign 0
+		\For {$k \assign 1..p$}
+			\State $\var{max} \assign \max(\var{max}, \var{last}[k])$
+		\EndFor
+		\State \Call{Help}{}
+		\State \Return $\Call{Discard}{\var{root}, \var{max}-1}$\label{discard}
+    \Else\ \linecomment{do a standard refresh}
+        \State $T' \assign \Call{RefreshUpdate}{T, v}$\label{RU1}
+        \If{$T' = \nl$} \Return{\tr}
+    	\Else\ \Return $\Call{CAS}{\var{v}.\fld{blocks}, T, T'}$\label{casGC}
+		\EndIf
+	\EndIf
+%    \State \Call{Advance}{\var{v, h}}\label{advanceGC}
+\EndFunction{GCRefresh}
+} 
 
-	\gc{\If{ \var{v} is root and $\var{h} \mbox{ mod } p^2=0$}}
-	\gc{\State \var{max} \assign 0}
-	\gc{\For {$k \assign 1..p$}}
-		\gc{\State $\var{max} \assign \max(\var{max}, \var{last}[k])$}
-	\gc{\EndFor}
-	\gc{\State \Call{Help}{}}
-	\gc{\State \Call{Discard}{$\var{root}, \var{max}-1$}}
-	\gc{\EndIf}
-
-    \ForEach{\fld{dir} {\keywordfont{in}} \{\fld{left}, \fld{right}\}} \label{startHelpChild1GC}
-        \State \var{childHead} \assign\ \var{v}.\fld{dir}.\head \label{readChildHeadGC}
-        \If{\var{v}.\fld{dir.blocks}[\var{childHead}] $\neq$ \nl} \label{ifHeadnotNullGC}
-            \State \Call{Advance}{\var{v}.\fld{dir}, \var{childHead}} \label{helpAdvanceGC}
-        \EndIf
-    \EndFor \label{endHelpChild1GC}
-    \State \var{new} \assign\ \Call{CreateBlock}{\var{v, h}} \label{invokeCreateBlockGC}
-    \If{\var{new = \nl}} \Return{\tr} \label{addOPGC} 
-    \EndIf
-    \gc{\State \var{result} \assign\ \var{v}.\fld{blocks}.\Call{TryInsert}{\var{new}} \label{casGC}}
-    \State \Call{Advance}{\var{v, h}}\label{advanceGC}
-    \State \Return{ \var{result}}
-\EndFunction{Refresh}
-
-\spac
-
-\Function{void}{Advance}{\typ{Node} \var{v}, \typ{int} \var{h}} 
-    \State \linecomment{set \var{v}.\fld{blocks}[\var{h}].\fld{super} and }
-    \State \linecomment{increment \var{v}.\fld{head} from \var{h} to \var{h}+1}
-    \If{$\var{v}\neq \var{root}$}
-        \State \var{h\sub{p}} \assign\ \var{v}.\fld{parent}.\head \label{readParentHeadGC}
-        \State \Call{CAS}{\var{v}.\fld{blocks}[\var{h}].\fld{super}, \nl, \var{h\sub{p}}} \label{setSuper1GC}
-    \EndIf
-    \State \Call{CAS}{\var{v}.\head, \var{h}, \var{h}+1} \label{incrementHeadGC}
-\EndFunction{Advance}
 
 \end{algorithmic}
 \end{minipage}
@@ -118,17 +110,48 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{48}
+\gc{\Function{RBT}{RefreshUpdate}{\typ{RBT} \var{T}, \typ{Node} \var{v}}
+    \State \linecomment{append new block to RBT $T$ read from $v.\fld{blocks}$}
+    \State \Call{SetSuper}{$v$, $T$}
+    \State $\var{h} \assign \Call{MaxBlock}{T}.\fld{index}+1$ \label{refreshReadMax}
+    \State \var{new} \assign\ \Call{CreateBlock}{\var{v, h}} \label{invokeCreateBlockGC}
+    \If{\var{new = \nl}} \Return{\nl} \label{addOPGC}
+    \Else \ \Return \Call{Insert}{$T$, \var{new}}\label{refreshInsertGC}
+    \EndIf
+\EndFunction{RefreshUpdate}
+}
+\spac
+
+\gc{
+\Function{void}{SetSuper}{\typ{Node} \var{v}, \typ{RBT} $T$} 
+	\State \linecomment{set \fld{super} field of last block in $T$}
+	\State \linecomment{and in $v$'s children's RBTs}
+	\State $\var{lastBlock} \assign \Call{MaxBlock}{T}$
+	\If{$v\neq \var{root}$}	
+		\State \var{sup} \assign\ \Call{MaxBlock}{\var{v}.\fld{parent.blocks}}.\fld{index}
+		\State \Call{CAS}{\var{lastBlock}.\fld{super}, \nl, \var{sup}}
+	\EndIf
+	\ForEach{\fld{dir} in \{\fld{left}, \fld{right}\}} \label{startHelpChild1GC}
+    	\State \var{lastChildBlock} \assign\ \Call{MaxBlock}{\var{v}.\fld{dir}.\fld{blocks}}
+		\State \Call{CAS}{\var{lastChildBlock}.\fld{super}, \nl, \var{lastBlock}.\fld{index}}
+    \EndFor \label{endHelpChild1GC}
+\EndFunction{SetChildrenSuper}
+}
+
+\spac
 
 \Function{Block}{CreateBlock}{\typ{Node} \var{v}, \typ{int} \var{i}} 
     \State\linecomment{create new block for a \op{Refresh} to install in \var{v}.\fld{blocks}[\var{i}]}
     \State let \var{new} be a new \typ{Block} \label{initNewBlockGC}
-    \State \var{new}.\eleft \assign\ $\var{v}.\fld{left}.\head - 1$\label{createEndLeftGC}
-    \State \var{new}.\eright \assign\ $\var{v}.\fld{right}.\head - 1$
+    \gc{
+    \State \var{new}.\eleft \assign\ $\Call{MaxBlock}{\var{v}.\fld{left}.\fld{blocks}}.\fld{index}$\label{createEndLeftGC}
+    \State \var{new}.\eright \assign\ $\Call{MaxBlock}{\var{v}.\fld{right}.\fld{blocks}}.\fld{index}$\label{createEndRightGC}
+    \State \var{new}.\fld{index} \assign \var{i}
+    }
 	\State \hangbox{\var{new}.\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + \\
 			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{enq}}}
 	\State \hangbox{\var{new}.\fld{sum\sub{deq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{deq}} + \\
 			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{deq}}}
-    \gc{\State \var{new}.\fld{index} \assign \var{h}}
     \State \var{num\sub{enq}} \assign\ $\var{new}.\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{enq}}$\label{computeNumEnqGC}
     \State \var{num\sub{deq}} \assign\ $\var{new}.\fld{sum\sub{deq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{deq}}$
     \If{$\var{v} = \var{root}$}
@@ -140,8 +163,62 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
         \State \Return \var{new}
     \EndIf
 \EndFunction{CreateBlock}
+\end{algorithmic}
+\end{minipage}
+\caption{Bounded-space queue implementation.\label{pseudocode1GC}}
+\end{figure}
 
-\spac
+\begin{figure}
+\begin{minipage}[t]{0.465\textwidth}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{48}
+\gc{
+\Function{void}{Help}{}
+    \State \linecomment{help pending operations}
+    
+    \For{$\ell$ in $\var{leaf}[1..k]$}
+        \State $\var{last} \assign \Call{LastBlock}{\ell.\fld{blocks}}$
+    	\State \Call{Propagate}{$\ell.\fld{parent}$}
+        \If{$\var{last}.\fld{element}\hspace{-.1mm} =\hspace{-.1mm} \nl$\hspace{-.15mm} and\hspace{-.15mm} $\var{last}.\fld{index}\hspace{-.12mm}>\hspace{-.12mm}0$} 
+            \State \linecomment{operation is a  dequeue}
+            \State $\langle\var{b}, \var{i}\rangle \assign\ \Call{IndexDequeue}{\ell, \var{last}.\fld{index}, 1}$
+            \State $\var{last}.\fld{response} \assign\ \Call{FindResponse}{b, i}$ 
+        \EndIf
+    \EndFor
+\EndFunction{Help}
+
+\spac 
+
+\Function{boolean}{Discard}{\typ{Node} \var{v}, \typ{int} \var{t}}
+    \State \linecomment{discard blocks with index less than or equal}
+    \State \linecomment{to $t$ from $v$'s RBT and their subblocks}
+    \If{$v$ is an internal node}
+	    \State \var{t\sub{left}} \assign \var{v}.\fld{blocks}[\var{t}].\eleft
+    	\State \var{t\sub{right}} \assign \var{v}.\fld{blocks}[\var{t}].\eright
+		\For{\var{j} \assign 1 to $p$}
+        	\State $T \assign \var{v}.\fld{blocks}$\label{readT2GC}
+        	\State $T'  \assign \Call{Split}{T,t}$\label{split}
+			\State \linecomment{\op{Split} removes blocks with $\var{index} < t$}
+			\State $T'' \assign \Call{RefreshUpdate}{T',v}$ \label{RU2}
+        	\State \hangbox{$\var{result} \assign \Call{CAS}{\var{v}.\fld{blocks}, T, \\
+					\hspace*{10mm}(T'' = \nl\ ?\ T' : T'')$}}\label{splitCASGC}
+        	\State \bf{exit when} \var{result} 
+	        \State \linecomment{if \op{CAS} succeeds go to line \ref{discardrecursecomment}}
+    	\EndFor
+    	\If{\var{v} is an internal \typ{Node}} 
+			\State \linecomment{discard subblocks in descendants of $v$}\label{discardrecursecomment}
+        	\State \Call{Discard}{\var{v}.\fld{left}, \var{t\sub{left}}}\label{discardrecurse1}
+        	\State \Call{Discard}{\var{v}.\fld{right}, \var{t\sub{right}}}\label{discardrecurse2}
+    	\EndIf
+	\EndIf
+	\State \Return \var{result}
+\EndFunction{Discard}
+}
+\end{algorithmic}
+\end{minipage}
+\begin{minipage}[t]{0.529\textwidth}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{48}
 
 \Function{$\langle\typ{int}, \typ{int}\rangle$}{IndexDequeue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}}
     \State \linecomment{return $\langle\var{x, y}\rangle$ such that \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$}
@@ -173,7 +250,7 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
     \State \hangbox{\var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} - \mbox{ }$\\
     		$\var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$}
     \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmptyGC}
-        \gc{\State \var{last}[\var{this process id}] \assign\ \var{b}}
+        \gc{\State \var{last}[\var{this process id}] \assign\ \var{b}}\label{setlast1}
         \State \Return \nl \hfill \com\ queue is empty when dequeue occurs\label{returnNullGC}
     \Else \ \linecomment{response is the \var{e}th enqueue in the root}
         \State \var{e} \assign\ \var{i} + \var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}} - 
@@ -184,16 +261,16 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 		\State $i_e \assign\ \var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$
         \gc{
         \State \var{e} \assign\ \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}\label{findAnswerGC}
-        \State \var{last}[\var{this process id}] \assign\ $b_e$
+        \State \var{last}[\var{this process id}] \assign\ $b_e$\label{setlast2}
         \State \Return{\var{e}}
         }
     \EndIf
 \EndFunction{FindResponse}
 
-
 \end{algorithmic}
 \end{minipage}
-\caption{Bounded-space queue implementation.\label{pseudocode1GC}}
+
+\caption{Bounded-space queue implementation, continued.\label{pseudocode1GC}}
 \end{figure}
 
 
@@ -266,69 +343,112 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
         \State \linecomment{Use binary search to find enqueue's block in \var{v}.\fld{dir.blocks} and its rank within block}
         \State find minimum $\var{b}'$ in range [\var{v}.\fld{blocks}[\var{b}-1].\edir+1..\var{v}.\fld{blocks}[\var{b}].\edir] s.t. $\var{v}.\fld{dir.blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$\label{getChildGC}
         \State $\var{i}'$ \assign\ $\var{i} - (\var{v}.\fld{dir.blocks}[\var{b}'-1].\fld{sum\sub{enq}} - \var{prev\sub{dir}})$
-        \State \Return\Call{GetEnqueue}{\var{v}.\fld{dir}, $\var{b}'$, $\var{i}'$} 
+        \State \Return\Call{GetEnqueue}{\var{v}.\fld{dir}, $\var{b}'$, $\var{i}'$}
     \EndIf
 \EndFunction{GetEnqueue}
 
-\spac
-
-\gc{
-\Function{boolean}{Propagated}{\typ{Node} \var{v}, \typ{int} \var{b}}
-    \State \linecomment{check if $\var{v}.\fld{blocks}[b]$ has been propagated to \var{root}}
-    \State \linecomment{Precondition:  $\var{v}.\fld{blocks}[b]\neq \nl$}
-    \If {$\var{v} = \var{root}$} \Return{true}
-    \Else
-    	\State \fld{dir} \assign\ (\var{v}.\fld{parent.left} = \var{v} ? \fld{left} : \fld{right}) 
-	    \State \var{sup} \assign\ \var{v}.\fld{blocks}[\var{b}].\fld{super}
-	    \If{$\var{v}.\fld{parent.blocks}[\var{sup}] \neq \nl$ and $\var{b} > \var{v}.\fld{parent.blocks}[\var{sup}].\edir$} \var{sup} \assign\ $\var{sup}+1$
-	    \EndIf
-
-	    \State \Return{$\var{v}.\fld{parent.blocks}[\var{sup}] \neq \nl$ and $\var{b} \leq \var{v}.\fld{parent.blocks}[\var{sup}].\edir$ and \Call{Propagated}{\var{v}.\fld{parent}, \var{sup}}}
-    \EndIf
-\EndFunction{Propagated}
-
-\spac
-
-\Function{void}{Help}{}
-    \State \linecomment{help pending dequeues that have been propagated to root}
-    \For{$\ell$ in $\var{leaf}[1..k]$}
-        \State $\var{h} \assign \ell.\head$
-        \If{$\ell.\fld{blocks}[\var{h}].\fld{element} = \nl$ and \Call{Propagated}{$\ell, h$}}
-            \State $\langle\var{b}, \var{i}\rangle \assign\ \Call{IndexDequeue}{\ell, h, 1}$
-            \State \var{output} \assign\ \Call{FindResponse}{$b, i$} 
-            \State $\ell.\fld{blocks}[\var{h}].\fld{response} \assign\ \var{output}$
-        \EndIf
-    \EndFor
-\EndFunction{Help}
-
-\spac 
-
-\Function{void}{Discard}{\typ{Node} \var{v}, \typ{int} \var{t}}
-    \State \linecomment{discard blocks with index less than or equal to threshold $t$ from RBT \var{v}.\fld{blocks} and all subblocks of those blocks}
-    \State \var{t\sub{left}} \assign \var{v}.\fld{blocks}[\var{t}].\eleft
-    \State \var{t\sub{right}} \assign \var{v}.\fld{blocks}[\var{t}].\eright
-	\For{\var{j} \assign 1 to $p$}
-        \State $T \assign \var{v}.\fld{blocks}$
-        \State $T'  \assign \Call{Split}{T,t}$ \Comment{$T'$ is the root of new RBT containing $T$'s blocks with $\var{index} \geq t$}
-        \State \bf{exit when} \Call{CAS}{\var{v}.\fld{blocks}, $T$, $T'$}\label{splitCASGC}
-    \EndFor
-    \If{\var{v} is an internal \typ{Node}} \Comment{discard subblocks in descendants of $v$}
-        \State \Call{Discard}{\var{v}.\fld{left}, \var{t\sub{left}}}
-        \State \Call{Discard}{\var{v}.\fld{right}, \var{t\sub{right}}}
-    \EndIf
-\EndFunction{Discard}
-}
 \end{algorithmic}
 \caption{\label{pseudocode2GC}Bounded-space queue implementation, continued. }
 \end{figure}
 
+\subsection{Correctness}
+Unfortunately, there are enough changes to the algorithm that a new proof of correctness
+is required.  Its structure mirrors the proof of the original algorithm, but requires additional
+reasoning to ensure GC does not interfere with other routines.
+
+\begin{observation}\label{RBTinsertions}
+When a block is inserted into an RBT $T$, its \fld{index} is one greater than the maximum \fld{index} in $T$.
+\end{observation}
+\begin{proof}
+If line \ref{appendLeafGC} inserts a block into a leaf's RBT, then it was created at 
+line \ref{enqNewGC} or \ref{deqNewGC} with \fld{index} $h+1$, where $h$ is the maximum \fld{index}
+in the leaf's RBT.  When the new block is inserted, the maximum \fld{index} in the RBT is still $h$,
+since only the owner of the leaf modifies the leaf's RBT.
+
+If line \ref{refreshInsertGC} inserts a block  into an internal node's RBT $T$,
+it is created by the call to \op{CreateBlock} at line \ref{invokeCreateBlockGC} and 
+has \fld{index} $h$, which is set at line \ref{refreshReadMax} to  the maximum \fld{index} in $T$ plus one.
+\end{proof}
+
+\begin{observation}\label{lastinroot}
+Each entry in \var{last} is the \var{index} of a block that has appeared in the root's RBT.
+\end{observation}
+\begin{proof}
+Only line \ref{setlast1} and \ref{setlast2} in \op{FindResponse} write values into \var{last}.
+The value written is either $b$ or $b_e \leq b$.
+By the precondition of \op{FindResponse}, $\var{root}.\fld{blocks}[b]$ exists, so the index $b$ has appeared
+in the root's RBT.
+By \Cref{RBTinsertions}, all values less than $b$ have appeared in the root's RBT too.
+\end{proof}
+
+\begin{observation}
+\label{edirGC} 
+If $B$ is a block in the RBT of an internal node $v$, then for $\var{dir} \in \{\fld{left},\fld{right}\}$,
+$B.\edir$ was read from the \fld{index} field of some node in the RBT of $v.\var{dir}$.
+\end{observation}
+\begin{proof}
+The \eleft\ and \eright\ fields are set by reading the \fld{index} field of a node in the appropriate child
+on line \ref{createEndLeftGC} and \ref{createEndRightGC}.
+\end{proof}
+
+\begin{invariant}
+For each RBT $T$, 
+$T$ is non-empty and the blocks of $T$ have consecutive \fld{index} fields.
+\end{invariant}
+\begin{proof}
+The claim is true initially, since each RBT initially contains only the empty block with \fld{index} 0.
+We show that each time a new RBT is constructed, it preserves the invariant.
+When a new RBT is created by inserting an element into an existing RBT, \Cref{RBTinsertions}
+implies that the invariant is preserved.
+
+Suppose a new RBT is created by a \op{Split}($T,t$) operation $S$ on at line \ref{split} of a \op{Discard}($v,t$), 
+and that the invariant held prior to $S$.
+Clearly, $S$ preserves the property that indices are consecutive.  To show that the new tree
+is non-empty we first prove that the call to \op{Discard}($v,t$) has a parameter $t$ that is at least as big as a value previously
+read from the index field of some block in $v$'s RBT.
+If \op{Discard} was called from line \ref{discard}, then $t+1$ was read from an entry of \var{last}, so the claim follows from \Cref{lastinroot}.
+If \op{Discard} was called from line \ref{discardrecurse1} or \ref{discardrecurse2}, the claim follows
+from \Cref{edirGC}.
+Since the invariant held prior to $S$, no split before $S$ emptied $v$'s tree.  Therefore,
+some block with index at least $t$ is still in $T$ when $S$ occurs.  That block will be in the new tree created by $S$.
+\end{proof}
+
+Thus, calls to \op{MaxBlock} are well-defined.  Also, this means that the sequence of blocks added to $v.\fld{blocks}$ have consecutive \fld{index} values, starting from 1, so the references to $v.\fld{blocks}[i]$ (meaning the block in $v$'s RBT with \fld{index} $i$) are well-defined.
+
+\begin{corollary}\label{maxNonDecreasing}
+The maximum \fld{index} in $v$'s RBT is non-decreasing over time.
+\end{corollary}
+\begin{proof}
+The CAS steps (on line \ref{casGC} and \ref{splitCASGC}) that update $v.\fld{blocks}$ always replace 
+a tree $T$ by a tree that is built from $T$ by inserting an element or removing the elements with 
+the smallest \fld{index} values.
+\end{proof}
+
+We now prove the analogue of Lemma \ref{lem::headProgress}.
 \begin{lemma}
-
+ If $b>0$ and a block with index $b$ has been inserted into $v.\fld{blocks}$ then 
+ $v.\fld{blocks}[b-1].\fld{end\sub{left}} \leq v.\fld{blocks}[b].\fld{end\sub{left}}$ and 
+ $v.\fld{blocks}[b-1].\fld{end\sub{right}} \leq v.\fld{blocks}[b].\fld{end\sub{right}}$.
 \end{lemma}
+\begin{proof}
+The block $B$ with index $b$ was installed into $v$'s RBT by the CAS at line \ref{casGC} or \ref{splitCASGC} 
+that changed the tree from $T$ to $T_{new}$.
+Before this CAS, the tree $T$ was read from $v.blocks$ at line \ref{readTGC} or \ref{readT2GC}, respectively,
+before the \op{RefreshUpdate} on line \ref{RU1} or \ref{RU2} that inserted $B$ to get $T_{new}$.
+Since the previous block $B'=v.\fld{blocks}[b-1]$ was already in $T$ (by \Cref{RBTinsertions}),
+the \op{CreateBlock}$(v,b-1)$ that created $B'$ terminated before the \op{CreateBlock}$(v,b)$ that created $B$ started.
+It follows from \Cref{maxNonDecreasing} that the value that line \ref{createEndLeftGC} of \op{CreateBlock}$(v,b-1)$ stores in $B'.\eleft$ is less than or equal to the value that line \ref{createEndLeftGC} of \op{CreateBlock}$(v,b)$ stores in $B.\eleft$.  Similarly, the values stored in $B'.\eright$ and $B.\eright$ at line \ref{createEndRightGC} satisfy the claim.
+\end{proof}
 
-\here{don't GC leaves of other processes}
-\here{insertion into rbt should only work if it is larger than any node already there}
-\here{line 39 checking if child head is not written should instead check if max node is = childHead}
+\Cref{lem::subblocksDistinct}, \Cref{lem::noDuplicates}, \Cref{lem::sum}, \Cref{blockNotEmpty} hold true for the modified algorithm.  Their proofs are identical to those given in Section \ref{sec::basicProperties}.
+
+
+
+
+
+
+
+
 -------
 
 In our design a process attempts to collect the garbage, when it is going to to append a block in the $kp^2$ position in \nf{root.blocks} (see Line \ref{}). Every $p^2$  block appended to the root, one \nf{GarbageCollect} terminates because \nf{root.head} cannot advance until a \nf{GarbageCollect} garbage collect is done (see Lines ).
@@ -409,4 +529,7 @@ The space taken by each node of the tree is $O(p^2+q)$. The total space in the t
 \begin{lemma}
   Algorithm is wait-free and linearizable.
 \end{lemma}
+
+\here{Remark on an optimization:  instead of storing \head\ field separate from \fld{blocks}, we could store
+the maximum index of the RBT in the root of the RBT.  This would simplify things, but require modifying the proof more extensively.}
 

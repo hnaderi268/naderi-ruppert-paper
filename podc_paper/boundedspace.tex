@@ -21,10 +21,11 @@ The binary searches for a block in line \ref{FRb} and \ref{getChild} can simply 
 using the \fld{sum\sub{enq}} field, since the RBT is also sorted with respect to this field, by \Cref{lem::sum}.
  
 Known lock-free search trees have step complexity that includes a term linear in $p$ \cite{EFHR14,Ko20}.  
-However, we do not require all the standard search tree functions.
+However, we do not require all the standard search tree operations.
 Instead of a standard insertion, we allow a \op{Refresh}'s insertion to fail if another
 concurrent \op{Refresh} succeeds in inserting a node, just as the CAS on line \ref{cas}
 can fail if a concurrent \op{Refresh} does a successful CAS.
+Moreover, the insertion should succeed only if the newly inserted block has a larger index than any other node in the RBT.
 Thus, we can use a particularly simple concurrent RBT implementation.
 A sequential RBT can be made persistent using the classic node-copying technique of 
 Driscoll et al.~\cite{DSST89}:  all nodes are immutable, and operations on the 
@@ -57,9 +58,9 @@ Then, it helps complete every other process's pending dequeue
 by computing the dequeue's response and writing it in the block in the leaf that represents the dequeue.
 Once this helping is complete, it follows from the FIFO property of the queue that elements enqueued 
 in $\var{root}.\fld{blocks}[1..m-1]$ have all been dequeued, so GC can discard all blocks in the root's RBT 
-with indices smaller than $m$.
+with indices smaller than $m-1$.
 Fortunately, there is an efficient \op{Split} operation that can remove
-all nodes with indices less than $m$ from an RBT in logarithmic time \cite[Sec.~4.2]{Tar83}.
+all nodes with indices smaller than $m-1$ from a RBT in logarithmic time \cite[Sec.~4.2]{Tar83}.
 Then, GC can work its way down the \ordering\ tree, using \op{Split} operations to discard all subblocks
 of the discarded root blocks.
 

@@ -89,10 +89,10 @@ satisfy the claim.
 If $B$ and $B'$ are two blocks in nodes at the same depth, their sets of subblocks are disjoint.
 \end{lemma}
 \begin{proof}
-We prove the lemma by reverse induction.
-If $B$ and $B'$ are in leaves, they have no subblocks, so the claim is true.
-Assume the claim is true for nodes at depth $d+1$ and let $B$ and $B'$ be two blocks in nodes at depth $d$.
-Consider the direct subblocks of $B$ and $B'$ defined by (\ref{defsubblock}).
+We prove the lemma by reverse induction on the depth.
+If $B$ and $B'$ are in leaves, they have no subblocks, so the claim holds.
+Assume the claim holds for nodes at depth $d+1$ and let $B$ and $B'$ be two blocks in nodes at depth $d$.
+Consider the direct subblocks of $B$ and $B'$ defined by~(\ref{defsubblock}).
 If $B$ and $B'$ are in different nodes at depth $d$, then their direct subblocks are disjoint.
 If $B$ and $B'$ are in the same node, it follows from \Cref{lem::headProgress} that their direct subblocks are disjoint.
 Either way, their direct subblocks (at depth $d+1$) are disjoint, so the claim follows from the induction hypothesis.

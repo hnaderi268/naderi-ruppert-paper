@@ -8,10 +8,12 @@
 
 Here, we give more details of the bounded-space construction sketched in Section \ref{reducing}.
 We first describe the modifications to the implementation.
-It uses two additional shared arrays.
+To avoid confusion, we use nodes to refer to the nodes of the ordering tree, and blocks to refer
+to the nodes of a RBT (since the RBT stores blocks).
+
+The space-bounded implementation uses an additional shared array so that processes can access one another's leaves to perform helping.
 \begin{itemize}
 \item \typ{Node[]} \var{leaf}$[1..p]$ \Comment{\var{leaf}$[k]$ is the leaf assigned to process $k$}
-\item \typ{int[]} \var{last}$[1..p]$ \Comment{\var{last}$[k]$ indexes last block in $root$ that process $k$ has dequeued from}
 \end{itemize}
 Each \typ{Block} has an additional field.
 \begin{itemize}
@@ -21,25 +23,49 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 \begin{itemize}
 \item \typ{Object} \var{response} \Comment{response of the operation in the block, if it is a dequeue}
 \end{itemize}
+Each \typ{Node} has an additional array field to help determine which of its blocks are safe to discard.
+\begin{itemize}
+\item \typ{int[]} \var{last}$[1..p]$ \Comment{\var{last}$[k]$ is the largest \fld{index} of a block in the node that process $k$ }\\
+\mbox{ }\Comment{has accessed, either to find the enqueued item for its dequeue}\\
+\mbox{ }\Comment{or during a \nl\ dequeue}
+\end{itemize}
 The \fld{blocks} field of each node in the \ordering\ tree is implemented as a pointer to the root of a RBT of \typ{Blocks} rather than an infinite array.  
-The nodes in the RBT each contain a pointer to a block, as well as the standard RBT node attributes: child pointers and a colour bit; this means that when an update on a RBT uses node-copying, the pointer to the block
-gets copied, rather than copying the block itself.)
 Each RBT is initialized with an empty block with index 0.
+The \head\ field, which previously gave the next position to insert into the \fld{blocks} array is no
+longer needed; we can instead find the maximum \fld{index} of any block in the RBT.
+To facilitate this, \op{MaxBlock} is a query operation on the RBT that 
+returns the block with the maximum \fld{index}.
+We can store, in the root of the RBT, a pointer to the maximum block so that \op{MaxBlock}
+can be done in constant time, without affecting the time of other RBT operations.
 
 \here{Talk about what happens if a block is not found in an RBT}
+\here{Talk about \emph{marking} a block to indicate that any blocks with smaller indices will no longer
+be needed by operations that haven't started yet.}
 
-We also apply an optimization:  instead of storing a \head\ field separate from \fld{blocks},
-we can simply use the maximum \fld{index} of any block in the \fld{blocks} RBT.
+Pseudocode for the space-bounded implementation appears in Figure \ref{pseudocode1GC}--\ref{pseudocode3GC}.
+The \op{Propagate} and \op{FindResponse} routines are unchanged.
+Minor additions to \op{IndexDequeue} and \op{GetEnqueue} update the \var{last} field of nodes
+visited by the routines to mark the blocks they visit in those nodes.
+Only minor modifications have been made to \op{Enqueue}, \op{Append}, \op{CreateBlock}
+to accomodate the switch from an array of blocks to a RBT of blocks (and the corresponding disappearance
+of the \head\ field).
+\op{Dequeue} has been similarly modified, and the second half of the routine is now in a
+separate routine called \op{CompleteDequeue} so that it can also be used by other processes
+helping to complete the operation.
 
-\here{Walk reader through the code (and how it is different from basic versino)}
+Once a dequeue has been propagated to the root, 
+\bf{\op CompleteDequeue} computes its answer.  This routine can also be called by helpers 
+who want to help complete the dequeue.
+In addition to calling \op{FindResponse} and \op{IndexDequeue} to compute the response,
+it also updates \var{last} entries if the computed response is \nl.
+It does this by calling \op{IndexDequeue} again, this time with \tr\ as its final parameter.
+This extra parameter has been added to 
+\op{IndexDequeue} to indicate whether it should mark blocks that it traverses (which all contain the dequeue).
 
-\op{MaxBlock} is a query operation on a RBT that returns the block with the maximum \fld{index}.
-We could keep a pointer to the maximum block in the root of the RBT so that \op{MaxBlock}
-can be done in constant time.
+\here{Discuss new routines AddBlock, SetSuper, Help, and largely modified Refresh}
 
-\here{Emphasize that RBT nodes have \emph{pointers to} blocks.  Thus when RBT does node copying,
-it copies the pointer to the block; it does not make a copy of the block itself.
-This is important because if we mark a block that has been node-copied, we want the block to still be marked.  Similarly for super field.}
+
+\here{does RBT have to have pointer to block rather than block itself so that updates to super field work correctly?}
 
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTDOUBLE}{\com\ #1}}
 
@@ -50,11 +76,11 @@ This is important because if we mark a block that has been node-copied, we want 
 
 \Function{void}{Enqueue}{\typ{Object} \var{e}} 
     \gc{
-    \State \var{h} \assign \Call{MaxBlock}{\var{leaf}.\fld{blocks}}.\fld{index}
+    \State \var{h} \assign \Call{MaxBlock}{\var{leaf}.\fld{blocks}}.\fld{index}+1
 	\State \hangbox{let \var{B} be a new \typ{Block} with \fld{element} \assign\ \var{e},\\
-		$\fld{sum\sub{enq}} \assign\ \var{leaf}.\fld{blocks}[h].\fld{sum\sub{enq}}+1,$\\
-		$\fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[h].\fld{sum\sub{deq}}$,\\
-		$\fld{index}\assign h+1$}\label{enqNewGC}
+		$\fld{sum\sub{enq}} \assign\ \var{leaf}.\fld{blocks}[h-1].\fld{sum\sub{enq}}+1,$\\
+		$\fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[h-1].\fld{sum\sub{deq}}$,\\
+		$\fld{index}\assign h$}\label{enqNewGC}
 	}
     \State \Call{Append}{\var{B}}
 \EndFunction{Enqueue}
@@ -63,23 +89,29 @@ This is important because if we mark a block that has been node-copied, we want 
 
 \Function{Object}{Dequeue()}{} 
     \gc{
-    \State \var{h} \assign \Call{MaxBlock}{\var{leaf}.\fld{blocks}}.\fld{index}
+    \State \var{h} \assign \Call{MaxBlock}{\var{leaf}.\fld{blocks}}.\fld{index}+1
     \State \hangbox{let \var{B} be a new \typ{Block} with \fld{element} \assign\ \nl,\\
-	    $\fld{sum\sub{enq}} \assign\ \var{leaf}.\fld{blocks}[h].\fld{sum\sub{enq}},$\\
-	    $\fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[h].\fld{sum\sub{deq}}+1$,\\
-	    $\fld{index}\assign h+1$}\label{deqNewGC}
+	    $\fld{sum\sub{enq}} \assign\ \var{leaf}.\fld{blocks}[h-1].\fld{sum\sub{enq}},$\\
+	    $\fld{sum\sub{deq}} \assign\ \var{leaf}.\fld{blocks}[h-1].\fld{sum\sub{deq}}+1$,\\
+	    $\fld{index}\assign h$}\label{deqNewGC}
 	}
     \State \Call{Append}{\var{B}}
-    \State $\langle \var{b}, \var{i}\rangle \assign\ \Call{IndexDequeue}{\var{leaf}, \gc{h+1}, 1, \fa}$
-    \gc{
+    \gc{\State \Return \Call{CompleteDequeue}{\var{leaf}, $h$}}
+\EndFunction{Dequeue}
+
+\spac
+
+\gc{
+\Function{Object}{CompleteDequeue}{\var{leaf}, $h$}
+    \State \linecomment Finish propagated dequeue in $\var{leaf}.\fld{blocks}[h]$
+    \State $\langle \var{b}, \var{i}\rangle \assign\ \Call{IndexDequeue}{\var{leaf}, h, 1, \fa}$
     \State $\var{res} \assign \Call{FindResponse}{b, i}$
-	\If{$\var{res} = \nl$} \linecomment{mark blocks}
-		\State $\Call{IndexDequeue}{\var{leaf}, h+1, 1, \tr}$
+	\If{$\var{res} = \nl$} \linecomment{update \var{last} values}
+		\State $\Call{IndexDequeue}{\var{leaf}, h, 1, \tr}$
 	\EndIf
 	\State \Return{\var{res}}
-    }
-    \label{deqRestGC}
-\EndFunction{Dequeue}
+\EndFunction{CompleteDequeue}
+}
 
 \spac
 
@@ -119,8 +151,14 @@ This is important because if we mark a block that has been node-copied, we want 
     \EndIf
 \EndFunction{Propagate}
 
-\spac
 
+
+\end{algorithmic}
+\end{minipage}
+\begin{minipage}[t]{0.529\textwidth}
+
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{48}
 \Function{boolean}{Refresh}{\typ{Node} \var{v}}
 	\State \linecomment{try to append a new block to $v.\fld{blocks}$}
 	\gc{
@@ -139,13 +177,7 @@ This is important because if we mark a block that has been node-copied, we want 
 
 \EndFunction{Refresh}
 
-\end{algorithmic}
-\end{minipage}
-\begin{minipage}[t]{0.529\textwidth}
-
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{48}
-
+\spac
 \gc{
 \Function{void}{SetSuper}{\typ{Node} \var{v}, \typ{RBT} $T$} 
 	\State \linecomment{set \fld{super} field of last block in $T$}
@@ -223,12 +255,11 @@ This is important because if we mark a block that has been node-copied, we want 
     \State \linecomment{help pending operations}
     
     \For{$\ell$ in $\var{leaf}[1..k]$}
-        \State $\var{last} \assign \Call{LastBlock}{\ell.\fld{blocks}}$
+        \State $\var{B} \assign \Call{LastBlock}{\ell.\fld{blocks}}$
     	\State \Call{Propagate}{$\ell.\fld{parent}$}
-        \If{$\var{last}.\fld{element}\hspace{-.1mm} =\hspace{-.1mm} \nl$\hspace{-.15mm} and\hspace{-.15mm} $\var{last}.\fld{index}\hspace{-.12mm}>\hspace{-.12mm}0$} 
+        \If{$\var{B}.\fld{element} = \nl$ and $\var{B}.\fld{index}>0$} 
             \State \linecomment{operation is a  dequeue}
-            \State $\langle\var{b}, \var{i}\rangle \assign\ \Call{IndexDequeue}{\ell, \var{last}.\fld{index}, 1}$
-            \State $\var{last}.\fld{response} \assign\ \Call{FindResponse}{b, i}$ 
+            \State $\var{B}.\fld{response} \assign\ \Call{CompleteDequeue}{\ell, \var{B}.\fld{index}}$ 
         \EndIf
     \EndFor
 \EndFunction{Help}
@@ -269,7 +300,7 @@ This is important because if we mark a block that has been node-copied, we want 
 \end{algorithmic}
 \end{minipage}
 
-\caption{Bounded-space queue implementation, continued.\label{pseudocode1GC}}
+\caption{Bounded-space queue implementation, continued.\label{pseudocode2GC}}
 \end{figure}
 
 
@@ -351,7 +382,7 @@ This is important because if we mark a block that has been node-copied, we want 
 \EndFunction{GetEnqueue}
 
 \end{algorithmic}
-\caption{\label{pseudocode2GC}Bounded-space queue implementation, continued. }
+\caption{\label{pseudocode3GC}Bounded-space queue implementation, continued. }
 \end{figure}
 
 \subsection{Correctness}

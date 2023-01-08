@@ -154,25 +154,43 @@ So suppose both $R_1$ and $R_2$ perform a failed \op{CAS} at line \ref{casGC}.
 \subsection{Analysis}
 
 We first bound the size of RBTs.  Let $q_{max}$ be the maximum size of the queue at any time during the sequential execution given by the linearization $L$.
+Recall that GC is done on a node every $G$ times its RBT is updated, where we chose $G$ to be $p^2\ceil{\log p}$.
 
-\begin{lemma}
-If the maximum \fld{index} in a node's RBT is a multiple of $p^2$, then
+\begin{lemma}\label{boundAfterGC}
+If the maximum \fld{index} in a node's RBT is a multiple of $G$, then
 it contains $O(q_{max}+p)$ blocks.
 \end{lemma}
+\begin{proof}
+\here{to be written}
+\end{proof}
 
 
 \begin{corollary}\label{RBTbound}
-At all times, the size of a node's RBT is $O(q_{max}+p^2)$. 
+At all times, the size of a node's RBT is $O(q_{max}+p+G)$. 
 \end{corollary}
 \begin{proof}
-
+Each update to a node's RBT adds at most one block to it, increasing its maximum \fld{index} by 1.
+Thus, there are at most $G$ updates since the last time its maximum \fld{index} was a multiple of $G$.
+The claim follows from \Cref{boundAfterGC}.
 \end{proof}
+
+\begin{theorem}\label{spaceBound}
+The size of our queue data structure is $O(pq_{max}+p^3\log p)$ words of memory.
+\end{theorem}
+\begin{proof}
+There are $2p-1$ nodes in the ordering tree.  Aside from the RBT, each node uses $O(p)$ memory for the
+\fld{last} array.  So the space bound follows from \Cref{RBTbound} and the fact that $G$ is chosen
+to be $p^2\ceil{\log p}$.
+\end{proof}
+
+Although individual operations may now become more expensive because they have to perform GC,
+we show that operations still have polylogarithmic amortized step complexity.
 
 \begin{proposition}
 The amortized step complexity is $O(\log p \log(p+q_{max}))$ per operation.
 \end{proposition}
 \begin{proof}
-It follows from \Cref{RBTbound}
+It follows from \Cref{RBTbound} and the fact that $G=p^2\ceil{\log p}$
 that all the RBT routines we use to perform \op{Split}, \op{Insert} and searches for
 blocks with a particular index or for a \fld{sum\sub{enq}} value (in line \ref{FRsearchGC} or \ref{getChildGC}) can all be done in $O(\log(p+q_{max}))$ steps.
 
@@ -180,19 +198,41 @@ First, we bound the number of steps taken \emph{excluding} the GC phase in line 
 An \op{Enqueue} or null \op{Dequeue} does $O(1)$ RBT operations and other work at each level of the tree during \op{Propagate},
 for a total of $O(\log p \log(p+q_{max}))$ steps.
 A non-null \op{Dequeue} must also search for a block in the root at line \ref{FRsearchGC}
-and call \op{GetEnqueue}, which does $O(1)$ RBT operations (including a search at line \ref{getChildGC}) and other work at each level of the tree.
+and call \op{GetEnqueue}.  At each level of the tree, \op{GetEnqueue} does $O(1)$ RBT operations (including a search at line \ref{getChildGC}) and $O(1)$ other steps.
 Thus, a \op{Dequeue} also takes $O(\log p \log(p+q_{max}))$ steps.
 
-Now we consider the additional steps a process takes to do GC in line \ref{GCstart}--\ref{GCend}.
-For each integer $r$, each process does GC on each node $v$ with a block whose \fld{index} is $rp^2$ at most
-once, since either its CAS succeeds, or another processes CAS advances the maximum 
-Each such helping phase takes $O(p)$ time to read the \var{last} array,
-$O(p \log p \log(p+q_{max}))$ time to \op{Help} (excluding any GC phases within \op{Help}, which will be accounted for at the other nodes),
-and \here{to be continued}
+Now we consider the additional steps a process takes while doing GC in line \ref{GCstart}--\ref{GCend}.
+If a process does GC in a call to \op{AddBlock}($v,T,B$) where $B$ has \fld{index} $r\cdot G$ for some integer $r$, we call this the process's \emph{$r$th helping phase on $v$}.
+We argue that each process $P$ can do an $r$th helping phase on $v$ at most once as follows.
+Consider $P$'s first call $A$ to \op{AddBlock} that does an $r$th helping phase on $v$.
+Let $v,T,B$ be the arguments of $A$.
+Any call to \op{AddBlock} on internal node $v$ is from line \ref{refreshABGC} of \op{Refresh}, so $B.\fld{index}$
+is the maximum \fld{index} in $T$ plus 1.
+The \op{Refresh} that called $A$ performed a \op{CAS} at line \ref{casGC}.  Either the \op{CAS} succeeds
+or it fails because 
+some other \op{CAS} changes $v.blocks$ from $T$ to another tree.
+Either way, by \Cref{RBTupdates}, $v$'s RBT's maximum \fld{index} will be at least $rG$ at all times
+after this CAS.
+So if a subsequent \op{Refresh} by process $P$ 
+ever calls \op{AddBlock} on $v$ again, the block it passes as the third argument
+will have $\index>rG$, so $P$ will not perform an $r$th helping phase on $v$ again.
+
+Each helping phase takes $O(p)$ steps to read the \var{last} array,
+$O(p \log p \log(p+q_{max}))$ steps to \op{Help},
+followed by $O(\log(p+q_{max}))$ steps to split and insert a new node into a RBT.
+Thus, for each integer $r$ and each node $v$, a total of $O(p^2\log p\log(p+q_{max}))$ steps
+are performed by all processes during their $r$th helping phase on $v$.
+We can amortize these steps over the operations that appear in 
+$v.blocks[(r-1)p^2+1..p^2]$.
+By \Cref{blockNotEmpty}, there are at least $G$ such operations, 
+so each operation's amortized number of steps for GC at each node along the path from its leaf to the root
+is $O(p^2\log p\log(p+q_{max})/G)=O(\log(p+q_{max}))$.
+Hence each operation's amortized number of GC steps is $O(\log p\log(p+q_{max}))$, which is
+within a constant factor of the steps it performs excluding GC.
 \end{proof}
 
 
-
+============
 
 In our design a process attempts to collect the garbage, when it is going to to append a block in the $kp^2$ position in \nf{root.blocks} (see Line \ref{}). Every $p^2$  block appended to the root, one \nf{GarbageCollect} terminates because \nf{root.head} cannot advance until a \nf{GarbageCollect} garbage collect is done (see Lines ).
 

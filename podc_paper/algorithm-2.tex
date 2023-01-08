@@ -127,11 +127,11 @@ This extra parameter has been added to
 \Function{RBT}{AddBlock}{\typ{Node} \var{v}, \typ{RBT} \var{T}, \typ{Block} \var{B}}
     \State \linecomment{add block $\var{B}\neq\nl$ to \var{T}, doing GC if necessary}
     \If{\var{B}.\fld{index} is a multiple of $p^2$}
-    	\State \linecomment{Do garbage collection}
+    	\State \linecomment{Do garbage collection}\label{GCstart}
 		\State $m \assign 0$
 		\For{$k\assign 1..p$} $m\assign \max(m, v.\fld{last}[k])$
 		\EndFor
-        \State \Call{Help}{}
+        \State \Call{Help}{}\label{GCend}
         \State $T' \assign\ \Call{Split}{T,m-1}$
         \State \linecomment{\op{Split} removes blocks with $\fld{index} < m-1$}
         \State \Return \Call{Insert}{$T',B$}
@@ -234,7 +234,7 @@ This extra parameter has been added to
         \State \var{e} \assign\ \var{i} + \var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}} - 
 			\var{root}.\fld{blocks}[\var{b}-1].\size\label{computeEGC}
 		\State \linecomment{compute enqueue's block using binary search}
-		\State find min $b_e \leq \var{b}$ with $\var{root}.\fld{blocks}[b_e].\fld{sum\sub{enq}} \geq \var{e}$
+		\State find min $b_e \leq \var{b}$ with $\var{root}.\fld{blocks}[b_e].\fld{sum\sub{enq}} \geq \var{e}$\label{FRsearchGC}
 		\State \linecomment{find rank of enqueue within its block}
 		\State $i_e \assign\ \var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$
         \State \Return \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}\label{findAnswerGC}

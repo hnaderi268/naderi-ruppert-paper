@@ -66,7 +66,7 @@ still makes sense.
 %\end{proof}
 
 We next prove the analogue of Lemma \ref{lem::headProgress}.
-\begin{customlemma}{$4'$}\label{lem::headProgressGC}
+\begin{customlemma}{\ref{lem::headProgress}$'$}\label{lem::headProgressGC}
  If $h>0$ and a block with index $h$ has been inserted into $v.\fld{blocks}$ then 
  $v.\fld{blocks}[h-1].\fld{end\sub{left}} \leq v.\fld{blocks}[h].\fld{end\sub{left}}$ and 
  $v.\fld{blocks}[h-1].\fld{end\sub{right}} \leq v.\fld{blocks}[h].\fld{end\sub{right}}$.
@@ -95,7 +95,7 @@ We say a node $v$ \emph{contains} an operation
 if some block containing the operation has previously appeared in $v$'s RBT (even if 
 the block has been removed from the RBT by a subsequent \op{Split}).
 
-\begin{customlemma}{$9'$}
+\begin{customlemma}{\ref{successfulRefresh}$'$}
 \label{successfulRefreshGC}
 Let $R$ be a call to \op{Refresh}($v$) that performs a successful \op{CAS} on line \ref{casGC} (or terminates at line \ref{addOPGC}).
 In the configuration after that CAS (or termination, respectively), $v$ contains all operations that $v$'s children contained 
@@ -131,20 +131,65 @@ in $v$'s RBT, so $op$ is contained in $v$.
 This allows us to show that a double \op{Refresh} propagates operations up the tree, 
 as in \Cref{lem::doubleRefresh}.
 
-\begin{lemma}\label{lem::doubleRefreshGC}
-Consider two consecutive terminating calls $R_1$, $R_2$ to \op{GCRefresh}($v$) by the same process.
-All operations propagated to $v$'s children when $R_1$ begins
-are propagated to $v$ when $R_2$ terminates.
-\end{lemma}
+\begin{customlemma}{\ref{lem::doubleRefresh}$'$}\label{lem::doubleRefreshGC}
+Consider two consecutive terminating calls $R_1$, $R_2$ to \op{Refresh}($v$) by the same process.
+All operations contained $v$'s children when $R_1$ begins
+are contained in $v$ when $R_2$ terminates.
+\end{customlemma}
 \begin{proof}
+If either $R_1$ or $R_2$ performs a successful \op{CAS} at line \ref{casGC} or terminates at line \ref{addOPGC}, the claim follows
+from \Cref{successfulRefreshGC}.
+So suppose both $R_1$ and $R_2$ perform a failed \op{CAS} at line \ref{casGC}.
+\here{To be continued....}
+
 \end{proof}
 
 
 
-
+\here{next, should probably show that blocks are removed only after they are no longer needed; i.e., every dequeue has its answer (either returned, or written in its response field) and every enqueue has a matching dequeue that has either terminated or has a response written.}
 
 
 -------
+
+\subsection{Analysis}
+
+We first bound the size of RBTs.  Let $q_{max}$ be the maximum size of the queue at any time during the sequential execution given by the linearization $L$.
+
+\begin{lemma}
+If the maximum \fld{index} in a node's RBT is a multiple of $p^2$, then
+it contains $O(q_{max}+p)$ blocks.
+\end{lemma}
+
+
+\begin{corollary}\label{RBTbound}
+At all times, the size of a node's RBT is $O(q_{max}+p^2)$. 
+\end{corollary}
+\begin{proof}
+
+\end{proof}
+
+\begin{proposition}
+The amortized step complexity is $O(\log p \log(p+q_{max}))$ per operation.
+\end{proposition}
+\begin{proof}
+It follows from \Cref{RBTbound}
+that all the RBT routines we use to perform \op{Split}, \op{Insert} and searches for
+blocks with a particular index or for a \fld{sum\sub{enq}} value (in line \ref{FRsearchGC} or \ref{getChildGC}) can all be done in $O(\log(p+q_{max}))$ steps.
+
+First, we bound the number of steps taken \emph{excluding} the GC phase in line \ref{GCstart}--\ref{GCend}.
+An \op{Enqueue} or null \op{Dequeue} does $O(1)$ RBT operations and other work at each level of the tree during \op{Propagate},
+for a total of $O(\log p \log(p+q_{max}))$ steps.
+A non-null \op{Dequeue} must also search for a block in the root at line \ref{FRsearchGC}
+and call \op{GetEnqueue}, which does $O(1)$ RBT operations (including a search at line \ref{getChildGC}) and other work at each level of the tree.
+Thus, a \op{Dequeue} also takes $O(\log p \log(p+q_{max}))$ steps.
+
+Now we consider the additional steps a process takes to do GC in line \ref{GCstart}--\ref{GCend}.
+\here{To be continued}
+
+\end{proof}
+
+
+
 
 In our design a process attempts to collect the garbage, when it is going to to append a block in the $kp^2$ position in \nf{root.blocks} (see Line \ref{}). Every $p^2$  block appended to the root, one \nf{GarbageCollect} terminates because \nf{root.head} cannot advance until a \nf{GarbageCollect} garbage collect is done (see Lines ).
 

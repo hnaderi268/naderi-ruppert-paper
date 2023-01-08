@@ -238,7 +238,8 @@ We now show that if a process fails its \op{Refresh}($v$) twice, some other proc
 
 \begin{lemma}\label{lem::doubleRefresh}
 Consider two consecutive terminating calls $R_1$, $R_2$ to \op{Refresh}($v$) by the same process.
-When $R_2$ terminates, $v$ contains all operations that $v$'s children contained when $R_1$ was invoked.
+All operations contained $v$'s children when $R_1$ begins
+are contained in $v$ when $R_2$ terminates.
 \end{lemma}
 \begin{proof}
 If either $R_1$ or $R_2$ performs a successful \op{CAS} at line \ref{cas} or terminates at line \ref{addOP}, the claim follows

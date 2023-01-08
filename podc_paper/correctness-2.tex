@@ -4,160 +4,128 @@
 Unfortunately, there are enough changes to the algorithm that a new proof of correctness
 is required.  Its structure mirrors the proof of the original algorithm, but requires additional
 reasoning to ensure GC does not interfere with other routines.
+The following observation describes
+how the set of blocks in the RBT can be modified.
 
-\begin{observation}\label{RBTinsertions}
-When a block is inserted into an RBT $T$, its \fld{index} is one greater than the maximum \fld{index} in $T$.
-\end{observation}
+\begin{lemma}\label{RBTupdates}
+Suppose a step of the algorithm changes $v.\fld{blocks}$ from a non-empty tree $T$ to $T'$.
+If the set of \fld{index} values  in $T$ is $I$, then the set of \fld{index} values in $T'$ is 
+$(I \cap [m-1,\infty))\cup \{\max(I) + 1\}$ for some $m$.
+\end{lemma}
 \begin{proof}
-If line \ref{appendLeafGC} inserts a block into a leaf's RBT, then it was created at 
-line \ref{enqNewGC} or \ref{deqNewGC} with \fld{index} $h+1$, where $h$ is the maximum \fld{index}
-in the leaf's RBT.  When the new block is inserted, the maximum \fld{index} in the RBT is still $h$,
-since only the owner of the leaf modifies the leaf's RBT.
+The RBT of a node is updated only at line \ref{appendLeafGC} or \ref{casGC}.
 
-If line \ref{refreshInsertGC} inserts a block  into an internal node's RBT $T$,
-it is created by the call to \op{CreateBlock} at line \ref{invokeCreateBlockGC} and 
-has \fld{index} $h$, which is set at line \ref{refreshReadMax} to  the maximum \fld{index} in $T$ plus one.
+If line \ref{appendLeafGC} of an \op{Append} operation modifies $v.\fld{blocks}$,
+then $v$ is a leaf node, and no other process ever modifies $v.\fld{blocks}$.
+$T'$ was obtained from $T$ by calling \op{AddBlock}($T,B$).
+$B$ was created either by the \op{Enqueue} or \op{Dequeue} that called \op{Append}.
+Either way, $B.\fld{index} = \max(I)+1$.
+The \op{AddBlock} that creates $T'$ may optionally \op{Split} the RBT and then add $B$ to it.
+So the claim is satisfied.
+
+If line \ref{casGC} of a \op{Refresh} modifies $v.\fld{blocks}$, then $v$ is an internal node.
+After reading $T$ from $v.\fld{blocks}$ at line \ref{refreshReadTGC},
+then creates the  block \var{new},
+and then calls \op{AddBlock}($T,new$) to create $T'$.
+Line \ref{createIndexGC} sets $\var{new}.\var{index} = \max(I)+1$.
+The \op{AddBlock} that creates $T'$ may optionally \op{Split} the RBT and then add $new$ to it.
+So the claim is satisfied.
 \end{proof}
 
-\begin{observation}\label{lastinroot}
-Each entry in \var{last} is the \var{index} of a block that has appeared in the root's RBT.
-\end{observation}
-\begin{proof}
-Only line \ref{setlast1} and \ref{setlast2} in \op{FindResponse} write values into \var{last}.
-The value written is either $b$ or $b_e \leq b$.
-By the precondition of \op{FindResponse}, $\var{root}.\fld{blocks}[b]$ exists, so the index $b$ has appeared
-in the root's RBT.
-By \Cref{RBTinsertions}, all values less than $b$ have appeared in the root's RBT too.
-\end{proof}
+Since each RBT starts with a single block with \fld{index} 0, the following is an easy consequence of \Cref{RBTupdates}.
+\begin{corollary}\label{nonEmptyIncreasing}
+The RBT stored in each node $v$ is never empty and always stores a set of blocks with consecutive indices.
+Moreover, its maximum \fld{index} can only increase over time.
+\end{corollary}
 
-\begin{observation}
-\label{edirGC} 
-If $B$ is a block in the RBT of an internal node $v$, then for $\var{dir} \in \{\fld{left},\fld{right}\}$,
-$B.\edir$ was read from the \fld{index} field of some node in the RBT of $v.\var{dir}$.
-\end{observation}
-\begin{proof}
-The \eleft\ and \eright\ fields are set by reading the \fld{index} field of a node in the appropriate child
-on line \ref{createEndLeftGC} and \ref{createEndRightGC}.
-\end{proof}
-
-\begin{invariant}\label{nonemptyConsec}
-For each RBT $T$, 
-$T$ is non-empty and the blocks of $T$ have consecutive \fld{index} fields.
-\end{invariant}
-\begin{proof}
-The claim is true initially, since each RBT initially contains only the empty block with \fld{index} 0.
-We show that each time a new RBT is constructed, it preserves the invariant.
-When a new RBT is created by inserting an element into an existing RBT, \Cref{RBTinsertions}
-implies that the invariant is preserved.
-
-Suppose a new RBT is created by a \op{Split}($T,t$) operation $S$ on at line \ref{split} of a \op{Discard}($v,t$), 
-and that the invariant held prior to $S$.
-Clearly, $S$ preserves the property that indices are consecutive.  To show that the new tree
-is non-empty we first prove that the call to \op{Discard}($v,t$) has a parameter $t$ that is at least as big as a value previously
-read from the index field of some block in $v$'s RBT.
-If \op{Discard} was called from line \ref{discard}, then $t+1$ was read from an entry of \var{last}, so the claim follows from \Cref{lastinroot}.
-If \op{Discard} was called from line \ref{discardrecurse1} or \ref{discardrecurse2}, the claim follows
-from \Cref{edirGC}.
-Since the invariant held prior to $S$, no split before $S$ emptied $v$'s tree.  Therefore,
-some block with index at least $t$ is still in $T$ when $S$ occurs.  That block will be in the new tree created by $S$.
-\end{proof}
-
-Since RBTs are always non-empty, calls to \op{MaxBlock} are well-defined.  
+Since RBTs are always non-empty, calls to \op{MaxBlock} have well-defined answers.  
 Throughout the proof, we use $v.\blocks[b]$ to refer to the block with \fld{index} $b$ that appeared
 in $v$'s tree at some time during the execution.
-It follows from \Cref{RBTinsertions} and \Cref{nonemptyConsec} that this block is unique, if 
-it exists.
+It follows from \Cref{RBTupdates} and \Cref{nonemptyConsec} that 
+each time a new block appears in $v$'s RBT, its \fld{index} is greater than any block
+that has appeared in $v$'s RBT earlier.
+Thus, $v.\blocks[b]$ is unique, if it exists.
 We also use this notation in the code to indicate that a search of the RBT should be performed for the block
 with \fld{index} $b$.
-We describe later what should happen if the block is not found by the search because it has been removed
+We describe later what should happen if that block is not found by the search because it has been removed
 by a GC phase.
 \here{remember to come back to this point}
 
-\begin{corollary}\label{maxNonDecreasing}
-The maximum \fld{index} in $v$'s RBT is non-decreasing over time.
-\end{corollary}
-\begin{proof}
-The CAS steps (on line \ref{casGC} and \ref{splitCASGC}) that update $v.\fld{blocks}$ always replace 
-a tree $T$ by a tree that is built from $T$ by inserting an element and/or removing the elements with 
-the smallest \fld{index} values, without emptying the tree.  Thus, the maximum \fld{index} in the tree cannot decrease.
-\end{proof}
+We now establish that definition (\ref{defsubblock}) of a block's subblocks
+still makes sense.
 
-We now prove the analogue of Lemma \ref{lem::headProgress}.
-\begin{lemma}
- If $b>0$ and a block with index $b$ has been inserted into $v.\fld{blocks}$ then 
- $v.\fld{blocks}[b-1].\fld{end\sub{left}} \leq v.\fld{blocks}[b].\fld{end\sub{left}}$ and 
- $v.\fld{blocks}[b-1].\fld{end\sub{right}} \leq v.\fld{blocks}[b].\fld{end\sub{right}}$.
-\end{lemma}
+%\here{If next obs is only used once, can fold it into the proof that needs it}
+%\begin{observation}
+%\label{edirGC} 
+%If $B$ is a block in the RBT of an internal node $v$, then for $\var{dir} \in \{\fld{left},\fld{right}\}$,
+%$B.\edir$ was read from the \fld{index} field of some node in the RBT of $v.\var{dir}$.
+%\end{observation}
+%\begin{proof}
+%The \eleft\ and \eright\ fields are set by reading the \fld{index} field of a node in the appropriate child
+%on line \ref{createEndLeftGC} and \ref{createEndRightGC}.
+%\end{proof}
+
+We next prove the analogue of Lemma \ref{lem::headProgress}.
+\begin{customlemma}{$4'$}\label{lem::headProgressGC}
+ If $h>0$ and a block with index $h$ has been inserted into $v.\fld{blocks}$ then 
+ $v.\fld{blocks}[h-1].\fld{end\sub{left}} \leq v.\fld{blocks}[h].\fld{end\sub{left}}$ and 
+ $v.\fld{blocks}[h-1].\fld{end\sub{right}} \leq v.\fld{blocks}[h].\fld{end\sub{right}}$.
+\end{customlemma}
 \begin{proof}
-The block $B$ with index $b$ was installed into $v$'s RBT by the CAS at line \ref{casGC} or \ref{splitCASGC} 
-that changed the tree from $T$ to $T_{new}$.
-Before this CAS, the tree $T$ was read from $v.blocks$ at line \ref{readTGC} or \ref{readT2GC}, respectively,
-before the \op{RefreshUpdate} on line \ref{RU1} or \ref{RU2} that inserted $B$ to get $T_{new}$.
-Since the previous block $B'=v.\fld{blocks}[b-1]$ was already in $T$ (by \Cref{RBTinsertions}),
-the \op{CreateBlock}$(v,b-1)$ that created $B'$ terminated before the \op{CreateBlock}$(v,b)$ that created $B$ started.
-It follows from \Cref{maxNonDecreasing} that the value that line \ref{createEndLeftGC} of \op{CreateBlock}$(v,b-1)$ stores in $B'.\eleft$ is less than or equal to the value that line \ref{createEndLeftGC} of \op{CreateBlock}$(v,b)$ stores in $B.\eleft$.  Similarly, the values stored in $B'.\eright$ and $B.\eright$ at line \ref{createEndRightGC} satisfy the claim.
+The block $B$ with index $h$ was installed into $v$'s RBT by the CAS at line \ref{casGC} 
+that changed the tree from $T$ to $T'$.
+Before this CAS, line \ref{refreshReadTGC} read the tree $T$ from $v.blocks$,
+line \ref{refreshReadMax} found a block $B'$  with \fld{index} $h-1$ in $T$,
+and then line \ref{invokeCreateBlockGC} created the block $B$ with $\fld{index}=h$.
+Since $B'$ was already in $T$ before $B$ was created, the
+\op{CreateBlock}$(v,b-1)$ that created $B'$ terminated before the 
+\op{CreateBlock}$(v,b)$ that created $B$ started.
+By \Cref{nonEmptyIncreasing}, the value that line \ref{createEndLeftGC} of \op{CreateBlock}$(v,b-1)$ 
+stores in $B'.\eleft$ is less than or equal to the value that line \ref{createEndLeftGC} 
+of \op{CreateBlock}$(v,b)$ stores in $B.\eleft$.  
+Similarly, the values stored in $B'.\eright$ and $B.\eright$ at line \ref{createEndRightGC} satisfy the claim.
 \end{proof}
 
 \Cref{lem::subblocksDistinct}, \Cref{lem::noDuplicates}, \Cref{lem::sum}, \Cref{blockNotEmpty} 
-hold true for the modified algorithm.  Their proofs are identical to those given in 
-Section \ref{sec::basicProperties} since they only depend on \Cref{lem::headProgress} 
+hold for the modified algorithm.  Their proofs are identical to those given in 
+Section \ref{sec::basicProperties} since they  depend only on \Cref{lem::headProgress} (which can be replaced by \Cref{lem::headProgressGC})
 and the definition of subblocks given in (\ref{defsubblock}).
-The following pair of lemmas are analogous to \Cref{successfulRefresh} for the modified \op{Refresh} routine.
-We say that an operation has been \emph{propagated} to node $v$ in configuration $C$ if
-some block containing the operation has been in $v.blocks$ at or before $C$.
+Next, we prove an analogue of \Cref{successfulRefresh}.
+We say a node $v$ \emph{contains} an operation
+if some block containing the operation has previously appeared in $v$'s RBT (even if 
+the block has been removed from the RBT by a subsequent \op{Split}).
 
-\begin{lemma}\label{nullRefreshGC}
-Suppose $v.\fld{blocks}=T$ at some configuration $C$ and \op{RefreshUpdate}($T,v$) is invoked after $C$ and
-returns \nl.  Then, all operations that were propagated to $v$'s
-children before $C$ have been propagated to $v$ before $C$.
-\end{lemma}
+\begin{customlemma}{$9'$}
+\label{successfulRefreshGC}
+Let $R$ be a call to \op{Refresh}($v$) that performs a successful \op{CAS} on line \ref{casGC} (or terminates at line \ref{addOPGC}).
+In the configuration after that CAS (or termination, respectively), $v$ contains all operations that $v$'s children contained 
+when $R$ executed line~\ref{refreshReadTGC}.
+\end{customlemma}
 \begin{proof}
-Suppose an operation $op$ has been propagated to $v$'s child (without loss of generality, $v.\fld{left}$) before $C$.
-Then, for some $i$, a block $B$ with \fld{index} $i$ has been in $v.\fld{left.blocks}$ before $C$.
-By Lemma \ref{maxNonDecreasing}, 
-the maximum \fld{index} in $v.\fld{left.blocks}$ is at least $i$ at all times during the \op{RefreshUpdate}.
-So, the value of $\var{new}.\eleft$ chosen at line \ref{createEndLeftGC} of the \op{RefreshUpdate}'s call
-to \op{CreateBlock} is at least $i$.
+Suppose $v$'s child (without loss of generality, $v.\fld{left}$) contained an operation $op$ 
+when $R$ executed line \ref{refreshReadTGC}.
+Let $i$ be the index of the block containing $op$ that was in $v$'s RBT before 
+$R$ executed line \ref{refreshReadTGC}.
+We consider two cases.
 
-Let $h$ be the value set at line \ref{refreshReadMax} of the \op{RefreshUpdate}.
-The \op{RefreshUpdate} returns \nl\ at line \ref{addOPGC}
-because the \op{CreateBlock}$(v,h)$  at line \ref{CBnullGC} returns \nl.
-By reasoning identical to the last paragraph of \Cref{successfulRefresh},
-it follows from the fact that $\var{num\sub{enq}}+\var{num\sub{deq}}=0$ that
-the blocks $v.\fld{left.blocks}[v.\fld{blocks}[h-1].\eleft+1..new.\eleft]$ and
+Suppose $R$'s call to \op{CreateBlock} returns a new block $B'$.  Then, $R$'s \op{CAS} at line \ref{cas} 
+installs $B'$ in $v.\fld{blocks}$.
+The \op{CreateBlock} set $B'.\eleft$ to the maximum \fld{index} in $v.\fld{left}$'s RBT at line \ref{createEndLeftGC}.
+By \Cref{nonEmptyIncreasing}, this maximum \fld{index} is bigger than $i$.
+By the definition of subblocks, some block in $v$ contains $B$ as a subblock
+and therefore $v$ contains $op$.
+
+Now suppose $R$'s call to \op{CreateBlock} returns \nl, causing $R$ to terminate at line \ref{addOPGC}.
+Let $h$ be the maximum \fld{index} in $T$ plus 1.
+By reasoning identical to the last paragraph of \Cref{successfulRefresh}'s proof,
+it follows from the fact that $\var{num\sub{enq}}+\var{num\sub{deq}}=0$ at line \ref{testEmptyGC}
+that the blocks $v.\fld{left.blocks}[v.\fld{blocks}[h-1].\eleft+1..new.\eleft]$ and
 $v.\fld{right.blocks}[v.\fld{blocks}[h-1].\eright+1..new.\eright]$
 contain no operations.
-Since each block contains at least one operation by \Cref{blockNotEmpty}
-these ranges must be empty, so $v.\fld{blocks}[h-1].\eleft \geq \var{new}.\eleft\geq i$.
-This implies that the block $B$ containing $op$ is a subblock of some block that has appeared in $v.\fld{blocks}$, so $op$ has been propagated to $v$.
-\end{proof}
-
-\begin{lemma}\label{successfulRefreshGC}
-If a \op{CAS} at line \ref{casGC} or \ref{splitCASGC} modifies $v.\fld{blocks}$ from $T$ to $T'$,
-then all operations that were propagated to $v$'s children before $v.\fld{blocks}$ was set to $T$
-have been propagated to $v$ in the configuration after the CAS.
-\end{lemma}
-\begin{proof}
-Suppose an operation $op$ has been propagated to $v$'s child (without loss of generality, $v.\fld{left}$) before $v.\fld{blocks}$ was set to $T$.
-Then, for some $i$, a block $B$ with \fld{index} $i$ that contains $op$
-has been in $v.\fld{left.blocks}$ before $v.\fld{blocks}$ was set to $T$.
-Let $c$ be the \op{CAS} instruction that changes $v.\fld{blocks}$ from $T$ to $T'$.
-If line \ref{casGC} performs $c$, then the \op{RefreshUpdate} $R$ at line \ref{RU1} that creates
-$T'$ began after $T$ was read from $v.\fld{blocks}$ at line \ref{readTGC}.
-Otherwise, line \ref{splitCASGC} performs $c$ and the \op{RefreshUpdate} $R$ at line \ref{RU2},
-which is invoked after $T$ was read from $v.\fld{blocks}$ at line \ref{readT2GC},
-either returned \nl\ or $T'$.
-
-If the \op{RefreshUpdate} $R$ returned \nl, the lemma follows from \Cref{nullRefreshGC}.
-So, assume \op{RefreshUpdate} $R$ returned $T'$.
-Then $T'$ contains a newly inserted block created by the call
-to \op{CreateBlock} on line \ref{invokeCreateBlockGC}.
-Since $R$ was invoked after $T$ was stored in $v.\fld{blocks}$, 
-the maximum \fld{index} in $v.\fld{left.blocks}$ is at least $i$ throughout $R$, by \Cref{maxNonDecreasing}.
-Thus. the \eleft\ field of the new block added to $T'$ by $R$'s call to \op{CreateBlock} is
-set to a value greater than or equal to $i$ at line \ref{createEndLeftGC}.
-By the definition of subblocks, it follows that the block $B$ containing $op$ is a subblock of a block
-that has been in $v.blocks$, as required.
+By \Cref{blockNotEmpty}, each block contains at least one operation, so
+these ranges must be empty, and $v.\fld{blocks}[h-1].\eleft \geq \var{new}.\eleft\geq i$.
+This implies that the block $B$ containing $op$ is a subblock of some block that has appeared
+in $v$'s RBT, so $op$ is contained in $v$.
 \end{proof}
 
 This allows us to show that a double \op{Refresh} propagates operations up the tree, 

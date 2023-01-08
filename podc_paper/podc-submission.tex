@@ -151,6 +151,12 @@
 \newtheorem{observation}[theorem]{Observation}
 \newtheorem{invariant}[theorem]{Invariant}
 
+\newtheorem{innercustomlemma}{Lemma}
+\newenvironment{customlemma}[1]
+  {\renewcommand\theinnercustomlemma{#1}\innercustomlemma}
+  {\endinnercustomlemma}
+
+
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs
 \AtBeginDocument{%

@@ -158,7 +158,7 @@ Since $B.\fld{sum\sub{enq}}$ is set to $v.\fld{blocks}[i-1]+1$ and
 $B.\fld{sum\sub{deq}}$ is set to $v.\fld{blocks}[i-1]$, the claim follows from the hypothesis.
 The proof for line \ref{deqNew}, where $B$ has a single dequeue, is similar.
 
-Now suppose $v$ is an internal node. By the definition of subblocks in (\ref{defsubblock}), the
+Now suppose $v$ is an internal node. By the definition of subblocks in (\ref{defsubblock}) and \Cref{lem::headProgress}, the
 subblocks of $v.\fld{blocks}[1..i]$ are $v.\fld{left.blocks}[1..B.\eleft]$ 
 and $v.\fld{right.blocks}[1..B.\eright]$.
 Thus, the enqueues in $E(v.\fld{blocks}[0])\cdots E(v.\fld{blocks}[i])$ are those in
@@ -197,8 +197,8 @@ when $R$ executed line~\ref{readHead}.
 \end{lemma}
 \begin{proof}
 Suppose $v$'s child (without loss of generality, $v.\fld{left}$) contained an operation $op$ 
-in the configuration $C$ immediately before $R$ executed line \ref{readHead}.
-Then for some $i$, the block $B$ in $v.\fld{left.blocks}[i]$ contains $op$.
+when $R$ executed line \ref{readHead}.
+Let $i$ be the index such that the block $B=v.\fld{left.blocks}[i]$ contains $op$.
 By \Cref{nonDecreasingHead} and \Cref{lem::headProgress}, the value of $childHead$ that $R$ reads from
 $v.\fld{left.head}$ in line \ref{readChildHead} is at least $i$.
 If it is equal to $i$, $R$ calls \op{Advance} at line \ref{helpAdvance}, which ensures that 
@@ -211,7 +211,7 @@ Suppose $R$'s call to \op{CreateBlock} returns the new block $B'$ and $R$'s \op{
 installs $B'$ in $v.\fld{blocks}$.
 Then, $B$ is a subblock of some block in $v$, since  $B'.\eleft$ is greater than or equal to $B$'s index
 in $v.\fld{left.blocks}$.
-Hence $B'$ contains $op$, as required.
+Hence $v$ contains $op$, as required.
 
 \Eric{I think this case was missing from the proof in the thesis}
 Now suppose $R$'s call to \op{CreateBlock} returns \nl, causing $R$ to terminate at line \ref{addOP}.

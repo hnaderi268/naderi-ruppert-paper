@@ -72,7 +72,7 @@ This extra parameter has been added to
 \begin{figure}
 \begin{minipage}[t]{0.465\textwidth}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{0}
+\setcounter{ALG@line}{200}
 
 \Function{void}{Enqueue}{\typ{Object} \var{e}} 
     \gc{
@@ -158,11 +158,11 @@ This extra parameter has been added to
 \begin{minipage}[t]{0.529\textwidth}
 
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{48}
+\setcounter{ALG@line}{248}
 \Function{boolean}{Refresh}{\typ{Node} \var{v}}
 	\State \linecomment{try to append a new block to $v.\fld{blocks}$}
 	\gc{
-	\State $T \assign v.\fld{blocks}$
+	\State $T \assign v.\fld{blocks}$\label{refreshReadTGC}
     \State \Call{SetSuper}{$v$, $T$}
     \State $\var{h} \assign \Call{MaxBlock}{T}.\fld{index}+1$ \label{refreshReadMax}
     }
@@ -202,7 +202,7 @@ This extra parameter has been added to
     \gc{
     \State \var{new}.\eleft \assign\ $\Call{MaxBlock}{\var{v}.\fld{left}.\fld{blocks}}.\fld{index}$\label{createEndLeftGC}
     \State \var{new}.\eright \assign\ $\Call{MaxBlock}{\var{v}.\fld{right}.\fld{blocks}}.\fld{index}$\label{createEndRightGC}
-    \State $\var{new}.\fld{index} \assign i$
+    \State $\var{new}.\fld{index} \assign i$\label{createIndexGC}
     }
 	\State \hangbox{\var{new}.\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + \\
 			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{enq}}}
@@ -213,7 +213,7 @@ This extra parameter has been added to
     \If{$\var{v} = \var{root}$}
         \State \hangbox{\var{new}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + \var{num\sub{enq}} - \var{num\sub{deq}}$)}\label{computeLengthGC}
     \EndIf
-    \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$}
+    \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$}\label{testEmptyGC}
         \State \Return \nl \hfill \com\ no blocks need to be propagated to \var{v}\label{CBnullGC}
     \Else
         \State \Return \var{new}
@@ -249,7 +249,7 @@ This extra parameter has been added to
 \begin{figure}
 \begin{minipage}[t]{0.465\textwidth}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{48}
+\setcounter{ALG@line}{307}
 \gc{
 \Function{void}{Help}{}
     \State \linecomment{help pending operations}
@@ -268,13 +268,13 @@ This extra parameter has been added to
 \end{minipage}
 \begin{minipage}[t]{0.529\textwidth}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{48}
+\setcounter{ALG@line}{318}
 
 \Function{$\langle\typ{int}, \typ{int}\rangle$}{IndexDequeue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}, \gc{\typ{boolean} \var{mark}}}
     \State \linecomment{return $\langle\var{x, y}\rangle$ such that \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$}
     \State \linecomment{is \var{y}th dequeue of $D(\var{root}.\fld{blocks}[\var{x}])$}
-    \State \linecomment{Precondition: \var{v}.\fld{blocks}[\var{b}] has been propagated to root}
-    \State \linecomment{and $D(\var{v}.\fld{blocks}[\var{b}])$ has at least \var{i} dequeues}
+    \State \linecomment{Precondition: \var{v}.\fld{blocks}[\var{b}] exists and has propagated}
+    \State \linecomment{to root and $D(\var{v}.\fld{blocks}[\var{b}])$ has at least \var{i} dequeues}
     \gc{
     \If{\var{mark} and $b>\var{v}.\fld{last}[\mbox{process id}]$}
     	\State $\var{v}.\fld{last}[\mbox{process id}] \assign b$
@@ -353,10 +353,10 @@ This extra parameter has been added to
 
 \begin{figure}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{101}
+\setcounter{ALG@line}{340}
 
 \Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
-    \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] is non-\nl\ and contains at least \var{i} enqueues}
+    \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] exists and contains at least \var{i} enqueues}
 	\gc{
 	\If{$b > \var{v}.\fld{last}[\mbox{process id}]$}
 		\State $\var{v}.\fld{last}[\mbox{process id}] \assign b$

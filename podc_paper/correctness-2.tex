@@ -184,8 +184,11 @@ and call \op{GetEnqueue}, which does $O(1)$ RBT operations (including a search a
 Thus, a \op{Dequeue} also takes $O(\log p \log(p+q_{max}))$ steps.
 
 Now we consider the additional steps a process takes to do GC in line \ref{GCstart}--\ref{GCend}.
-\here{To be continued}
-
+For each integer $r$, each process does GC on each node $v$ with a block whose \fld{index} is $rp^2$ at most
+once, since either its CAS succeeds, or another processes CAS advances the maximum 
+Each such helping phase takes $O(p)$ time to read the \var{last} array,
+$O(p \log p \log(p+q_{max}))$ time to \op{Help} (excluding any GC phases within \op{Help}, which will be accounted for at the other nodes),
+and \here{to be continued}
 \end{proof}
 
 

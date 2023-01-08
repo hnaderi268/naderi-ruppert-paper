@@ -50,11 +50,11 @@ Only minor modifications have been made to \op{Enqueue}, \op{Append}, \op{Create
 to accomodate the switch from an array of blocks to a RBT of blocks (and the corresponding disappearance
 of the \head\ field).
 \op{Dequeue} has been similarly modified, and the second half of the routine is now in a
-separate routine called \op{CompleteDequeue} so that it can also be used by other processes
+separate routine called \op{CompleteDeq} so that it can also be used by other processes
 helping to complete the operation.
 
 Once a dequeue has been propagated to the root, 
-\bf{\op CompleteDequeue} computes its answer.  This routine can also be called by helpers 
+\bf{\op CompleteDeq} computes its answer.  This routine can also be called by helpers 
 who want to help complete the dequeue.
 In addition to calling \op{FindResponse} and \op{IndexDequeue} to compute the response,
 it also updates \var{last} entries if the computed response is \nl.
@@ -96,13 +96,13 @@ This extra parameter has been added to
 	    $\fld{index}\assign h$}\label{deqNewGC}
 	}
     \State \Call{Append}{\var{B}}
-    \gc{\State \Return \Call{CompleteDequeue}{\var{leaf}, $h$}}
+    \gc{\State \Return \Call{CompleteDeq}{\var{leaf}, $h$}}
 \EndFunction{Dequeue}
 
 \spac
 
 \gc{
-\Function{Object}{CompleteDequeue}{\var{leaf}, $h$}
+\Function{Object}{CompleteDeq}{\var{leaf}, $h$}
     \State \linecomment Finish propagated dequeue in $\var{leaf}.\fld{blocks}[h]$
     \State $\langle \var{b}, \var{i}\rangle \assign\ \Call{IndexDequeue}{\var{leaf}, h, 1, \fa}$
     \State $\var{res} \assign \Call{FindResponse}{b, i}$
@@ -110,7 +110,7 @@ This extra parameter has been added to
 		\State $\Call{IndexDequeue}{\var{leaf}, h, 1, \tr}$
 	\EndIf
 	\State \Return{\var{res}}
-\EndFunction{CompleteDequeue}
+\EndFunction{CompleteDeq}
 }
 
 \spac
@@ -131,34 +131,17 @@ This extra parameter has been added to
 		\State $m \assign 0$
 		\For{$k\assign 1..p$} $m\assign \max(m, v.\fld{last}[k])$
 		\EndFor
-        \State \Call{Help}{}\label{GCend}
+        \State \Call{Help}{}
         \State $T' \assign\ \Call{Split}{T,m-1}$
         \State \linecomment{\op{Split} removes blocks with $\fld{index} < m-1$}
-        \State \Return \Call{Insert}{$T',B$}
+        \State \Return \Call{Insert}{$T',B$}\label{GCend}
 	\Else\ \Return \Call{Insert}{$T, B$}
     \EndIf
 \EndFunction{AddBlock}
 }
 \spac
 
-\Function{void}{Propagate}{\typ{Node} \var{v}}
-    \State \linecomment{propagate blocks from \var{v}'s children to root}
-    \If{\bf{not} \Call{Refresh}{\var{v}}} \label{firstRefreshGC}  \hfill \com\ double refresh
-        \State \Call{Refresh}{\var{v}} \label{secondRefreshGC}
-    \EndIf
-    \If{$\var{v} \neq \var{root}$} \hfill \com\ recurse up tree
-        \State \Call{Propagate}{\var{v}.\fld{parent}}
-    \EndIf
-\EndFunction{Propagate}
 
-
-
-\end{algorithmic}
-\end{minipage}
-\begin{minipage}[t]{0.529\textwidth}
-
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{248}
 \Function{boolean}{Refresh}{\typ{Node} \var{v}}
 	\State \linecomment{try to append a new block to $v.\fld{blocks}$}
 	\gc{
@@ -176,6 +159,24 @@ This extra parameter has been added to
     \EndIf
 
 \EndFunction{Refresh}
+
+
+
+\end{algorithmic}
+\end{minipage}
+\begin{minipage}[t]{0.529\textwidth}
+
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{248}
+\Function{void}{Propagate}{\typ{Node} \var{v}}
+    \State \linecomment{propagate blocks from \var{v}'s children to root}
+    \If{\bf{not} \Call{Refresh}{\var{v}}} \label{firstRefreshGC}  \hfill \com\ double refresh
+        \State \Call{Refresh}{\var{v}} \label{secondRefreshGC}
+    \EndIf
+    \If{$\var{v} \neq \var{root}$} \hfill \com\ recurse up tree
+        \State \Call{Propagate}{\var{v}.\fld{parent}}
+    \EndIf
+\EndFunction{Propagate}
 
 \spac
 \gc{
@@ -256,19 +257,44 @@ This extra parameter has been added to
     
     \For{$\ell$ in $\var{leaf}[1..k]$}
         \State $\var{B} \assign \Call{LastBlock}{\ell.\fld{blocks}}$
-    	\State \Call{Propagate}{$\ell.\fld{parent}$}
-        \If{$\var{B}.\fld{element} = \nl$ and $\var{B}.\fld{index}>0$} 
-            \State \linecomment{operation is a  dequeue}
-            \State $\var{B}.\fld{response} \assign\ \Call{CompleteDequeue}{\ell, \var{B}.\fld{index}}$ 
+    	%\State \Call{Propagate}{$\ell.\fld{parent}$}   <--- don't do this because recursive helping could be infinite loop
+        \If{$\var{B}.\fld{element} = \nl$ and $\var{B}.\fld{index}>0$ 
+        					\State \hspace*{4mm} and \Call{Propagated}{$\ell, \var{B}.\fld{index}$}} 
+            \State \linecomment{operation is a propagated dequeue}
+            \State $\var{B}.\fld{response} \assign\ \Call{CompleteDeq}{\ell, \var{B}.\fld{index}}$ 
         \EndIf
     \EndFor
 \EndFunction{Help}
 }
+
+\spac
+
+\gc{
+\Function{boolean}{Propagated}{\typ{Node} \var{v}, \typ{int} \var{b}}
+    \State \linecomment{check if $\var{v}.\fld{blocks}[b]$ has  propagated to \var{root}}
+    \State \linecomment{Precondition:  $\var{v}.\fld{blocks}[b]$ exists}
+    \If {$\var{v} = \var{root}$} \Return{true}
+    \ElsIf {$\var{v}.\fld{super} = \nl$ or 
+    			\State \hspace*{4mm}$\var{v}.\fld{parent.blocks}[\var{v}.\fld{super}] = \nl$} 
+		\State\Return{\fa}
+    \Else
+    	\State \fld{dir} \assign\ (\var{v}.\fld{parent.left} = \var{v} ? \fld{left} : \fld{right}) 
+	    \State \var{sup} \assign\ \var{v}.\fld{blocks}[\var{b}].\fld{super}
+	    \If{$\var{b} > \var{v}.\fld{parent.blocks}[\var{sup}].\edir$} 
+				\State\var{sup} \assign\ $\var{sup}+1$
+	    \EndIf
+	    \State \hangbox{\Return{$\var{v}.\fld{parent.blocks}[\var{sup}] \neq \nl$ and\\
+	    		 $\var{b} \leq \var{v}.\fld{parent.blocks}[\var{sup}].\edir$ and\\
+			 	 \Call{Propagated}{\var{v}.\fld{parent}, \var{sup}}}}
+    \EndIf
+\EndFunction{Propagated}
+}
+
 \end{algorithmic}
 \end{minipage}
 \begin{minipage}[t]{0.529\textwidth}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{318}
+\setcounter{ALG@line}{358}
 
 \Function{$\langle\typ{int}, \typ{int}\rangle$}{IndexDequeue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}, \gc{\typ{boolean} \var{mark}}}
     \State \linecomment{return $\langle\var{x, y}\rangle$ such that \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$}
@@ -299,6 +325,37 @@ This extra parameter has been added to
 
 \end{algorithmic}
 \end{minipage}
+
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{335}
+
+\Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
+    \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] exists and contains at least \var{i} enqueues}
+	\gc{
+	\If{$b > \var{v}.\fld{last}[\mbox{process id}]$}
+		\State $\var{v}.\fld{last}[\mbox{process id}] \assign b$
+	\EndIf
+	}
+    \If{\var{v} is a leaf node}
+        \State\Return \var{v}.\fld{blocks}[\var{b}].\fld{element} \label{getBaseCaseGC}
+    \Else 
+        \State \var{sum\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[\var{b}].\eleft].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}$] from left child}
+        \State \var{prev\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eleft].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from left child}
+        \State \var{prev\sub{right}} \assign\ \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eright].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from right child}
+        \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \label{leftOrRightGC} \cmt{required enqueue is in \var{v}.\fld{left}}
+            \State \fld{dir} \assign\ \fld{left}
+        \Else
+            \State \fld{dir} \assign\ \fld{right}
+            \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$
+        \EndIf
+        \State \linecomment{Use binary search to find enqueue's block in \var{v}.\fld{dir.blocks} and its rank within block}
+        \State find minimum $\var{b}'$ in range [\var{v}.\fld{blocks}[\var{b}-1].\edir+1..\var{v}.\fld{blocks}[\var{b}].\edir] s.t. $\var{v}.\fld{dir.blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$\label{getChildGC}
+        \State $\var{i}'$ \assign\ $\var{i} - (\var{v}.\fld{dir.blocks}[\var{b}'-1].\fld{sum\sub{enq}} - \var{prev\sub{dir}})$
+        \State \Return\Call{GetEnqueue}{\var{v}.\fld{dir}, $\var{b}'$, $\var{i}'$}
+    \EndIf
+\EndFunction{GetEnqueue}
+
+\end{algorithmic}
 
 \caption{Bounded-space queue implementation, continued.\label{pseudocode2GC}}
 \end{figure}
@@ -352,36 +409,7 @@ This extra parameter has been added to
 
 
 \begin{figure}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{340}
 
-\Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
-    \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] exists and contains at least \var{i} enqueues}
-	\gc{
-	\If{$b > \var{v}.\fld{last}[\mbox{process id}]$}
-		\State $\var{v}.\fld{last}[\mbox{process id}] \assign b$
-	\EndIf
-	}
-    \If{\var{v} is a leaf node}
-        \State\Return \var{v}.\fld{blocks}[\var{b}].\fld{element} \label{getBaseCaseGC}
-    \Else 
-        \State \var{sum\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[\var{b}].\eleft].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}$] from left child}
-        \State \var{prev\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eleft].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from left child}
-        \State \var{prev\sub{right}} \assign\ \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eright].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from right child}
-        \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \label{leftOrRightGC} \cmt{required enqueue is in \var{v}.\fld{left}}
-            \State \fld{dir} \assign\ \fld{left}
-        \Else
-            \State \fld{dir} \assign\ \fld{right}
-            \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$
-        \EndIf
-        \State \linecomment{Use binary search to find enqueue's block in \var{v}.\fld{dir.blocks} and its rank within block}
-        \State find minimum $\var{b}'$ in range [\var{v}.\fld{blocks}[\var{b}-1].\edir+1..\var{v}.\fld{blocks}[\var{b}].\edir] s.t. $\var{v}.\fld{dir.blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$\label{getChildGC}
-        \State $\var{i}'$ \assign\ $\var{i} - (\var{v}.\fld{dir.blocks}[\var{b}'-1].\fld{sum\sub{enq}} - \var{prev\sub{dir}})$
-        \State \Return\Call{GetEnqueue}{\var{v}.\fld{dir}, $\var{b}'$, $\var{i}'$}
-    \EndIf
-\EndFunction{GetEnqueue}
-
-\end{algorithmic}
 \caption{\label{pseudocode3GC}Bounded-space queue implementation, continued. }
 \end{figure}
 

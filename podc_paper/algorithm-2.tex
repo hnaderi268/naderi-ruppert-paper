@@ -3,10 +3,6 @@
 \section{Detailed Description of the Bounded-Space Implementation}
 \label{reducing-details}
 
-\HERE{Idea:  replace last array with a bit in blocks that gets set when somebody dequeues an element in the block.  then can use the max index of any marked block minus 1 as the last completed block.  
-In order to ensure that blocks of dequeues are also cleared out,
-maybe dequeues that return null have to mark all blocks along the dequeue's path?
-}
 
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTSINGLEAPP}{\com\ #1}}
 
@@ -25,7 +21,10 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 \begin{itemize}
 \item \typ{Object} \var{response} \Comment{response of the operation in the block, if it is a dequeue}
 \end{itemize}
-The \fld{blocks} field of each node in the \ordering\ tree is implemented as a pointer to the root of a RBT of \typ{Blocks} rather than an infinite array.  Each RBT is initialized with an empty block with index 0.
+The \fld{blocks} field of each node in the \ordering\ tree is implemented as a pointer to the root of a RBT of \typ{Blocks} rather than an infinite array.  
+The nodes in the RBT each contain a pointer to a block, as well as the standard RBT node attributes: child pointers and a colour bit; this means that when an update on a RBT uses node-copying, the pointer to the block
+gets copied, rather than copying the block itself.)
+Each RBT is initialized with an empty block with index 0.
 
 \here{Talk about what happens if a block is not found in an RBT}
 
@@ -86,19 +85,21 @@ This is important because if we mark a block that has been node-copied, we want 
 
 \Function{void}{Append}{\typ{Block} \var{B}} 
     \State \linecomment{append block to leaf and propagate to root}
-    \gc{\State \var{leaf}.\fld{blocks} \assign \Call{AddBlock}{\var{leaf}.\fld{blocks}, \var{B}}\label{appendLeafGC}}
+    \gc{\State \var{leaf}.\fld{blocks} \assign \Call{AddBlock}{\var{leaf}, \var{leaf}.\fld{blocks}, \var{B}}\label{appendLeafGC}}
     \State \Call{Propagate}{\var{leaf}.\fld{parent}} 
 \EndFunction{Append}
 
 \spac
 
 \gc{
-\Function{RBT}{AddBlock}{\typ{RBT} \var{T}, \typ{Block} \var{B}}
+\Function{RBT}{AddBlock}{\typ{Node} \var{v}, \typ{RBT} \var{T}, \typ{Block} \var{B}}
     \State \linecomment{add block $\var{B}\neq\nl$ to \var{T}, doing GC if necessary}
     \If{\var{B}.\fld{index} is a multiple of $p^2$}
     	\State \linecomment{Do garbage collection}
+		\State $m \assign 0$
+		\For{$k\assign 1..p$} $m\assign \max(m, v.\fld{last}[k])$
+		\EndFor
         \State \Call{Help}{}
-        \State $m$ \assign\ maximum \fld{index} of marked block in $T$
         \State $T' \assign\ \Call{Split}{T,m-1}$
         \State \linecomment{\op{Split} removes blocks with $\fld{index} < m-1$}
         \State \Return \Call{Insert}{$T',B$}
@@ -131,7 +132,7 @@ This is important because if we mark a block that has been node-copied, we want 
     \If{\var{new = \nl}} \Return{\nl} \label{addOPGC}
     \Else  
     	\gc{
-	    \State $T' \assign \Call{AddBlock}{T, \var{new}}$
+	    \State $T' \assign \Call{AddBlock}{v, T, \var{new}}$
 		\State \Return{\Call{CAS}{\var{v}.\fld{blocks}, $T$, $T'$}}
 		}
     \EndIf
@@ -244,7 +245,8 @@ This is important because if we mark a block that has been node-copied, we want 
     \State \linecomment{Precondition: \var{v}.\fld{blocks}[\var{b}] has been propagated to root}
     \State \linecomment{and $D(\var{v}.\fld{blocks}[\var{b}])$ has at least \var{i} dequeues}
     \gc{
-    \If{\var{mark}} \var{v}.\fld{blocks}[\var{b}].\fld{mark} \assign \tr
+    \If{\var{mark} and $b>\var{v}.\fld{last}[\mbox{process id}]$}
+    	\State $\var{v}.\fld{last}[\mbox{process id}] \assign b$
     \EndIf
     }
     \If{$\var{v} = \var{root}$} \Return $\langle\var{b, i}\rangle$ \label{indexBaseCaseGC}
@@ -324,7 +326,11 @@ This is important because if we mark a block that has been node-copied, we want 
 
 \Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
     \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] is non-\nl\ and contains at least \var{i} enqueues}
-	\gc{\State $\var{v}.\fld{blocks}[\var{b}].\fld{marked} := \tr$}
+	\gc{
+	\If{$b > \var{v}.\fld{last}[\mbox{process id}]$}
+		\State $\var{v}.\fld{last}[\mbox{process id}] \assign b$
+	\EndIf
+	}
     \If{\var{v} is a leaf node}
         \State\Return \var{v}.\fld{blocks}[\var{b}].\fld{element} \label{getBaseCaseGC}
     \Else 

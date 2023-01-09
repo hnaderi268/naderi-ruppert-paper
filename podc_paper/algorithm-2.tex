@@ -133,38 +133,16 @@ it also updates \var{last} if the computed response is \nl.
     \Else  
     	\gc{
 	    \State $T' \assign \Call{AddBlock}{v, T, \var{new}}$\label{refreshABGC}
-		\State \Return{\Call{CAS}{\var{v}.\fld{blocks}, $T$, $T'$}}\label{casGC}
+		\State \var{result} \assign \Call{CAS}{\var{v}.\fld{blocks}, $T$, $T'$}\label{casGC}
+		\State \Call{SetSuper}{$v$, $T'$}
 		}
+		\State \Return \var{result}
     \EndIf
 
 \EndFunction{Refresh}
+
 \spac
 
-\gc{
-\Function{void}{SetSuper}{\typ{Node} \var{v}, \typ{RBT} $T$} 
-	\State \linecomment{set \fld{super} field of last block in $T$}
-	\State \linecomment{and in $v$'s children's RBTs}
-	\State $\var{lastBlock} \assign \Call{MaxBlock}{T}$
-	\If{$v\neq \var{root}$}	
-		\State \var{sup} \assign\ \Call{MaxBlock}{\var{v}.\fld{parent.blocks}}.\fld{index}
-		\State \Call{CAS}{\var{lastBlock}.\fld{super}, \nl, \var{sup}}
-	\EndIf
-	\ForEach{\fld{dir} in \{\fld{left}, \fld{right}\}} \label{startHelpChild1GC}
-    	\State \var{lastChildBlock} \assign\ \Call{MaxBlock}{\var{v}.\fld{dir}.\fld{blocks}}
-		\State \Call{CAS}{\var{lastChildBlock}.\fld{super}, \nl, \var{lastBlock}.\fld{index}}
-    \EndFor \label{endHelpChild1GC}
-\EndFunction{SetSuper}
-}
-
-3
-
-
-\end{algorithmic}
-\end{minipage}
-\begin{minipage}[t]{0.529\textwidth}
-
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{250}
 \gc{
 \Function{RBT}{AddBlock}{\typ{Node} \var{v}, \typ{RBT} \var{T}, \typ{Block} \var{B}}
     \State \linecomment{add block $\var{B}\neq\nl$ to \var{T}, doing GC if necessary}
@@ -179,6 +157,31 @@ it also updates \var{last} if the computed response is \nl.
     \EndIf
 \EndFunction{AddBlock}
 }
+
+\end{algorithmic}
+\end{minipage}
+\begin{minipage}[t]{0.529\textwidth}
+
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{251}
+
+\gc{
+\Function{void}{SetSuper}{\typ{Node} \var{v}, \typ{RBT} $T$} 
+	\State \linecomment{set \fld{super} field of last block in $T$}
+	\State \linecomment{and in $v$'s children's RBTs}
+	\State $\var{vLast} \assign \Call{MaxBlock}{T}$
+	\If{$v\neq \var{root}$}	
+		\State \var{sup} \assign\ \Call{MaxBlock}{\var{v}.\fld{parent.blocks}}.\fld{index}
+		\State \Call{CAS}{\var{vLast}.\fld{super}, \nl, \var{sup}}
+	\EndIf
+	\ForEach{\fld{dir} in \{\fld{left}, \fld{right}\}} \label{startHelpChild1GC}
+    	\State $\var{childLast} \assign\ \Call{MaxBlock}{\var{v}.\fld{dir}.\fld{blocks}}$
+		\State $\Call{CAS}{\var{childLast}.\fld{super}, \nl, \var{vLast}.\fld{index}}$
+    \EndFor \label{endHelpChild1GC}
+\EndFunction{SetSuper}
+}
+
+
 \spac
 
 \Function{Block}{CreateBlock}{\typ{Node} \var{v}, \typ{int} \var{i}} 
@@ -238,7 +241,7 @@ it also updates \var{last} if the computed response is \nl.
 \begin{figure}
 \begin{minipage}[t]{0.465\textwidth}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{300}
+\setcounter{ALG@line}{302}
 \gc{
 \Function{Object}{CompleteDeq}{\var{leaf}, $h$}
     \State \linecomment Finish propagated dequeue in $\var{leaf}.\fld{blocks}[h]$
@@ -293,7 +296,7 @@ it also updates \var{last} if the computed response is \nl.
 \end{minipage}
 \begin{minipage}[t]{0.529\textwidth}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{353}
+\setcounter{ALG@line}{355}
 \gc{
 \Function{Block}{SplitBlock}{\typ{Node} v}
 	\State \linecomment{figure out where to split $v$'s RBT}
@@ -347,7 +350,7 @@ it also updates \var{last} if the computed response is \nl.
 \end{minipage}
 
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{333}
+\setcounter{ALG@line}{335}
 
 \Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
     \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] exists and contains at least \var{i} enqueues}

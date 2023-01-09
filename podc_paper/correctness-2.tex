@@ -140,10 +140,30 @@ are contained in $v$ when $R_2$ terminates.
 If either $R_1$ or $R_2$ performs a successful \op{CAS} at line \ref{casGC} or terminates at line \ref{addOPGC}, the claim follows
 from \Cref{successfulRefreshGC}.
 So suppose both $R_1$ and $R_2$ perform a failed \op{CAS} at line \ref{casGC}.
-\here{To be continued....}
+Then some other \op{CAS} on $v.\fld{blocks}$ succeeds between the time each \op{Refresh}
+reads $v.\fld{blocks}$ at line \ref{refreshReadTGC} and performs its \op{CAS} at line \ref{casGC}.
+Consider the \op{Refresh} $R_3$ that does this successful \op{CAS} during $R_2$.
+$R_3$ must have read $v.\fld{blocks}$ after the successful \op{CAS} during $R_1$.
+The claim follows from \Cref{successfulRefreshGC} applied to $R_3$.
+\end{proof}
+
+\Cref{lem::appendExactlyOnce} can then be proved in the same way as in Section \ref{sec::propagating}.
+We modified the way \var{super} fields are computed, so we prove an analogue of \Cref{superRelation} to show that \fld{super} fields are (nearly) accurate.
+
+\begin{customlemma}{$\ref{superRelation}'$}\label{superRelationGC}
+Let $B=v.\var{blocks}[b]$.
+  If $v.\fld{parent.blocks}[s]$ is the superblock of $B$ then $s-1\leq B.\fld{super}\leq s$.
+\end{customlemma}
+\begin{proof}
 
 \end{proof}
 
+
+
+The correctness of \op{GetEnqueue} and \op{indexDequeue}, which are identical to the original version of the implementation are dependent only on the fact that we do not discard blocks needed by those routines.
+The following lemmas show this.
+
+\here{prove some lemmas about not throwing away useful information, then restate correctness lemmas about getenq and indexdeq that say they work correctly OR the operation is already propagated/complete.}
 
 
 \here{next, should probably show that blocks are removed only after they are no longer needed; i.e., every dequeue has its answer (either returned, or written in its response field) and every enqueue has a matching dequeue that has either terminated or has a response written.}

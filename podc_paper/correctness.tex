@@ -213,7 +213,7 @@ Then, $B$ is a subblock of some block in $v$, since  $B'.\eleft$ is greater than
 in $v.\fld{left.blocks}$.
 Hence $v$ contains $op$, as required.
 
-\Eric{I think this case was missing from the proof in the thesis}
+%\Eric{I think this case was missing from the proof in the thesis}
 Now suppose $R$'s call to \op{CreateBlock} returns \nl, causing $R$ to terminate at line \ref{addOP}.
 Intuitively, since there are no operations in $v$'s children to promote, $op$ is already in $v$.
 We formalize this intuition.
@@ -266,6 +266,7 @@ does a double \op{Refresh}~on each internal node on the path $P$ from the leaf t
 By \Cref{lem::doubleRefresh}, this ensures a block in each node on $P$ contains $B$'s operation.
 There is at most one such block in each node, by \Cref{lem::noDuplicates}.
 \end{proof}
+
 
 \subsection{Correctness of Helping Routines}
 \label{sec::helpingCorrect}
@@ -327,13 +328,14 @@ otherwise, \Cref{successfulRefresh} would imply that $B$ is a subblock of one of
 $v.\fld{parent.blocks}[1..s-1]$, contrary to the hypothesis.
 Now, consider the call to \op{Advance}($v, b$) that writes $B.\fld{super}$.
 It is invoked either 
-at line \ref{helpAdvance} after seeing $v.\fld{blocks}[h]\neq \nl$ at line \ref{ifHeadnotNull}
-or at line \ref{advance} after ensuring $v.\fld{blocks}[h]\neq \nl$ at line~\ref{cas}.
+at line \ref{helpAdvance} after seeing $v.\fld{blocks}[b]\neq \nl$ at line \ref{ifHeadnotNull}
+or at line \ref{advance} after ensuring $v.\fld{blocks}[b]\neq \nl$ at line~\ref{cas}.
 Either way, the \op{Advance} is invoked after $B$ is installed, and therefore after $r'$.
 By \Cref{nonDecreasingHead}, $v.\fld{parent}.\head$ is non-decreasing, so 
 the value this \op{Advance} reads in $v.\fld{parent}.\head$ and
 writes in $B.\fld{super}$ is greater than or equal to the value $s-1$ that $r'$ reads in $v.\fld{parent}.\head$.
 \end{proof}
+
 
 %The reader may wonder when the case $b\nf{.super}=s$ happens. This can happen when $
 %\nf{$n$.parent.blocks[$B$.super]}=\nf{null}$ when $B$\nf{.super} is written and $R_p$ puts its created block 

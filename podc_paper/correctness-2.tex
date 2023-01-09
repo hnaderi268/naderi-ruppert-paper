@@ -41,7 +41,7 @@ Moreover, its maximum \fld{index} can only increase over time.
 Since RBTs are always non-empty, calls to \op{MaxBlock} have well-defined answers.  
 Throughout the proof, we use $v.\blocks[b]$ to refer to the block with \fld{index} $b$ that appeared
 in $v$'s tree at some time during the execution.
-It follows from \Cref{RBTupdates} and \Cref{nonemptyConsec} that 
+It follows from \Cref{RBTupdates} and \Cref{nonEmptyIncreasing} that 
 each time a new block appears in $v$'s RBT, its \fld{index} is greater than any block
 that has appeared in $v$'s RBT earlier.
 Thus, $v.\blocks[b]$ is unique, if it exists.
@@ -147,54 +147,79 @@ So suppose both $R_1$ and $R_2$ perform a failed \op{CAS} at line \ref{casGC}.
 
 
 \here{next, should probably show that blocks are removed only after they are no longer needed; i.e., every dequeue has its answer (either returned, or written in its response field) and every enqueue has a matching dequeue that has either terminated or has a response written.}
-
-
+one invariant will be that a null dequeue or a dequeued enqueue appears in the first block (or some later block) of each RBT.
+should imply that no operation will need any block before the first block in the RBT
 -------
 
 \subsection{Analysis}
 \label{sec::GCanalysis}
 
-\here{Danger:  what if I remove a block (by a split), which prevents another process from continuing on to mark ancestors/descendants of this node?  Does existing helping take care of this?  Or maybe this does not cause too many excess blocks to be left around?  If not, maybe before splitting, we should mark descendants/ancesotrs of max marked block; in this case, all marking should go in the same direction up/down tree.}
+\here{need to prove a lemma analogous to \Cref{blockSize}}
 
 We first bound the size of RBTs.  Let $q_{max}$ be the maximum size of the queue at any time during the sequential execution given by the linearization $L$.
-Recall that GC is done on a node every $G$ times its RBT is updated, where we chose $G$ to be $p^2\ceil{\log p}$.
+Recall that GC is done on a node every $G$ times its RBT is updated, and we chose $G$ to be $p^2\ceil{\log p}$.
 
-We say the index $b$ \emph{is marked in node $v$} if some process has tested
-whether $b>\var{v}.\fld{last}[*]$ at line \ref{marktest1} or \ref{marktest2}.
-Intuitively, a block's index value is marked 
-when a dequeue passes through this block to find the enqueue
-whose argument it should return, or when a dequeue that returns null passes through the block.
-Thus, $b$ gets marked in $v$ when $v.\fld{blocks}[b]$ 
-contains either an enqueue whose value is being dequeued or a \nl\ dequeue.
-If the index of block $B$ is marked in $v$, we also say $B$ is marked in $v$.
+%We say the index $b$ \emph{is marked in node $v$} if some process has tested
+%whether $b>\var{v}.\fld{last}[*]$ at line \ref{marktest1} or \ref{marktest2}.
+%Intuitively, a block's index value is marked 
+%when a dequeue passes through this block to find the enqueue
+%whose argument it should return, or when a dequeue that returns null passes through the block.
+%Thus, $b$ gets marked in $v$ when $v.\fld{blocks}[b]$ 
+%contains either an enqueue whose value is being dequeued or a \nl\ dequeue.
+%If the index of block $B$ is marked in $v$, we also say $B$ is marked in $v$.
 
 \begin{lemma}\label{boundAfterGC}
 If the maximum \fld{index} in a node's RBT is a multiple of $G$, then
-it contains $O(q_{max}+p)$ blocks.
+it contains at most $2q_{max}+4p+1$ blocks.
 \end{lemma}
 \begin{proof}
-Consider the \op{AddBlock} that updates a node $v$'s RBT with the insertion of a block whose 
+Consider the invocation $A$ of \op{AddBlock} that updates a node $v$'s RBT with the insertion of a block whose 
 \fld{index} is a multiple of $G$.
-That \op{AddBlock} performs a GC phase.
-Let $C$ be the configuration after it executes line \ref{beforeLastScan}.
-Let $L'$ be the prefix of the linearization order $L$ consisting of blocks that have beed added to the
-root before $C$.
-$A$'s \op{Split} on line \ref{splitGC} removes from the RBT all blocks whose indices
-were marked in $v$ prior to line \ref{beforeLastScan}, except for $m$ and $m-1$.
-To bound the number of blocks left in the RBT after the split, 
-we get a bound on the number of operations in unmarked blocks in $v$.
+$A$ performs a GC phase.
+Let $C$ be the configuration before $A$ invokes \op{SplitBlock} on line \ref{callSplitBlock}.
+That call to \op{SplitBlock} recurses up to the root, where it computes $m$ by reading the \var{last}
+array.
+Let $L_1$ be the prefix of the linearization $L$ corresponding to blocks $1..m$ of the root.
+Let $L_2$ be the next segment of the linearization corresponding to blocks $m+1..\ell$ of the root, where
+$\ell$ is the last block added to the root's RBT before $C$.
 
-First consider an enqueue operation $E$ in an unmarked block in $v$.
-No dequeue that returns $E$'s value has completed (otherwise it would have marked the block in $v$).
-So, if the dequeue is in $L'$, then the dequeue is still pending at $C$.
-There can be at most $p$ dequeues pending at $C$.
-So, either $E$'s element is still in the 
+We first bound the number of operations in $L_2$.
 
-An enqueue operation can be in an unmarked block in $v$
-only if the dequeue that returns its value has not yet completed.
+The number of enqueues in $L_2$ whose values are still in the queue at the end of $L_2$ is at most $q_{max}$.
+Any enqueue in $L_2$ whose value is not still in the queue at the end of $L_2$
+must still be in progress at $C$; otherwise the process that dequeued it would have
+set its \var{last} entry to a value greater than the index of the block of the root that contains the enqueue prior to $C$,
+contradicting the definition of $m$.
+So, there are at most $p$ enqueues in $L_2$ whose values are still in the queue at the end of $L_2$.
+Thus, there are at most $q_{max}+p$ enqueues in $L_2$.
 
+If a dequeue in $L_2$ returns a non-null value in the sequential execution $L$,
+then the value it returns was either in the queue at the end of $L_1$ or it was enqueued during $L_2$.
+Thus, there are at most $q_{max}+(q_{max}+p)$ dequeues in $L_2$ that return non-null values.
+Any dequeue in $L_2$ that returns a null value in the sequential execution $L$ must still be in progress
+at $C$; otherwise the process that performed the dequeue would have set its \var{last} entry
+to a value greater than the index of the block of the root that contains the dequeue prior to $C$, 
+contradicting the definition of $m$.
+So, there are at most $p$ null dequeues in $L_2$.
+Thus, there are at most $2q_{max} + 2p$ dequeues in $L_2$.
 
-\here{to be continued}
+$A$'s call to \op{SplitBlock} determines the index $s$ used to split $v$'s RBT by following 
+\eleft\ and \eright\ pointers from the root down to $v$.
+So, the block returned is a subblock of block $m$ of the root, unless
+at some point along the path of subblocks the subblock has already been removed by a split,
+in which case \op{SplitBlock} returns a subblock of a block $m'>m$ in the root.
+
+Next, we bound the number of operations in $v$'s blocks that are retained when $A$ does sets
+$T'\assign\op{Split}(T,s)$ operation.
+Since $T$ was read before $C$, any operation in $T$ is either in progress at $C$ or has been propagated to the root before $C$.\here{cite a lemma about propagation before operation terminates}
+Thus, there are at most $p$ operations in $T$ that do not appear in $L_1\cdot L_2$.
+All the rest of the operations in blocks of $T'$ have been propagated to blocks $m..\ell$ of the root.
+There are at most $p$ operations in block $m$ of the root by \Cref{blockSizeGC}
+and we showed above that there are at most $2q_{max} + 2p$ in blocks 
+$m+1..\ell$ of the root.
+Thus, there are at most $2q_{max}+4p$ operations in blocks of $T'$.
+Since each block is non-empty by \Cref{blockNotEmpty}, $T'$ contains at most $2q_{max}+4p$ blocks, and one more 
+block is inserted before $A$ sets $v$'s \fld{blocks} to the resulting RBT.
 \end{proof}
 
 
@@ -211,8 +236,8 @@ The claim follows from \Cref{boundAfterGC}.
 The size of our queue data structure is $O(pq_{max}+p^3\log p)$ words of memory.
 \end{theorem}
 \begin{proof}
-There are $2p-1$ nodes in the ordering tree.  Aside from the RBT, each node uses $O(p)$ memory for the
-\fld{last} array.  So the space bound follows from \Cref{RBTbound} and the fact that $G$ is chosen
+There are $2p-1$ nodes in the ordering tree.  Aside from the RBT, each node uses $O(1)$ memory words.
+So the space bound follows from \Cref{RBTbound} and the fact that $G$ is chosen
 to be $p^2\ceil{\log p}$.
 \end{proof}
 
@@ -220,9 +245,10 @@ Although individual operations may now become more expensive because they have t
 we show that operations still have polylogarithmic amortized step complexity.
 
 \begin{proposition}
-The amortized step complexity is $O(\log p \log(p+q_{max}))$ per operation.
+The amortized step complexity of each operation is $O(\log p \log(p+q_{max}))$.
 \end{proposition}
 \begin{proof}
+\here{this proof may need some modification since code was changed to change how split point is computed}
 It follows from \Cref{RBTbound} and the fact that $G=p^2\ceil{\log p}$
 that all the RBT routines we use to perform \op{Split}, \op{Insert} and searches for
 blocks with a particular index or for a \fld{sum\sub{enq}} value (in line \ref{FRsearchGC} or \ref{getChildGC}) can all be done in $O(\log(p+q_{max}))$ steps.

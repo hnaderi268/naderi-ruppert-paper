@@ -11,9 +11,14 @@ We first describe the modifications to the implementation.
 To avoid confusion, we use nodes to refer to the nodes of the ordering tree, and blocks to refer
 to the nodes of a RBT (since the RBT stores blocks).
 
-The space-bounded implementation uses an additional shared array so that processes can access one another's leaves to perform helping.
+The space-bounded implementation uses two additional shared arrays:
+the \var{leaf} array allows processes to access one another's leaves to perform helping, and
+the \var{last} array is used to determine which blocks are safe to discard.
 \begin{itemize}
 \item \typ{Node[]} \var{leaf}$[1..p]$ \Comment{\var{leaf}$[k]$ is the leaf assigned to process $k$}
+\item \typ{int[]} \var{last}$[1..p]$ \Comment{\var{last}$[k]$ is the largest \fld{index} of a block in the root  that process $k$}\\
+\mbox{ }\Comment{has observed to contain either an enqueue whose value has}\\
+\mbox{ }\Comment{been dequeued or a null dequeue }
 \end{itemize}
 Each \typ{Block} has an additional field.
 \begin{itemize}
@@ -23,12 +28,6 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 \begin{itemize}
 \item \typ{Object} \var{response} \Comment{response of the operation in the block, if it is a dequeue}
 \end{itemize}
-Each \typ{Node} has an additional array field to help determine which of its blocks are safe to discard.
-\begin{itemize}
-\item \typ{int[]} \var{last}$[1..p]$ \Comment{\var{last}$[k]$ is the largest \fld{index} of a block in the node that process $k$ }\\
-\mbox{ }\Comment{has accessed, either to find the enqueued item for its dequeue}\\
-\mbox{ }\Comment{or during a \nl\ dequeue}
-\end{itemize}
 The \fld{blocks} field of each node in the \ordering\ tree is implemented as a pointer to the root of a RBT of \typ{Blocks} rather than an infinite array.  
 Each RBT is initialized with an empty block with index 0.
 The \head\ field, which previously gave the next position to insert into the \fld{blocks} array is no
@@ -37,13 +36,14 @@ To facilitate this, \op{MaxBlock} is a query operation on the RBT that
 returns the block with the maximum \fld{index}.
 We can store, in the root of the RBT, a pointer to the maximum block so that \op{MaxBlock}
 can be done in constant time, without affecting the time of other RBT operations.
+Similarly, a \op{MinBlock} query finds the block with the minimum \fld{index} in a RBT.
 
 \here{Talk about what happens if a block is not found in an RBT}
 \here{Talk about \emph{marking} a block to indicate that any blocks with smaller indices will no longer
 be needed by operations that haven't started yet.}
 
-\HERE{Update this parag after making changes}
-Pseudocode for the space-bounded implementation appears in Figure \ref{pseudocode1GC}--\ref{pseudocode3GC}.
+\here{Update this parag after code is finalized--it has changed since I wrote this parag}
+Pseudocode for the space-bounded implementation appears in Figure \ref{pseudocode1GC}--\ref{pseudocode2GC}.
 The \op{Propagate} and \op{FindResponse} routines are unchanged.
 Minor additions to \op{IndexDequeue} and \op{GetEnqueue} update the \var{last} field of nodes
 visited by the routines to mark the blocks they visit in those nodes.
@@ -170,7 +170,7 @@ it also updates \var{last} if the computed response is \nl.
     \State \linecomment{add block $\var{B}\neq\nl$ to \var{T}, doing GC if necessary}
     \If{\var{B}.\fld{index} is a multiple of $G$}
     	\State \linecomment{Do garbage collection}\label{GCstart}
-        \State $s \assign \Call{SplitBlock}{v}.\var{index}$
+        \State $s \assign \Call{SplitBlock}{v}.\var{index}$\label{callSplitBlock}
         \State \Call{Help}{}
         \State $T' \assign\ \Call{Split}{T,s}$\label{splitGC}
         \State \linecomment{\op{Split} removes blocks with $\fld{index} < m-1$}
@@ -307,7 +307,8 @@ it also updates \var{last} if the computed response is \nl.
 		\State \var{dir} \assign ($v=v.\fld{parent.left}$ ? \fld{left} : \fld{right})
 		\State $B \assign v.\fld{blocks}[B_p.\edir]$
 	\EndIf
-	\State \Return ($B = \nl$ ? \Call{MinBlock}{v.\var{blocks}} : $B$)
+	\State \linecomment If $B$ was already discarded, use leftmost block instead
+	\State \Return ($B = \nl$ ? $\Call{MinBlock}{v.\var{blocks}}$ : $B$)
 \EndFunction{SplitBlock}
 }
 

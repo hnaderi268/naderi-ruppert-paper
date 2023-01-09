@@ -48,23 +48,18 @@ Blocks should be kept if they contain operations still in progress.
 Moreover, a block containing an \op{Enqueue}($x$) must be kept until $x$ is dequeued.
 
 To maintain good amortized time per operation, we periodically do a garbage collection (GC) phase.
-If a process performing a \op{Refresh} on the root finds that $\var{root}.\head$ is a multiple
-of $p^2$, it does GC.
-To determine which blocks can be thrown away, we keep an array $\var{last}[1..p]$ where 
+If a \op{Refresh} on a node adds a block whose \var{index} is a multiple of $G=p^2\ceil{\log p}$, it does GC to remove obsolete blocks from the node's RBT.
+To determine which blocks can be thrown away, the node has an array $\var{last}[1..p]$ where 
 each process writes the index of the last block in
-\var{root} containing an enqueue whose element it dequeued.
+containing an enqueue whose element it dequeued.
 To perform GC, a process reads $\var{last}[1..p]$ and finds the maximum entry $m$.
 Then, it helps complete every other process's pending dequeue 
 by computing the dequeue's response and writing it in the block in the leaf that represents the dequeue.
 Once this helping is complete, it follows from the FIFO property of the queue that elements enqueued 
-in $\var{root}.\fld{blocks}[1..m-1]$ have all been dequeued, so GC can discard all blocks in the root's RBT 
+in $\fld{blocks}[1..m-1]$ have all been dequeued, so GC can discard all blocks in the RBT 
 with indices smaller than $m-1$.
 Fortunately, there is an efficient \op{Split} operation that can remove
 all nodes with indices smaller than $m-1$ from a RBT in logarithmic time \cite[Sec.~4.2]{Tar83}.
-Then, GC can work its way down the \ordering\ tree, using \op{Split} operations to discard all subblocks
-of the discarded root blocks.
-
-\here{Have to talk about repeating CAS to do GC at each node up to p times}
 
 An operation $op$'s search of a RBT may fail to find the required block $B$ that has been removed 
 by another process's GC phase.  If $op$
@@ -73,10 +68,10 @@ its own leaf.
 \here{What about enqueues not finding required block?}
 
 Each process takes $\tilde{O}(p)$ steps during a GC phase.\footnote{We use $\tilde{O}$ notation
-to omit polylogarithmic factors; see Appendix \ref{reducing-details} for precise bounds.}
+to omit polylogarithmic factors; see Appendix \ref{sec::GCanalysis} for precise bounds.}
 Since all processes may run GC,
-a total of $\tilde{O}(p^2)$ steps is spent on a GC phase.
-There are at least $p^2$ operations between two GC phases,  so
+a total of $\tilde{O}(G)$ steps is spent on a GC phase.
+There are at least $G$ operations between two GC phases,  so
 GC contributes only $\tilde{O}(1)$ steps per operation in an amortized sense.
 Doing GC less frequently would yield better constant factors in the amortized number of steps per operation but use more space.
 

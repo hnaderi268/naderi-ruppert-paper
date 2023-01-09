@@ -126,13 +126,13 @@ This extra parameter has been added to
 \gc{
 \Function{RBT}{AddBlock}{\typ{Node} \var{v}, \typ{RBT} \var{T}, \typ{Block} \var{B}}
     \State \linecomment{add block $\var{B}\neq\nl$ to \var{T}, doing GC if necessary}
-    \If{\var{B}.\fld{index} is a multiple of $p^2$}
+    \If{\var{B}.\fld{index} is a multiple of $G$}
     	\State \linecomment{Do garbage collection}\label{GCstart}
-		\State $m \assign 0$
+		\State $m \assign 0$\label{beforeLastScan}
 		\For{$k\assign 1..p$} $m\assign \max(m, v.\fld{last}[k])$
 		\EndFor
         \State \Call{Help}{}
-        \State $T' \assign\ \Call{Split}{T,m-1}$
+        \State $T' \assign\ \Call{Split}{T,m-1}$\label{splitGC}
         \State \linecomment{\op{Split} removes blocks with $\fld{index} < m-1$}
         \State \Return \Call{Insert}{$T',B$}\label{GCend}
 	\Else\ \Return \Call{Insert}{$T, B$}
@@ -244,7 +244,7 @@ This extra parameter has been added to
 
 \end{algorithmic}
 \end{minipage}
-\caption{Bounded-space queue implementation.\label{pseudocode1GC}.  $G$ is a constant, which we choose to be $p^2 \ceil{\log p}$.}
+\caption{Bounded-space queue implementation.\label{pseudocode1GC}  $G$ is a constant, which we choose to be $p^2 \ceil{\log p}$.}
 \end{figure}
 
 \begin{figure}
@@ -302,7 +302,7 @@ This extra parameter has been added to
     \State \linecomment{Precondition: \var{v}.\fld{blocks}[\var{b}] exists and has propagated}
     \State \linecomment{to root and $D(\var{v}.\fld{blocks}[\var{b}])$ has at least \var{i} dequeues}
     \gc{
-    \If{\var{mark} and $b>\var{v}.\fld{last}[\mbox{process id}]$}
+    \If{\var{mark} and $b>\var{v}.\fld{last}[\mbox{process id}]$} \label{marktest2}
     	\State $\var{v}.\fld{last}[\mbox{process id}] \assign b$
     \EndIf
     }
@@ -332,7 +332,7 @@ This extra parameter has been added to
 \Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
     \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] exists and contains at least \var{i} enqueues}
 	\gc{
-	\If{$b > \var{v}.\fld{last}[\mbox{process id}]$}
+	\If{$b > \var{v}.\fld{last}[\mbox{process id}]$}\label{marktest1}
 		\State $\var{v}.\fld{last}[\mbox{process id}] \assign b$
 	\EndIf
 	}

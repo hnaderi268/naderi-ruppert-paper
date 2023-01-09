@@ -152,16 +152,49 @@ So suppose both $R_1$ and $R_2$ perform a failed \op{CAS} at line \ref{casGC}.
 -------
 
 \subsection{Analysis}
+\label{sec::GCanalysis}
+
+\here{Danger:  what if I remove a block (by a split), which prevents another process from continuing on to mark ancestors/descendants of this node?  Does existing helping take care of this?  Or maybe this does not cause too many excess blocks to be left around?  If not, maybe before splitting, we should mark descendants/ancesotrs of max marked block; in this case, all marking should go in the same direction up/down tree.}
 
 We first bound the size of RBTs.  Let $q_{max}$ be the maximum size of the queue at any time during the sequential execution given by the linearization $L$.
 Recall that GC is done on a node every $G$ times its RBT is updated, where we chose $G$ to be $p^2\ceil{\log p}$.
+
+We say the index $b$ \emph{is marked in node $v$} if some process has tested
+whether $b>\var{v}.\fld{last}[*]$ at line \ref{marktest1} or \ref{marktest2}.
+Intuitively, a block's index value is marked 
+when a dequeue passes through this block to find the enqueue
+whose argument it should return, or when a dequeue that returns null passes through the block.
+Thus, $b$ gets marked in $v$ when $v.\fld{blocks}[b]$ 
+contains either an enqueue whose value is being dequeued or a \nl\ dequeue.
+If the index of block $B$ is marked in $v$, we also say $B$ is marked in $v$.
 
 \begin{lemma}\label{boundAfterGC}
 If the maximum \fld{index} in a node's RBT is a multiple of $G$, then
 it contains $O(q_{max}+p)$ blocks.
 \end{lemma}
 \begin{proof}
-\here{to be written}
+Consider the \op{AddBlock} that updates a node $v$'s RBT with the insertion of a block whose 
+\fld{index} is a multiple of $G$.
+That \op{AddBlock} performs a GC phase.
+Let $C$ be the configuration after it executes line \ref{beforeLastScan}.
+Let $L'$ be the prefix of the linearization order $L$ consisting of blocks that have beed added to the
+root before $C$.
+$A$'s \op{Split} on line \ref{splitGC} removes from the RBT all blocks whose indices
+were marked in $v$ prior to line \ref{beforeLastScan}, except for $m$ and $m-1$.
+To bound the number of blocks left in the RBT after the split, 
+we get a bound on the number of operations in unmarked blocks in $v$.
+
+First consider an enqueue operation $E$ in an unmarked block in $v$.
+No dequeue that returns $E$'s value has completed (otherwise it would have marked the block in $v$).
+So, if the dequeue is in $L'$, then the dequeue is still pending at $C$.
+There can be at most $p$ dequeues pending at $C$.
+So, either $E$'s element is still in the 
+
+An enqueue operation can be in an unmarked block in $v$
+only if the dequeue that returns its value has not yet completed.
+
+
+\here{to be continued}
 \end{proof}
 
 

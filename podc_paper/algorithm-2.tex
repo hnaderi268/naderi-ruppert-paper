@@ -155,7 +155,7 @@ The \opemph{Propagated} function is used to determine whether the dequeue has pr
     \If{\var{B}.\fld{index} is a multiple of $G$}
     	\State \linecomment{Do garbage collection}\label{GCstart}
         \State $s \assign \Call{SplitBlock}{\var{v}}.\var{index}$\label{callSplitBlock}
-        \State \Call{Help}{}
+        \State \Call{Help}{}\label{invokeHelp}
         \State $T' \assign\ \Call{Split}{T,s}$\label{splitGC}
         \State \linecomment{\op{Split} removes blocks with $\fld{index} < s$}
         \State \Return \Call{Insert}{$T',B$}\label{GCend}

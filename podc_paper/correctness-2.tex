@@ -170,10 +170,74 @@ Let $B=\var{v}.\fld{blocks}[b]$.
 
 \end{proof}
 
+\subsubsection{GC Keeps Needed Blocks}
+
+The correctness of \op{GetEnqueue} and \op{indexDequeue}, which are very similar to the 
+original implementation, are dependent only on the fact that GC does not 
+discard blocks needed by those routines.
+The following lemmas are used to show this.
+
+We say a block is \emph{finished} if 
+\begin{itemize}
+\item
+it has been propagated to the root,
+\item
+the value of each enqueue contained in the block has either been returned by a dequeue
+or written in the \fld{result} field of a dequeue, and
+\item
+each dequeue contained in the block has either terminated or has a non-null \fld{result} field in the leaf block that represents it.
+\end{itemize}
+Intuitively, once a block is finished, operations no longer need to pass through the block
+to compute responses to operations.
+The following is an immediate consequence of the definition of finished and what it means for an operation to be contained in a block.
+
+\begin{observation}\label{subblocksFinished}
+A block is finished if and only all of its subblocks are finished.
+\end{observation}
+
+\begin{invariant}
+If the minimum \fld{index} of any block in \vv's RBT is $b_{min}$, then
+all blocks that were ever added to \vv\ with $\fld{index}$ at most $b_{min}$ are finished.
+\end{invariant}
+\begin{proof}
+The invariant is true initially, since the minimum \fld{index} block in \vv's RBT is the empty block, which is (vacuously) finished.
+
+We must show the invariant is preserved whenever $\vv.\fld{blocks}$ changes.
+The minimum \fld{index} of \vv's RBT can only change when \vv's RBT changes, either at line 
+\ref{appendLeafGC} (if \vv\ is a leaf) or at line \ref{casGC} (if \vv\ is an internal node).
+In either case, the step changes $\vv.\fld{blocks}$ is changed
+from $T$ to $T'$, where $T'$ is obtained by  a call to \op{AddBlock}(\vv, $T$, $B$).
+(In the case of a leaf \vv, this is true because only the process that owns the leaf ever
+writes to $\vv.\fld{blocks}$.)
+If the \op{AddBlock} does not do GC (lines \ref{GCstart}--\ref{GCend}), 
+then $T'$ is obtained by adding a new block to $T$, so by \Cref{} the minimum \fld{index}
+is the same.
+So consider the case where the \op{AddBlock} performs GC.
+We must show that any block of \vv\ whose index is less than or equal to the
+minimum \fld{index} in $T'$ is finished when $T'$ is installed in $\vv.\fld{blocks}$.
+Since $T'$ is obtained by discarding all blocks with \fld{index} at most $s$ (and adding
+a block with a larger index), it suffices to show that all blocks that were ever added
+to \vv's RBT with \fld{index} at most $s$ are finished.
+
+\here{to be continued}
+might need assn that ops so far are consistent with L
 
 
-The correctness of \op{GetEnqueue} and \op{indexDequeue}, which are identical to the original version of the implementation are dependent only on the fact that we do not discard blocks needed by those routines.
-The following lemmas show this.
+ 
+
+
+
+
+Claim:  After an \op{AddBlock} finishes its call to \op{Help} on line \ref{invokeHelp}
+all blocks of $v$ with \fld{index} less than or equal to $s$ are finished.
+
+\end{proof}
+
+
+
+
+
+
 
 \here{prove some lemmas about not throwing away useful information, then restate correctness lemmas about getenq and indexdeq that say they work correctly OR the operation is already propagated/complete.}
 

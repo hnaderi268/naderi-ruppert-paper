@@ -86,10 +86,22 @@ of \op{CreateBlock}$(v,b)$ stores in $B.\eleft$.
 Similarly, the values stored in $B'.\eright$ and $B.\eright$ at line \ref{createEndRightGC} satisfy the claim.
 \end{proof}
 
+\Cref{lem::headProgressGC} implies that 
+the nodes of an in-order traversal of any RBT have non-decreasing values of
+$\eleft$ (and of $\eright$).
+Thus, the searches for a block based on \eleft\ or \eright\ values 
+at lines \ref{searchsuper1}, \ref{searchsuper2} and \ref{searchsuper3},
+which are used to look for the superblock of a node or its predecessor, can be done in logarithmic time.
+
 \Cref{lem::subblocksDistinct}, \Cref{lem::noDuplicates}, \Cref{lem::sum}, \Cref{blockNotEmpty} 
 hold for the modified algorithm.  Their proofs are identical to those given in 
 Section \ref{sec::basicProperties} since they  depend only on \Cref{lem::headProgress} (which can be replaced by \Cref{lem::headProgressGC})
 and the definition of subblocks given in (\ref{defsubblock}).
+In particular, \Cref{lem::sum} says that nodes in an in-order traversal of a RBT have non-decreasing
+values of \fld{sum\sub{enq}}  so the searches of a RBT based on
+\fld{sum\sub{enq}} values in lines
+\ref{getChildGC} and \ref{FRsearchGC} can be done in logarithmic time.
+
 Next, we prove an analogue of \Cref{successfulRefresh}.
 We say a node $v$ \emph{contains} an operation
 if some block containing the operation has previously appeared in $v$'s RBT (even if 
@@ -97,7 +109,7 @@ the block has been removed from the RBT by a subsequent \op{Split}).
 
 \begin{customlemma}{\ref{successfulRefresh}$'$}
 \label{successfulRefreshGC}
-Let $R$ be a call to \op{Refresh}($v$) that performs a successful \op{CAS} on line \ref{casGC} (or terminates at line \ref{addOPGC}).
+Let $R$ be a call to \op{Refresh}(\var{v}) that performs a successful \op{CAS} on line \ref{casGC} (or terminates at line \ref{addOPGC}).
 In the configuration after that CAS (or termination, respectively), $v$ contains all operations that $v$'s children contained 
 when $R$ executed line~\ref{refreshReadTGC}.
 \end{customlemma}
@@ -319,7 +331,7 @@ within a constant factor of the steps it performs excluding GC.
 \end{proof}
 
 We remark that the implementation remains wait-free:  the depth of recursion in each routine is  bounded
-by the height of the tree and there are no loops.
+by the height of the tree and the only loop is the counted loop in the \op{Help} routine.
 
 ============
 

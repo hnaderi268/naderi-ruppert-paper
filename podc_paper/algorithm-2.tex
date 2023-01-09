@@ -20,6 +20,21 @@ the \var{last} array is used to determine which blocks are safe to discard.
 \mbox{ }\Comment{has observed to contain either an enqueue whose value has}\\
 \mbox{ }\Comment{been dequeued or a null dequeue }
 \end{itemize}
+
+The \fld{blocks} field of each node in the \ordering\ tree is implemented as a pointer to the root of a RBT of \typ{Blocks} rather than an infinite array.  
+Each RBT is initialized with an empty block with index~0.
+Any access to an entry of the \fld{blocks} array is replaced by a search in the RBT.
+The node's \head\ field, which previously gave the next position to insert into the \fld{blocks} array is no
+longer needed; we can instead simply find the maximum \fld{index} of any block in the RBT.
+To facilitate this, \op{MaxBlock} is a query operation on the RBT that 
+returns the block with the maximum \fld{index}.
+We can store, in the root of the RBT, a pointer to the maximum block so that \op{MaxBlock}
+can be done in constant time, without affecting the time of other RBT operations.
+Similarly, a \op{MinBlock} query finds the block with the minimum \fld{index} in a RBT.
+
+Blocks no longer require the \fld{super} field.  This was used to quickly find the blocks 
+superblock in the parent node's \fld{blocks} array, but this can now be done efficiently 
+by searching the parent's \fld{blocks} RBT instead.
 Each \typ{Block} has an additional field.
 \begin{itemize}
 \item \typ{int} \var{index} \Comment{position this block would have in the \fld{blocks} array}
@@ -28,42 +43,58 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field.
 \begin{itemize}
 \item \typ{Object} \var{response} \Comment{response of the operation in the block, if it is a dequeue}
 \end{itemize}
-The \fld{blocks} field of each node in the \ordering\ tree is implemented as a pointer to the root of a RBT of \typ{Blocks} rather than an infinite array.  
-Each RBT is initialized with an empty block with index 0.
-The \head\ field, which previously gave the next position to insert into the \fld{blocks} array is no
-longer needed; we can instead find the maximum \fld{index} of any block in the RBT.
-To facilitate this, \op{MaxBlock} is a query operation on the RBT that 
-returns the block with the maximum \fld{index}.
-We can store, in the root of the RBT, a pointer to the maximum block so that \op{MaxBlock}
-can be done in constant time, without affecting the time of other RBT operations.
-Similarly, a \op{MinBlock} query finds the block with the minimum \fld{index} in a RBT.
 
 \here{Talk about what happens if a block is not found in an RBT}
-\here{Talk about \emph{marking} a block to indicate that any blocks with smaller indices will no longer
-be needed by operations that haven't started yet.}
 
-\here{Update this parag after code is finalized--it has changed since I wrote this parag}
 Pseudocode for the space-bounded implementation appears in Figure \ref{pseudocode1GC}--\ref{pseudocode2GC}.
-The \op{Propagate} and \op{FindResponse} routines are unchanged.
-Minor additions to \op{IndexDequeue} and \op{GetEnqueue} update the \var{last} field of nodes
-visited by the routines to mark the blocks they visit in those nodes.
-Only minor modifications have been made to \op{Enqueue}, \op{Append}, \op{CreateBlock}
-to accomodate the switch from an array of blocks to a RBT of blocks (and the corresponding disappearance
+New or modified code appears in blue.
+The \op{Propagate} and \op{GetEnqueue} routines are unchanged.
+A few lines have been added to \op{FindResponse} to update the \var{last} array
+to ensure that it stores the value described above.
+Minor modifications have also
+been made to \op{Enqueue}, \op{Dequeue}, \op{CreateBlock}, \op{Refresh} and \op{Append}
+to accommodate  the switch from an array of blocks to a RBT of blocks (and the corresponding disappearance
 of the \head\ field).
-\op{Dequeue} has been similarly modified, and the second half of the routine is now in a
+In addition, the second half of the \op{Dequeue} routine is now in a
 separate routine called \op{CompleteDeq} so that it can also be used by other processes
 helping to complete the operation.
+The \op{Refresh} routine no longer needs to set the \fld{super} field of blocks since
+that field has been removed.
+The \op{IndexDequeue} routine, which must trace the location of a dequeue along
+a path from its leaf to the root has a minor modification to search the \fld{blocks} RBT at 
+each level instead of using the \fld{super} field.
 
-Once a dequeue has been propagated to the root, 
-\bf{\op CompleteDeq} computes its answer.  This routine can also be called by helpers 
-who want to help complete the dequeue.
-In addition to calling \op{FindResponse} and \op{IndexDequeue} to compute the response,
-it also updates \var{last} if the computed response is \nl.
+The new routines, \op{AddBlock}, \op{SplitBlock}, \op{Help} and \op{Propagated} are
+used to implement GC.
+When a \op{Refresh} or \op{Append} wants to add a new block to a node's \fld{blocks} RBT,
+it calls the new \opemph{AddBlock} routine.
+Before attempting to add the block to a node's RBT, \op{AddBlock} triggers a GC phase on the RBT if 
+the new block's \fld{index} is a multiple of the constant $G$, which we choose to be $p\ceil{\log p}$.
+This ensures that obsolete blocks are removed from the RBT once every $G$ times a new block is added to it.
+The GC phase uses \op{SplitBlock} to determine the index $s$ of the oldest block to keep,
+calls \op{Help} to help all pending dequeues that have been propagated to the root
+(to ensure that all blocks before $s$ can safely be discarded),
+uses the standard RBT \op{Split} routine \cite{Tar83}
+to remove all blocks with \fld{index} less than $s$,
+inserts the new block
+and finally performs a \op{CAS} to swing the node's \fld{blocks} pointer to the new RBT.
 
-\here{Discuss new routines AddBlock, SetSuper, Help, and largely modified Refresh}
+To determine the oldest block in a node $v$ to keep, the \opemph{SplitBlock} routine  first
+finds the most recent block $B_{root}$ in the root that contains either an enqueue that has been dequeued
+or a null dequeue using the \var{last} array.  All enqueues before this block are either
+dequeued or will be dequeued by a dequeue that is in progress.  Once those pending dequeues have been
+helped to complete, it is safe to discard any blocks in the root older than $B_{root}$, as well
+as their subblocks.
+The \op{SplitBlock} uses the \eleft\ and \eright\ fields to find the last subblock in $v$
+of $B_{root}$ (or any older block in the root).
+As \op{SplitBlock} is in progress, it is possible that some block that it needs in a node $v'$
+along the path from $v$ to the root is discarded by another GC phase.
+In this case, \op{SplitBlock} uses the last subblock in $v$ of the oldest block in $v'$ instead
+(since $v'$ determined that all blocks older than that are safe to discard).
 
-
-\here{does RBT have to have pointer to block rather than block itself so that updates to super field work correctly?}
+The \opemph{Help} routine is fairly straightforward:  it loops through all leaves and
+helps the dequeue that is in progress there if it has already been propagated to the root.
+The \opemph{Propagated} function is used to determine whether the dequeue has propagated to the root.
 
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTDOUBLE}{\com\ #1}}
 
@@ -126,7 +157,7 @@ it also updates \var{last} if the computed response is \nl.
         \State $s \assign \Call{SplitBlock}{\var{v}}.\var{index}$\label{callSplitBlock}
         \State \Call{Help}{}
         \State $T' \assign\ \Call{Split}{T,s}$\label{splitGC}
-        \State \linecomment{\op{Split} removes blocks with $\fld{index} < m-1$}
+        \State \linecomment{\op{Split} removes blocks with $\fld{index} < s$}
         \State \Return \Call{Insert}{$T',B$}\label{GCend}
 	\Else\ \Return \Call{Insert}{$T, B$}
     \EndIf
@@ -148,7 +179,7 @@ it also updates \var{last} if the computed response is \nl.
 		\State \var{dir} \assign ($v=v.\fld{parent.left}$ ? \fld{left} : \fld{right})
 		\State $B \assign v.\fld{blocks}[B_p.\edir]$
 	\EndIf
-	\State \linecomment If $B$ was already discarded, use leftmost block instead
+	\State \linecomment If $B$ was discarded, use leftmost block instead
 	\State \Return ($B = \nl$ ? $\Call{MinBlock}{v.\var{blocks}}$ : $B$)
 \EndFunction{SplitBlock}
 }
@@ -204,7 +235,7 @@ it also updates \var{last} if the computed response is \nl.
 		\State \fld{dir} \assign\ (\var{v}.\fld{parent.left} = \var{v} ? \fld{left} : \fld{right}) 
 		\If{\Call{MaxBlock}{$T$}.\edir < b} \Return \fa
 		\Else
-			\State $B_p$ \assign min block in $T$ with $\edir \geq b$
+			\State $B_p$ \assign min block in $T$ with $\edir \geq b$\label{searchsuper3}
 			\State \Return \Call{Propagated}{\var{v}.\fld{parent}, $B_p$.\fld{index}}
 		\EndIf
 	\EndIf
@@ -223,8 +254,8 @@ it also updates \var{last} if the computed response is \nl.
 	    \State \fld{dir} \assign\ (\var{v}.\fld{parent.left} = \var{v} ? \fld{left} : \fld{right}) 
     	\gc{
 		\State $T\assign \var{v}.\fld{parent.blocks}$
-		\State $B_p$ \assign min block in $T$ with $\edir \geq b$
-		\State $B_p'$ \assign max block in $T$ with $\edir < b$
+		\State $B_p$ \assign min block in $T$ with $\edir \geq b$\label{searchsuper1}
+		\State $B_p'$ \assign max block in $T$ with $\edir < b$\label{searchsuper2}
 	    }
 	    \State \linecomment{compute index \var{i} of dequeue in superblock $B_p$}
 	    \State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{b}-1].\fld{sum\sub{deq}} -$ \\
@@ -319,7 +350,7 @@ it also updates \var{last} if the computed response is \nl.
 		\State $i_e \assign\ \var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$
 		\gc{
         \State \var{res} \assign \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}\label{findAnswerGC}
-        \If {$b > \var{last}[\var{id}]$} $\var{last}[\var{id}]\assign b$
+        \If {$b_e > \var{last}[\var{id}]$} $\var{last}[\var{id}]\assign b_e$
         \EndIf
         \State \Return \var{res}
 		}

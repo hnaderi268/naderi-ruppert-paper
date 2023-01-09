@@ -158,7 +158,7 @@ should imply that no operation will need any block before the first block in the
 
 We first bound the size of RBTs.  Let $q_{max}$ be the maximum size of the queue at any time during the sequential execution given by the linearization $L$.
 Recall that GC is done on a node every $G$ times its RBT is updated, and we chose $G$ to be $p^2\ceil{\log p}$.
-
+Part of the proof of the following lemma is similar to the proof of \Cref{dSearchTime}.
 %We say the index $b$ \emph{is marked in node $v$} if some process has tested
 %whether $b>\var{v}.\fld{last}[*]$ at line \ref{marktest1} or \ref{marktest2}.
 %Intuitively, a block's index value is marked 
@@ -232,11 +232,19 @@ Thus, there are at most $G$ updates since the last time its maximum \fld{index} 
 The claim follows from \Cref{boundAfterGC}.
 \end{proof}
 
+The following theorem bounds the space that is reachable (and therefore cannot be freed by the environment's garbage collector) at any time.
+\here{There may be room to improve this bound by a more careful analysis since the bounds so far
+didn't use the fact that operations only appear along one path in the tree; in other words
+doing a bound on total size of all RBTs at one level of the ordering tree at once, rather than
+on each node separately, might reduce it to qlogp + poly(p).  Might also be possible to be
+more precise about how it depends on "current" size of queue rather than max size.}
+
 \begin{theorem}\label{spaceBound}
-The size of our queue data structure is $O(pq_{max}+p^3\log p)$ words of memory.
+The queue data structure uses a maximum of $O(pq_{max}+p^3\log p)$ words of memory at any time.
 \end{theorem}
 \begin{proof}
 There are $2p-1$ nodes in the ordering tree.  Aside from the RBT, each node uses $O(1)$ memory words.
+Each process may hold pointers to $O(1)$ RBTs that are no longer current in local variables.
 So the space bound follows from \Cref{RBTbound} and the fact that $G$ is chosen
 to be $p^2\ceil{\log p}$.
 \end{proof}
@@ -290,6 +298,8 @@ Hence each operation's amortized number of GC steps is $O(\log p\log(p+q_{max}))
 within a constant factor of the steps it performs excluding GC.
 \end{proof}
 
+We remark that the implementation remains wait-free:  the depth of recursion in each routine is  bounded
+by the height of the tree and there are no loops.
 
 ============
 
@@ -327,13 +337,6 @@ If the $i$th \nf{Enqueue} gets dequeued in a FIFO queue, it means the first $i-1
   Blocks before the most recent block that has been dequeued(computed to be dequeue) from are finished. If the most current \nf{Dequeue} returned(computed) \nf{null} then all the blocks before the block containing the \nf{Dequeue} are finished.
 \end{lemma}
 
-The idea above leads us to a poly-log data structure that supports throwing away all the blocks with keys smaller than an index. Red-black trees do this for us. \nf{Get(i)}, \nf{Append()} and \nf{Split(i)} are logarithmic in block trees.
-We can create a shared red-black tree just creating a new path for the operation and then using \nf{CAS} to change the root of the tree. See [this] for more.
-
-\begin{observation}
-PBRT supports poly-log operations ....
-\end{observation}
-
 \begin{lemma}
     If we replace the arrays we used to implement \nf{blocks} with red-black trees the amortized complexity of the algorithm would be $PolyLog(p,q)$. And also the algorithm is correct.
 \end{lemma}
@@ -346,32 +349,7 @@ The \nf{response} written is correct.
 
 But how can we know which blocks in each node are finished or not? 
 
-\begin{observation}
-Every $p^2$ block appended to the root, \nf{FreeMemory} is invoked.  
-\end{observation}
-
-To know the last block dequeied from we can implement a shared array among processes which they write the last root block they have dequeued from. 
-
-\begin{lemma}
-    $\nf{Max(Last)} - \text{index of the last finished block}$ in the node $n$ is $O(p)$.
-\end{lemma}
-
-\begin{lemma}
-    After \nf{FreeMemory}, the space taken by each node of the tree is $O(p+q)$.
-\end{lemma}
-
-\begin{corollary}
-The space taken by each node of the tree is $O(p^2+q)$. The total space in the tree is $PolyLog(p+q)$.
-\end{corollary}
-
-\begin{lemma}
-  The amortized step per process for the algorithm with garbage collection is $PolyLog(p+q)$.
-\end{lemma}
 
 \begin{lemma}
   Algorithm is wait-free and linearizable.
 \end{lemma}
-
-\here{Remark on an optimization:  instead of storing \head\ field separate from \fld{blocks}, we could store
-the maximum index of the RBT in the root of the RBT.  This would simplify things, but require modifying the proof more extensively.}
-

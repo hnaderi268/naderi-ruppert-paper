@@ -4,7 +4,7 @@
 
 There has been a great deal of research in the past several decades on the design of linearizable, lock-free queues.
 Besides being a fundamental data structure, queues are used in
-significant concurrent applications, including OS kernels \cite{MP91}, memory management (e.g., \cite{BBFRSW21} \here{try to find an older, more canonical reference}),
+significant concurrent applications, including OS kernels \cite{MP91}, memory management (e.g., \cite{BBFRSW21}\here{try to find an older, more canonical reference}),
 packet processing \cite{DPDK},
 and sharing resources or tasks.
 The lock-free MS-queue of Michael and Scott \cite{MS98} is a classic shared queue implementation.
@@ -43,7 +43,7 @@ Our implementation is the first with step complexity that is polylogarithmic in 
 For ease of presentation, we first give an unbounded-space construction that uses
 $O(\log^2 p + \log q)$ steps per operation.
 Then, we show how to modify the implementation to use 
-\here{$O(?)$ space} and \here{$O(?)$ steps per operation}.
+bounded space while still having amortized step complexity $O(\log^2p + \log q)$ per operation.
 Both implementations use single-word CAS and reasonably-sized words.
 Moreover, they use $O(\log p)$ CAS instructions per operation in the worst case, whereas previous
 lock-free queues use 

@@ -63,7 +63,6 @@ We now bound operations' running times in terms of the number of processes $p$, 
 
 \begin{lemma}\label{enqDeqTime}
 Each \op{Enqueue} and null Dequeue takes $O(\log p)$ steps 
-\Eric{In the thesis, Lemma 52 said enqueues take $O(\log^2 p)$ steps.  Was this a typo?}
 and each non-null \op{Dequeue} takes
 $O(\log p\log c + \log q_e+ \log q_d)$ steps,
 where $q_d$ is the size of the queue when the \nf{Dequeue} is linearized and 
@@ -79,7 +78,6 @@ So, the total number of steps for either type of operation is $O(\log p)$.
 
 A non-null \op{Dequeue} must also search at line \ref{FRb} and call \op{GetEnqueue}
 at line \ref{findAnswer}.
-\Eric{Modified:}
 By \Cref{dSearchTime}, the doubling search takes $O(\log(q_e+q_d+p))$ steps,
 since the size of the queue can change by at most $p$ within one block (by \Cref{blockSize}).
 \op{GetEnqueue} does a binary search within each node on a path from the root to a leaf.

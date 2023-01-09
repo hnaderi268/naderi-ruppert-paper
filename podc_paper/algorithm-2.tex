@@ -79,18 +79,18 @@ to remove all blocks with \fld{index} less than $s$,
 inserts the new block
 and finally performs a \op{CAS} to swing the node's \fld{blocks} pointer to the new RBT.
 
-To determine the oldest block in a node $v$ to keep, the \opemph{SplitBlock} routine  first
+To determine the oldest block in a node \var{v} to keep, the \opemph{SplitBlock} routine  first
 finds the most recent block $B_{root}$ in the root that contains either an enqueue that has been dequeued
 or a null dequeue using the \var{last} array.  All enqueues before this block are either
 dequeued or will be dequeued by a dequeue that is in progress.  Once those pending dequeues have been
 helped to complete, it is safe to discard any blocks in the root older than $B_{root}$, as well
 as their subblocks.
-The \op{SplitBlock} uses the \eleft\ and \eright\ fields to find the last subblock in $v$
+The \op{SplitBlock} uses the \eleft\ and \eright\ fields to find the last subblock in \var{v}
 of $B_{root}$ (or any older block in the root).
-As \op{SplitBlock} is in progress, it is possible that some block that it needs in a node $v'$
-along the path from $v$ to the root is discarded by another GC phase.
-In this case, \op{SplitBlock} uses the last subblock in $v$ of the oldest block in $v'$ instead
-(since $v'$ determined that all blocks older than that are safe to discard).
+As \op{SplitBlock} is in progress, it is possible that some block that it needs in a node $\var{v}'$
+along the path from \var{v} to the root is discarded by another GC phase.
+In this case, \op{SplitBlock} uses the last subblock in \var{v} of the oldest block in $\var{v}'$ instead
+(since $\var{v}'$ determined that all blocks older than that are safe to discard).
 
 The \opemph{Help} routine is fairly straightforward:  it loops through all leaves and
 helps the dequeue that is in progress there if it has already been propagated to the root.
@@ -168,19 +168,19 @@ The \opemph{Propagated} function is used to determine whether the dequeue has pr
 
 \gc{
 \Function{Block}{SplitBlock}{\typ{Node} v}
-	\State \linecomment{figure out where to split $v$'s RBT}
-	\If{$v=\var{root}$}
+	\State \linecomment{figure out where to split \var{v}'s RBT}
+	\If{$\var{v}=\var{root}$}
 		\State $m \assign 0$
-		\For{$k\assign 1..p$} $m\assign \max(m, v.\fld{last}[k])$
+		\For{$k\assign 1..p$} $m\assign \max(m, \var{v}.\fld{last}[k])$
 		\EndFor
 		\State $B\assign \var{root}.\fld{blocks}[m-1]$
 	\Else
-		\State $B_p \assign \Call{SplitBlock}{v.parent}$
-		\State \var{dir} \assign ($v=v.\fld{parent.left}$ ? \fld{left} : \fld{right})
-		\State $B \assign v.\fld{blocks}[B_p.\edir]$
+		\State $B_p \assign \Call{SplitBlock}{\var{v}.\fld{parent}}$
+		\State \var{dir} \assign ($\var{v}=\var{v}.\fld{parent.left}$ ? \fld{left} : \fld{right})
+		\State $B \assign \var{v}.\fld{blocks}[B_p.\edir]$
 	\EndIf
 	\State \linecomment If $B$ was discarded, use leftmost block instead
-	\State \Return ($B = \nl$ ? $\Call{MinBlock}{v.\var{blocks}}$ : $B$)
+	\State \Return ($B = \nl$ ? $\Call{MinBlock}{\var{v}.\var{blocks}}$ : $B$)
 \EndFunction{SplitBlock}
 }
 
@@ -206,9 +206,9 @@ The \opemph{Propagated} function is used to determine whether the dequeue has pr
 \spac
 
 \Function{boolean}{Refresh}{\typ{Node} \var{v}}
-	\State \linecomment{try to append a new block to $v.\fld{blocks}$}
+	\State \linecomment{try to append a new block to $\var{v}.\fld{blocks}$}
 	\gc{
-	\State $T \assign v.\fld{blocks}$\label{refreshReadTGC}
+	\State $T \assign \var{v}.\fld{blocks}$\label{refreshReadTGC}
     \State $\var{h} \assign \Call{MaxBlock}{T}.\fld{index}+1$ \label{refreshReadMax}
     }
     \State \var{new} \assign\ \Call{CreateBlock}{\var{v, h}} \label{invokeCreateBlockGC}

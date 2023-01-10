@@ -5,7 +5,7 @@
 After proving some basic invariants in Section \ref{sec::basicProperties},
 we show in Section \ref{sec::propagating} that performing a double refresh at each node
 is sufficient to propagate an operation to the root.
-In Section \ref{sec::helpingCorrect} we show that the \op{getEnqueue} and \op{indexDequeue}
+In Section \ref{sec::tracingCorrect} we show that the \op{getEnqueue} and \op{indexDequeue}
 routines correctly navigate through the \ordering\ tree.
 Finally, we show that the implementation is linearizable in Section \ref{sec::linearizability}.
 
@@ -268,114 +268,53 @@ There is at most one such block in each node, by \Cref{lem::noDuplicates}.
 \end{proof}
 
 
-\subsection{Correctness of \op{GetEnqueue} and \op{IndexDequeue}}
-\label{sec::helpingCorrect}
+\subsection{Correctness of \opemph{GetEnqueue} and \opemph{IndexDequeue}}
+\label{sec::tracingCorrect}
 
-We first show that \op{getEnqueue} works correctly.
+See Appendix \ref{app::tracingDetails} for detailed proofs for this section.
 
-\begin{lemma}\label{lem::get}
-If $1\leq i\leq |E(v.\fld{blocks}[b])|$ then \op{getEnqueue}($v,b,i$) returns the argument of the $i$th enqueue in $E(v.\fld{blocks}[b])$.
-\end{lemma}
-\begin{proof}
-We prove the claim by induction on the height of node $v$.
-If $v$ is a leaf, the hypothesis implies that $i=1$ and the block $v.\fld{blocks}[b]$ represents 
-an enqueue whose argument is stored in $v.\fld{blocks}[b].\fld{element}$.
-\op{GetEnqueue} returns the argument of this enqueue at line \ref{getBaseCase}.
+We first show the \fld{super} field is accurate, since \op{IndexDequeue} uses it to trace superblocks up the tree.  This is proved by showing that the \fld{super} field of a block $B$ in node $v$ is read from the 
+\var{v}.\fld{parent}'s \var{head} field close to the time that $B$'s superblock $B_s$ is installed in the parent node.
+On one hand, $B.super$ is written before $B_s$ is installed:
+\op{Advance} writes $B.super$ before advancing $\var{v}.\head$  past $B$'s index, which must happen before the \op{CreateBlock} that creates
+$B_s$ gets the value of $B_s.\eleft$ or $B_s.\eright$.
+On the other hand, $B.\fld{super}$ cannot be written too long before $B_s$ is installed:
+$B.\fld{super}$ is written after $B$ is installed, and \Cref{successfulRefresh} ensures that $B$ is propagated to the
+parent soon after.
 
-Assuming the claim holds for $v$'s children, we prove it for $v$.
-Let $B$ be $v.\fld{blocks}[b]$.
-By (\ref{defSeqs}),
-$E(B)$ is obtained by concatenating the enqueue sequences of the direct subblocks
-of $B$, which are listed in (\ref{defsubblock}).
-By \Cref{lem::sum}, $\var{sum\sub{left}}-\var{prev\sub{left}}$ is the number
-of enqueues in $E(B)$ that come from $B$'s subblocks in $v$'s left child.
-Thus, $dir$ is set to the direction for the child of $v$ that contains the required enqueue.
-Moreover, when line \ref{endChooseDir} is reached, $i$ is the position of the required enqueue within the portion $E'$ of $E(B)$ that comes from that child.
-Thus,  line \ref{getChild} finds the index $b'$ of the subblock $B'$ containing the required enqueue.
-By \Cref{lem::sum}, $v.\var{dir.blocks}[b'-1].\var{sum\sub{enq}} - \var{prev\sub{dir}}$ is the number of 
-enqueues in $E'$ before the enqueues of block $B'$, so
-the value $i'$ computed on line \ref{getChildIndex} is the position of the required enqueue within $E(B')$.
-Thus, the recursive call on line \ref{getRecurse} satisfies its precondition, and 
-returns the required result, by the induction hypothesis.
-\end{proof}
-
-Next, we prove the \fld{super} field of a block is within one of the true index of the block's superblock.
-
-\begin{lemma}\label{superRelation}
+\begin{restatable}{lemma}{superRelationRes}
+\label{superRelation}
 Let $B=v.\var{blocks}[b]$.
   If $v.\fld{parent.blocks}[s]$ is the superblock of $B$ then $s-1\leq B.\fld{super}\leq s$.
-\end{lemma}
-\begin{proof}
-We first show $B.\fld{super}\leq s$.
-Let $R_s$ be the instance of \op{Refresh}($v.\fld{parent}$) that installs the superblock of $B$ 
-in $v.\fld{parent.blocks}[s]$.
-By the definition of subblocks (\ref{defsubblock}), $R_s$'s read $r$ of $v.head$ at line \ref{createEndLeft} or \ref{createEndRight} obtains a value greater than $b$.
-By \Cref{lem::headPosition}, $B.\fld{super} \neq \nl$ when $r$ occurs, which means
-that $B.\fld{super}$ was set (by line~\ref{setSuper1}) to a value read from $v.\fld{parent}.\head$ before $r$.
-When $r$ occurs, $v.\fld{parent.blocks}[s] = \nl$, since the later \op{CAS} by $R_s$ at line
-\ref{cas} succeeds.
-So, by \Cref{lem::headPosition}, $v.\fld{parent}.\head \leq s$ when $r$ occurs.
-Since the value stored $B.\fld{super}$ was read from $v.\fld{parent.head}$ before $r$ and the \head\ field is non-decreasing by \Cref{nonDecreasingHead}, it follows that $B.super\leq s$.
-
-Next, we show that $B.\fld{super}\geq s-1$.
-The value stored in $B.\fld{super}$ at line \ref{setSuper1} is read from $v.\fld{parent}.\head$ at line \ref{readParentHead} and \head\ values are always at least 1, so $B.\fld{super} \geq 1$.
-So, if $s\leq 2$, the claim is trivial.  Assume $s>2$ for the remainder of the proof.
-By \Cref{lem::headProgress}, $v.\fld{parent.blocks}[s-1]\neq \nl$.  Let $R_{s-1}$ be the call to
-$\op{Refresh}(v.\fld{parent})$ that installed the block in $v.\fld{parent.blocks}[s-1]$.
-Let $r'$ be the step when $R_{s-1}$ reads $s-1$ in $v.\fld{parent}.\head$ at line \ref{readHead}.
-This read $r'$ must be before $B$ is installed in $v$;
-otherwise, \Cref{successfulRefresh} would imply that $B$ is a subblock of one of 
-$v.\fld{parent.blocks}[1..s-1]$, contrary to the hypothesis.
-Now, consider the call to \op{Advance}($v, b$) that writes $B.\fld{super}$.
-It is invoked either 
-at line \ref{helpAdvance} after seeing $v.\fld{blocks}[b]\neq \nl$ at line \ref{ifHeadnotNull}
-or at line \ref{advance} after ensuring $v.\fld{blocks}[b]\neq \nl$ at line~\ref{cas}.
-Either way, the \op{Advance} is invoked after $B$ is installed, and therefore after $r'$.
-By \Cref{nonDecreasingHead}, $v.\fld{parent}.\head$ is non-decreasing, so 
-the value this \op{Advance} reads in $v.\fld{parent}.\head$ and
-writes in $B.\fld{super}$ is greater than or equal to the value $s-1$ that $r'$ reads in $v.\fld{parent}.\head$.
-\end{proof}
+\end{restatable}
 
 
 %The reader may wonder when the case $b\nf{.super}=s$ happens. This can happen when $
 %\nf{$n$.parent.blocks[$B$.super]}=\nf{null}$ when $B$\nf{.super} is written and $R_p$ puts its created block 
 %into \nf{$n$.parent.blocks[$B$\nf{.super}]} afterwards.
+Showing  \op{GetEnqueue} and \op{IndexDequeue} work correctly is mostly just checking that they correctly compute the index of the required block
+and the operation's rank within the block.  
+For \op{IndexDequeue}, we use \Cref{superRelation} each time \op{IndexDequeue} goes one step up the tree.
+\here{mention somewhere why precondition of IndexDequeue is true? also check that block of parent indexed by sup in that routine is non-null}
 
-We prove \op{IndexDequeue}'s correctness using \Cref{superRelation} on each step of the \op{IndexDequeue}.
-\here{mention somewhere why precondition of IndexDequeue is true; also check that block of parent indexed by sup in that routine is non-null}
-
-\begin{lemma}\label{lem::indexDequeue}
+\begin{restatable}{lemma}{indexDequeueRes}
+\label{lem::indexDequeue}
 If $v.\fld{blocks}[b]$ has been propagated to the root and $1\leq i\leq |D(v.\fld{blocks}[b])|$, 
  then \op{IndexDequeue}($v, b, i$) returns $\langle b',i' \rangle$ such that the \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$ is the $(i')$th dequeue of $D(\var{root}.\fld{blocks}[b'])$.
-\end{lemma}
-\begin{proof}
-We prove the claim by induction on the depth of node $v$. The base case where $v$ is the root is trivial (see Line \ref{indexBaseCase}).
-Assuming the claim holds for $v$'s parent, we prove it for $v$.
-Let $B=v.\fld{blocks}[b]$ and $B'$ be the superblock of $B$.
-\op{IndexDequeue}($v, b, i$) first computes the index $sup$ of $B'$ in $v.\fld{parent}$.
-By \Cref{superRelation}, this index is either $B.super$ or $B.super+1$.
-The correct index is determined by testing on line \ref{supertest} whether $B$ is not a subblock of $v.\fld{parent.blocks}[B.\fld{super}]$.
+\end{restatable}
 
-Next, the position of the required dequeue in $D(B')$ is computed in 
-lines \ref{computeISuperStart}--\ref{computeISuperEnd}. 
-We first add the number of dequeues in the subblocks of $B'$ in $v$ that preced $B$ on line \ref{computeISuperStart}.
-If $v$ is the right child of its parent, then all of the subblocks of $B'$ from $v$'s left sibling
-also precede the required dequeue, so we add the number of dequeues in those subblocks in line \ref{considerLeftBeforeRight}.
-
-Finally, \op{IndexDequeue} is called recursively on $v$'s parent.
-Since $B$ has been propagated to the root, so has its superblock $B'$.
-Thus, all preconditions of the recursive call are met.
-By the induction hypothesis, the recursive call returns the location of the required dequeue in the root.\end{proof}
+\begin{restatable}{lemma}{getEnqRes}
+\label{lem::get}
+If $1\leq i\leq |E(v.\fld{blocks}[b])|$ then \op{getEnqueue}($v,b,i$) returns the argument of the $i$th enqueue in $E(v.\fld{blocks}[b])$.
+\end{restatable}
 
 \subsection{Linearizability}
 \label{sec::linearizability}
 
-Consider any finite execution.  We must show that the linearization ordering $L$ defined in 
+We show that the linearization ordering $L$ defined in 
 (\ref{linearization}) is a legal permutation of a subset of the operations in 
 the execution, i.e., that it includes all operations that terminate and 
-if one operation $op_1$ terminates before another operation $op_2$ begins, then $op_2$ does appear
-before $op_1$ in $L$.  Then we must show that each dequeue that terminates returns the 
-same response as it would in the sequential execution described by $L$.
+if one operation $op_1$ terminates before another operation $op_2$ begins, then $op_2$ does not precede $op_1$ in $L$.  We also show result each dequeue returns is the same as in the sequential execution  $L$.
 
 \begin{lemma} \label{linearSat}
 $L$ is a legal linearization ordering.
@@ -442,9 +381,9 @@ By \Cref{lem::get}, the call to \op{GetEnqueue} returns the argument of the requ
 
 Combining \Cref{linearSat} and \Cref{linearCorrect} provides our main result.
 
-\begin{theorem}
+\begin{mytheorem}
 The queue implementation is linearizable.
-\end{theorem}
+\end{mytheorem}
 
 
 \here{Should there be a lemma somewhere in this section that explicitly shows that each

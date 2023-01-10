@@ -43,8 +43,7 @@ If not, $P$ computes the rank\footnote{We say that the $r$th element in a sequen
 among all non-null dequeues,
 finds the $r$th enqueue in the linearization, and returns that enqueue's value.
 
-The primary challenge is thus figuring out what information to store in each block so that 
-the following tasks can be done efficiently (in a polylogarithmic number of steps).
+We must choose what to store in each block so that the following tasks can be done efficiently.
 \begin{enumerate}[label={(T\arabic*)}]
 \item
 \label{construct}
@@ -70,10 +69,6 @@ Arrows represent the indices stored in \eleft\ and \eright\ fields of blocks (as
 The fourth process's Deq\sub{6} is still propagating towards the root.
 The linearization order for this tree is
 Enq(a) Enq(e) Deq\sub{2} $\mid$ Enq(b) Deq\sub{4} Deq\sub{5} $\mid$ Enq(d) Enq(f) Enq(h) Deq\sub{1} $\mid$ Enq(c) Deq\sub{3} $\mid$ Enq(g), where vertical bars indicate boundaries of blocks in the root.\label{orderingtree}}
-\end{figure}
-\here{Make sure two figures appear on same page of final version}
-
-\begin{figure}[t]
 \input{implicit.pdf_t}
 \caption{\label{implicit}The actual, implicit representation of the tree shown in Figure \ref{orderingtree}.
 The leaf blocks simply show the \fld{element} field.

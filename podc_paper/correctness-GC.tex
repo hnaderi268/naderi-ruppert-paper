@@ -293,7 +293,7 @@ Thus, the \fld{response} field will still be there when a \op{Dequeue} needs it.
 \subsubsection{Linearizability}
 
 The correctness of the \op{IndexDequeue} and \op{GetEnqueue}  operations
-can be proved in the same way as in Section \ref{sec::helpingCorrect},
+can be proved in the same way as in Section \ref{sec::tracingCorrect},
 since they are largely unchanged (except for the simplification that \op{IndexDequeue}
 can simply search for a block's superblock instead of using the block's \fld{super} 
 field to calculate the superblock's position).
@@ -392,9 +392,9 @@ doing a bound on total size of all RBTs at one level of the ordering tree at onc
 on each node separately, might reduce it to qlogp + poly(p).  Might also be possible to be
 more precise about how it depends on "current" size of queue rather than max size.}
 
-\begin{theorem}\label{spaceBound}
+\begin{mytheorem}\label{spaceBound}
 The queue data structure uses a maximum of $O(pq_{max}+p^3\log p)$ words of memory at any time.
-\end{theorem}
+\end{mytheorem}
 \begin{proof}
 There are $2p-1$ nodes in the ordering tree.  Aside from the RBT, each node uses $O(1)$ memory words.
 Each process may hold pointers to $O(1)$ RBTs that are no longer current in local variables.

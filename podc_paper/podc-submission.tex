@@ -45,7 +45,9 @@
 \usepackage{enumitem}
 \usepackage{bold-extra}
 \usepackage{cleveref}
-\renewcommand*\contentsname{Table of Contents}
+\usepackage{thmtools,thm-restate}
+
+%\renewcommand*\contentsname{Table of Contents}
 
 \usepackage{multicol}
 \setlength\columnsep{24pt}
@@ -53,7 +55,7 @@
 
 \numberwithin{equation}{section}
 
-\def\draft{1}  % set to 1 for draft (include comments, color edits), 0 for clean final copy (omit comments, edits in black)
+\def\draft{0}  % set to 1 for draft (include comments, color edits), 0 for clean final copy (omit comments, edits in black)
 \if\draft 1
 \usepackage{showkeys}
 \newcommand{\mycomment}[3]{{\color{#2}{[\bf{#1: #3}]}}}
@@ -145,6 +147,7 @@
 \usepackage{amsmath,amsthm}
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{mytheorem}[theorem]{Theorem}
 \newtheorem{corollary}[theorem]{Corollary}
 \newtheorem{proposition}[theorem]{Proposition}
 \newtheorem{definition}[theorem]{Definition}
@@ -255,10 +258,10 @@
 \begin{abstract}
 We introduce a novel linearizable wait-free queue implementation using single-word 
 CAS instructions.
-Previous lock-free queues all take $\Omega(p)$ steps per operation in the worst case, 
+Previous lock-free queues all have amortized step complexity of $\Omega(p)$ per operation in worst-case executions, 
 where $p$ is the number of processes that can access the queue.
-We achieve $O(\log^2 p +\log q)$ steps per operation, where $q$ is the size of the queue.
-\here{mention space usage; update time bound if space-efficient version takes more time per op}
+We present a new wait-free queue that takes $O(\log p)$ steps per enqueue and $O(\log^2 p +\log q)$ steps per dequeue, where $q$ is the size of the queue.
+A bounded-space version of the implementation has amortized step complexity of $O(\log^2 p +\log q)$ per operation.
 \end{abstract}
 
 %%
@@ -303,7 +306,10 @@ We achieve $O(\log^2 p +\log q)$ steps per operation, where $q$ is the size of t
 \newpage
 \appendix
 
-\input{algorithm-2}
-\input{correctness-2}
+\input{correctness-details}
+
+\input{algorithm-GC}
+
+\input{correctness-GC}
 
 \end{document}

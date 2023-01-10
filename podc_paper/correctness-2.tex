@@ -4,6 +4,9 @@
 Unfortunately, there are enough changes to the algorithm that a new proof of correctness
 is required.  Its structure mirrors the proof of the original algorithm, but requires additional
 reasoning to ensure GC does not interfere with other routines.
+
+\subsubsection{Basic Properties}
+
 The following observation describes
 how the set of blocks in the RBT can be modified.
 
@@ -102,6 +105,8 @@ values of \fld{sum\sub{enq}}  so the searches of a RBT based on
 \fld{sum\sub{enq}} values in lines
 \ref{getChildGC} and \ref{FRsearchGC} can be done in logarithmic time.
 
+\subsubsection{Propagating Operations to the Root}
+
 Next, we prove an analogue of \Cref{successfulRefresh}.
 We say a node \var{v} \emph{contains} an operation
 if some block containing the operation has previously appeared in \var{v}'s RBT (even if 
@@ -160,22 +165,14 @@ The claim follows from \Cref{successfulRefreshGC} applied to $R_3$.
 \end{proof}
 
 \Cref{lem::appendExactlyOnce} can then be proved in the same way as in Section \ref{sec::propagating}.
-We modified the way \var{super} fields are computed, so we prove an analogue of \Cref{superRelation} to show that \fld{super} fields are (nearly) accurate.
 
-\begin{customlemma}{$\ref{superRelation}'$}\label{superRelationGC}
-Let $B=\var{v}.\fld{blocks}[b]$.
-  If $\var{v}.\fld{parent.blocks}[s]$ is the superblock of $B$ then $s-1\leq B.\fld{super}\leq s$.
-\end{customlemma}
-\begin{proof}
-
-\end{proof}
 
 \subsubsection{GC Keeps Needed Blocks}
 
-The correctness of \op{GetEnqueue} and \op{indexDequeue}, which are very similar to the 
+The correctness of \op{GetEnqueue} and \op{IndexDequeue}, which are very similar to the 
 original implementation, are dependent only on the fact that GC does not 
 discard blocks needed by those routines.
-The following lemmas are used to show this.
+The following results are used to show this.
 
 We say a block is \emph{finished} if 
 \begin{itemize}
@@ -183,9 +180,9 @@ We say a block is \emph{finished} if
 it has been propagated to the root,
 \item
 the value of each enqueue contained in the block has either been returned by a dequeue
-or written in the \fld{result} field of a dequeue, and
+or written in the \fld{response} field of a dequeue, and
 \item
-each dequeue contained in the block has either terminated or has a non-null \fld{result} field in the leaf block that represents it.
+each dequeue contained in the block has either terminated or has a non-null \fld{response} field in the leaf block that represents it.
 \end{itemize}
 Intuitively, once a block is finished, operations no longer need to pass through the block
 to compute responses to operations.
@@ -195,57 +192,117 @@ The following is an immediate consequence of the definition of finished and what
 A block is finished if and only all of its subblocks are finished.
 \end{observation}
 
-\begin{invariant}
-If the minimum \fld{index} of any block in \vv's RBT is $b_{min}$, then
-all blocks that were ever added to \vv\ with $\fld{index}$ at most $b_{min}$ are finished.
+\here{Technically, following proof might have to be wrapped up in a big induction with the argument
+that outputs are linearized correctly, to argue that the matchup between enqueues and dequeues
+is the same as it would be in the linearization ordering.  (Check whether this is really needed.)
+Or alternatively, we could add an assumption that if every operation agrees with the linearization
+so far, then the invariant is preserved by each step.
+Then, when proving the linearization is correct, everything will work out.
+But just leave it as is for the submission, since this is a subtle point}
+
+\begin{invariant}\label{lem::finished}
+If the minimum \fld{index} of any block in \var{v}'s RBT is $b_{min}$, then
+each block with $\fld{index}$ at most $b_{min}$ that was ever added to \var{v} is finished.
 \end{invariant}
 \begin{proof}
-The invariant is true initially, since the minimum \fld{index} block in \vv's RBT is the empty block, which is (vacuously) finished.
+The invariant is true initially, since the minimum \fld{index} block in \var{v}'s RBT is the empty block, which is (vacuously) finished.
 
-We must show the invariant is preserved whenever $\vv.\fld{blocks}$ changes.
-The minimum \fld{index} of \vv's RBT can only change when \vv's RBT changes, either at line 
-\ref{appendLeafGC} (if \vv\ is a leaf) or at line \ref{casGC} (if \vv\ is an internal node).
-In either case, the step changes $\vv.\fld{blocks}$ is changed
-from $T$ to $T'$, where $T'$ is obtained by  a call to \op{AddBlock}(\vv, $T$, $B$).
-(In the case of a leaf \vv, this is true because only the process that owns the leaf ever
-writes to $\vv.\fld{blocks}$.)
-If the \op{AddBlock} does not do GC (lines \ref{GCstart}--\ref{GCend}), 
-then $T'$ is obtained by adding a new block to $T$, so by \Cref{} the minimum \fld{index}
-is the same.
-So consider the case where the \op{AddBlock} performs GC.
-We must show that any block of \vv\ whose index is less than or equal to the
-minimum \fld{index} in $T'$ is finished when $T'$ is installed in $\vv.\fld{blocks}$.
+We show that every step preserves the invariant.  
+We need only consider a step $st$ that modifies a node's RBT.
+The minimum \fld{index} of \var{v}'s RBT can only change when \var{v}'s RBT changes, either at line 
+\ref{appendLeafGC} (if \var{v} is a leaf) or at line \ref{casGC} (if \var{v} is an internal node).
+In either case, the step $st$ changes $\var{v}.\fld{blocks}$ is changed
+from $T$ to $T'$, where $T'$ is obtained by  a call $A$ to \op{AddBlock}(\var{v}, $T$, $B$).
+(In the case of a leaf \var{v}, this is true because only the process that owns the leaf ever
+writes to $\var{v}.\fld{blocks}$.)
+If $A$ does not do GC (lines \ref{GCstart}--\ref{GCend}), 
+then $T'$ is obtained by adding a new block to $T$, so by \Cref{RBTupdates} the minimum \fld{index}
+is unchanged and the invariant is trivially preserved.
+So consider the case where $A$ performs GC.
+We must show that any block of \var{v} whose index is less than or equal to the
+minimum \fld{index} in $T'$ is finished when $T'$ is installed in $\var{v}.\fld{blocks}$.
 Since $T'$ is obtained by discarding all blocks with \fld{index} at most $s$ (and adding
 a block with a larger index), it suffices to show that all blocks that were ever added
-to \vv's RBT with \fld{index} at most $s$ are finished.
+to \var{v}'s RBT with \fld{index} at most $s$ are finished.
 
-\here{to be continued}
-might need assn that ops so far are consistent with L
+We must examine how $A$'s call to the recursive algorithm \op{SplitBlock} computes the value of $s$.
 
+\begin{claim}\label{splitfinished}
+If one of the recursive calls to $\op{SplitBlock}(x)$ within $A$'s call to \op{SplitBlock},
+then that block and all earlier blocks in $x$ are finished when $st$ occurs.
+\end{claim}
+\begin{proof}[Proof of Claim]
+We prove this claim  by induction on the depth of $x$.
 
- 
+For the base case, suppose $x$ is the root.
+\op{SplitBlock} finds the maximum value $m$ in \var{last}, which is the index of some block
+that contains an operation that is either a null dequeue or an enqueue whose value is the response for a dequeue that has been propagated to the root (since these are the only ways that an entry of \var{last} can be set to $m$).
+By the FIFO property of queues, the values enqueued by enqueues in $\var{root}.\fld{blocks}[1..m-1]$
+are all dequeued by operations of $\var{root}.\fld{blocks}[1..m]$.
+Between the termination of $A$'s call to \op{Splitblock} at line \ref{callSplitBlock}
+and the \op{CAS} step $st$ after $A$ terminates, the $A$ helps all pending dequeues at line \ref{invokeHelp}.
+Thus, after this helping (and before step $st$),
+$\var{root}.\fld{blocks}[1..m-1]$ are all finished blocks, so the claim is true.
 
+For the induction step, we assume the claim holds for $x$'s parent, and prove it for $x$.
+We consider two cases.
 
+If \op{SplitBlock}($x$) returns the minimum block of $x$'s RBT at line \ref{substitute},
+then the claim follows from the assumption that \Cref{lem::finished} holds at all times before $st$.
 
-
-Claim:  After an \op{AddBlock} finishes its call to \op{Help} on line \ref{invokeHelp}
-all blocks of $v$ with \fld{index} less than or equal to $s$ are finished.
-
+Otherwise, \op{SplitBlock}($x$) returns the block $B$ at line \ref{substitute}.
+By the induction hypothesis, the block $B_p$ computed at line \ref{SBrecurse}
+(and all earlier blocks of $x$) are finished when $st$ occurs.
+By \Cref{subblocksFinished}, the block $B$ in $x$ indexed by $B_p.\eleft$ or $B_p.\eright$
+is also finished when $st$ occurs.
+\renewcommand{\qedsymbol}{$\diamondsuit$}
 \end{proof}
 
+If the \op{Split} at line \ref{splitGC} of $A$ modifies the RBT, then it discards
+all the blocks older than the one returned by \op{SplitBlock} at line \ref{callSplitBlock}.
+By \Cref{splitfinished}, the minimum block in the new tree will satisfy the invariant when $st$
+installs the new tree in $\var{v}.\fld{blocks}$.
+\end{proof}
 
+\begin{lemma}\label{blocknotfound}
+If a \op{Dequeue} operation fails to find a block in an RBT,
+%during its calls to \op{IndexDequeue} or \op{GetEnqueue}, 
+then it has been propagated to the root and its result has been written in its \fld{response} field.
+If an \op{Enqueue} operation fails to find a block in an RBT, it has been propagated to the root.
+\end{lemma}
+\begin{proof}
+Any block that GC removes from an RBT is finished, by \Cref{lem::finished}, so if an 
+\op{Enqueue} or \op{Dequeue} fails to find a block while it is propagating itself up to
+the root (for example, during the \op{CreateBlock} routine), then a block containing
+the operation itself has been removed from a RBT, so the operation has propagated to the root,
+by the definition of finished.
+Moreover, by \Cref{lem::finished}, if the operation is a dequeue, then its result is in its \op{response} field.
 
+After propagation to the root, a \op{Dequeue} must access blocks that contain the dequeue,
+as well as the enqueue whose value it will return (if it is not a null dequeue).
+If any of those blocks have been removed, it follows from \Cref{lem::finished} that the
+\op{Dequeue}'s result is written in its \fld{response} field.
+\end{proof}
 
+By \Cref{blocknotfound}, an operation that fails to find a block in an RBT can terminate.
+If it is a \op{Dequeue}, it can return the result written in its \fld{response} field.
+Since no other process updates the RBT in a process's leaf, the block containing the \fld{response}
+will be the last block in the leaf's RBT, and the last block of an RBT is never removed by GC.
+Thus, the \fld{response} field will still be there when a \op{Dequeue} needs it.
 
+\subsubsection{Linearizability}
 
+The correctness of the \op{IndexDequeue} and \op{GetEnqueue}  operations
+can be proved in the same way as in Section \ref{sec::helpingCorrect},
+since they are largely unchanged (except for the simplification that \op{IndexDequeue}
+can simply search for a block's superblock instead of using the block's \fld{super} 
+field to calculate the superblock's position).
+They will give the correct response, provided none of the blocks they need to access have been 
+removed by GC.  But as we have seen above, if that happens, the \op{Enqueue} or \op{Dequeue} can simply terminate.
 
-\here{prove some lemmas about not throwing away useful information, then restate correctness lemmas about getenq and indexdeq that say they work correctly OR the operation is already propagated/complete.}
-
-
-\here{next, should probably show that blocks are removed only after they are no longer needed; i.e., every dequeue has its answer (either returned, or written in its response field) and every enqueue has a matching dequeue that has either terminated or has a response written.}
-one invariant will be that a null dequeue or a dequeued enqueue appears in the first block (or some later block) of each RBT.
-should imply that no operation will need any block before the first block in the RBT
--------
+Similarly the results of Section \ref{sec::linearizability} 
+can be reproved in exactly the same way as for the original algorithm to establish
+that the space-bounded algorithm is linearizable.
 
 \subsection{Analysis}
 \label{sec::GCanalysis}
@@ -345,6 +402,8 @@ So the space bound follows from \Cref{RBTbound} and the fact that $G$ is chosen
 to be $p^2\ceil{\log p}$.
 \end{proof}
 
+It may be possible, via a more careful analysis, to reduce the bound on space usage to $O(\log p(q_{max}+p^3)$.
+
 Although individual operations may now become more expensive because they have to perform GC,
 we show that operations still have polylogarithmic amortized step complexity.
 
@@ -374,11 +433,11 @@ is the maximum \fld{index} in $T$ plus 1.
 The \op{Refresh} that called $A$ performed a \op{CAS} at line \ref{casGC}.  Either the \op{CAS} succeeds
 or it fails because 
 some other \op{CAS} changes \var{v}.\fld{blocks} from $T$ to another tree.
-Either way, by \Cref{RBTupdates}, \var{v}'s RBT's maximum \fld{index} will be at least $rG$ at all times
+Either way, by \Cref{RBTupdates}, \var{v}'s RBT's maximum \fld{index} will be at least $r\cdot G$ at all times
 after this CAS.
 So if a subsequent \op{Refresh} by process $P$ 
 ever calls \op{AddBlock} on \var{v} again, the block it passes as the third argument
-will have $\index>rG$, so $P$ will not perform an $r$th helping phase on \var{v} again.
+will have $\index>r\cdot G$, so $P$ will not perform an $r$th helping phase on \var{v} again.
 
 Each helping phase takes $O(p)$ steps to read the \var{last} array,
 $O(p \log p \log(p+q_{max}))$ steps to \op{Help},
@@ -396,56 +455,3 @@ within a constant factor of the steps it performs excluding GC.
 
 We remark that the implementation remains wait-free:  the depth of recursion in each routine is  bounded
 by the height of the tree and the only loop is the counted loop in the \op{Help} routine.
-
-============
-
-In our design a process attempts to collect the garbage, when it is going to to append a block in the $kp^2$ position in \nf{root.blocks} (see Line \ref{}). Every $p^2$  block appended to the root, one \nf{GarbageCollect} terminates because \nf{root.head} cannot advance until a \nf{GarbageCollect} garbage collect is done (see Lines ).
-
-%\begin{lemma}
-%Size of \nf{root.blocks} after \nf{GarbageCollect} is $O(p^2+q)$.
-%\end{lemma}
-%
-%\begin{lemma}
-%Total number of the blocks in the tree is $O(p^3+pq)$.
-%\end{lemma}
-
-\nf{Enqueue} operation $e$ can be removed from the tree after termination of \nf{Dequeue} $d$ where $Resp(d)=e$. It is safe to remove \nf{Dequeue} $d$ from the tree after the $d$ terminates. We can remove a block after the conditions told are satisfied for all of its \nf{Enqueue}s and \nf{Dequeue}s. A \nf{Dequeue} may go to sleep for a long time and prevent a \nf{block} to be removed (the block it is in or the block its response is in). In that situation other processes can help the \nf{Dequeue} by computing its response and writing it down somewhere. After writing down the response of th \nf{Dequeue} can be removed, since if the process wanted the response it can read from the helped response.
-
-\begin{definition}
-A block  is \it{finished} if all of its \nf{Enqueue}s have been computed to be the response of some \nf{Dequeue} and all of its \nf{Dequeues} responses have been computed.  
-\end{definition}
-
-\begin{corollary}
-If a block is finished, then all of its subblocks are also finished.  
-\end{corollary}
-
-\begin{lemma}
-It is safe to remove a finished block from the non-leaf nodes.
-\end{lemma}
-
-If the $i$th \nf{Enqueue} gets dequeued in a FIFO queue, it means the first $i-1$ \nf{Enqueue} operations have been already dequeued. This gives us the idea that if a block is finished then all the blocks before it are also finished. If an operation in a block goes to sleep for a long time then other processes help the operation so the block gets finished. There are less than $p$ idle operations, we can help them before garbage collection and then remove all the finished blocks safely in an amortized poly-log time.
-
-\begin{lemma}
-    If all \nf{Dequeue} operations in the root are helped, then all the blocks before a finished block in the root are also finished.
-\end{lemma}
-
-\begin{lemma}
-  Blocks before the most recent block that has been dequeued(computed to be dequeue) from are finished. If the most current \nf{Dequeue} returned(computed) \nf{null} then all the blocks before the block containing the \nf{Dequeue} are finished.
-\end{lemma}
-
-\begin{lemma}
-    If we replace the arrays we used to implement \nf{blocks} with red-black trees the amortized complexity of the algorithm would be $PolyLog(p,q)$. And also the algorithm is correct.
-\end{lemma}
-
-We can help a \nf{Dequeue} by computing its response and writing it down. If the process in future failed to execute, it can read the helped value written down.
-
-\begin{lemma}
-The \nf{response} written is correct.
-\end{lemma}
-
-But how can we know which blocks in each node are finished or not? 
-
-
-\begin{lemma}
-  Algorithm is wait-free and linearizable.
-\end{lemma}

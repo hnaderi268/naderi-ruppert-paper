@@ -122,8 +122,6 @@
 \newcommand{\eright}{\fld{end\sub{right}}}
 \newcommand{\edir}{\fld{end\sub{dir}}}
 
-\newcommand{\vv}{\var{v}}
-
 \newcommand{\hangbox}[1]{\parbox[t]{\dimexpr\linewidth-\algorithmicindent\relax}{%
     \setlength{\hangindent}{\algorithmicindent}%
     #1}}
@@ -145,13 +143,14 @@
 \newcommand{\gc}[1]{\color{blue}#1\color{black}}
 
 \usepackage{amsmath,amsthm}
-%\newtheorem{theorem}{Theorem}
-%\newtheorem{lemma}[theorem]{Lemma}
-%\newtheorem{corollary}[theorem]{Corollary}
-%\newtheorem{proposition}[theorem]{Proposition}
-%\newtheorem{definition}[theorem]{Definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{definition}[theorem]{Definition}
 \newtheorem{observation}[theorem]{Observation}
 \newtheorem{invariant}[theorem]{Invariant}
+\newtheorem{claim}{Claim}[theorem]
 
 \newtheorem{innercustomlemma}{Lemma}
 \newenvironment{customlemma}[1]

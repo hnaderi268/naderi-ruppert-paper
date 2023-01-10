@@ -331,7 +331,7 @@ The \opemph{Propagated} function is used to determine whether the dequeue has pr
 \end{minipage}
 \begin{minipage}[t]{0.529\textwidth}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{352}
+\setcounter{ALG@line}{351}
 \Function{element}{FindResponse}{\typ{int} \var{b}, \typ{int} \var{i}}
     \State \linecomment{find response to \var{i}th dequeue in $D(\var{root}.\fld{blocks}[\var{b}])$}
     \State \linecomment{Precondition:  $1\leq i\leq |D(\var{root}.\fld{blocks}[\var{b}])|$}
@@ -371,8 +371,7 @@ The \opemph{Propagated} function is used to determine whether the dequeue has pr
 
 \Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
     \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] exists and contains at least \var{i} enqueues}
-    \If{\var{v} is a leaf node}
-        \State\Return \var{v}.\fld{blocks}[\var{b}].\fld{element} \label{getBaseCaseGC}
+    \If{\var{v} is a leaf node} \Return \var{v}.\fld{blocks}[\var{b}].\fld{element} \label{getBaseCaseGC}
     \Else 
         \State \var{sum\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[\var{b}].\eleft].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}$] from left child}
         \State \var{prev\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eleft].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from left child}

@@ -128,6 +128,76 @@ L=E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k).
 \subsection{Designing a Block Representation to Solve Tasks \ref{construct} to \ref{findenqueue}}
 \label{sec:fields}
 
+\renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTSINGLE}{\com\ #1}}
+\begin{figure}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{1}
+\Statex \linecomment{Shared variable}
+\begin{itemize}
+\item \typ{Node} \var{root} \Comment{root of a binary tree of \tt{Node}s with one leaf for each process}
+\end{itemize}
+
+\Statex \linecomment{Thread-local variable}
+\begin{itemize}
+\item \typ{Node} \var{leaf} \Comment{process's leaf in the tree}
+\end{itemize}
+
+\Statex $\blacktriangleright$ \typ{Node}
+\begin{itemize}
+\item \typ{Node} \fld{left}, \fld{right}, \fld{parent} \Comment{children and parent pointers initialized  when creating the tree}
+\item \typ{Block}[0..$\infty$] \fld{blocks} \Comment{initially \var{blocks}[0] contains an empty block with all integer fields equal to 0}
+\item \typ{int} \head \Comment{position to attempt appending next \block\ to \fld{blocks}, initially 1}
+\end{itemize}
+
+\Statex $\blacktriangleright$ \typ{Block} 
+
+\begin{itemize}
+  	\item \typ{int} \fld{sum\sub{enq}, sum\sub{deq}}
+  		\Comment{number of enqueue, dequeue operations in \fld{blocks} array up to this block (inclusive)}
+  	\item \typ{int} \fld{super}
+  		\Comment{approximate index of the block's superblock in \fld{parent.blocks}}
+	\item[\com] Blocks in internal \nodes\ have the following additional fields
+	\begin{itemize}[leftmargin=3mm]
+		\item[$\bullet$] \typ{int} \eleft, \eright
+  		\Comment{index of last direct subblock in the left and right child}
+	\end{itemize}
+  	\item[\com] Blocks in leaf \nodes\ have the following additional field
+  	\begin{itemize}[leftmargin=3mm]
+		\item[$\bullet$] \typ{Object} \fld{element}
+  		\Comment{if the block's operation is \opa{Enqueue}{x} then \fld{element}=\var{x}, otherwise \fld{element}=\nl}
+	\end{itemize}
+	\item[\com] Blocks in the root \node\ have the following additional field
+	\begin{itemize}[leftmargin=3mm]
+		\item[$\bullet$] \typ{int} \size%
+  		\Comment{size of the queue after performing all operations up to the end of this block}
+	\end{itemize}
+\end{itemize}
+
+%\Statex {\com\  Blocks in internal nodes have the following additional fields}
+%\Statex $\blacktriangleright$ \tt{\sl{InternalBlock} extends \sl{Block}} \sf{\com\ the following additional fields are used only for blocks in internal nodes}
+%\begin{itemize}
+%	\item \tt{int} \eleft, \eright
+%  		\Comment{index of last direct subblock in the left and right child}
+%\end{itemize}
+
+%\Statex {\com\ Blocks in leaf nodes have the following additional field}
+%\Statex $\blacktriangleright$ \tt{\sl{LeafBlock} extends \sl{Block}} \sf{\com\ the following additional field is used only for blocks in leaves}
+%\begin{itemize}
+%  \item \tt{\sl{Object} element}
+%  \Comment{if the block's operation is \tt{enqueue(x)} then \tt{element=x}, otherwise \tt{element=null}.}
+%\end{itemize}
+
+%\Statex {\com\ Blocks in the root node have the following additional field}
+%\Statex $\blacktriangleright$ \tt{\sl{RootBlock} extends \sl{InternalBlock}} \sf{\com\ the following additional field is used only for blocks in the root}
+%\begin{itemize}
+%  \item \tt{\sl{int} \size}%
+%  \Comment{size of the queue after performing all operations up to the end of this block}
+%\end{itemize}
+
+\end{algorithmic}
+\caption{Objects used in the \ordering\ tree data structure \label{object-fields}}
+\end{figure}
+
 Each \node\ of the \ordering\ tree has an infinite array called \fld{blocks}.
 To simplify the code, \fld{blocks}[0] is initialized with an empty \block\ $B_0$, 
 where $E(B_0)$ and $D(B_0)$ are empty sequences.
@@ -224,76 +294,6 @@ when they attempt to advance $v.\fld{head}$ from $h$ to $h+1$,
 using a value they read from the \fld{head} field of $v$'s parent.
 As mentioned above, this might not be the exact index of $B$'s superblock, but we
 shall prove that it is close.
-
-\renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTSINGLE}{\com\ #1}}
-\begin{figure}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{1}
-\Statex \linecomment{Shared variable}
-\begin{itemize}
-\item \typ{Node} \var{root} \Comment{root of a binary tree of \tt{Node}s with one leaf for each process}
-\end{itemize}
-
-\Statex \linecomment{Thread-local variable}
-\begin{itemize}
-\item \typ{Node} \var{leaf} \Comment{process's leaf in the tree}
-\end{itemize}
-
-\Statex $\blacktriangleright$ \typ{Node}
-\begin{itemize}
-\item \typ{Node} \fld{left}, \fld{right}, \fld{parent} \Comment{children and parent pointers initialized  when creating the tree}
-\item \typ{Block}[0..$\infty$] \fld{blocks} \Comment{initially \var{blocks}[0] contains an empty block with all integer fields equal to 0}
-\item \typ{int} \head \Comment{position to attempt appending next \block\ to \fld{blocks}, initially 1}
-\end{itemize}
-
-\Statex $\blacktriangleright$ \typ{Block} 
-
-\begin{itemize}
-  	\item \typ{int} \fld{sum\sub{enq}, sum\sub{deq}}
-  		\Comment{number of enqueue, dequeue operations in \fld{blocks} array up to this block (inclusive)}
-  	\item \typ{int} \fld{super}
-  		\Comment{approximate index of the block's superblock in \fld{parent.blocks}}
-	\item[\com] Blocks in internal \nodes\ have the following additional fields
-	\begin{itemize}[leftmargin=3mm]
-		\item[$\bullet$] \typ{int} \eleft, \eright
-  		\Comment{index of last direct subblock in the left and right child}
-	\end{itemize}
-  	\item[\com] Blocks in leaf \nodes\ have the following additional field
-  	\begin{itemize}[leftmargin=3mm]
-		\item[$\bullet$] \typ{Object} \fld{element}
-  		\Comment{if the block's operation is \opa{Enqueue}{x} then \fld{element}=\var{x}, otherwise \fld{element}=\nl}
-	\end{itemize}
-	\item[\com] Blocks in the root \node\ have the following additional field
-	\begin{itemize}[leftmargin=3mm]
-		\item[$\bullet$] \typ{int} \size%
-  		\Comment{size of the queue after performing all operations up to the end of this block}
-	\end{itemize}
-\end{itemize}
-
-%\Statex {\com\  Blocks in internal nodes have the following additional fields}
-%\Statex $\blacktriangleright$ \tt{\sl{InternalBlock} extends \sl{Block}} \sf{\com\ the following additional fields are used only for blocks in internal nodes}
-%\begin{itemize}
-%	\item \tt{int} \eleft, \eright
-%  		\Comment{index of last direct subblock in the left and right child}
-%\end{itemize}
-
-%\Statex {\com\ Blocks in leaf nodes have the following additional field}
-%\Statex $\blacktriangleright$ \tt{\sl{LeafBlock} extends \sl{Block}} \sf{\com\ the following additional field is used only for blocks in leaves}
-%\begin{itemize}
-%  \item \tt{\sl{Object} element}
-%  \Comment{if the block's operation is \tt{enqueue(x)} then \tt{element=x}, otherwise \tt{element=null}.}
-%\end{itemize}
-
-%\Statex {\com\ Blocks in the root node have the following additional field}
-%\Statex $\blacktriangleright$ \tt{\sl{RootBlock} extends \sl{InternalBlock}} \sf{\com\ the following additional field is used only for blocks in the root}
-%\begin{itemize}
-%  \item \tt{\sl{int} \size}%
-%  \Comment{size of the queue after performing all operations up to the end of this block}
-%\end{itemize}
-
-\end{algorithmic}
-\caption{Objects used in the \ordering\ tree data structure \label{object-fields}}
-\end{figure}
 
 \subsection{Details of the Implementation}
 
@@ -519,8 +519,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
     \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] is non-\nl\ and contains at least \var{i} enqueues}
 	
-    \If{\var{v} is a leaf node}
-        \State\Return \var{v}.\fld{blocks}[\var{b}].\fld{element} \label{getBaseCase}
+    \If{\var{v} is a leaf node} \Return \var{v}.\fld{blocks}[\var{b}].\fld{element} \label{getBaseCase}
     \Else 
         \State \var{sum\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[\var{b}].\eleft].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}$] from left child}
         \State \var{prev\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eleft].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from left child}
@@ -569,40 +568,38 @@ that propagated blocks that were in \var{v}'s children prior to line \ref{firstR
 Then, \op{Propagate} recurses to \var{v}.\fld{parent} to continue propagating blocks up to the root.  
 
 %\paragraph{\tt{Refresh()} and \tt{Advance()}}
-The goal of a \opemph{Refresh} on node \var{v} is to create a block representing the new blocks
+A \opemph{Refresh} on node \var{v} creates a block representing the new blocks
 in \var{v}'s
-children and append it to \var{v}.\fld{blocks}. 
-Line \ref{readHead} reads \var{v}.\fld{head} into the local variable \var{h}
-and Line \ref{invokeCreateBlock} creates the new block to be installed in \var{v}.\fld{blocks}[\var{h}].
-If line \ref{invokeCreateBlock} returns \nl\ instead of a new block, it means that there were no new blocks in \var{v}'s children to propagate to \var{v}.
-In this case, \op{Refresh} returns true at line \ref{addOP} and terminates.
-Otherwise, the CAS at line \ref{cas} attempts to install its new block into \var{v}.\fld{blocks}[\var{h}].
-Either this CAS succeeds or some other process has installed a new block in this location.
-Either way, line \ref{advance} then calls \opemph{Advance} to advance \var{v}'s head pointer 
+children and tries to append it to \var{v}.\fld{blocks}. 
+Line \ref{readHead} reads \var{v}.\fld{head} into the local variable \var{h}.
+Line \ref{invokeCreateBlock} creates the new block to install in \var{v}.\fld{blocks}[\var{h}].
+If line \ref{invokeCreateBlock} returns \nl\ instead of a new block, there were no new blocks in \var{v}'s children to propagate to \var{v}, so \op{Refresh} can return true at line \ref{addOP} and terminate.
+Otherwise, the CAS at line \ref{cas} tries to install the new block into \var{v}.\fld{blocks}[\var{h}].
+Either this CAS succeeds or some other process has installed a  block in this location.
+Either way, line \ref{advance} then calls \opemph{Advance} to advance \var{v}'s head index 
 from \var{h} to $\var{h}+1$
-and to fill in the \fld{super} field of the most recently appended block.
+and fill in the \fld{super} field of the most recently appended block.
 The boolean value returned by \op{Refresh} indicates whether its CAS succeeded.
-Since a \op{Refresh} may do a successful CAS but pause before calling \op{Advance} at line \ref{advance},
-other processes help keep \fld{head} up to date by also calling \op{Advance}, 
-either at line \ref{helpAdvance} during a \op{Refresh} on \var{v}'s parent or line \ref{advance} during a \op{Refresh} on \var{v}.
+A \op{Refresh} may pause after a successful CAS before calling \op{Advance} at line \ref{advance},
+so other processes help keep \fld{head} up to date by  calling \op{Advance}, 
+either at line \ref{helpAdvance} during a \op{Refresh} on \var{v}'s parent or line \ref{advance} during a \op{Refresh} on~\var{v}.
 
 \opemph{CreateBlock}(\var{v, i}) is used
 by \op{Refresh} to construct a block to be installed in \var{v}.\fld{blocks}[\var{i}].
-The block \nf{new} is created in Line \ref{initNewBlock}. 
+The block \var{new} is created in Line \ref{initNewBlock}. 
 The \eleft\ and \eright\ fields are filled in with the indices of the last blocks appended to \var{v}'s
 children, which are obtained by reading the \fld{head} index in \var{v}'s children.
-Recall that the \fld{sum\sub{enq}} field should store the number of enqueues in
-\var{v}.\fld{blocks}[1..\var{i}].
-Since these enqueues come from \var{v}.\fld{left.blocks}[1..\var{new}.\eleft] and \var{v}.\fld{blocks}[1..\var{new}.\eright],
-the total number of these enqueues is $\var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right}.\fld{blocks}[\var{new}.\eright].\fld{sum\sub{enq}}$.
+Since the \fld{sum\sub{enq}} field should store the number of enqueues in
+\var{v}.\fld{blocks}[1..\var{i}] and these enqueues come from \var{v}.\fld{left.blocks}[1..\var{new}.\eleft] and \var{v}.\fld{blocks}[1..\var{new}.\eright], line \ref{createSumEnq} sets
+\fld{sum\sub{enq}} to $\var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right}.\fld{blocks}[\var{new}.\eright].\fld{sum\sub{enq}}$.
 Line \ref{computeNumEnq} sets \var{num\sub{enq}} to the number of enqueues in the new block by
 subtracting from \var{new}.\fld{sum\sub{enq}} the number of enqueues that are already in \var{v}.\fld{blocks}[$1..\var{i}-1$].
 The values of \var{new}.\fld{sum\sub{deq}} and \var{num\sub{deq}} are computed similarly.
 Then, if \var{new}
 is going to be installed in the root, line \ref{computeLength} computes the \fld{size} field, which
 represents the number of elements in the queue after the operations in the block are performed.
-Finally, if the newly created block contains no operations, \op{CreateBlock} returns \nl\ to indicate
-that there is no need to append it to \var{v}.\fld{blocks}.
+Finally, if the new block contains no operations, \op{CreateBlock} returns \nl\ to indicate
+ there is no need to install it.
 
 Once a \op{Dequeue} is appended to a block of the process's leaf and propagated to the root,
 the \opemph{IndexDequeue} routine finds the \op{Dequeue}'s location in the root.

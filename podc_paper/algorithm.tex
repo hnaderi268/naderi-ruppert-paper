@@ -110,10 +110,10 @@ and its dequeue sequence $D(B)$ is empty.  If $B$ is a block in a leaf represent
 If $B$ is a block in an internal node $v$ with direct subblocks $B^L_1, \ldots, B^L_\ell$ from 
 $v$'s left child
 and $B^R_1,\ldots,B^R_r$ from $v$'s right child, then $B$'s operation sequences are defined by the concatenations 
-\begin{eqnarray}
-E(B) &=& E(B^L_1)\cdots E(B^L_\ell)\cdot E(B^R_1) \cdots E(B^R_r)\nonumber\\
-D(B) &=& D(B^L_1)\cdots D(B^L_\ell)\cdot D(B^R_1) \cdots D(B^R_r)\label{defSeqs}
-\end{eqnarray}
+\begin{equation}
+E(B) = E(B^L_1)\cdots E(B^L_\ell)\cdot E(B^R_1) \cdots E(B^R_r) \mbox{ and }
+D(B) = D(B^L_1)\cdots D(B^L_\ell)\cdot D(B^R_1) \cdots D(B^R_r)\label{defSeqs}
+\end{equation}
 We say the block $B$ \emph{contains} the operations in $E(B)$ and $D(B)$.
 
 Finally, when designing a total order for the operations propagated to the root, we choose
@@ -140,8 +140,8 @@ Instead, the block stores an implicit representation of the sequences.
 We now explain how we designed the fields for this implicit representation. 
 Refer to Figure \ref{implicit} for an example showing how the tree in Figure \ref{orderingtree} is actually represented, and Figure \ref{object-fields} for the definitions of the fields of \blocks\ and \nodes.
 
-The information stored in a \block\ depends on whether it is in an internal node or a leaf.
-A block in a leaf represents a single enqueue or dequeue.  The \fld{element} field stores the value
+%The information stored in a \block\ depends on whether it is in an internal node or a leaf.
+A block in a leaf represents a single enqueue or dequeue.  The block's \fld{element} field stores the value
 enqueued for an enqueue operation, or \nl\ if the operation is a dequeue.
 
 \here{If space permits, we might want to add some examples in the following paragraphs that refer back to Figure \ref{implicit}.}
@@ -254,14 +254,20 @@ shall prove that it is close.
   	\item \typ{int} \fld{super}
   		\Comment{approximate index of the block's superblock in \fld{parent.blocks}}
 	\item[\com] Blocks in internal \nodes\ have the following additional fields
-	\item \typ{int} \eleft, \eright
+	\begin{itemize}[leftmargin=3mm]
+		\item[$\bullet$] \typ{int} \eleft, \eright
   		\Comment{index of last direct subblock in the left and right child}
+	\end{itemize}
   	\item[\com] Blocks in leaf \nodes\ have the following additional field
-  	\item \typ{Object} \fld{element}
+  	\begin{itemize}[leftmargin=3mm]
+		\item[$\bullet$] \typ{Object} \fld{element}
   		\Comment{if the block's operation is \opa{Enqueue}{x} then \fld{element}=\var{x}, otherwise \fld{element}=\nl}
+	\end{itemize}
 	\item[\com] Blocks in the root \node\ have the following additional field
-	\item \typ{int} \size%
+	\begin{itemize}[leftmargin=3mm]
+		\item[$\bullet$] \typ{int} \size%
   		\Comment{size of the queue after performing all operations up to the end of this block}
+	\end{itemize}
 \end{itemize}
 
 %\Statex {\com\  Blocks in internal nodes have the following additional fields}

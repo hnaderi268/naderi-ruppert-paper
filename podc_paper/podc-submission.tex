@@ -160,6 +160,10 @@
   {\renewcommand\theinnercustomlemma{#1}\innercustomlemma}
   {\endinnercustomlemma}
 
+\newtheorem{innercustomprop}{Proposition}
+\newenvironment{customprop}[1]
+  {\renewcommand\theinnercustomprop{#1}\innercustomprop}
+  {\endinnercustomprop}
 
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs
@@ -256,11 +260,11 @@
 \settopmatter{printacmref=false}  % REMOVE THIS LINE FOR CAMERA READY
 
 \begin{abstract}
-We introduce a novel linearizable wait-free queue implementation using single-word 
+We present a novel linearizable wait-free queue implementation using single-word 
 CAS instructions.
-Previous lock-free queues all have amortized step complexity of $\Omega(p)$ per operation in worst-case executions, 
-where $p$ is the number of processes that can access the queue.
-We present a new wait-free queue that takes $O(\log p)$ steps per enqueue and $O(\log^2 p +\log q)$ steps per dequeue, where $q$ is the size of the queue.
+Previous lock-free queue implementations from \op{CAS} all have amortized step complexity of $\Omega(p)$ per operation in worst-case executions, 
+where $p$ is the number of processes that access the queue.
+Our new wait-free queue  takes $O(\log p)$ steps per enqueue and $O(\log^2 p +\log q)$ steps per dequeue, where $q$ is the size of the queue.
 A bounded-space version of the implementation has amortized step complexity of $O(\log^2 p +\log q)$ per operation.
 \end{abstract}
 

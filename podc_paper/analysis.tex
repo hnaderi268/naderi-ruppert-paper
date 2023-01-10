@@ -4,7 +4,7 @@
 In this section, we analyze the number of steps and the number of \op{CAS} instructions performed by operations.
 First, we prove some claims about the size and operations of a block. 
 
-\begin{proposition}
+\begin{proposition}\label{casbound}
 Each \nf{Enqueue} or \nf{Dequeue} operation performs $O(\log p)$ \nf{CAS} instructions.
 \end{proposition}
 \begin{proof}

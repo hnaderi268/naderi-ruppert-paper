@@ -407,9 +407,9 @@ It may be possible, via a more careful analysis, to reduce the bound on space us
 Although individual operations may now become more expensive because they have to perform GC,
 we show that operations still have polylogarithmic amortized step complexity.
 
-\begin{proposition}
+\begin{mytheorem}
 The amortized step complexity of each operation is $O(\log p \log(p+q_{max}))$.
-\end{proposition}
+\end{mytheorem}
 \begin{proof}
 \here{this proof may need some modification since code was changed to change how split point is computed}
 It follows from \Cref{RBTbound} and the fact that $G=p^2\ceil{\log p}$
@@ -455,3 +455,8 @@ within a constant factor of the steps it performs excluding GC.
 
 We remark that the implementation remains wait-free:  the depth of recursion in each routine is  bounded
 by the height of the tree and the only loop is the counted loop in the \op{Help} routine.
+Since each operation still only does two \op{CAS} instructions at each level of the tree (at line \ref{casGC}), the following proposition still holds for the space-bounded version of the queue.
+
+\begin{customprop}{\bf{\ref{casbound}}$'$}
+Each operation performs $O(\log p)$ \op{CAS} instructions in the worst case.
+\end{customprop}

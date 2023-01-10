@@ -146,7 +146,7 @@ It uses fetch\&increment and swap  instructions and takes $O(1)$ steps per opera
 uses unbounded memory.  Bounding the space increases the steps per operation to $\Omega(p)$.
 Jayanti and Petrovic gave a wait-free poly-logarithmic
 queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but it works only for a single dequeuer. 
-Our \ordering\ tree is similar to the tree structure the use to agree on a linearization ordering.
+Our \ordering\ tree is similar to the tree structure they use to agree on a linearization ordering.
 
 \here{Should we mention https://arxiv.org/abs/2103.11926 , which seems to have a queue for 2 enqueuers and 2 dequeuers ?  May not be worth mentioning because then $p$ is a constant, so complexity in terms of $p$ doesn't make sense.}
 
@@ -160,11 +160,7 @@ since previous CAS-based queues all required $\Omega(p)$ step complexity.
 Our new implementation counters this argument.
 
 \emph{Fetch\&Increment Objects.}
-There are sublinear-time implementations of another object
-with consensus number 2.
-Two papers \cite{ERW12,10.1007/978-3-642-41527-2_20}
-implemented fetch\&increment objects from LL/SC objects
-using a polylogarithmic number of steps per operation.
+There are implementations of fetch\&increment objects that use a polylogarithmic number of steps per operation. \cite{ERW12,10.1007/978-3-642-41527-2_20}
 Our approach is similar to that of Ellen, Ramachandran and Woelfel \cite{ERW12},
 which also uses a tree structure to keep track of the fetch\&increments
 that have been performed, as in the universal construction of \cite{DBLP:conf/stoc/AfekDT95}.

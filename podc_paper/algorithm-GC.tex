@@ -69,7 +69,7 @@ used to implement GC.
 When a \op{Refresh} or \op{Append} wants to add a new block to a node's \fld{blocks} RBT,
 it calls the new \opemph{AddBlock} routine.
 Before attempting to add the block to a node's RBT, \op{AddBlock} triggers a GC phase on the RBT if 
-the new block's \fld{index} is a multiple of the constant $G$, which we choose to be $p^2\ceil{\log p}$.
+the new block's \fld{index} is a multiple of the constant $G$, which we choose to be $(p\ceil{\log p})^2$.
 This ensures that obsolete blocks are removed from the RBT once every $G$ times a new block is added to it.
 The GC phase uses \op{SplitBlock} to determine the index $s$ of the oldest block to keep,
 calls \op{Help} to help all pending dequeues that have been propagated to the root
@@ -274,7 +274,7 @@ The \opemph{Propagated} function is used to determine whether the dequeue has pr
 \end{algorithmic}
 \end{minipage}
 \vspace*{-4mm}
-\caption{Bounded-space queue implementation.\label{pseudocode1GC}  $G$ is a constant, which we choose to be $p^2 \ceil{\log p}$.}
+\caption{Bounded-space queue implementation.\label{pseudocode1GC}  $G$ is a constant, which we choose to be $(p \ceil{\log p})^2$.}
 \end{figure}
 
 \begin{figure}

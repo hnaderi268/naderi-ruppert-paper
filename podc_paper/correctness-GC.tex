@@ -310,7 +310,7 @@ that the space-bounded algorithm is linearizable.
 \here{need to prove a lemma analogous to \Cref{blockSize}}
 
 We first bound the size of RBTs.  Let $q_{max}$ be the maximum size of the queue at any time during the sequential execution given by the linearization $L$.
-Recall that GC is done on a node every $G$ times its RBT is updated, and we chose $G$ to be $p^2\ceil{\log p}$.
+Recall that GC is done on a node every $G$ times its RBT is updated, and we chose $G$ to be $(p\ceil{\log p})^2$.
 Part of the proof of the following lemma is similar to the proof of \Cref{dSearchTime}.
 %We say the index $b$ \emph{is marked in node \var{v}} if some process has tested
 %whether $b>\var{v}.\fld{last}[*]$ at line \ref{marktest1} or \ref{marktest2}.
@@ -393,16 +393,16 @@ on each node separately, might reduce it to qlogp + poly(p).  Might also be poss
 more precise about how it depends on "current" size of queue rather than max size.}
 
 \begin{mytheorem}\label{spaceBound}
-The queue data structure uses a maximum of $O(pq_{max}+p^3\log p)$ words of memory at any time.
+The queue data structure uses a maximum of $O(pq_{max}+p^3\log^2 p)$ words of memory at any time.
 \end{mytheorem}
 \begin{proof}
 There are $2p-1$ nodes in the ordering tree.  Aside from the RBT, each node uses $O(1)$ memory words.
 Each process may hold pointers to $O(1)$ RBTs that are no longer current in local variables.
 So the space bound follows from \Cref{RBTbound} and the fact that $G$ is chosen
-to be $p^2\ceil{\log p}$.
+to be $(p\ceil{\log p})^2$.
 \end{proof}
 
-It may be possible, via a more careful analysis, to reduce the bound on space usage to $O(\log p(q_{max}+p^3)$.
+\here{It may be possible, via a more careful analysis, to reduce the bound on space usage to $O(\log^2 p(q_{max}+p^3)$.}
 
 Although individual operations may now become more expensive because they have to perform GC,
 we show that operations still have polylogarithmic amortized step complexity.
@@ -412,7 +412,7 @@ The amortized step complexity of each operation is $O(\log p \log(p+q_{max}))$.
 \end{mytheorem}
 \begin{proof}
 \here{this proof may need some modification since code was changed to change how split point is computed}
-It follows from \Cref{RBTbound} and the fact that $G=p^2\ceil{\log p}$
+It follows from \Cref{RBTbound} and the fact that $G=(p\ceil{\log p})^2$
 that all the RBT routines we use to perform \op{Split}, \op{Insert} and searches for
 blocks with a particular index or for a \fld{sum\sub{enq}} value (in line \ref{FRsearchGC} or \ref{getChildGC}) can all be done in $O(\log(p+q_{max}))$ steps.
 
@@ -448,9 +448,9 @@ We can amortize these steps over the operations that appear in
 $\var{v}.\fld{blocks}[(r-1)p^2+1..p^2]$.
 By \Cref{blockNotEmpty}, there are at least $G$ such operations, 
 so each operation's amortized number of steps for GC at each node along the path from its leaf to the root
-is $O(p^2\log p\log(p+q_{max})/G)=O(\log(p+q_{max}))$.
-Hence each operation's amortized number of GC steps is $O(\log p\log(p+q_{max}))$, which is
-within a constant factor of the steps it performs excluding GC.
+is $O(p^2\log p\log(p+q_{max})/G)=O(\log(p+q_{max})/\log p)$.
+Hence each operation's amortized number of GC steps is $O(\log(p+q_{max}))$, which is less than
+the bound on the number of non-GC steps it performs.
 \end{proof}
 
 We remark that the implementation remains wait-free:  the depth of recursion in each routine is  bounded

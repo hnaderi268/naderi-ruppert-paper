@@ -14,11 +14,12 @@ Finally, we prove linearizability in Section \ref{sec::linearizability}.
 \label{sec::basicProperties}
 
 A \typ{Block} object's fields, except for \fld{super}, are immutable:  they are written only 
-when the block is created at line \ref{enqNew} or \ref{deqNew} (for a leaf's block) or lines \ref{initNewBlock}--\ref{computeLength} (for an internal node's block).  
+when the block is created.
+% at line \ref{enqNew} or \ref{deqNew} (for a leaf's block) or lines \ref{initNewBlock}--\ref{computeLength} (for an internal node's block).  
 Moreover, only a \op{CAS} at line \ref{setSuper1} can modify the \fld{super} field 
-(from \nl\ to a non-\nl\ value), so it remains fixed once a value is stored in it.
+(from \nl\ to a non-\nl\ value), so it is written only once.
 Similarly, only a \op{CAS} at line \ref{cas} can modify an element of a node's \fld{blocks} array 
-(from \nl\ to a non-\nl\ value), so once a block is stored in a node, it remains there forever.
+(from \nl\ to a non-\nl\ value), so blocks are permanently added to nodes.
 Only a \op{CAS} at line \ref{incrementHead} can update a node's \head\ field by incrementing it,
 which implies the following.
 
@@ -201,12 +202,12 @@ Intuitively, since there are no operations in $\var{v}$'s children to promote, $
 We formalize this intuition.
 The value computed at line \ref{createSumEnq} is
 \begin{eqnarray*}
-\var{num\sub{enq}} 
-&=& \var{v}.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right.blocks}[new.\eright].\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[h-1].\fld{sum\sub{enq}} \\
-&=& \var{v}.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right.blocks}[new.\eright].\fld{sum\sub{enq}} \\
-&&\mbox{ }- \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft].\fld{sum\sub{enq}} - \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright].\fld{sum\sub{enq}}
+\var{num\sub{enq}} \hspace*{-2mm}
+&=& \hspace*{-2mm} \var{v}.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right.blocks}[new.\eright].\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[h-1].\fld{sum\sub{enq}} \\
+&=& \hspace*{-2mm}\var{v}.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right.blocks}[new.\eright].\fld{sum\sub{enq}} \\
+&&- \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft].\fld{sum\sub{enq}} - \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright].\fld{sum\sub{enq}}
 \end{eqnarray*}
-It follows from \Cref{lem::sum} that $num\sub{enq}$ is the total number of enqueues contained in the blocks
+By \Cref{lem::sum}, $num\sub{enq}$ is the  number of enqueues  in 
 $\var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft+1..new.\eleft]$ and
 $\var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright+1..new.\eright]$.
 Similarly, $num\sub{deq}$ is the total number of dequeues contained in these blocks.
@@ -310,24 +311,11 @@ Also, if $op_{1}$ terminates before $op_{2}$ begins, then $op_{1}$
 is propagated to the root before $op_2$ begins, so $op_2$ appears before $op_2$ in $L$.
 \end{proof}
 
-In the next lemma, we show that the \fld{size} field in each block in the root is computed correctly.
-\begin{lemma}\label{sizeCorrectness}
+A simple proof (in Appendix \ref{app::tracingDetails}) shows that \fld{size} fields are computed correctly.
+\begin{restatable}{lemma}{sizeCorrectRes}
+\label{sizeCorrectness}
 If the operations of $\var{root}.\fld{blocks}[0..b]$ are applied sequentially in the order of~$L$ on an initially empty queue, the resulting queue has $\var{root}.\fld{blocks}[b].\size$ elements.  
-\end{lemma}
-\begin{proof}
-We prove the claim by induction on $b$. 
-The base case when ${b=0}$ is trivial, since the queue is initially empty and 
-$\var{root}.\fld{blocks}[0]$ contains an empty block whose \size\ field is $0$. 
-Assuming the claim holds for $b-1$, we prove it for $b$.
-The \fld{size} field of the block $B$ installed in $\var{root}.\fld{blocks}[b]$ is computed
-at line \ref{computeLength} of a call to \op{CreateBlock}(\var{root, b}).
-By the induction hypothesis, $root.\fld{blocks}[b-1].\size$ gives the size of the queue before the operations
-of block $B$ are performed.
-By \Cref{lem::sum}, the values of \var{num\sub{enq}} and \var{num\sub{deq}}
-are the number of enqueues and dequeues contained in $B$.
-Hence, the size of the queue after the operations of $B$ are performed (with enqueues before dequeues as specified by $L$)
-is $\max(0, \var{root}.\fld{blocks}[b-1].\size + \var{num\sub{enq}} - \var{num\sub{deq}})$.
-\end{proof}
+\end{restatable}
 
 Next, we show operations return the same response as they would in the sequential execution $L$.
 

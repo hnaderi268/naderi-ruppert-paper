@@ -49,8 +49,8 @@ Moreover, each operation does $O(\log p)$ CAS instructions in the worst case, wh
 lock-free queues use 
 %an unbounded number of CAS instructions in the worst case and 
 $\Omega(p)$ CAS instructions, even in an amortized sense.
-For the space-bounded version, we unlink unneeded memory from our data structure.
-We do not address the orthogonal problem of reclaiming unlinked memory; we assume a safe
+For the space-bounded version, we unlink unneeded objects from our data structure.
+We do not address the orthogonal problem of reclaiming memory; we assume a safe
 garbage collector, such as the highly optimized one that Java provides.
 
 Our queue uses a binary tree, called the \emph{\ordering\ tree}, where each process has its own leaf.

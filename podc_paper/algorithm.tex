@@ -215,17 +215,19 @@ enqueued for an enqueue operation, or \nl\ if the operation is a dequeue.
 
 \here{If space permits, we might want to add some examples in the following paragraphs that refer back to Figure \ref{implicit}.}
 
-Each block in an internal \node\ $v$ stores the indices of the last direct subblock in $v$'s left and right child in the fields \eleft\ and \eright.  
-Thus, the direct subblocks of $v.\fld{blocks}[b]$ are
+Each block in an internal \node\ $\var{v}$ stores the indices of the last direct subblock in $\var{v}$'s left and right child in the fields \eleft\ and \eright.  
+Thus, the direct subblocks of $\var{v}.\fld{blocks}[b]$ are
 \begin{eqnarray}\label{defsubblock}
-v.\fld{left.blocks}[v.\fld{blocks}[b-1].\fld{end\sub{left}}+1..v.\fld{blocks}[b].\fld{end\sub{left}}] \mbox{ and}\nonumber\\
-v.\fld{right.blocks}[v.\fld{blocks}[b-1].\fld{end\sub{right}}+1..v.\fld{blocks}[b].\fld{end\sub{right}}].
+\var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[b-1].\fld{end\sub{left}}+1..\var{v}.\fld{blocks}[b].\fld{end\sub{left}}] \mbox{ and}\nonumber\\
+\var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[b-1].\fld{end\sub{right}}+1..\var{v}.\fld{blocks}[b].\fld{end\sub{right}}].
 \end{eqnarray}
-This allows us to navigate to a block's direct subblocks easily.
-Blocks also store prefix sums of the numbers of enqueues and dequeues:
-the block in $\var{v}.\fld{blocks}[b]$ has two fields \fld{sum\sub{enq}} and \fld{sum\sub{deq}}
-that store the total number of enqueues and dequeues in $\var{v}.\fld{blocks}[1..\var{b}]$.
-These fields allow us to pinpoint the  location of an operation among the subblocks of a given block.
+The \eleft\ and \eright\ fields allow us to navigate to a block's direct subblocks.
+Blocks also store some prefix sums:
+%the block in 
+$\var{v}.\fld{blocks}[b]$ has two fields \fld{sum\sub{enq}} and \fld{sum\sub{deq}}
+that store the total numbers of enqueues and dequeues in $\var{v}.\fld{blocks}[1..\var{b}]$.
+We use these to search for a particular operation.
+% pinpoint the  location of an operation among the subblocks of a given block.
 For example, consider finding the $r$th enqueue $E_r$ in the linearization.
 A binary search for $r$ on \fld{sum\sub{enq}} fields of the root's blocks 
 finds the block  containing $E_r$.
@@ -233,8 +235,8 @@ If we know a block $B$ in a \node\ $v$ contains $E_r$,
 we can use the \fld{sum\sub{enq}} field again to determine which child of $v$ contains $E_r$
 and then do a binary search
 among the direct subblocks of $B$ in that child.
-Thus, we work our way down the tree until we find a leaf block, which explicitly stores 
-$E_r$.
+Thus, we work our way down the tree until we find the leaf block that  stores 
+$E_r$ explicitly.
 %Now, suppose we want to find the $r$th enqueue in the linearization ordering for task \ref{findenqueue}.Let $B_1, B_2, \ldots, B_k$ be the blocks in the root.
 %First, we need prefix sums of the number of enqueues in $E(B_1)\cdot E(B_2)\cdots E(B_i)$
 %so that we can do a binary search for the block $B_e$ that contains the $r$th enqueue.
@@ -248,10 +250,10 @@ $E_r$.
 %For this, we can again use the prefix sums of the number of enqueues in any prefix of the array $v_r.blocks$.
 %We can then continue in this way down the tree until reaching a leaf where the enqueue is stored explicitly.
 We shall show that the binary search in the root can be done in $O(\log p + \log q)$ steps,
-and the binary search within each other \node\ along the path to a leaf can be done in $O(\log p)$ steps,
+and the binary search within each other \node\ along the path to a leaf takes $O(\log p)$ steps,
 for a total of $O(\log^2 p + \log q)$ steps for task \ref{findenqueue}.
-All information needed for this search process can be derived from the 
-\eleft, \eright\ and \fld{sum\sub{enq}} fields.
+%All information needed for this search process can be derived from the 
+%\eleft, \eright\ and \fld{sum\sub{enq}} fields.
 
 A block is called the \emph{superblock} of all of its direct subblocks.
 To facilitate task \ref{findinroot}, each block $B$ has a field \fld{super} that contains

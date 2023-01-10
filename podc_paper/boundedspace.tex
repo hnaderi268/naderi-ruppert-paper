@@ -3,20 +3,19 @@
 \section{Reducing Space Usage}
 \label{reducing}
 
-In our implementation, an operation remains in the \nf{blocks} arrays forever. 
-Thus, the space used is proportional to the number of operations that have been invoked.
-Now, we sketch a mechanism to remove blocks that are no longer needed to use space
+Operations remain in the \fld{blocks} arrays forever. 
+This uses space proportional to the number of enqueues that have been invoked.
+Now, we describe how to remove blocks that are no longer needed to use space
 polynomial in $p$ and $q$, while maintaining polylogarithmic (amortized) step complexity.  For lack of space, details are in Appendix~\ref{reducing-details}.
-
 We replace the \fld{blocks} array in each node by a red-black tree (RBT)
 that stores the blocks.
 Each block has an additional \fld{index} field
 that represents its position within the original \fld{blocks} array, and
 blocks in a RBT are sorted by \fld{index}.
-The attempt to append a new block in entry $i$ of the \fld{blocks} array on line \ref{cas}
+The attempt to install a new block in $\fld{blocks}[i]$  on line \ref{cas}
 is replaced by an attempt to insert a new block with index $i$ into the RBT.
-Accessing the block in entry $i$ in the \fld{blocks} array can then be 
-replaced by searching the RBT for the block with index $i$.
+Accessing the block in entry $i$ in the \fld{blocks} array is 
+replaced by searching the RBT for the  index $i$.
 The binary searches for a block in line \ref{FRb} and \ref{getChild} can simply search the RBT
 using the \fld{sum\sub{enq}} field, since the RBT is also sorted with respect to this field, by \Cref{lem::sum}.
  
@@ -48,7 +47,7 @@ Blocks should be kept if they contain operations still in progress.
 Moreover, a block containing an \op{Enqueue}($x$) must be kept until $x$ is dequeued.
 
 To maintain good amortized time per operation, we periodically do a garbage collection (GC) phase.
-If a \op{Refresh} on a node adds a block whose \var{index} is a multiple of $G=p^2\ceil{\log p}$, it does GC to remove obsolete blocks from the node's RBT.
+If a \op{Refresh} on a node adds a block whose \var{index} is a multiple of $G=(p\ceil{\log p})^2$, it does GC to remove obsolete blocks from the node's RBT.
 To determine which blocks can be thrown away, the node has an array $\var{last}[1..p]$ where 
 each process writes the index of the last block in
 containing an enqueue whose element it dequeued.
@@ -64,14 +63,16 @@ all nodes with indices smaller than $m-1$ from a RBT in logarithmic time \cite[S
 An operation $op$'s search of a RBT may fail to find the required block $B$ that has been removed 
 by another process's GC phase.  If $op$
 is a dequeue, $op$ must have been helped before $B$ was discarded, so $op$ can simply read its response from
-its own leaf.
-\here{What about enqueues not finding required block?}
+its own leaf.  If $op$ is an enqueue, it can simply terminate.
 
-A GC phase on a node takes $O(p\log p \log(p+q))$ steps to help complete all pending operations.
-If all processes carry out this GC phase, it takes a total of $O(p^2\log p\log(p+q))=O(G\log(p+q))$ steps.
+We show that GC ensures each RBT has size $O(pq+p^3\log p)$, so RBT operations take $O(\log(p+q))$ time.
+Excluding GC, an operation does $O(1)$ operations on RBTs at each level of the tree for a total of
+$O(\log p(\log p +\log q))$ steps.
+A GC phase takes $O(p\log p \log(p+q))$ steps to help complete all pending operations.
+If all processes carry out this GC phase, it takes a total of $O(p^2\log p\log(p+q))=O(\frac{G\log(p+q)}{\log p})$ steps.
 There are at least $G$ operations between two GC phases,  so for each node,
-GC  contributes only $O(\log(p+q))$ steps to each operation in an amortized sense.
+GC  contributes only $O(\frac{\log(p+q)}{\log p})$ steps to each operation in an amortized sense.
 Adding up over all nodes an operation visits, 
-an operation takes $O(\log p\log(p+q))$ steps doing GC in an amortized sense.
+an operation spends $O(\log(p+q))$ steps doing GC in an amortized sense.
 %Doing GC less frequently would yield better constant factors in the amortized number of steps per operation but use more space.
 

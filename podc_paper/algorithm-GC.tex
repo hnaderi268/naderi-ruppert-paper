@@ -378,7 +378,7 @@ The \opemph{Propagated} function is used to determine whether the dequeue has pr
         \State \var{prev\sub{right}} \assign\ \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eright].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from right child}
         \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \label{leftOrRightGC} \cmt{required enqueue is in \var{v}.\fld{left}}
             \State \fld{dir} \assign\ \fld{left}
-        \Else
+        \Else \Comment{required enqueue is in \var{v}.\fld{right}}
             \State \fld{dir} \assign\ \fld{right}
             \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$
         \EndIf

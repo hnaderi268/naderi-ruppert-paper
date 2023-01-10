@@ -39,8 +39,7 @@ dequeue must return.  To do this, $P$ first determines which block in the root c
 (since the operation may have been propagated to the root by some other process).
 Then, $P$ determines whether the queue is empty when its dequeue is linearized. 
 If so, it returns \nl\ and we call it a \emph{null dequeue}.
-If not, $P$ computes the rank\footnote{We say that the $r$th element in a sequence has rank $r$ within that sequence.} $r$ of its dequeue in the linearization ordering
-among all non-null dequeues,
+If not, $P$ computes the rank\footnote{We say that the $r$th element in a sequence has rank $r$ within that sequence.} $r$ of its dequeue among all non-null dequeues in the linearization ordering,
 finds the $r$th enqueue in the linearization, and returns that enqueue's value.
 
 We must choose what to store in each block so that the following tasks can be done efficiently.
@@ -53,7 +52,7 @@ Construct a block for node $v$ that represents the operations contained in conse
 Given a dequeue in a leaf that has been propagated to the root, find that operation's position in the root's blocks array.
 \item
 \label{findrank}
-Given a dequeue's position in the root, determine whether it is a null dequeue (i.e., whether the queue is empty when it is linearized)
+Given a dequeue's position in the root, determine if it is a null dequeue (i.e., if the queue is empty when it is linearized)
 or determine the rank $r$ of the enqueue whose value it should return.
 \item
 \label{findenqueue}
@@ -222,20 +221,20 @@ Thus, the direct subblocks of $v.\fld{blocks}[b]$ are
 v.\fld{left.blocks}[v.\fld{blocks}[b-1].\fld{end\sub{left}}+1..v.\fld{blocks}[b].\fld{end\sub{left}}] \mbox{ and}\nonumber\\
 v.\fld{right.blocks}[v.\fld{blocks}[b-1].\fld{end\sub{right}}+1..v.\fld{blocks}[b].\fld{end\sub{right}}].
 \end{eqnarray}
-This allows us to navigate to the direct subblocks of any block easily.
+This allows us to navigate to a block's direct subblocks easily.
 Blocks also store prefix sums of the numbers of enqueues and dequeues:
-the block in $v.\fld{blocks}[b]$ has two fields \fld{sum\sub{enq}} and \fld{sum\sub{deq}}
+the block in $\var{v}.\fld{blocks}[b]$ has two fields \fld{sum\sub{enq}} and \fld{sum\sub{deq}}
 that store the total number of enqueues and dequeues in $\var{v}.\fld{blocks}[1..\var{b}]$.
-These fields allow us to pinpoint the exact location of an operation among the subblocks of a given block.
-For example, consider finding the $r$th enqueue in the linearization ordering.
-We use the \fld{sum\sub{enq}} fields of the root's blocks to do a binary search
-to locate which block in the root contains the operation.
-If we know which block $B$ in some \node\ $v$ contains the enqueue,
-we can use the \fld{sum\sub{enq}} field again to determine which child of $v$ contains the enqueue
+These fields allow us to pinpoint the  location of an operation among the subblocks of a given block.
+For example, consider finding the $r$th enqueue $E_r$ in the linearization.
+We do a binary search on \fld{sum\sub{enq}} fields of the root's blocks 
+to locate the block that contains $E_r$.
+If we know which block $B$ in some \node\ $v$ contains $E_r$,
+we can use the \fld{sum\sub{enq}} field again to determine which child of $v$ contains $E_r$
 and then to do a binary search
 among the direct subblocks of $B$ in that child.
 Thus, we work our way down the tree until we find a leaf block, which explicitly stores 
-the enqueue.
+$E_r$.
 %Now, suppose we want to find the $r$th enqueue in the linearization ordering for task \ref{findenqueue}.Let $B_1, B_2, \ldots, B_k$ be the blocks in the root.
 %First, we need prefix sums of the number of enqueues in $E(B_1)\cdot E(B_2)\cdots E(B_i)$
 %so that we can do a binary search for the block $B_e$ that contains the $r$th enqueue.
@@ -250,14 +249,14 @@ the enqueue.
 %We can then continue in this way down the tree until reaching a leaf where the enqueue is stored explicitly.
 We shall show that the binary search in the root can be done in $O(\log p + \log q)$ steps,
 and the binary search within each other \node\ along the path to a leaf can be done in $O(\log p)$ steps,
-for a total of $O(\log^2 p + \log q)$ steps to complete task \ref{findenqueue}.
-All of the information needed for this search process can be derived from the 
+for a total of $O(\log^2 p + \log q)$ steps for task \ref{findenqueue}.
+All information needed for this search process can be derived from the 
 \eleft, \eright\ and \fld{sum\sub{enq}} fields.
 
 A block is called the \emph{superblock} of all of its direct subblocks.
 To facilitate task \ref{findinroot}, each block $B$ has a field \fld{super} that contains
-the (approximate) index of its superblock in the parent \node's \fld{blocks} array.
-We shall ensure that the value of $B.\fld{super}$ differs from the true index of $B$'s superblock by at most 1.
+the (approximate) index of its superblock in the parent \node's \fld{blocks} array (it may differ from the true index by 1).
+%We shall ensure that the value of $B.\fld{super}$ differs from the true index of $B$'s superblock by at most 1.
 This allows a process to determine the true location of the superblock by checking the \eleft\ or \eright\ values of just two \blocks\ in the parent \node.
 Thus, starting from an operation in a leaf's block, one can use these indices to track the 
 operation all the way up the path to the root, and determine the operation's location in a root block
@@ -292,8 +291,8 @@ So, we leave $B.\fld{super}$ blank.  After $B$ is installed
 in $v.\fld{blocks}[\var{h}]$, processes cooperate to fill in $B.\fld{super}$ 
 when they attempt to advance $v.\fld{head}$ from $h$ to $h+1$,
 using a value they read from the \fld{head} field of $v$'s parent.
-As mentioned above, this might not be the exact index of $B$'s superblock, but we
-shall prove that it is close.
+%As mentioned above, this might not be the exact index of $B$'s superblock, but we
+%shall prove that it is close.
 
 \subsection{Details of the Implementation}
 
@@ -526,7 +525,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
         \State \var{prev\sub{right}} \assign\ \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eright].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from right child}
         \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \label{leftOrRight} \Comment{required enqueue is in \var{v}.\fld{left}}
             \State \fld{dir} \assign\ \fld{left}
-        \Else
+        \Else \Comment{required enqueue is in \var{v}.\fld{right}}
             \State \fld{dir} \assign\ \fld{right}
             \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$
         \EndIf \label{endChooseDir}
@@ -586,14 +585,14 @@ either at line \ref{helpAdvance} during a \op{Refresh} on \var{v}'s parent or li
 
 \opemph{CreateBlock}(\var{v, i}) is used
 by \op{Refresh} to construct a block to be installed in \var{v}.\fld{blocks}[\var{i}].
-The block \var{new} is created in Line \ref{initNewBlock}. 
-The \eleft\ and \eright\ fields are filled in with the indices of the last blocks appended to \var{v}'s
-children, which are obtained by reading the \fld{head} index in \var{v}'s children.
+%The block \var{new} is created in Line \ref{initNewBlock}. 
+The \eleft\ and \eright\ fields store the indices of the last blocks appended to \var{v}'s
+children, obtained by reading the \fld{head} index in \var{v}'s children.
 Since the \fld{sum\sub{enq}} field should store the number of enqueues in
 \var{v}.\fld{blocks}[1..\var{i}] and these enqueues come from \var{v}.\fld{left.blocks}[1..\var{new}.\eleft] and \var{v}.\fld{blocks}[1..\var{new}.\eright], line \ref{createSumEnq} sets
 \fld{sum\sub{enq}} to $\var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right}.\fld{blocks}[\var{new}.\eright].\fld{sum\sub{enq}}$.
 Line \ref{computeNumEnq} sets \var{num\sub{enq}} to the number of enqueues in the new block by
-subtracting from \var{new}.\fld{sum\sub{enq}} the number of enqueues that are already in \var{v}.\fld{blocks}[$1..\var{i}-1$].
+subtracting from \var{new}.\fld{sum\sub{enq}} the number of enqueues  in \var{v}.\fld{blocks}[$1..\var{i}-1$].
 The values of \var{new}.\fld{sum\sub{deq}} and \var{num\sub{deq}} are computed similarly.
 Then, if \var{new}
 is going to be installed in the root, line \ref{computeLength} computes the \fld{size} field, which
@@ -615,24 +614,22 @@ value greater than \var{b} from $\var{par}.\fld{left.head}=\var{v}.\fld{head}$ a
 \var{B} as a subblock. 
 %Let $b'$ be the index of $B'$ in $par$.\fld{blocks}. 
  
-Since the index of \var{B}'s superblock is not known until $B$ is
-propagated to $par$, $R_v$ cannot set the \nf{super} field of ${B}$ when
+Since the index of \var{B}'s superblock $B'$ is not known until $B$ is
+propagated to $par$, $R\sub{\var{v}}$ cannot set the \nf{super} field of ${B}$ when
 it creates \var{B}. 
-It would be too costly to have $R_{par}$ set the \fld{super} field of all the direct subblocks of $B'$ (because
+It would be too costly to have $R_{par}$ set the \fld{super} field of all the direct subblocks of $B'$ (since
 there could be up to $p$ direct subblocks).
-Intuitively, the index of \var{B}'s superblock will be close to the value of \var{par}.\fld{head} has when \var{B} is installed.
+Intuitively, the index of $B'$ will be close to the value of \var{par}.\fld{head} has when \var{B} is installed.
 Since we can search for the precise superblock when we need it, it suffices that \var{B}.\fld{super}
-is close to the actual index of \var{B}'s superblock.
+is close to the actual index of  $B'$.
 Thus, after \var{B} is installed, the call to \op{Advance} at line \ref{advance} sets the value of \var{B}.\fld{super} by reading \var{par}.\fld{head}.
-As mentioned earlier, other processes may help fill in this field by calling \op{Advance} at line \ref{helpAdvance} or \ref{advance} to ensure that it is filled in soon after \var{B} is installed.
-We shall
-show that this ensures that \nf{$B$.super} differs
+As mentioned earlier, other processes may help by calling \op{Advance} at line \ref{helpAdvance} or \ref{advance} to ensure that $\var{B}.\fld{super}$ is filled in soon after \var{B} is installed.
+We shall show \nf{$B$.\fld{super}}  differs
 from the index of $B'$ by at most~1. 
 
 To compute the response of the $i$th \nf{Dequeue} in the $b$th block
 of the root, \opemph{FindResponse}(\var{b, i}) determines at line \ref{checkEmpty} if the queue is empty.
-If the queue is
-not empty, Line \ref{computeE} computes the rank \var{e} of the
+If not, line \ref{computeE} computes the rank \var{e} of the
 \op{Enqueue} whose argument is the \op{Dequeue}'s response. 
 A binary search on the \fld{sum\sub{enq}} fields of \var{root}.\fld{blocks} finds the index $b_e$ of the block that contains 
 the \var{e}th enqueue.

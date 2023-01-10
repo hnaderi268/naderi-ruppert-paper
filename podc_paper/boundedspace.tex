@@ -67,11 +67,11 @@ is a dequeue, $op$ must have been helped before $B$ was discarded, so $op$ can s
 its own leaf.
 \here{What about enqueues not finding required block?}
 
-Each process takes $\tilde{O}(p)$ steps during a GC phase.\footnote{We use $\tilde{O}$ notation
-to omit polylogarithmic factors; see Appendix \ref{sec::GCanalysis} for precise bounds.}
-Since all processes may run GC,
-a total of $\tilde{O}(G)$ steps is spent on a GC phase.
-There are at least $G$ operations between two GC phases,  so
-GC contributes only $\tilde{O}(1)$ steps per operation in an amortized sense.
-Doing GC less frequently would yield better constant factors in the amortized number of steps per operation but use more space.
+A GC phase on a node takes $O(p\log p \log(p+q))$ steps to help complete all pending operations.
+If all processes carry out this GC phase, it takes a total of $O(p^2\log p\log(p+q))=O(G\log(p+q))$ steps.
+There are at least $G$ operations between two GC phases,  so for each node,
+GC  contributes only $O(\log(p+q))$ steps to each operation in an amortized sense.
+Adding up over all nodes an operation visits, 
+an operation takes $O(\log p\log(p+q))$ steps doing GC in an amortized sense.
+%Doing GC less frequently would yield better constant factors in the amortized number of steps per operation but use more space.
 

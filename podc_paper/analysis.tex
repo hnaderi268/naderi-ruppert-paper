@@ -59,15 +59,15 @@ By \Cref{blockNotEmpty}, each direct subblock of $B$ contains at least one opera
 $B$ has at most $c$ direct subblocks.
 \end{proof}
 
-We now bound operations' running times in terms of the number of processes $p$, the maximum contention $c\leq p$ and the size of the queue. 
+We now bound step complexity in terms of the number of processes $p$, the maximum contention $c\leq p$ and the size of the queue. 
 
-\begin{lemma}\label{enqDeqTime}
+\begin{mytheorem}\label{enqDeqTime}
 Each \op{Enqueue} and null Dequeue takes $O(\log p)$ steps 
 and each non-null \op{Dequeue} takes
 $O(\log p\log c + \log q_e+ \log q_d)$ steps,
 where $q_d$ is the size of the queue when the \nf{Dequeue} is linearized and 
 $q_e$ is the size of the queue when the \op{Enqueue} of the value returned is linearized.
-\end{lemma}
+\end{mytheorem}
 \begin{proof}
 An \op{Enqueue} or null \op{Dequeue} creates a block, appends it to the process's 
 leaf and propagates it to the root.  The \op{Propagate}  does $O(1)$ steps 

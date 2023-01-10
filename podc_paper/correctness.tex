@@ -3,12 +3,12 @@
 \section{Proof of Correctness}
 \label{sec::correctness}
 
-After proving some basic invariants in Section \ref{sec::basicProperties},
-we show in Section \ref{sec::propagating} that performing a double refresh at each node
-is sufficient to propagate an operation to the root.
-In Section \ref{sec::tracingCorrect} we show that the \op{getEnqueue} and \op{indexDequeue}
-routines correctly navigate through the \ordering\ tree.
-Finally, we show that the implementation is linearizable in Section \ref{sec::linearizability}.
+After proving some basic properties in Section \ref{sec::basicProperties},
+we show in Section \ref{sec::propagating} that a double refresh at each node
+suffices to propagate an operation to the root.
+In Section \ref{sec::tracingCorrect} we show \op{GetEnqueue} and \op{IndexDequeue}
+correctly navigate through the  tree.
+Finally, we prove linearizability in Section \ref{sec::linearizability}.
 
 \subsection{Basic Properties}
 \label{sec::basicProperties}

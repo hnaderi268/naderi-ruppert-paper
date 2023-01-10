@@ -227,11 +227,11 @@ the block in $\var{v}.\fld{blocks}[b]$ has two fields \fld{sum\sub{enq}} and \fl
 that store the total number of enqueues and dequeues in $\var{v}.\fld{blocks}[1..\var{b}]$.
 These fields allow us to pinpoint the  location of an operation among the subblocks of a given block.
 For example, consider finding the $r$th enqueue $E_r$ in the linearization.
-We do a binary search on \fld{sum\sub{enq}} fields of the root's blocks 
-to locate the block that contains $E_r$.
-If we know which block $B$ in some \node\ $v$ contains $E_r$,
+A binary search for $r$ on \fld{sum\sub{enq}} fields of the root's blocks 
+finds the block  containing $E_r$.
+If we know a block $B$ in a \node\ $v$ contains $E_r$,
 we can use the \fld{sum\sub{enq}} field again to determine which child of $v$ contains $E_r$
-and then to do a binary search
+and then do a binary search
 among the direct subblocks of $B$ in that child.
 Thus, we work our way down the tree until we find a leaf block, which explicitly stores 
 $E_r$.
@@ -262,18 +262,18 @@ Thus, starting from an operation in a leaf's block, one can use these indices to
 operation all the way up the path to the root, and determine the operation's location in a root block
 in $O(\log p)$ time.
 
-We now consider task \ref{findrank}.
-First, we must determine whether the queue is empty when a dequeue occurs.
-To facilitate this, each block in the root stores a \fld{size} field that stores the number of elements
-in the queue after all operations in the linearization ordering up to that block (inclusive) 
-have been performed.
-We can easily determine which dequeues in a block $B_d$ in the root are null dequeues using
-$B_{d-1}.\fld{size}$, which stores the size of the queue just before $B_d$'s operations are performed, and the number of enqueues and dequeues in $B_d$.
-We can also compute the number of non-null dequeues in blocks $B_1, \ldots, B_{d-1}$ 
-as $B_{d-1}.\fld{sum\sub{enq}}-B_{d-1}.\fld{size}$.
-Then, for any non-null dequeue in $B_d$, we can use this information to determine its
-rank among all non-null dequeues in the linearization ordering, and hence the rank of the enqueue
-whose value it should return (among all enqueues).
+Now consider task \ref{findrank}.
+To determine whether the queue is empty when a dequeue occurs,
+each block in the root has a \fld{size} field storing the number of elements
+in the queue after all operations in the linearization up to that block (inclusive) 
+have been done.
+We can  determine which dequeues in a block $B_d$ in the root are null dequeues using
+$B_{d-1}.\fld{size}$, which is the size of the queue just before $B_d$'s operations, and the number of enqueues and dequeues in $B_d$.
+Moreover, the total number of non-null dequeues in blocks $B_1, \ldots, B_{d-1}$ 
+is $B_{d-1}.\fld{sum\sub{enq}}-B_{d-1}.\fld{size}$.
+We can use this information to determine the
+rank of a non-null dequeue in $B_d$ among all non-null dequeues in the linearization, which is the rank  (among all enqueues) of the enqueue
+whose value the dequeue should return.
 
 Having defined the fields required for tasks \ref{findinroot}, \ref{findrank} and \ref{findenqueue},
 we can easily see how to construct a new block $B$ during a \op{Refresh} in $O(1)$ time.
@@ -619,13 +619,15 @@ propagated to $par$, $R\sub{\var{v}}$ cannot set the \nf{super} field of ${B}$ w
 it creates \var{B}. 
 It would be too costly to have $R_{par}$ set the \fld{super} field of all the direct subblocks of $B'$ (since
 there could be up to $p$ direct subblocks).
-Intuitively, the index of $B'$ will be close to the value of \var{par}.\fld{head} has when \var{B} is installed.
-Since we can search for the precise superblock when we need it, it suffices that \var{B}.\fld{super}
-is close to the actual index of  $B'$.
-Thus, after \var{B} is installed, the call to \op{Advance} at line \ref{advance} sets the value of \var{B}.\fld{super} by reading \var{par}.\fld{head}.
-As mentioned earlier, other processes may help by calling \op{Advance} at line \ref{helpAdvance} or \ref{advance} to ensure that $\var{B}.\fld{super}$ is filled in soon after \var{B} is installed.
-We shall show \nf{$B$.\fld{super}}  differs
-from the index of $B'$ by at most~1. 
+Soon after $B$ is installed,
+a call to \op{Advance} at line \ref{helpAdvance} or \ref{advance} by some process will
+set \var{B}.\fld{super} to a value read from \var{par}.\fld{head}.
+We shall show that this happens soon enough that $B.\fld{super}$ differs from the true index of $B'$
+by at most 1.
+%Thus, after \var{B} is installed, the call to \op{Advance} at line \ref{advance} sets the value of \var{B}.\fld{super} by reading \var{par}.\fld{head}.
+%As mentioned earlier, other processes may help by calling \op{Advance} at line \ref{helpAdvance} or \ref{advance} to ensure that $\var{B}.\fld{super}$ is filled in soon after \var{B} is installed.
+%We shall show \nf{$B$.\fld{super}}  differs
+%from the index of $B'$ by at most~1. 
 
 To compute the response of the $i$th \nf{Dequeue} in the $b$th block
 of the root, \opemph{FindResponse}(\var{b, i}) determines at line \ref{checkEmpty} if the queue is empty.

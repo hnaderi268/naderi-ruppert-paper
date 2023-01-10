@@ -1,7 +1,7 @@
 % !TEX root =  podc-submission.tex
 
 \subsection{Correctness}
-Unfortunately, there are enough changes to the algorithm that a new proof of correctness
+There are enough changes to the algorithm that a new proof of correctness
 is required.  Its structure mirrors the proof of the original algorithm, but requires additional
 reasoning to ensure GC does not interfere with other routines.
 
@@ -55,7 +55,7 @@ by a GC phase.
 \here{remember to come back to this point}
 
 We now establish that definition (\ref{defsubblock}) of a block's subblocks
-still makes sense.
+still makes sense by proving the analogue of Lemma \ref{lem::headProgress}.
 
 %\here{If next obs is only used once, can fold it into the proof that needs it}
 %\begin{observation}
@@ -68,7 +68,7 @@ still makes sense.
 %on line \ref{createEndLeftGC} and \ref{createEndRightGC}.
 %\end{proof}
 
-We next prove the analogue of Lemma \ref{lem::headProgress}.
+
 \begin{customlemma}{\ref{lem::headProgress}$'$}\label{lem::headProgressGC}
  If $h>0$ and a block with index $h$ has been inserted into $\var{v}.\fld{blocks}$ then 
  $\var{v}.\fld{blocks}[h-1].\fld{end\sub{left}} \leq \var{v}.\fld{blocks}[h].\fld{end\sub{left}}$ and 
@@ -182,7 +182,7 @@ it has been propagated to the root,
 the value of each enqueue contained in the block has either been returned by a dequeue
 or written in the \fld{response} field of a dequeue, and
 \item
-each dequeue contained in the block has either terminated or has a non-null \fld{response} field in the leaf block that represents it.
+each dequeue contained in the block has terminated or some process has written to the \fld{response} field in the leaf block that represents it.
 \end{itemize}
 Intuitively, once a block is finished, operations no longer need to pass through the block
 to compute responses to operations.

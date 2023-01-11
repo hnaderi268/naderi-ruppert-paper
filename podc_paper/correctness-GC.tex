@@ -8,7 +8,7 @@ reasoning to ensure GC does not interfere with other routines.
 \subsubsection{Basic Properties}
 
 The following observation describes
-how the set of blocks in the RBT can be modified.
+how the set of blocks in a node's RBT can be modified.
 
 \begin{lemma}\label{RBTupdates}
 Suppose a step of the algorithm changes $\var{v}.\fld{blocks}$ from a non-empty tree $T$ to $T'$.
@@ -312,7 +312,7 @@ that the space-bounded algorithm is linearizable.
 \here{need to prove a lemma analogous to \Cref{blockSize}}
 
 We first bound the size of RBTs.  Let $q_{max}$ be the maximum size of the queue at any time during the sequential execution given by the linearization $L$.
-Recall that GC is done on a node every $G$ times its RBT is updated, and we chose $G$ to be $(p\ceil{\log p})^2$.
+Recall that GC is done on a node every $G$ times its RBT is updated, and we chose $G$ to be $p^2\ceil{\log p}$.
 Part of the proof of the following lemma is similar to the proof of \Cref{dSearchTime}.
 %We say the index $b$ \emph{is marked in node \var{v}} if some process has tested
 %whether $b>\var{v}.\fld{last}[*]$ at line \ref{marktest1} or \ref{marktest2}.
@@ -364,8 +364,8 @@ So, the block returned is a subblock of block $m$ of the root, unless
 at some point along the path of subblocks the subblock has already been removed by a split,
 in which case \op{SplitBlock} returns a subblock of a block $m'>m$ in the root.
 
-Next, we bound the number of operations in \var{v}'s blocks that are retained when $A$ does sets
-$T'\assign\op{Split}(T,s)$ operation.
+Next, we bound the number of operations in \var{v}'s blocks that are retained when $A$  sets
+$T'\assign\op{Split}(T,s)$.
 Since $T$ was read before $C$, any operation in $T$ is either in progress at $C$ or has been propagated to the root before $C$.\here{cite a lemma about propagation before operation terminates}
 Thus, there are at most $p$ operations in $T$ that do not appear in $L_1\cdot L_2$.
 All the rest of the operations in blocks of $T'$ have been propagated to blocks $m..\ell$ of the root.
@@ -395,13 +395,13 @@ on each node separately, might reduce it to qlogp + poly(p).  Might also be poss
 more precise about how it depends on "current" size of queue rather than max size.}
 
 \begin{mytheorem}\label{spaceBound}
-The queue data structure uses a maximum of $O(pq_{max}+p^3\log^2 p)$ words of memory at any time.
+The queue data structure uses a maximum of $O(pq_{max}+p^3\log p)$ words of memory at any time.
 \end{mytheorem}
 \begin{proof}
 There are $2p-1$ nodes in the ordering tree.  Aside from the RBT, each node uses $O(1)$ memory words.
 Each process may hold pointers to $O(1)$ RBTs that are no longer current in local variables.
 So the space bound follows from \Cref{RBTbound} and the fact that $G$ is chosen
-to be $(p\ceil{\log p})^2$.
+to be $p^2\ceil{\log p}$.
 \end{proof}
 
 \here{It may be possible, via a more careful analysis, to reduce the bound on space usage to $O(\log^2 p(q_{max}+p^3)$.}
@@ -414,7 +414,7 @@ The amortized step complexity of each operation is $O(\log p \log(p+q_{max}))$.
 \end{mytheorem}
 \begin{proof}
 \here{this proof may need some modification since code was changed to change how split point is computed}
-It follows from \Cref{RBTbound} and the fact that $G=(p\ceil{\log p})^2$
+It follows from \Cref{RBTbound} and the fact that $G=p^2\ceil{\log p}$
 that all the RBT routines we use to perform \op{Split}, \op{Insert} and searches for
 blocks with a particular index or for a \fld{sum\sub{enq}} value (in line \ref{FRsearchGC} or \ref{getChildGC}) can all be done in $O(\log(p+q_{max}))$ steps.
 
@@ -425,7 +425,8 @@ A non-null \op{Dequeue} must also search for a block in the root at line \ref{FR
 and call \op{GetEnqueue}.  At each level of the tree, \op{GetEnqueue} does $O(1)$ RBT operations (including a search at line \ref{getChildGC}) and $O(1)$ other steps.
 Thus, a \op{Dequeue} also takes $O(\log p \log(p+q_{max}))$ steps.
 
-Now we consider the additional steps a process takes while doing GC in line \ref{GCstart}--\ref{GCend}.
+Now we consider the additional steps a process takes while doing GC in line \ref{GCstart}--\ref{GCend}
+and show that the amortized number of GC steps each operation takes is also $O(\log p\log(p+q_{max}))$.
 If a process does GC in a call to \op{AddBlock}($\var{v},T,B$) where $B$ has \fld{index} $r\cdot G$ for some integer $r$, we call this the process's \emph{$r$th helping phase on \var{v}}.
 We argue that each process $P$ can do an $r$th helping phase on \var{v} at most once as follows.
 Consider $P$'s first call $A$ to \op{AddBlock} that does an $r$th helping phase on \var{v}.
@@ -450,9 +451,8 @@ We can amortize these steps over the operations that appear in
 $\var{v}.\fld{blocks}[(r-1)p^2+1..p^2]$.
 By \Cref{blockNotEmpty}, there are at least $G$ such operations, 
 so each operation's amortized number of steps for GC at each node along the path from its leaf to the root
-is $O(p^2\log p\log(p+q_{max})/G)=O(\log(p+q_{max})/\log p)$.
-Hence each operation's amortized number of GC steps is $O(\log(p+q_{max}))$, which is less than
-the bound on the number of non-GC steps it performs.
+is $O(p^2\log p\log(p+q_{max})/G)=O(\log(p+q_{max}))$.
+Hence each operation's amortized number of GC steps is $O(\log p\log(p+q_{max}))$.
 \end{proof}
 
 We remark that the implementation remains wait-free:  the depth of recursion in each routine is  bounded

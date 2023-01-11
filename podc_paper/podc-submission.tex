@@ -265,7 +265,7 @@ Previous lock-free queue implementations from \op{CAS} all have amortized step c
 $\Omega(p)$ per operation in worst-case executions, where $p$ is the number of processes that 
 access the queue.  Our new wait-free queue  takes $O(\log p)$ steps per enqueue and 
 $O(\log^2 p +\log q)$ steps per dequeue, where $q$ is the size of the queue.  
-A bounded-space version of the implementation has amortized step complexity of $O(\log^2 p +\log q)$ per operation.
+A bounded-space version of the implementation has $O(\log p \log(p+q))$ amortized step complexity  per operation.
 \end{abstract}
 
 %%

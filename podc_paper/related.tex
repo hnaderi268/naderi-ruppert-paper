@@ -8,9 +8,10 @@ A version of it is
 included in the standard Java Concurrency Package.  %java.util.concurrent.ConcurrentLinkedQueue
 See the paper that introduced it for a survey of the early history of concurrent queues.
 As mentioned above, the MS-queue suffers from the CAS retry problem because of contention at the front and back of the queue.
-Thus, it is lock-free but not wait-free and has an amortized\Hossein{Maybe we can say worst-case. I see that you have used amortized step complexity consistently everywhere but maybe it is fair to say that these papers were not designed to improve the worst-case amortized step complexity.}
-\Eric{Amortized step complexity is defined in first parag of paper to be worst case over all executions of the average number of steps per operation, so I think the worst-case aspect of it is clear.  Also, if we just said ``worst-case'' without ``amortized'' it would be confused with worst-case of an individual operation, which is infinite in this case.  By the way, saying that previous implementations have $\Omega(p)$ step complexity, even in the amortized sense, makes the new contribution even more of a contrast.}
-step complexity of $\Theta(p)$ per operation.
+Thus, it is lock-free but not wait-free and has an amortized step complexity of $\Theta(p)$ per operation.
+
+%\Hossein{Maybe we can say worst-case. I see that you have used amortized step complexity consistently everywhere but maybe it is fair to say that these papers were not designed to improve the worst-case amortized step complexity.}
+%\Eric{Amortized step complexity is defined in first parag of paper to be worst case over all executions of the average number of steps per operation, so I think the worst-case aspect of it is clear.  Also, if we just said ``worst-case'' without ``amortized'' it would be confused with worst-case of an individual operation, which is infinite in this case.  By the way, saying that previous implementations have $\Omega(p)$ step complexity, even in the amortized sense, makes the new contribution even more of a contrast.}
 
 Many papers have described ways to reduce contention in the MS-queue.
 Moir et al.~\cite{DBLP:conf/spaa/MoirNSS05} 
@@ -51,7 +52,7 @@ presented an optimistic  queue implementation.
 In the MS-queue, an enqueue requires two CAS steps.
 The optimistic queue uses a doubly-linked list to reduce the number of
 \texttt{CAS} instructions to one in the best case. 
-Pointers in the doubly-linked list can be inconsistent, but are fixed when needed by traversing the list.
+Pointers in the doubly-linked list can be inconsistent, but are fixed when necessary by traversing the list.
 Although this fixing is rare in practice, it yields an amortized complexity of $\Omega(qp)$ 
 steps per operation for worst-case executions.
 
@@ -135,7 +136,7 @@ the universal construction of Afek, Dauber, and
 Touitou~\cite{DBLP:conf/stoc/AfekDT95} can be modified to use $O(\log p)$ steps per operation, 
 assuming that words can store $\Omega(p \log p)$ bits. 
 (Thus, in terms of operations on reasonably-sized $O(\log p)$-bit words, their construction would take $\Omega(p\log p)$ steps per operation.)
-Fatourou and Kallimanis \cite{FK14} used their universal construction based on fetch\&add and LL/SC instructions
+Fatourou and Kallimanis \cite{FK14} used their own universal construction based on fetch\&add and LL/SC instructions
 to implement a queue, but its step complexity is also $\Omega(p)$.
 \here{Double check this.}
 
@@ -160,7 +161,7 @@ since previous CAS-based queues all required $\Omega(p)$ step complexity.
 Our new implementation counters this argument.
 
 \emph{Fetch\&Increment Objects.}
-There are implementations of fetch\&increment objects that use a polylogarithmic number of steps per operation. \cite{ERW12,10.1007/978-3-642-41527-2_20}
+There are implementations of fetch\&increment objects that use a polylogarithmic number of steps per operation \cite{ERW12,10.1007/978-3-642-41527-2_20}.
 Our approach is similar to that of Ellen, Ramachandran and Woelfel \cite{ERW12},
 which also uses a tree structure to keep track of the fetch\&increments
 that have been performed, as in the universal construction of \cite{DBLP:conf/stoc/AfekDT95}.

@@ -32,7 +32,7 @@ We can store, in the root of the RBT, a pointer to the maximum block so that \op
 can be done in constant time, without affecting the time of other RBT operations.
 Similarly, a \op{MinBlock} query finds the block with the minimum \fld{index} in a RBT.
 
-Blocks no longer require the \fld{super} field.  This was used to quickly find the blocks 
+Blocks no longer require the \fld{super} field.  It was used to quickly find a block's 
 superblock in the parent node's \fld{blocks} array, but this can now be done efficiently 
 by searching the parent's \fld{blocks} RBT instead.
 Each \typ{Block} has an additional field.
@@ -65,11 +65,11 @@ a path from its leaf to the root has a minor modification to search the \fld{blo
 each level instead of using the \fld{super} field.
 
 The new routines, \op{AddBlock}, \op{SplitBlock}, \op{Help} and \op{Propagated} are
-used to implement GC.
+used to implement the garbage collection (GC) phase.
 When a \op{Refresh} or \op{Append} wants to add a new block to a node's \fld{blocks} RBT,
 it calls the new \opemph{AddBlock} routine.
 Before attempting to add the block to a node's RBT, \op{AddBlock} triggers a GC phase on the RBT if 
-the new block's \fld{index} is a multiple of the constant $G$, which we choose to be $(p\ceil{\log p})^2$.
+the new block's \fld{index} is a multiple of the constant $G$, which we choose to be $p^2\ceil{\log p}$.
 This ensures that obsolete blocks are removed from the RBT once every $G$ times a new block is added to it.
 The GC phase uses \op{SplitBlock} to determine the index $s$ of the oldest block to keep,
 calls \op{Help} to help all pending dequeues that have been propagated to the root
@@ -87,12 +87,12 @@ helped to complete by line \ref{invokeHelp},
 it is safe to discard any blocks in the root older than $B_{root}$, as well
 as their subblocks.\footnote{If we used the more conservative approach of discarding blocks whose indices 
 are smaller than the \emph{minimum} entry of \var{last} instead of the maximum, helping would be unnecessary, but then one slow process could prevent GC from discarding any blocks, so the space would not be bounded.}
-The \op{SplitBlock} uses the \eleft\ and \eright\ fields to find the last subblock in \var{v}
-of $B_{root}$ (or any older block in the root).
+The \op{SplitBlock} uses the \eleft\ and \eright\ fields to find the last block in \var{v} that is a subblock
+of $B_{root}$ (or any older block in the root, in case $B_{root}$ has no subblocks in \var{v}).
 As \op{SplitBlock} is in progress, it is possible that some block that it needs in a node $\var{v}'$
 along the path from \var{v} to the root is discarded by another GC phase.
 In this case, \op{SplitBlock} uses the last subblock in \var{v} of the oldest block in $\var{v}'$ instead
-(since $\var{v}'$ determined that all blocks older than that are safe to discard).
+(since a GC phase on $\var{v}'$ determined that all blocks older than that are safe to discard anyway).
 
 The \opemph{Help} routine is fairly straightforward:  it loops through all leaves and
 helps the dequeue that is in progress there if it has already been propagated to the root.
@@ -274,7 +274,7 @@ The \opemph{Propagated} function is used to determine whether the dequeue has pr
 \end{algorithmic}
 \end{minipage}
 \vspace*{-4mm}
-\caption{Bounded-space queue implementation.\label{pseudocode1GC}  $G$ is a constant, which we choose to be $(p \ceil{\log p})^2$.}
+\caption{Bounded-space queue implementation.\label{pseudocode1GC}  $G$ is a constant, which we choose to be $p^2 \ceil{\log p}$.}
 \end{figure}
 
 \begin{figure}

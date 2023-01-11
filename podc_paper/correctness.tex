@@ -28,7 +28,7 @@ For each node \var{v},  \var{v}.\fld{head} is non-decreasing over time.
 \end{observation}
 
 \begin{lemma} \label{lem::headInc}
-Let $R$ be an instance of \opa{Refresh}{v} whose call to \op{CreateBlock} returns a non-\nl\ block.  When $R$ terminates, \var{v}.\head\ is greater than the value $R$ reads from it at line \ref{readHead}.
+Let $R$ be an instance of \opa{Refresh}{v} whose call to \op{CreateBlock} returns a non-\nl\ block.  When $R$ terminates, \var{v}.\head\ is strictly greater than the value $R$ reads from it at line \ref{readHead}.
 \end{lemma}
 \begin{proof}
 After $R$'s \op{CAS} at line \ref{incrementHead}, \var{v}.\head\ is no longer equal to the value \var{h}
@@ -45,13 +45,13 @@ If $\var{v}\neq \var{root}$,  $\var{v}.\fld{blocks}[i].super \neq \nl$ for $0<i<
 \begin{proof}
 Initially, $\var{v}.\head=1$, $\var{v}.\fld{blocks}[0]\neq\nl$  and $\var{v}.\fld{blocks}[i]=\nl$ for  $i>0$, so the claims~hold.
 
-Assume the claim holds before a change to $\var{v}.\fld{blocks}$, which can be made only
+Assume the claims hold before a change to $\var{v}.\fld{blocks}$, which can be made only
 by a successful \op{CAS} at line \ref{cas}.
 The \op{CAS} changes $\var{v}.\fld{blocks}[h]$ from \nl\ to a non-\nl\ value.
 Since $\var{v}.\fld{blocks}[h]$ is \nl\ before the CAS, $\var{v}.\head \leq h$ by the hypothesis.
-Since $h$ was read from $\var{v}.\fld{blocks}[h]$ earlier at line \ref{readHead}, 
-$\var{v}.\head \geq h$ by \Cref{lem::headPosition}.
-So, $h=\var{v}.\head$ and a change to $\var{v}.\fld{blocks}[\var{v}.\head]$ preserves the invariant.
+Since $h$ was read from $\var{v}.\head$ earlier at line \ref{readHead}, the current value of 
+$\var{v}.\head$ is at least $h$ by \Cref{nonDecreasingHead}.
+So, $\var{v}.\head=h$ when the \op{CAS} occurs and a change to $\var{v}.\fld{blocks}[\var{v}.\head]$ preserves the invariant.
 
 Now, assume the claim holds before a change to $\var{v}.\head$, which can only be an increment from $h$ to $h+1$
 by a successful \op{CAS} at line \ref{incrementHead} of \op{Advance}.
@@ -59,7 +59,7 @@ For the first two claims, it suffices to show that $\var{v}.\fld{blocks}[head] \
 \nf{Advance} is called either at line \ref{helpAdvance} 
 after testing that $\var{v}.\fld{blocks}[h]\neq\nl$ at line \ref{ifHeadnotNull},
 or at line \ref{advance} after the \op{CAS} at line \ref{cas} ensures $\var{v}.\fld{blocks}[h]\neq\nl$.
-For the third claim, observe that prior to incrementing $\var{v}.\head$ at line \ref{incrementHead},
+For the third claim, observe that prior to incrementing $\var{v}.\head$ to $i+1$ at line \ref{incrementHead},
 the \op{CAS} at line \ref{setSuper1} ensures that $\var{v}.\fld{blocks}[i].super\neq \nl$.
 \end{proof}
 
@@ -110,7 +110,7 @@ For  $i\neq j$, $\var{v}.\fld{blocks}[i]$ and $\var{v}.\fld{blocks}[j]$ cannot b
 \end{corollary}
 \begin{proof}
 A block $B$ contains the operations in $B$'s subblocks in leaves of the tree.
-An operation by process $P$ appears in one block of $P$'s leaf, so
+An operation by process $P$ appears in just one block of $P$'s leaf, so
 an operation 
 cannot be in two different leaf blocks. 
 By \Cref{lem::subblocksDistinct}, $\var{v}.\fld{blocks}[i]$ and $\var{v}.\fld{blocks}[j]$ have no common subblocks, so the claim follows.
@@ -140,9 +140,9 @@ By \Cref{lem::subblocksDistinct}, $\var{v}.\fld{blocks}[i]$ and $\var{v}.\fld{bl
 % \end{proof}
 
 The accuracy of the values stored in the \fld{sum\sub{enq}} and \fld{sum\sub{deq}} fields
-on line \ref{enqNew}, \ref{deqNew}, \ref{createSumEnq} and \ref{createSumDeq} follows easily
+on lines \ref{enqNew}, \ref{deqNew}, \ref{createSumEnq} and \ref{createSumDeq} follows easily
 from the definition of subblocks.  See Appendix 
-\ref{app::tracingDetails} for a detailed proof.
+\ref{app::tracingDetails} for a detailed proof of \Cref{lem::sum}.
 
 \begin{restatable}{invariant}{sumRes}
 \label{lem::sum}
@@ -151,14 +151,14 @@ $B.\fld{sum\sub{enq}} = | E(\var{v}.\fld{blocks}[0])\cdots E(\var{v}.\fld{blocks
 $B.\fld{sum\sub{deq}} = | D(\var{v}.\fld{blocks}[0])\cdots D(\var{v}.\fld{blocks}[i]) |$.
 \end{restatable}
 
-This allows us to prove that every block a Refresh installs contains at least one operation.
+This allows us to prove that every block a \op{Refresh} installs contains at least one operation.
 
 \begin{corollary}\label{blockNotEmpty}
 If a block $B$ is in $\var{v}.\fld{blocks}[i]$ where $i>0$, then $E(B)$ and $D(B)$ are not both empty.
 \end{corollary}
 \begin{proof}
 The \op{Refresh} that installed $B$ got $B$ as the response to its call to \op{CreateBlock} on line \ref{invokeCreateBlock}.
-Thus, at line \ref{testEmpty} $\var{num\sub{enq}}+\var{num\sub{deq}}\neq 0$.
+Thus, at line \ref{testEmpty}, $\var{num\sub{enq}}+\var{num\sub{deq}}\neq 0$.
 By \Cref{lem::sum}, $\var{num\sub{enq}} = |E(B)|$ and $\var{num\sub{deq}} = |D(B)|$,
 so these sequences cannot both be empty.
 \end{proof}
@@ -193,7 +193,7 @@ Thus, $new.\eleft \geq i$.  We consider two cases.
 Suppose $R$'s call to \op{CreateBlock} returns the new block $B'$ and $R$'s \op{CAS} at line \ref{cas} 
 installs $B'$ in $\var{v}.\fld{blocks}$.
 Then, $B$ is a subblock of some block in $\var{v}$, since  $B'.\eleft$ is greater than or equal to $B$'s index
-in $\var{v}.\fld{left.blocks}$.
+$i$ in $\var{v}.\fld{left.blocks}$.
 Hence $\var{v}$ contains $op$, as required.
 
 %\Eric{I think this case was missing from the proof in the thesis}
@@ -205,7 +205,7 @@ The value computed at line \ref{createSumEnq} is
 \var{num\sub{enq}} \hspace*{-2mm}
 &=& \hspace*{-2mm} \var{v}.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right.blocks}[new.\eright].\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[h-1].\fld{sum\sub{enq}} \\
 &=& \hspace*{-2mm}\var{v}.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right.blocks}[new.\eright].\fld{sum\sub{enq}} \\
-&&- \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft].\fld{sum\sub{enq}} - \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright].\fld{sum\sub{enq}}
+&&- \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft].\fld{sum\sub{enq}} - \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright].\fld{sum\sub{enq}}.
 \end{eqnarray*}
 By \Cref{lem::sum}, $num\sub{enq}$ is the  number of enqueues  in 
 $\var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft+1..new.\eleft]$ and
@@ -217,7 +217,7 @@ By \Cref{blockNotEmpty}, this means the ranges of blocks are empty, so that $\va
 Hence, $B$ is already a subblock of some block in $\var{v}$, so $\var{v}$ contains $op$.
 \end{proof}
 
-We now show that if a process fails its \op{Refresh}($\var{v}$) twice, some other process must have succeeded.
+We now show that a double \op{Refresh} propagates blocks as required.
 
 \begin{lemma}\label{lem::doubleRefresh}
 Consider two consecutive terminating calls $R_1$, $R_2$ to \op{Refresh}($\var{v}$) by the same process.
@@ -237,7 +237,7 @@ $R_3$ must have executed line \ref{readHead} after $R_1$, since $R_3$ read the v
 Thus, all operations contained in $\var{v}$'s children when $R_1$ begins
 are also contained in $\var{v}$'s children when $R_3$ later executes line \ref{readHead}.
 By \Cref{successfulRefresh}, these operations are contained in $\var{v}$ when $R_3$ performs its successful \op{CAS},
-which is before $R_2$ terminates.
+which is before $R_2$'s failed \op{CAS}.
 \end{proof}
 
 \begin{lemma} \label{lem::appendExactlyOnce}
@@ -297,7 +297,7 @@ If $1\leq i\leq |E(\var{v}.\fld{blocks}[b])|$ then \op{getEnqueue}($\var{v},b,i$
 We show that the linearization ordering $L$ defined in 
 (\ref{linearization}) is a legal permutation of a subset of the operations in 
 the execution, i.e., that it includes all operations that terminate and 
-if one operation $op_1$ terminates before another operation $op_2$ begins, then $op_2$ does not precede $op_1$ in $L$.  We also show result each dequeue returns is the same as in the sequential execution  $L$.
+if one operation $op_1$ terminates before another operation $op_2$ begins, then $op_2$ does not precede $op_1$ in $L$.  We also show the result each dequeue returns is the same as in the sequential execution  $L$.
 
 \begin{lemma} \label{linearSat}
 $L$ is a legal linearization ordering.
@@ -307,7 +307,7 @@ By \Cref{lem::noDuplicates}, $L$ is a permutation of a subset of the operations 
 By \Cref{lem::appendExactlyOnce}, each terminating operation is propagated to the root before it terminates,
 so it appears in $L$.
 Also, if $op_{1}$ terminates before $op_{2}$ begins, then $op_{1}$ 
-is propagated to the root before $op_2$ begins, so $op_2$ appears before $op_2$ in $L$.
+is propagated to the root before $op_2$ begins, so $op_1$ appears before $op_2$ in $L$.
 \end{proof}
 
 A simple proof (in Appendix \ref{app::tracingDetails}) shows that \fld{size} fields are computed correctly.

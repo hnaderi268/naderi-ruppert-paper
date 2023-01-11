@@ -37,7 +37,7 @@ Each of these $b-1-b_e$ blocks contains at least one operation, by \Cref{blockNo
 So, $b-1-b_e \leq B_{b-1}.\size + 2\cdot B_{b_e}.\size$.
 \end{proof}
 
-The following lemma is useful in bounding the time to \op{GetEnqueue}
+The following lemma is useful in bounding the time for \op{GetEnqueue}
 \begin{lemma}\label{blockSize}
 Each block $B$ in each node contains at most one operation of each process.
 If $c$ is the execution's maximum point contention, $B$ has at most $c$ direct~subblocks.
@@ -55,7 +55,7 @@ are invoked before $t$.  Thus, all are  running concurrently at $t$, so $B$ cont
 By definition, the direct subblocks of $B$ contain these $c$ operations, and each operation is contained
 in exactly one of these subblocks, by Lemma \ref{lem::subblocksDistinct}.
 By \Cref{blockNotEmpty}, each direct subblock of $B$ contains at least one operation,
-$B$ has at most $c$ direct subblocks.
+so $B$ has at most $c$ direct subblocks.
 \end{proof}
 
 We now bound step complexity in terms of the number of processes $p$, the maximum contention $c\leq p$, and the size of the queue. 
@@ -80,8 +80,8 @@ at line \ref{findAnswer}.
 By \Cref{dSearchTime}, the doubling search takes $O(\log(q_e+q_d+p))$ steps,
 since the size of the queue can change by at most $p$ within one block (by \Cref{blockSize}).
 \op{GetEnqueue} does a binary search within each node on a path from the root to a leaf.
-Each node $v$'s search is within the subblocks of one block in $v$'s parent.
-By \Cref{blockSize}, each search takes $O(\log c)$ steps, for a total of $O(\log p\log c)$ steps.
+Each node $\var{v}$'s search is within the subblocks of one block in $\var{v}$'s parent.
+By \Cref{blockSize}, each such search takes $O(\log c)$ steps, for a total of $O(\log p\log c)$ steps.
 \end{proof}
 
 \begin{corollary}

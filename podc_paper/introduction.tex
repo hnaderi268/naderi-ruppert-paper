@@ -15,7 +15,7 @@ If this CAS fails, the operation must retry.
 In the worst case, this means that each successful CAS may cause all other processes to
 fail and retry, leading to an amortized step complexity of $\Omega(p)$ per operation in a system of $p$ processes.
 (To measure amortized step complexity of a lock-free implementation, we consider all possible finite executions
-and divide the number of steps in the execution by the number of operations initiated in the execution.)
+and divide the number of steps in the execution by the number of operations  in the execution.)
 Numerous papers have suggested modifications to the MS-queue \cite{DBLP:conf/opodis/HoffmanSS07,DBLP:conf/podc/KoganH14,DBLP:conf/ppopp/KoganP11,DBLP:journals/dc/Ladan-MozesS08,MKLLP22,DBLP:conf/spaa/MoirNSS05,RC17}, but 
 all still have $\Omega(p)$ amortized step complexity as a result of
 contention on the front and back of the queue.
@@ -30,21 +30,22 @@ have an $\Omega(c)$ term in their step complexity, where $c$ represents contenti
 the number of processes that access the data structure concurrently, which can be $p$ in the worst case.
 Attiya and Fouren \cite{DBLP:conf/opodis/AttiyaF17} proved 
 that amortized $\Omega(c)$ steps per operation are indeed necessary
-for any CAS-based implementation of a lock-free bag data structure, which provide operations
+for any CAS-based implementation of a lock-free bag data structure, which provides operations
 to insert an element or remove an arbitrary element (chosen non-deterministically).
 Since a queue trivially implements a bag, this lower bound also holds for queues.
 At first glance, this would seem to settle the question of the step complexity of lock-free queues.
 However, the lower bound leaves a loophole:  it holds only if $c$ is $O(\log\log p)$.
 Thus, the lower bound could be stated more precisely as an amortized bound of $\Omega(\min(c,\log\log p))$ steps per operation.
 
-We exploit this loophole.  We show that it is, in fact, possible to implement a linearizable, wait-free queue
-whose step complexity is sublinear in $p$.
-Our queue is the first with step complexity that is polylogarithmic in $p$ and in $q$, the number of elements in the queue.
-For ease of presentation, we first give an unbounded-space construction that uses
-$O(\log^2 p + \log q)$ steps per operation,
+We exploit this loophole.  We show  it is, in fact, possible to design a linearizable, wait-free queue
+with step complexity sublinear in $p$.
+Our queue is the first whose step complexity  is polylogarithmic in $p$ and in $q$, the number of elements in the queue.
+For ease of presentation, we first give an unbounded-space construction where enqueues take $O(\log p)$ steps and
+dequeues take $O(\log^2 p + \log q)$ steps,
 and then modify it to bound the space
-while still having amortized step complexity $O(\log^2p + \log q)$ per operation.
-Both versions use single-word CAS on reasonably-sized words.
+while  having $O(\log p\log( p+ q))$ amortized step complexity  per operation.
+Both versions use single-word CAS on %reasonably-sized 
+small words.
 Moreover, each operation does $O(\log p)$ CAS instructions in the worst case, whereas previous
 lock-free queues use 
 %an unbounded number of CAS instructions in the worst case and 
@@ -60,7 +61,7 @@ and avoids the CAS retry problem.
 Operations in the root are ordered, 
 and this order is used to linearize the operations and compute their responses.
 \here{Either here or in related work section, talk about previous usage of ordering tree and how ours differs from it}
-Explicitly storing all operations in the nodes would be too costly.
+Explicitly storing all operations in the tree nodes would be too costly.
 Instead, we use a novel implicit representation of sets
 of operations that allows us to quickly merge two sets from the children of a node,
 and quickly access any  operation in a~set.

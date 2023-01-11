@@ -50,11 +50,8 @@ that has appeared in \var{v}'s RBT earlier.
 Thus, $\var{v}.\blocks[b]$ is unique, if it exists.
 We also use this notation in the code to indicate that a search of the RBT should be performed for the block
 with \fld{index} $b$.
-We describe later what should happen if that block is not found by the search because it has been removed
-by a GC phase.
-\here{remember to come back to this point}
 
-We now establish that definition (\ref{defsubblock}) of a block's subblocks
+We now establish that Definition (\ref{defsubblock}) of a block's subblocks
 still makes sense by proving the analogue of Lemma \ref{lem::headProgress}.
 
 %\here{If next obs is only used once, can fold it into the proof that needs it}
@@ -75,17 +72,17 @@ still makes sense by proving the analogue of Lemma \ref{lem::headProgress}.
  $\var{v}.\fld{blocks}[h-1].\fld{end\sub{right}} \leq \var{v}.\fld{blocks}[h].\fld{end\sub{right}}$.
 \end{customlemma}
 \begin{proof}
-The block $B$ with index $h$ was installed into \var{v}'s RBT by the CAS at line \ref{casGC} 
-that changed the tree from $T$ to $T'$.
-Before this CAS, line \ref{refreshReadTGC} read the tree $T$ from $\var{v}.blocks$,
+The block $B$ with index $h$ was installed into \var{v}'s RBT by the \op{CAS} at line \ref{casGC}.
+Suppose that \op{CAS} changed the tree from $T$ to $T'$.
+Before this \op{CAS}, line \ref{refreshReadTGC} read the tree $T$ from $\var{v}.blocks$,
 line \ref{refreshReadMax} found a block $B'$  with \fld{index} $h-1$ in $T$,
 and then line \ref{invokeCreateBlockGC} created the block $B$ with $\fld{index}=h$.
 Since $B'$ was already in $T$ before $B$ was created, the
-\op{CreateBlock}$(v,b-1)$ that created $B'$ terminated before the 
-\op{CreateBlock}$(v,b)$ that created $B$ started.
-By \Cref{nonEmptyIncreasing}, the value that line \ref{createEndLeftGC} of \op{CreateBlock}$(v,b-1)$ 
+\op{CreateBlock}$(\var{v},b-1)$ that created $B'$ terminated before the 
+\op{CreateBlock}$(\var{v},b)$ that created $B$ started.
+By \Cref{nonEmptyIncreasing}, the value that line \ref{createEndLeftGC} of \op{CreateBlock}$(\var{v},b-1)$ 
 stores in $B'.\eleft$ is less than or equal to the value that line \ref{createEndLeftGC} 
-of \op{CreateBlock}$(v,b)$ stores in $B.\eleft$.  
+of \op{CreateBlock}$(\var{v},b)$ stores in $B.\eleft$.  
 Similarly, the values stored in $B'.\eright$ and $B.\eright$ at line \ref{createEndRightGC} satisfy the claim.
 \end{proof}
 
@@ -93,7 +90,7 @@ Similarly, the values stored in $B'.\eright$ and $B.\eright$ at line \ref{create
 the nodes of an in-order traversal of any RBT have non-decreasing values of
 $\eleft$ (and of $\eright$).
 Thus, the searches for a block based on \eleft\ or \eright\ values 
-at lines \ref{searchsuper1}, \ref{searchsuper2} and \ref{searchsuper3},
+at lines \ref{searchsuper3}, \ref{searchsuper1} and \ref{searchsuper2},
 which are used to look for the superblock of a node or its predecessor, can be done in logarithmic time.
 
 \Cref{lem::subblocksDistinct}, \Cref{lem::noDuplicates}, \Cref{lem::sum}, \Cref{blockNotEmpty} 
@@ -239,7 +236,7 @@ For the base case, suppose $x$ is the root.
 that contains an operation that is either a null dequeue or an enqueue whose value is the response for a dequeue that has been propagated to the root (since these are the only ways that an entry of \var{last} can be set to $m$).
 By the FIFO property of queues, the values enqueued by enqueues in $\var{root}.\fld{blocks}[1..m-1]$
 are all dequeued by operations of $\var{root}.\fld{blocks}[1..m]$.
-Between the termination of $A$'s call to \op{Splitblock} at line \ref{callSplitBlock}
+Between the termination of $A$'s call to \op{SplitBlock} at line \ref{callSplitBlock}
 and the \op{CAS} step $st$ after $A$ terminates, the $A$ helps all pending dequeues at line \ref{invokeHelp}.
 Thus, after this helping (and before step $st$),
 $\var{root}.\fld{blocks}[1..m-1]$ are all finished blocks, so the claim is true.
@@ -264,7 +261,11 @@ By \Cref{splitfinished}, the minimum block in the new tree will satisfy the inva
 installs the new tree in $\var{v}.\fld{blocks}$.
 \end{proof}
 
-\here{Should add some discussion about the fact that we keep the newest finished block, in case some operation contained in a block with index i also needs to look at fields of the block with index i-1}
+We remark that \Cref{lem::finished} guarantees that GC keeps one block that is finished and discards all blocks with smaller indices.
+This is because the first unfinished block may still be traversed by an operation in the future,
+and when examining that block the operation may need information from the preceding block.  For example,
+when \op{FindResponse} is called on a block with index $b$, line \ref{FRnumenqGC} looks up the block with
+index $b-1$.
 
 \begin{lemma}\label{blocknotfound}
 If a \op{Dequeue} operation fails to find a block in an RBT,
@@ -302,7 +303,7 @@ field to calculate the superblock's position).
 They will give the correct response, provided none of the blocks they need to access have been 
 removed by GC.  But as we have seen above, if that happens, the \op{Enqueue} or \op{Dequeue} can simply terminate.
 
-Similarly the results of Section \ref{sec::linearizability} 
+Similarly, the results of Section \ref{sec::linearizability} 
 can be reproved in exactly the same way as for the original algorithm to establish
 that the space-bounded algorithm is linearizable.
 
@@ -455,7 +456,7 @@ is $O(p^2\log p\log(p+q_{max})/G)=O(\log(p+q_{max}))$.
 Hence each operation's amortized number of GC steps is $O(\log p\log(p+q_{max}))$.
 \end{proof}
 
-We remark that the implementation remains wait-free:  the depth of recursion in each routine is  bounded
+The implementation remains wait-free:  the depth of recursion in each routine is  bounded
 by the height of the tree and the only loop is the counted loop in the \op{Help} routine.
 Since each operation still only does two \op{CAS} instructions at each level of the tree (at line \ref{casGC}), the following proposition still holds for the space-bounded version of the queue.
 

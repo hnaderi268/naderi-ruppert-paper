@@ -64,39 +64,6 @@ The \op{IndexDequeue} routine, which must trace the location of a dequeue along
 a path from its leaf to the root has a minor modification to search the \fld{blocks} RBT at 
 each level instead of using the \fld{super} field.
 
-The new routines, \op{AddBlock}, \op{SplitBlock}, \op{Help} and \op{Propagated} are
-used to implement the garbage collection (GC) phase.
-When a \op{Refresh} or \op{Append} wants to add a new block to a node's \fld{blocks} RBT,
-it calls the new \opemph{AddBlock} routine.
-Before attempting to add the block to a node's RBT, \op{AddBlock} triggers a GC phase on the RBT if 
-the new block's \fld{index} is a multiple of the constant $G$, which we choose to be $p^2\ceil{\log p}$.
-This ensures that obsolete blocks are removed from the RBT once every $G$ times a new block is added to it.
-The GC phase uses \op{SplitBlock} to determine the index $s$ of the oldest block to keep,
-calls \op{Help} to help all pending dequeues that have been propagated to the root
-(to ensure that all blocks before $s$ can safely be discarded),
-uses the standard RBT \op{Split} routine \cite{Tar83}
-to remove all blocks with \fld{index} less than $s$,
-inserts the new block
-and finally performs a \op{CAS} to swing the node's \fld{blocks} pointer to the new RBT.
-
-To determine the oldest block in a node \var{v} to keep, the \opemph{SplitBlock} routine  first
-finds the most recent block $B_{root}$ in the root that contains either an enqueue that has been dequeued
-or a null dequeue using the \var{last} array.  By the FIFO property of queues, all enqueues in blocks before $B_{root}$ are either
-dequeued or will be dequeued by a dequeue that is currently in progress.  Once those pending dequeues have been
-helped to complete by line \ref{invokeHelp},
-it is safe to discard any blocks in the root older than $B_{root}$, as well
-as their subblocks.\footnote{If we used the more conservative approach of discarding blocks whose indices 
-are smaller than the \emph{minimum} entry of \var{last} instead of the maximum, helping would be unnecessary, but then one slow process could prevent GC from discarding any blocks, so the space would not be bounded.}
-The \op{SplitBlock} uses the \eleft\ and \eright\ fields to find the last block in \var{v} that is a subblock
-of $B_{root}$ (or any older block in the root, in case $B_{root}$ has no subblocks in \var{v}).
-As \op{SplitBlock} is in progress, it is possible that some block that it needs in a node $\var{v}'$
-along the path from \var{v} to the root is discarded by another GC phase.
-In this case, \op{SplitBlock} uses the last subblock in \var{v} of the oldest block in $\var{v}'$ instead
-(since a GC phase on $\var{v}'$ determined that all blocks older than that are safe to discard anyway).
-
-The \opemph{Help} routine is fairly straightforward:  it loops through all leaves and
-helps the dequeue that is in progress there if it has already been propagated to the root.
-The \opemph{Propagated} function is used to determine whether the dequeue has propagated to the root.
 
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTDOUBLE}{\com\ #1}}
 
@@ -175,11 +142,11 @@ The \opemph{Propagated} function is used to determine whether the dequeue has pr
 		\State $m \assign 0$
 		\For{$k\assign 1..p$} $m\assign \max(m, \var{v}.\fld{last}[k])$
 		\EndFor
-		\State $B\assign \var{root}.\fld{blocks}[m-1]$
+		\State $B\assign \var{root}.\fld{blocks}[m-1]$\label{SBlookup1}
 	\Else
 		\State $B_p \assign \Call{SplitBlock}{\var{v}.\fld{parent}}$\label{SBrecurse}
 		\State \var{dir} \assign ($\var{v}=\var{v}.\fld{parent.left}$ ? \fld{left} : \fld{right})
-		\State $B \assign \var{v}.\fld{blocks}[B_p.\edir]$
+		\State $B \assign \var{v}.\fld{blocks}[B_p.\edir]$\label{SBlookup2}
 	\EndIf
 	\State \linecomment If $B$ was discarded, use leftmost block instead
 	\State \Return ($B = \nl$ ? $\Call{MinBlock}{\var{v}.\var{blocks}}$ : $B$) \label{substitute}
@@ -235,7 +202,7 @@ The \opemph{Propagated} function is used to determine whether the dequeue has pr
     \Else
     	\State $T\assign \var{v}.\fld{parent.blocks}$
 		\State \fld{dir} \assign\ (\var{v}.\fld{parent.left} = \var{v} ? \fld{left} : \fld{right}) 
-		\If{\Call{MaxBlock}{$T$}.\edir < b} \Return \fa
+		\If{$\Call{MaxBlock}{T}.\edir < b$} \Return \fa
 		\Else
 			\State $B_p$ \assign min block in $T$ with $\edir \geq b$\label{searchsuper3}
 			\State \Return \Call{Propagated}{\var{v}.\fld{parent}, $B_p$.\fld{index}}
@@ -336,7 +303,7 @@ The \opemph{Propagated} function is used to determine whether the dequeue has pr
     \State \linecomment{find response to \var{i}th dequeue in $D(\var{root}.\fld{blocks}[\var{b}])$}
     \State \linecomment{Precondition:  $1\leq i\leq |D(\var{root}.\fld{blocks}[\var{b}])|$}
     \State \hangbox{\var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} - \mbox{ }$\\
-    		$\var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$}
+    		$\var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$}\label{FRnumenqGC}
     \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmptyGC}
     	\State \linecomment{ queue is empty when dequeue occurs}
         \gc{
@@ -441,3 +408,56 @@ The \opemph{Propagated} function is used to determine whether the dequeue has pr
 %\end{algorithmic}
 %\end{algorithm}
 
+The new routines, \op{AddBlock}, \op{SplitBlock}, \op{Help} and \op{Propagated} are
+used to implement the garbage collection (GC) phase.
+When a \op{Refresh} or \op{Append} wants to add a new block to a node's \fld{blocks} RBT,
+it calls the new \opemph{AddBlock} routine.
+Before attempting to add the block to a node's RBT, \op{AddBlock} triggers a GC phase on the RBT if 
+the new block's \fld{index} is a multiple of the constant $G$, which we choose to be $p^2\ceil{\log p}$.
+This ensures that obsolete blocks are removed from the RBT once every $G$ times a new block is added to it.
+The GC phase uses \op{SplitBlock} to determine the index $s$ of the oldest block to keep,
+calls \op{Help} to help all pending dequeues that have been propagated to the root
+(to ensure that all blocks before $s$ can safely be discarded),
+uses the standard RBT \op{Split} routine \cite{Tar83}
+to remove all blocks with \fld{index} less than $s$,
+inserts the new block
+and finally performs a \op{CAS} to swing the node's \fld{blocks} pointer to the new RBT.
+
+To determine the oldest block in a node \var{v} to keep, the \opemph{SplitBlock} routine  first
+finds the most recent block $B_{root}$ in the root that contains either an enqueue that has been dequeued
+or a null dequeue using the \var{last} array.  By the FIFO property of queues, all enqueues in blocks before $B_{root}$ are either
+dequeued or will be dequeued by a dequeue that is currently in progress.  Once those pending dequeues have been
+helped to complete by line \ref{invokeHelp},
+it is safe to discard any blocks in the root older than $B_{root}$, as well
+as their subblocks.\footnote{If we used the more conservative approach of discarding blocks whose indices 
+are smaller than the \emph{minimum} entry of \var{last} instead of the maximum, helping would be unnecessary, but then one slow process could prevent GC from discarding any blocks, so the space would not be bounded.}
+The \op{SplitBlock} uses the \eleft\ and \eright\ fields to find the last block in \var{v} that is a subblock
+of $B_{root}$ (or any older block in the root, in case $B_{root}$ has no subblocks in \var{v}).
+As \op{SplitBlock} is in progress, it is possible that some block that it needs in a node $\var{v}'$
+along the path from \var{v} to the root is discarded by another GC phase.
+In this case, \op{SplitBlock} uses the last subblock in \var{v} of the oldest block in $\var{v}'$ instead
+(since a GC phase on $\var{v}'$ determined that all blocks older than that are safe to discard anyway).
+
+The \opemph{Help} routine is fairly straightforward:  it loops through all leaves and
+helps the dequeue that is in progress there if it has already been propagated to the root.
+The \opemph{Propagated} function is used to determine whether the dequeue has propagated to the root.
+
+In the code, we use $\var{v}.\fld{blocks}[i]$ to refer to the block in the RBT stored in $\var{v}.\fld{blocks}$
+with index~$i$.
+A search for this block may sometimes not find it, if it has already been discarded
+by another process's GC.
+As mentioned in Section \ref{reducing}, if this happens to an enqueue operation,
+the enqueue can simply terminate because the fact that the block is gone means that another
+process has helped the enqueue reach the root of the ordering tree.
+Similarly, if  a dequeue operation performs a failed search on a RBT, the dequeue can return the value 
+written in the \fld{response} field of the 
+leaf block that represents the dequeue and terminate, since some other process
+will have written the \fld{response} there before discarding the needed block.
+We do not explicitly write this early termination every time we do a lookup in an RBT.
+There is one exception to this rule:  if an RBT lookup for block $B$ returns \nl\
+on line \ref{SBlookup1} or \ref{SBlookup2} of
+\op{SplitBlock} because the required block has been discarded, 
+we continue doing GC, since we do not a GC phase on one node
+to be prevented from cleaning up its RBT because a GC phase on a different node threw away some blocks
+that were needed.
+Line \ref{substitute} says what to do in this case.

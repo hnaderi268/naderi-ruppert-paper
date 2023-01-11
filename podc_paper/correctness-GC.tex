@@ -369,7 +369,7 @@ $T'\assign\op{Split}(T,s)$ operation.
 Since $T$ was read before $C$, any operation in $T$ is either in progress at $C$ or has been propagated to the root before $C$.\here{cite a lemma about propagation before operation terminates}
 Thus, there are at most $p$ operations in $T$ that do not appear in $L_1\cdot L_2$.
 All the rest of the operations in blocks of $T'$ have been propagated to blocks $m..\ell$ of the root.
-There are at most $p$ operations in block $m$ of the root by \Cref{blockSizeGC}
+There are at most $p$ operations in block $m$ of the root %by \Cref{blockSizeGC}
 and we showed above that there are at most $2q_{max} + 2p$ in blocks 
 $m+1..\ell$ of the root.
 Thus, there are at most $2q_{max}+4p$ operations in blocks of $T'$.

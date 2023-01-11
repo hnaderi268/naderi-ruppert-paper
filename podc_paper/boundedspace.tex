@@ -5,8 +5,8 @@
 
 Operations remain in the \fld{blocks} arrays forever. 
 This uses space proportional to the number of enqueues that have been invoked.
-Now, we describe how to remove blocks that are no longer needed to use space
-polynomial in $p$ and $q$, while maintaining polylogarithmic (amortized) step complexity.  For lack of space, details are in Appendix~\ref{reducing-details}.
+Now, we modify the implementation to remove blocks that are no longer needed, so that space usage is
+polynomial in $p$ and $q$, while (amortized) step complexity is still polylogarithmic.  For lack of space, details are in Appendix~\ref{reducing-details}.
 We replace the \fld{blocks} array in each node by a red-black tree (RBT)
 that stores the blocks.
 Each block has an additional \fld{index} field
@@ -14,7 +14,7 @@ that represents its position within the original \fld{blocks} array, and
 blocks in a RBT are sorted by \fld{index}.
 The attempt to install a new block in $\fld{blocks}[i]$  on line \ref{cas}
 is replaced by an attempt to insert a new block with index $i$ into the RBT.
-Accessing the block in entry $i$ in the \fld{blocks} array is 
+Accessing the block in $\fld{blocks}[i]$ is 
 replaced by searching the RBT for the  index $i$.
 The binary searches for a block in line \ref{FRb} and \ref{getChild} can simply search the RBT
 using the \fld{sum\sub{enq}} field, since the RBT is also sorted with respect to this field, by \Cref{lem::sum}.
@@ -46,19 +46,18 @@ also keep the running time of our operations polylogarithmic.
 Blocks should be kept if they contain operations still in progress.
 Moreover, a block containing an \op{Enqueue}($x$) must be kept until $x$ is dequeued.
 
-To maintain good amortized time per operation, we periodically do a garbage collection (GC) phase.
+To maintain good amortized time, we periodically do a garbage collection (GC) phase.
 If a \op{Refresh} on a node adds a block whose \var{index} is a multiple of $G=(p\ceil{\log p})^2$, it does GC to remove obsolete blocks from the node's RBT.
-To determine which blocks can be thrown away, the node has an array $\var{last}[1..p]$ where 
-each process writes the index of the last block in
-containing an enqueue whose element it dequeued.
+To determine which blocks can be thrown away, we use a global array $\var{last}[1..p]$ where 
+each process writes the index of the last block in the root
+containing a null dequeue or an enqueue whose element it dequeued.
 To perform GC, a process reads $\var{last}[1..p]$ and finds the maximum entry $m$.
 Then, it helps complete every other process's pending dequeue 
 by computing the dequeue's response and writing it in the block in the leaf that represents the dequeue.
 Once this helping is complete, it follows from the FIFO property of the queue that elements enqueued 
-in $\fld{blocks}[1..m-1]$ have all been dequeued, so GC can discard all blocks in the RBT 
-with indices smaller than $m-1$.
-Fortunately, there is an efficient \op{Split} operation that can remove
-all nodes with indices smaller than $m-1$ from a RBT in logarithmic time \cite[Sec.~4.2]{Tar83}.
+in $\fld{root.blocks}[1..m-1]$ have all been dequeued, so GC can discard all subblocks of those.
+Fortunately, there is an  RBT \op{Split} operation that can remove
+these blocks in logarithmic time \cite[Sec.~4.2]{Tar83}.
 
 An operation $op$'s search of a RBT may fail to find the required block $B$ that has been removed 
 by another process's GC phase.  If $op$
@@ -70,8 +69,8 @@ Excluding GC, an operation does $O(1)$ operations on RBTs at each level of the t
 $O(\log p(\log p +\log q))$ steps.
 A GC phase takes $O(p\log p \log(p+q))$ steps to help complete all pending operations.
 If all processes carry out this GC phase, it takes a total of $O(p^2\log p\log(p+q))=O(\frac{G\log(p+q)}{\log p})$ steps.
-There are at least $G$ operations between two GC phases,  so for each node,
-GC  contributes only $O(\frac{\log(p+q)}{\log p})$ steps to each operation in an amortized sense.
+Thus, each node contributes $O(\frac{\log(p+q)}{\log p})$ steps to each operation in an amortized sense
+since there are at least $G$ operations between two GC phases.
 Adding up over all nodes an operation visits, 
 an operation spends $O(\log(p+q))$ steps doing GC in an amortized sense.
 %Doing GC less frequently would yield better constant factors in the amortized number of steps per operation but use more space.

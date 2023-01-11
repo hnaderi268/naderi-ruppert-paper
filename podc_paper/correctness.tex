@@ -304,8 +304,7 @@ $L$ is a legal linearization ordering.
 \end{lemma}
 \begin{proof}
 By \Cref{lem::noDuplicates}, $L$ is a permutation of a subset of the operations in the execution.
-Since each operation creates a block $B$ containing the operation and then calls \op{Append}($B$), 
-the operation is propagated to the root before the operation terminates, by \Cref{lem::appendExactlyOnce},
+By \Cref{lem::appendExactlyOnce}, each terminating operation is propagated to the root before it terminates,
 so it appears in $L$.
 Also, if $op_{1}$ terminates before $op_{2}$ begins, then $op_{1}$ 
 is propagated to the root before $op_2$ begins, so $op_2$ appears before $op_2$ in $L$.

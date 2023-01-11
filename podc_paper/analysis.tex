@@ -1,8 +1,7 @@
 % !TEX root =  podc-submission.tex
 
 \section{Analysis}
-In this section, we analyze the number of steps and the number of \op{CAS} instructions performed by operations.
-First, we prove some claims about the size and operations of a block. 
+We now analyze the number of steps and the number of \op{CAS} instructions performed by operations.
 
 \begin{proposition}\label{casbound}
 Each \op{Enqueue} or \op{Dequeue} operation performs $O(\log p)$ \op{CAS} instructions.
@@ -19,10 +18,10 @@ The search that \op{FindResponse}$(b,i)$ does at line \ref{FRb} to find the inde
 \end{lemma}
 \begin{proof}
 Let the blocks in the root be $B_1, \ldots, B_\ell$.
-The doubling search used to compute $b_e$ takes $O(\log (b-b_e))$ steps,
+The doubling search for $b_e$ takes $O(\log (b-b_e))$ steps,
 so we prove $b - b_e \leq 2 \cdot B_{b_e}.\size + B_{b-1}.\size + 1$.
-If $b \leq b_e+1$, then this is trivial, so assume for the rest of the proof that $b>b_e+1$.
-
+If $b \leq b_e+1$, then this is trivial, so assume  $b>b_e+1$.
+%
 As shown in \Cref{linearCorrect}, the dequeue that calls \op{FindResponse} is in $B_b$ and is supposed to return an enqueue in $B_{b_e}$.
 Thus, there can be at most $B_{b_e}.\size$ dequeues in 
 $D(B_{b_e+1}) \cdots D(B_{b-1})$; otherwise in the sequential execution $L$,
@@ -59,7 +58,7 @@ By \Cref{blockNotEmpty}, each direct subblock of $B$ contains at least one opera
 $B$ has at most $c$ direct subblocks.
 \end{proof}
 
-We now bound step complexity in terms of the number of processes $p$, the maximum contention $c\leq p$ and the size of the queue. 
+We now bound step complexity in terms of the number of processes $p$, the maximum contention $c\leq p$, and the size of the queue. 
 
 \begin{mytheorem}\label{enqDeqTime}
 Each \op{Enqueue} and null Dequeue takes $O(\log p)$ steps 

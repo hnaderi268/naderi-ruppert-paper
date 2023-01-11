@@ -264,6 +264,8 @@ By \Cref{splitfinished}, the minimum block in the new tree will satisfy the inva
 installs the new tree in $\var{v}.\fld{blocks}$.
 \end{proof}
 
+\here{Should add some discussion about the fact that we keep the newest finished block, in case some operation contained in a block with index i also needs to look at fields of the block with index i-1}
+
 \begin{lemma}\label{blocknotfound}
 If a \op{Dequeue} operation fails to find a block in an RBT,
 %during its calls to \op{IndexDequeue} or \op{GetEnqueue}, 

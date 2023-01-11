@@ -2,13 +2,13 @@
 
 \section{Future Directions}
 
-Our focus in constructing our queue was on optimizing step complexity for worst-case executions.
-However, our approach does have a higher cost in the best case (for example, when an operation
-runs in isolation).
-It may be possible to make our queue adaptive by having an operation capture a starting node
-in the \ordering\ tree (as in \cite{DBLP:conf/stoc/AfekDT95}) rather than having a statically assigned leaf as its starting point.
+Our focus was on optimizing step complexity for worst-case executions.
+However, our queue has a higher cost than the MS-queue in the best case (when an operation
+runs by itself).
+Perhaps our queue could be made adaptive by having an operation capture a starting node
+in the \ordering\ tree (as in \cite{DBLP:conf/stoc/AfekDT95}) rather than starting at a statically assigned leaf.
 Another way to make our queue more practical might be to use it as the slow path in the
-fast-path slow-path methodology of Kogan and Petrank \cite{10.1145/2370036.2145835} to
+fast-path slow-path methodology  \cite{10.1145/2370036.2145835} to
 get a queue that has good performance in practice while also having good worst-case step complexity.
 
 There is a gap between our implementation, which takes $O(\log^2 p + \log q)$ steps per operation,

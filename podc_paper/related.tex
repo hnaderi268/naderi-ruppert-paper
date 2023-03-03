@@ -82,6 +82,7 @@ These solutions also use $\Omega(p)$ steps per operation due to the CAS retry pr
 
 Morrison and Afek \cite{DBLP:conf/ppopp/MorrisonA13} also used a linked list of (circular) arrays.
 To avoid the CAS retry problem, concurrent operations try to claim spots in an array using fetch\&increment instructions.
+(It was shown recently that this implementation can be modified to use single-word CAS instructions rather than double-width CAS \cite{RK23}.)
 If livelock between enqueues and a racing dequeue prevent enqueues from claiming a spot,
 the enqueues fall back on using a CAS to add a new array to the linked list, 
 and the CAS retry problem reappears.
@@ -148,6 +149,8 @@ uses unbounded memory.  Bounding the space increases the steps per operation to 
 Jayanti and Petrovic gave a wait-free polylogarithmic
 queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but it works only for a single dequeuer. 
 Our \ordering\ tree is similar to the tree structure they use to agree on a linearization ordering.
+Concurrently with our work, Johnen, Khattabi and Milani \cite{JKM23} build on \cite{DBLP:conf/fsttcs/JayantiP05} to give a wait-free queue implementation 
+that achieves $O(\log p)$ time for enqueue operations and $O(k \log p)$ time for dequeue operations if there are only $k$ dequeuers.
 
 \here{Should we mention https://arxiv.org/abs/2103.11926 , which seems to have a queue for 2 enqueuers and 2 dequeuers ?  May not be worth mentioning because then $p$ is a constant, so complexity in terms of $p$ doesn't make sense.}
 

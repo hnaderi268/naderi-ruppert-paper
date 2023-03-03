@@ -5,7 +5,7 @@
 There has been a great deal of research in the past several decades on the design of linearizable, lock-free queues.
 Besides being a fundamental data structure, queues are used in
 significant concurrent applications, including OS kernels \cite{MP91}, memory management (e.g., \cite{BBFRSW21}\here{try to find an older, more canonical reference}),
-packet processing \cite{DPDK},
+packet processing \cite{DPDK}, synchronization \cite{KAE23},\here{is this a good citation for this?}
 and sharing resources or tasks.
 The lock-free MS-queue of Michael and Scott \cite{MS98} is a classic shared queue implementation.
 It uses a singly-linked list with pointers to the front and back nodes.

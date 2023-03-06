@@ -149,8 +149,8 @@ uses unbounded memory.  Bounding the space increases the steps per operation to 
 Jayanti and Petrovic gave a wait-free polylogarithmic
 queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but it works only for a single dequeuer. 
 Our \ordering\ tree is similar to the tree structure they use to agree on a linearization ordering.
-Concurrently with our work, Johnen, Khattabi and Milani \cite{JKM23} build on \cite{DBLP:conf/fsttcs/JayantiP05} to give a wait-free queue implementation 
-that achieves $O(\log p)$ time for enqueue operations and $O(k \log p)$ time for dequeue operations if there are only $k$ dequeuers.
+Concurrently with our work, which first appeared in \cite{Nad22}, Johnen, Khattabi and Milani \cite{JKM23} built on \cite{DBLP:conf/fsttcs/JayantiP05} to give a wait-free queue implementation 
+that achieves $O(\log p)$ steps for enqueue operations but fails to achieve polylogarithmic step complexity for dequeues: their dequeue operations take $O(k \log p)$ steps if there are $k$ dequeuers.
 
 \here{Should we mention https://arxiv.org/abs/2103.11926 , which seems to have a queue for 2 enqueuers and 2 dequeuers ?  May not be worth mentioning because then $p$ is a constant, so complexity in terms of $p$ doesn't make sense.}
 

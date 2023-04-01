@@ -60,7 +60,7 @@ Find the $r$th enqueue in the linearization ordering.
 \end{enumerate}
 Since these tasks depends on the linearization ordering, we describe that ordering next.
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \input{tournamentTree.pdf_t}
 \caption{An example \ordering\ tree with four processes. 
 We show explicitly the enqueue sequence and dequeue sequence represented by each block in the \fld{blocks} arrays of the seven nodes.  The leftmost element of each \fld{blocks} array is a dummy block.
@@ -68,6 +68,7 @@ Arrows represent the indices stored in \eleft\ and \eright\ fields of blocks (as
 The fourth process's Deq\sub{6} is still propagating towards the root.
 The linearization order for this tree is
 Enq(a) Enq(e) Deq\sub{2} $\mid$ Enq(b) Deq\sub{4} Deq\sub{5} $\mid$ Enq(d) Enq(f) Enq(h) Deq\sub{1} $\mid$ Enq(c) Deq\sub{3} $\mid$ Enq(g), where vertical bars indicate boundaries of blocks in the root.\label{orderingtree}}
+\medskip
 \input{implicit.pdf_t}
 \caption{\label{implicit}The actual, implicit representation of the tree shown in Figure \ref{orderingtree}.
 The leaf blocks simply show the \fld{element} field.
@@ -75,7 +76,7 @@ Internal blocks show the \fld{sum\sub{enq}} and \fld{sum\sub{deq}} fields,
 and \eleft\ and \eright\ fields are shown using arrows as before.
 Root blocks also have the additional \fld{size} field.
 The \fld{super} field is not shown.}
-\end{figure}
+\end{figure*}
 
 \subsection{Linearization Ordering}
 
@@ -109,10 +110,10 @@ and its dequeue sequence $D(B)$ is empty.  If $B$ is a block in a leaf represent
 If $B$ is a block in an internal node $\var{v}$ with direct subblocks $B^L_1, \ldots, B^L_\ell$ from 
 $\var{v}$'s left child
 and $B^R_1,\ldots,B^R_r$ from $\var{v}$'s right child, then $B$'s operation sequences are defined by the concatenations 
-\begin{equation}
-E(B) = E(B^L_1)\cdots E(B^L_\ell)\cdot E(B^R_1) \cdots E(B^R_r) \mbox{ and }
-D(B) = D(B^L_1)\cdots D(B^L_\ell)\cdot D(B^R_1) \cdots D(B^R_r)\label{defSeqs}
-\end{equation}
+\begin{eqnarray}
+E(B) &=& E(B^L_1)\cdots E(B^L_\ell)\cdot E(B^R_1) \cdots E(B^R_r) \mbox{ and }\nonumber\\
+D(B) &=& D(B^L_1)\cdots D(B^L_\ell)\cdot D(B^R_1) \cdots D(B^R_r)\label{defSeqs}
+\end{eqnarray}
 We say the block $B$ \emph{contains} the operations in $E(B)$ and $D(B)$.
 
 Finally, when designing a total order for the operations propagated to the root, we choose
@@ -129,11 +130,11 @@ L=E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k).
 
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTSINGLE}{\com\ #1}}
 \begin{figure}
-\begin{algorithmic}[1]
+\begin{algorithmic}
 \setcounter{ALG@line}{1}
 \Statex \linecomment{Shared variable}
 \begin{itemize}
-\item \typ{Node} \var{root} \Comment{root of a binary tree of \tt{Node}s with one leaf for each process}
+\item \typ{Node} \var{root} \Comment{root of binary tree of \tt{Node}s with one leaf per process}
 \end{itemize}
 
 \Statex \linecomment{Thread-local variable}
@@ -143,18 +144,20 @@ L=E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k).
 
 \Statex $\blacktriangleright$ \typ{Node}
 \begin{itemize}
-\item \typ{Node} \fld{left}, \fld{right}, \fld{parent} \Comment{children and parent pointers initialized  when creating the tree}
-\item \typ{Block}[0..$\infty$] \fld{blocks} \Comment{initially \var{blocks}[0] contains an empty block with all integer fields equal to 0}
-\item \typ{int} \head \Comment{position to attempt appending next \block\ to \fld{blocks}, initially 1}
+\item \typ{Node} \fld{left}, \fld{right}, \fld{parent} \Comment{tree pointers initialized  when creating the tree}
+\item \typ{Block}[0..$\infty$] \fld{blocks} \Comment{blocks that have been propagated to this node;}\linebreak
+	\mbox{ }\Comment{\var{blocks}[0] is empty block whose integer fields are 0}
+\item \typ{int} \head \Comment{position to append next \block\ to \fld{blocks}, initially 1}
 \end{itemize}
 
 \Statex $\blacktriangleright$ \typ{Block} 
 
 \begin{itemize}
   	\item \typ{int} \fld{sum\sub{enq}, sum\sub{deq}}
-  		\Comment{number of enqueue, dequeue operations in \fld{blocks} array up to this block (inclusive)}
+  		\Comment{number of enqueues, dequeues in \fld{blocks} array}\linebreak
+		\mbox{ }\Comment{up to this block (inclusive)}
   	\item \typ{int} \fld{super}
-  		\Comment{approximate index of the block's superblock in \fld{parent.blocks}}
+  		\Comment{approximate index of superblock in \fld{parent.blocks}}
 	\item[\com] Blocks in internal \nodes\ have the following additional fields
 	\begin{itemize}[leftmargin=3mm]
 		\item[$\bullet$] \typ{int} \eleft, \eright
@@ -163,12 +166,13 @@ L=E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k).
   	\item[\com] Blocks in leaf \nodes\ have the following additional field
   	\begin{itemize}[leftmargin=3mm]
 		\item[$\bullet$] \typ{Object} \fld{element}
-  		\Comment{if the block's operation is \opa{Enqueue}{x} then \fld{element}=\var{x}, otherwise \fld{element}=\nl}
+  		\Comment{\var{x} for \opa{Enqueue}{x} operation; otherwise \nl}
 	\end{itemize}
 	\item[\com] Blocks in the root \node\ have the following additional field
 	\begin{itemize}[leftmargin=3mm]
 		\item[$\bullet$] \typ{int} \size%
-  		\Comment{size of the queue after performing all operations up to the end of this block}
+  		\Comment{size of queue after performing all operations up }\linebreak
+		\mbox{ }\Comment{to the end of this block}
 	\end{itemize}
 \end{itemize}
 
@@ -194,7 +198,7 @@ L=E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k).
 %\end{itemize}
 
 \end{algorithmic}
-\caption{Objects used in the \ordering\ tree data structure \label{object-fields}}
+\caption{Objects used in the \ordering\ tree data structure.\label{object-fields}\Eric{Fix indentation}}
 \end{figure}
 
 Each \node\ of the \ordering\ tree has an infinite array called \fld{blocks}.
@@ -315,8 +319,8 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \here{For consistency of notation, perhaps change $n$ to $B$ in code for Enqueue, Dequeue.  Maybe also new to B for CreateBlock, Refresh.}
 
-\begin{figure}
-\begin{minipage}[t]{0.465\textwidth}
+\begin{figure*}
+\begin{minipage}[t]{0.405\textwidth}
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{0}
 
@@ -340,8 +344,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \spac
 
-\Function{void}{Append}{\typ{Block} \var{B}} 
-    \State \linecomment{append block to leaf and propagate to root}
+\Function{void}{Append}{\typ{Block} \var{B}} \com\ append block to leaf and propagate to root
     \State \var{leaf.}\fld{blocks}[\var{leaf.}\head] \assign\ \var{B}\label{appendLeaf}
     \State \var{leaf.}\head\ \assign\ \var{leaf.}\head+1 \label{appendEnd} 
     \State \Call{Propagate}{\var{leaf.}\fld{parent}} 
@@ -349,8 +352,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \spac
 
-\Function{void}{Propagate}{\typ{Node} \var{v}}
-    \State \linecomment{propagate blocks from \var{v}'s children to root}
+\Function{void}{Propagate}{\typ{Node} \var{v}} \com\ propagate blocks from \var{v}'s children to root
     \If{\bf{not} \Call{Refresh}{\var{v}}} \label{firstRefresh}  \hfill \com\ double refresh
         \State \Call{Refresh}{\var{v}} \label{secondRefresh}
     \EndIf
@@ -361,8 +363,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \spac
 
-\Function{boolean}{Refresh}{\typ{Node} \var{v}}
-    \State \linecomment{try to append a new block to \var{v}.\fld{blocks}}
+\Function{boolean}{Refresh}{\typ{Node} \var{v}} \com\ try to append a new block to \var{v}.\fld{blocks}
     \State \var{h} \assign\ \var{v}.\head \label{readHead}
     \ForEach{\fld{dir} {\keywordfont{in}} $\{\fld{left, right}\}$} \label{startHelpChild1}
         \State \var{childHead} \assign\ \var{v}.\fld{dir}.\head \label{readChildHead}
@@ -381,9 +382,8 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \spac
 
-\Function{void}{Advance}{\typ{Node} \var{v}, \typ{int} \var{h}} 
-    \State \linecomment{set \var{v}.\fld{blocks}[\var{h}].\fld{super} and }
-    \State \linecomment{increment \var{v}.\fld{head} from \var{h} to \var{h}+1}
+\Function{void}{Advance}{\typ{Node} \var{v}, \typ{int} \var{h}} \com\ set \var{v}.\fld{blocks}[\var{h}].\fld{super} and increment
+    \State \linecomment{\var{v}.\fld{head} from \var{h} to $\var{h}+1$}
     \If{$\var{v}\neq \var{root}$}
 	    \State \var{h\sub{p}} \assign\ \var{v}.\fld{parent}.\head \label{readParentHead}
     	\State \Call{CAS}{\var{v}.\fld{blocks}[\var{h}].\fld{super}, \nl, \var{h\sub{p}}} \label{setSuper1}
@@ -393,19 +393,18 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \end{algorithmic}
 \end{minipage}
-\begin{minipage}[t]{0.529\textwidth}
+\begin{minipage}[t]{0.585\textwidth}
 
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{50}
 
-\Function{Block}{CreateBlock}{\typ{Node} \var{v}, \typ{int} \var{i}} 
-    \State\linecomment{create new block for a \op{Refresh} to install in \var{v}.\fld{blocks}[\var{i}]}
+\Function{Block}{CreateBlock}{\typ{Node} \var{v}, \typ{int} \var{i}} \com\ create new block for a \op{Refresh} to install in \var{v}.\fld{blocks}[\var{i}]
     \State let \var{new} be a new \typ{Block} \label{initNewBlock}
     \State \var{new}.\eleft \assign\ $\var{v}.\fld{left}.\head - 1$\label{createEndLeft}
     \State \var{new}.\eright \assign\ $\var{v}.\fld{right}.\head - 1$\label{createEndRight}
-	\State \hangbox{\var{new}.\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + \\
+	\State \hangbox{\var{new}.\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + 
 			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{enq}}}\label{createSumEnq}
-	\State \hangbox{\var{new}.\fld{sum\sub{deq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{deq}} + \\
+	\State \hangbox{\var{new}.\fld{sum\sub{deq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{deq}} + 
 			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{deq}}}\label{createSumDeq}
     \State \var{num\sub{enq}} \assign\ $\var{new}.\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{enq}}$\label{computeNumEnq}
     \State \var{num\sub{deq}} \assign\ $\var{new}.\fld{sum\sub{deq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{deq}}$
@@ -421,11 +420,10 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \spac
 
-\Function{$\langle\typ{int}, \typ{int}\rangle$}{IndexDequeue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}}
-    \State \linecomment{return $\langle\var{b}', \var{i}'\rangle$ such that \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$}
-    \State \linecomment{is $(\var{i}')$th dequeue of $D(\var{root}.\fld{blocks}[\var{b}'])$}
-    \State \linecomment{Precondition: $\var{v}.\fld{blocks}[\var{b}]$ is not \nl, has been }
-    \State \linecomment{propagated to root and contains at least \var{i} dequeues}
+\Function{$\langle\typ{int}, \typ{int}\rangle$}{IndexDequeue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \com\ return $\langle\var{b}', \var{i}'\rangle$ such that \var{i}th dequeue in
+    \State \linecomment{$D(\var{v}.\fld{blocks}[\var{b}])$ is $(\var{i}')$th dequeue of $D(\var{root}.\fld{blocks}[\var{b}'])$}
+    \State \linecomment{Precondition: $\var{v}.\fld{blocks}[\var{b}]$ is not \nl, was propagated to root, and contains at least}
+    \State \linecomment{\var{i} dequeues}
     \If{$\var{v} = \var{root}$} \Return $\langle\var{b, i}\rangle$ \label{indexBaseCase}
     \Else
 	    \State \fld{dir} \assign\ (\var{v}.\fld{parent.left} = \var{v} ? \fld{left} : \fld{right}) 
@@ -433,7 +431,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 	    \If{$\var{b} > \var{v}.\fld{parent.blocks}[\var{sup}].\fld{end\sub{dir}}$} \var{sup} \assign\ $\var{sup}+1$\label{supertest}\label{idsup2}
 	    \EndIf\label{idsup3}
 	    \State \linecomment{compute index \var{i} of dequeue in superblock}
-	    \State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{b}-1].\fld{sum\sub{deq}} -$ \\
+	    \State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{b}-1].\fld{sum\sub{deq}} -$ 
 	    		$\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}-1].\edir].\fld{sum\sub{deq}}$}\label{computeISuperStart}
         \If{$\fld{dir} = \fld{right}$} 
         	\State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}].\eleft].\fld{sum\sub{deq}} - \mbox{ }$\\
@@ -445,13 +443,11 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \spac
 
-\Function{element}{FindResponse}{\typ{int} \var{b}, \typ{int} \var{i}}
-    \State \linecomment{find response to \var{i}th dequeue in $D(\var{root}.\fld{blocks}[\var{b}])$}
+\Function{element}{FindResponse}{\typ{int} \var{b}, \typ{int} \var{i}} \com\ find response to \var{i}th dequeue in $D(\var{root}.\fld{blocks}[\var{b}])$
     \State \linecomment{Precondition:  $1\leq i\leq |D(\var{root}.\fld{blocks}[\var{b}])|$}
     %  $i\geq 1$ and \var{root}.\fld{blocks}[\var{b}] is non-null and}
     %  \State \linecomment{contains at least \var{i} dequeues}
-    \State \hangbox{\var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} - \mbox{ }$\\
-    		$\var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$}\label{FRNum}
+    \State \hangbox{\var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} - \var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$}\label{FRNum}
     \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmpty}
         \State \Return \nl \hfill \com\ queue is empty when dequeue occurs\label{returnNull}
     \Else \ \linecomment{response is the \var{e}th enqueue in the root}
@@ -469,7 +465,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \end{minipage}
 \vspace*{-3mm}
 \caption{Queue implementation.\label{pseudocode1}}
-\end{figure}
+\end{figure*}
 
 
 
@@ -499,7 +495,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \EndIf
 \EndFunction{GetEnqueue}
 \end{algorithmic}
-\caption{\label{pseudocode2}Queue implementation, continued.}
+\caption{\label{pseudocode2}Queue implementation, continued.\Eric{Fix code and combine with other figure}}
 %\here{Would this routine be simpler to write if i parameter was the rank within whole node rather than within the block?  Not much; I tried it.}
 \end{figure}
 

@@ -326,8 +326,8 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \Function{void}{Enqueue}{\typ{Object} \var{e}} 
     \State \hangbox{let \var{B} be a new \typ{Block} with \fld{element} \assign\ \var{e},\\
-		\fld{sum\sub{enq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}}+1,\\
-		\fld{sum\sub{deq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}}\label{enqNew}
+		$\fld{sum\sub{enq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}}+1$,\\
+		$\fld{sum\sub{deq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}$}\label{enqNew}
     \State \Call{Append}{\var{B}}
 \EndFunction{Enqueue}
 
@@ -335,10 +335,10 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \Function{Object}{Dequeue()}{} 
     \State \hangbox{let \var{B} be a new \typ{Block} with \fld{element} \assign\ \nl,\\
-	    \fld{sum\sub{enq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}},\\
-	    \fld{sum\sub{deq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}+1}\label{deqNew}
+	    $\fld{sum\sub{enq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}}$,\\
+	    $\fld{sum\sub{deq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}+1$}\label{deqNew}
     \State \Call{Append}{\var{B}}
-    \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, $\var{leaf.}\head-1$, 1}\label{invokeIndexDequeue}
+    \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, $\var{leaf.}\head-1$, $1$}\label{invokeIndexDequeue}
     \State \Return{ \Call{FindResponse}{\var{b, i}}}\label{deqRest}
 \EndFunction{Dequeue}
 
@@ -346,7 +346,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \Function{void}{Append}{\typ{Block} \var{B}} \com\ append block to leaf and propagate to root
     \State \var{leaf.}\fld{blocks}[\var{leaf.}\head] \assign\ \var{B}\label{appendLeaf}
-    \State \var{leaf.}\head\ \assign\ \var{leaf.}\head+1 \label{appendEnd} 
+    \State $\var{leaf.}\head\ \assign\ \var{leaf.}\head+1$ \label{appendEnd} 
     \State \Call{Propagate}{\var{leaf.}\fld{parent}} 
 \EndFunction{Append}
 
@@ -382,30 +382,16 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \spac
 
-\Function{void}{Advance}{\typ{Node} \var{v}, \typ{int} \var{h}} \com\ set \var{v}.\fld{blocks}[\var{h}].\fld{super} and increment
-    \State \linecomment{\var{v}.\fld{head} from \var{h} to $\var{h}+1$}
-    \If{$\var{v}\neq \var{root}$}
-	    \State \var{h\sub{p}} \assign\ \var{v}.\fld{parent}.\head \label{readParentHead}
-    	\State \Call{CAS}{\var{v}.\fld{blocks}[\var{h}].\fld{super}, \nl, \var{h\sub{p}}} \label{setSuper1}
-	\EndIf
-    \State \Call{CAS}{\var{v}.\head, \var{h}, \var{h}+1} \label{incrementHead}
-\EndFunction{Advance}
 
-\end{algorithmic}
-\end{minipage}
-\begin{minipage}[t]{0.585\textwidth}
-
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{50}
-
-\Function{Block}{CreateBlock}{\typ{Node} \var{v}, \typ{int} \var{i}} \com\ create new block for a \op{Refresh} to install in \var{v}.\fld{blocks}[\var{i}]
+\Function{Block}{CreateBlock}{\typ{Node} \var{v}, \typ{int} \var{i}} 
+    \State \linecomment{create new block for a \op{Refresh} to install in \var{v}.\fld{blocks}[\var{i}]}
     \State let \var{new} be a new \typ{Block} \label{initNewBlock}
     \State \var{new}.\eleft \assign\ $\var{v}.\fld{left}.\head - 1$\label{createEndLeft}
     \State \var{new}.\eright \assign\ $\var{v}.\fld{right}.\head - 1$\label{createEndRight}
-	\State \hangbox{\var{new}.\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + 
-			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{enq}}}\label{createSumEnq}
-	\State \hangbox{\var{new}.\fld{sum\sub{deq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{deq}} + 
-			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{deq}}}\label{createSumDeq}
+	\State \hangbox{\var{new}.\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + \\
+			\hspace*{11mm}\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{enq}}}\label{createSumEnq}
+	\State \hangbox{\var{new}.\fld{sum\sub{deq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{deq}} + \\
+			\hspace*{11mm}\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{deq}}}\label{createSumDeq}
     \State \var{num\sub{enq}} \assign\ $\var{new}.\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{enq}}$\label{computeNumEnq}
     \State \var{num\sub{deq}} \assign\ $\var{new}.\fld{sum\sub{deq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{deq}}$
     \If{$\var{v} = \var{root}$}
@@ -417,6 +403,20 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
         \State \Return \var{new}
     \EndIf
 \EndFunction{CreateBlock}
+
+\end{algorithmic}
+\end{minipage}
+\begin{minipage}[t]{0.585\textwidth}
+
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{50}
+\Function{void}{Advance}{\typ{Node} \var{v}, \typ{int} \var{h}} \com\ set \var{v}.\fld{blocks}[\var{h}].\fld{super} and increment \var{v}.\fld{head} from \var{h} to $\var{h}+1$
+    \If{$\var{v}\neq \var{root}$}
+	    \State \var{h\sub{p}} \assign\ \var{v}.\fld{parent}.\head \label{readParentHead}
+    	\State \Call{CAS}{\var{v}.\fld{blocks}[\var{h}].\fld{super}, \nl, \var{h\sub{p}}} \label{setSuper1}
+	\EndIf
+    \State \Call{CAS}{\var{v}.\head, \var{h}, \var{h}+1} \label{incrementHead}
+\EndFunction{Advance}
 
 \spac
 
@@ -461,27 +461,17 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \EndIf
 \EndFunction{FindResponse}
 
-\end{algorithmic}
-\end{minipage}
-\vspace*{-3mm}
-\caption{Queue implementation.\label{pseudocode1}}
-\end{figure*}
-
-
-
-
-\begin{figure}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{102}
-
 \Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
     \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] is non-\nl\ and contains at least \var{i} enqueues}
 	
     \If{\var{v} is a leaf node} \Return \var{v}.\fld{blocks}[\var{b}].\fld{element} \label{getBaseCase}
     \Else 
-        \State \var{sum\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[\var{b}].\eleft].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}$] from left child}
-        \State \var{prev\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eleft].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from left child}
-        \State \var{prev\sub{right}} \assign\ \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eright].\fld{sum\sub{enq}} \Comment{\#\ of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from right child}
+        \State \var{sum\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[\var{b}].\eleft].\fld{sum\sub{enq}} 
+        \State \linecomment{\var{sum\sub{left}} is the number of enqueues in \var{v}.\fld{blocks}[1..$\var{b}$] from \var{v}'s left child}
+        \State \var{prev\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eleft].\fld{sum\sub{enq}} 
+        \State \linecomment{\var{prev\sub{left}} is the number of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from \var{v}'s left child}
+        \State \var{prev\sub{right}} \assign\ \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eright].\fld{sum\sub{enq}} 
+        \State \linecomment{\var{prev\sub{right}} is the number of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from \var{v}'s right child}
         \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \label{leftOrRight} \Comment{required enqueue is in \var{v}.\fld{left}}
             \State \fld{dir} \assign\ \fld{left}
         \Else \Comment{required enqueue is in \var{v}.\fld{right}}
@@ -489,15 +479,18 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
             \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$
         \EndIf \label{endChooseDir}
         \State \linecomment{Use binary search to find enqueue's block in \var{v}.\fld{dir} and its rank within block}
-        \State find minimum $\var{b}'$ in range [\var{v}.\fld{blocks}[\var{b}-1].\edir+1..\var{v}.\fld{blocks}[\var{b}].\edir] s.t. $\var{v}.\fld{dir.blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$\label{getChild}
+        \State \hangbox{find minimum $\var{b}'$ in range [\var{v}.\fld{blocks}[$\var{b}-1$].\edir+1..\var{v}.\fld{blocks}[\var{b}].\edir] such that\\
+        	 $\var{v}.\fld{dir.blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$\label{getChild}}
         \State $\var{i}'$ \assign\ $\var{i} - (\var{v}.\fld{dir.blocks}[\var{b}'-1].\fld{sum\sub{enq}} - \var{prev\sub{dir}})$\label{getChildIndex}
         \State \Return\Call{GetEnqueue}{\var{v}.\fld{dir}, $\var{b}'$, $\var{i}'$} \label{getRecurse}
     \EndIf
 \EndFunction{GetEnqueue}
+
 \end{algorithmic}
-\caption{\label{pseudocode2}Queue implementation, continued.\Eric{Fix code and combine with other figure}}
-%\here{Would this routine be simpler to write if i parameter was the rank within whole node rather than within the block?  Not much; I tried it.}
-\end{figure}
+\end{minipage}
+\vspace*{-3mm}
+\caption{Queue implementation.\label{pseudocode1}}
+\end{figure*}
 
 An \opemph{Enqueue}(\var{e}) appends a \block\ to the process's leaf.
 The block has $\fld{element}=\var{e}$ to indicate it represents an \op{Enqueue}(\var{e}) operation.

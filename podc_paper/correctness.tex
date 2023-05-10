@@ -67,9 +67,11 @@ It follows that blocks accessed by the \op{Enqueue}, \op{Dequeue} and \op{Create
 
 The following two lemmas show that no operation appears in more than one block of the root.
 \begin{lemma} \label{lem::headProgress}
- If $b>0$ and $\var{v}.\fld{blocks}[b] \neq \nl$ then 
- $\var{v}.\fld{blocks}[b-1].\fld{end\sub{left}} \leq \var{v}.\fld{blocks}[b].\fld{end\sub{left}}$ and 
- $\var{v}.\fld{blocks}[b-1].\fld{end\sub{right}} \leq \var{v}.\fld{blocks}[b].\fld{end\sub{right}}$.
+ If $b>0$ and $\var{v}.\fld{blocks}[b] \neq \nl$, then
+ \begin{eqnarray*}
+ \var{v}.\fld{blocks}[b-1].\fld{end\sub{left}} &\leq& \var{v}.\fld{blocks}[b].\fld{end\sub{left}} \mbox{ and}\\
+ \var{v}.\fld{blocks}[b-1].\fld{end\sub{right}} &\leq& \var{v}.\fld{blocks}[b].\fld{end\sub{right}}.
+ \end{eqnarray*}
 \end{lemma}
 \begin{proof}
 Let $B$ be the block in $\var{v}.\fld{blocks}[b]$.
@@ -146,9 +148,11 @@ from the definition of subblocks.  See Appendix
 
 \begin{restatable}{invariant}{sumRes}
 \label{lem::sum}
-If $B$ is a block stored in $\var{v}.\fld{blocks}[i]$,
-$B.\fld{sum\sub{enq}} = | E(\var{v}.\fld{blocks}[0])\cdots E(\var{v}.\fld{blocks}[i]) |$ and
-$B.\fld{sum\sub{deq}} = | D(\var{v}.\fld{blocks}[0])\cdots D(\var{v}.\fld{blocks}[i]) |$.
+If $B$ is a block stored in $\var{v}.\fld{blocks}[i]$, then
+\begin{eqnarray*}
+B.\fld{sum\sub{enq}} &=& | E(\var{v}.\fld{blocks}[0])\cdots E(\var{v}.\fld{blocks}[i]) | \mbox{ and}\\
+B.\fld{sum\sub{deq}} &=& | D(\var{v}.\fld{blocks}[0])\cdots D(\var{v}.\fld{blocks}[i]) |.
+\end{eqnarray*}
 \end{restatable}
 
 This allows us to prove that every block a \op{Refresh} installs contains at least one operation.
@@ -203,11 +207,15 @@ We formalize this intuition.
 The value computed at line \ref{createSumEnq} is
 \begin{eqnarray*}
 \var{num\sub{enq}} \hspace*{-2mm}
-&=& \hspace*{-2mm} \var{v}.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right.blocks}[new.\eright].\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[h-1].\fld{sum\sub{enq}} \\
-&=& \hspace*{-2mm}\var{v}.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right.blocks}[new.\eright].\fld{sum\sub{enq}} \\
-&&- \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft].\fld{sum\sub{enq}} - \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright].\fld{sum\sub{enq}}.
+&=& \hspace*{-2mm} \var{v}.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}} \\
+&& + \var{v}.\fld{right.blocks}[new.\eright].\fld{sum\sub{enq}}\\
+&&  - \var{v}.\fld{blocks}[h-1].\fld{sum\sub{enq}} \\
+&=& \hspace*{-2mm}\var{v}.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}}\\
+&& + \var{v}.\fld{right.blocks}[new.\eright].\fld{sum\sub{enq}} \\
+&&- \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft].\fld{sum\sub{enq}} \\
+&& - \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright].\fld{sum\sub{enq}}.
 \end{eqnarray*}
-By \Cref{lem::sum}, $num\sub{enq}$ is the  number of enqueues  in 
+It follows from \Cref{lem::sum} that $num\sub{enq}$ is the total  number of enqueues  in 
 $\var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft+1..new.\eleft]$ and
 $\var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright+1..new.\eright]$.
 Similarly, $num\sub{deq}$ is the total number of dequeues contained in these blocks.

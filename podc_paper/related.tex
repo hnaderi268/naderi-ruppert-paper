@@ -164,10 +164,12 @@ since previous CAS-based queues all required $\Omega(p)$ step complexity.
 Our new implementation counters this argument.
 
 \emph{Fetch\&Increment Objects.}
-There are implementations of fetch\&increment objects that use a polylogarithmic number of steps per operation \cite{ERW12,10.1007/978-3-642-41527-2_20}.
-Our approach is similar to that of Ellen, Ramachandran and Woelfel \cite{ERW12},
-which also uses a tree structure to keep track of the fetch\&increments
-that have been performed, as in the universal construction of \cite{DBLP:conf/stoc/AfekDT95}.
+Ellen, Ramachandran and Woelfel \cite{ERW12} gave an implementation of 
+fetch\&increment objects that uses a polylogarithmic number of steps per operation.
+Like our queue, they also use a tree structure similar to the universal construction of 
+\cite{DBLP:conf/stoc/AfekDT95} to keep track of the operations
+that have been performed.
 However, our construction requires more intricate
 data structures to represent sets of operations, since a queue's state cannot be represented as succinctly
 as the single-word state of a fetch\&increment object.
+Ellen and Woelfel \cite{10.1007/978-3-642-41527-2_20} gave an improved implementation of fetch\&increment with better step complexity.

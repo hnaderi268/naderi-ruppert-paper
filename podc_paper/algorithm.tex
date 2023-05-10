@@ -222,8 +222,8 @@ enqueued if the operation is an enqueue, or \nl\ if the operation is a dequeue.
 Each block in an internal \node\ $\var{v}$ has fields \eleft\ and \eright\ that store the indices of the block's last direct subblock in $\var{v}$'s left and right child.  
 Thus, the direct subblocks of $\var{v}.\fld{blocks}[b]$ are
 \begin{eqnarray}\label{defsubblock}
-\var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[b-1].\fld{end\sub{left}}+1..\var{v}.\fld{blocks}[b].\fld{end\sub{left}}] \mbox{ and}\nonumber\\
-\var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[b-1].\fld{end\sub{right}}+1..\var{v}.\fld{blocks}[b].\fld{end\sub{right}}].
+\var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[b\!-\!1].\fld{end\sub{left}}\!+\!1..\var{v}.\fld{blocks}[b].\fld{end\sub{left}}] \mbox{ and}\nonumber\\
+\var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[b\!-\!1].\fld{end\sub{right}}\!+\!1..\var{v}.\fld{blocks}[b].\fld{end\sub{right}}].\!
 \end{eqnarray}
 The \eleft\ and \eright\ fields allow us to navigate to a block's direct subblocks.
 Blocks also store some prefix sums:
@@ -265,7 +265,7 @@ the (approximate) index of its superblock in the parent \node's \fld{blocks} arr
 %We shall ensure that the value of $B.\fld{super}$ differs from the true index of $B$'s superblock by at most 1.
 This allows a process to determine the true location of the superblock by checking the \eleft\ or \eright\ values of just two \blocks\ in the parent \node.
 Thus, starting from an operation in a leaf's block, one can use these indices to track the 
-operation all the way up the path to the root, and determine the operation's location in a root block
+operation  up the path to the root, and determine the operation's location in a root block
 in $O(\log p)$ time.
 
 Now consider task \ref{findrank}.
@@ -283,12 +283,19 @@ whose value the dequeue should return.
 
 Having defined the fields required for tasks \ref{findinroot}, \ref{findrank} and \ref{findenqueue},
 we can easily see how to construct a new block $B$ during a \op{Refresh} in $O(1)$ time.
-A \op{Refresh} on \node\ $\var{v}$ reads the values $h_{\ell}$ and $h_{r}$ of the \fld{head} fields of $\var{v}$'s children and stores 
+A \op{Refresh} on \node\ $\var{v}$ reads the values $h_{\ell}$ and~$h_{r}$ of the \fld{head} fields of $\var{v}$'s children and stores 
 $h_{\ell}-1$ and $h_{r}-1$ in $B.\eleft$ and $B.\eright$.
-Then, we can compute $B.\fld{sum\sub{enq}}$ as $\var{v}.\fld{left}.\fld{blocks}[B.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right}.\fld{blocks}[B.\eright].\fld{sum\sub{enq}}$.
-For a block $B$ in the root, $B.\fld{size}$ can be computed using the \fld{size} field of the previous block $B'$ and
-the number of enqueues and dequeues in $B$:
-$B.\fld{size} = \max(0, B'.\fld{size} + (B.\fld{sum\sub{enq}}-B'.\fld{sum\sub{enq}}) - (B.\fld{sum\sub{deq}} - B'.\fld{sum\sub{deq}}))$.
+Then, we can compute 
+\begin{eqnarray*}
+B.\fld{sum\sub{enq}}&=&\var{v}.\fld{left}.\fld{blocks}[B.\eleft].\fld{sum\sub{enq}} \\
+&&+ \var{v}.\fld{right}.\fld{blocks}[B.\eright].\fld{sum\sub{enq}}.
+\end{eqnarray*}
+For a block $B$ in the root, $B.\fld{size}$ is computed using the \fld{size} field of the previous block $B'$ and
+the number of enqueues and dequeues in~$B$:
+\begin{eqnarray*}
+B.\fld{size} &=& \max(0, B'.\fld{size} + (B.\fld{sum\sub{enq}}-B'.\fld{sum\sub{enq}})\\ 
+			&& \hspace*{19mm} - (B.\fld{sum\sub{deq}} - B'.\fld{sum\sub{deq}})).	
+\end{eqnarray*}
 
 The only remaining field is $B.\fld{super}$.  When the block 
 $B$ is created for a \node\ $\var{v}$, we do not yet know where its
@@ -308,7 +315,7 @@ by at most 1.
 
 \subsection{Details of the Implementation}
 
-We now discuss the queue implementation in more detail.  Pseudocode is provided in Figure \ref{pseudocode1} and \ref{pseudocode2}.
+We now discuss the queue implementation in more detail.  Pseudocode is provided in Figure \ref{pseudocode1}.
 %We use $v.\var{blocks[i].num\sub{enq}}$ as shorthand for 
 %$v.\var{blocks[i].sum\sub{enq} - blocks[i-1].sum\sub{enq}}$, that is, 
 %the number of enqueues in the block.  (For $\var{i}=0$, $v.\var{blocks[0].num\sub{enq}} = 0$.)
@@ -542,9 +549,9 @@ The \eleft\ and \eright\ fields store the indices of the last blocks appended to
 children, obtained by reading the \fld{head} index in \var{v}'s children.
 Since the \fld{sum\sub{enq}} field should store the number of enqueues in
 \var{v}.\fld{blocks}[1..\var{i}] and these enqueues come from \var{v}.\fld{left.blocks}[1..\var{new}.\eleft] and \var{v}.\fld{blocks}[1..\var{new}.\eright], line \ref{createSumEnq} sets
-\fld{sum\sub{enq}} to $\var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right}.\fld{blocks}[\var{new}.\eright].\fld{sum\sub{enq}}$.
+\fld{sum\sub{enq}} to the sum of $\var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}}$ and $\var{v}.\fld{right}.\fld{blocks}[\var{new}.\eright].\fld{sum\sub{enq}}$.
 Line \ref{computeNumEnq} sets \var{num\sub{enq}} to the number of enqueues in the new block by
-subtracting from \var{new}.\fld{sum\sub{enq}} the number of enqueues  in \var{v}.\fld{blocks}[$1..\var{i}-1$].
+subtracting  the number of enqueues  in \var{v}.\fld{blocks}[$1..\var{i}-1$] from \var{new}.\fld{sum\sub{enq}}.
 The values of \var{new}.\fld{sum\sub{deq}} and \var{num\sub{deq}} are computed similarly.
 Then, if \var{new}
 is going to be installed in the root, line \ref{computeLength} computes the \fld{size} field, which

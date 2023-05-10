@@ -35,8 +35,9 @@ onwards towards the~root.
 Now suppose $P$'s operation has been propagated all the way to the root.
 If $P$'s operation is an enqueue, it has obtained a place in the linearization ordering and can terminate.
 If $P$'s operation is a dequeue, $P$ must use information in the tree to compute the value that the
-dequeue must return.  To do this, $P$ first determines which block in the root contains its operation
-(since the operation may have been propagated to the root by some other process).
+dequeue must return.  To do this, $P$ first determines which block in the root contains its dequeue
+(since the dequeue may have been propagated to the root by some other process).
+$P$ does this by finding the dequeue's location in each node along the path from the leaf to the root.
 Then, $P$ determines whether the queue is empty when its dequeue is linearized. 
 If so, it returns \nl\ and we call it a \emph{null dequeue}.
 If not, $P$ computes the rank\footnote{We say that the $r$th element in a sequence has rank $r$ within that sequence.} $r$ of its dequeue among all non-null dequeues in the linearization ordering,
@@ -58,7 +59,7 @@ or determine the rank $r$ of the enqueue whose value it should return.
 \label{findenqueue}
 Find the $r$th enqueue in the linearization ordering.
 \end{enumerate}
-Since these tasks depends on the linearization ordering, we describe that ordering next.
+Since these tasks depend on the linearization ordering, we describe that ordering next.
 
 \begin{figure*}[t]
 \input{tournamentTree.pdf_t}
@@ -116,8 +117,10 @@ D(B) &=& D(B^L_1)\cdots D(B^L_\ell)\cdot D(B^R_1) \cdots D(B^R_r)\label{defSeqs}
 \end{eqnarray}
 We say the block $B$ \emph{contains} the operations in $E(B)$ and $D(B)$.
 
-Finally, when designing a total order for the operations propagated to the root, we choose
-to put each block's enqueues before its dequeues.
+Finally, when linearizing the operations propagated to the root, we must
+choose how to order operations within a block.  Any ordering within a block would work, since all operations
+in a block are concurrent with one another.  We choose to put
+each block's enqueues before its dequeues.
 Thus, if the root's blocks array contains blocks $B_1, \ldots, B_k$, the 
 linearization ordering is 
 \begin{equation}

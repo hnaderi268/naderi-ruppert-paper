@@ -32,10 +32,13 @@ Attiya and Fouren \cite{DBLP:conf/opodis/AttiyaF17} proved
 that amortized $\Omega(c)$ steps per operation are indeed necessary
 for any CAS-based implementation of a lock-free bag data structure, which provides operations
 to insert an element or remove an arbitrary element (chosen non-deterministically).
-Since a queue trivially implements a bag, this lower bound also holds for queues.
-At first glance, this would seem to settle the question of the step complexity of lock-free queues.
-However, the lower bound leaves a loophole:  it holds only if $c$ is $O(\log\log p)$.
-Thus, the lower bound could be stated more precisely as an amortized bound of $\Omega(\min(c,\log\log p))$ steps per operation.
+Since a queue trivially implements a bag, this lower bound also applies to queues.
+Although this might seem to settle the step complexity of lock-free queues, the lower bound
+holds only if $c$ is $O(\log\log p)$ so it should be stated more precisely as
+%At first glance, this would seem to settle the question of the step complexity of lock-free queues.
+%However, the lower bound leaves a loophole:  it holds only if $c$ is $O(\log\log p)$.
+%Thus, the lower bound could be stated more precisely as 
+an amortized bound of $\Omega(\min(c,\log\log p))$ steps per operation.
 
 We exploit this loophole.  We show  it is, in fact, possible to design a linearizable, wait-free queue
 with step complexity sublinear in $p$.

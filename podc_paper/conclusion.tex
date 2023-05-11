@@ -11,7 +11,7 @@ A possible application of our queue  might be to use it as the slow path in the
 fast-path slow-path methodology  \cite{10.1145/2370036.2145835} to
 get a queue that has good performance in practice while also having good worst-case step complexity.
 
-There remains a gap between our implementation, which takes $O(\log^2 p + \log q)$ steps per operation,
+A gap remains between our queue, which takes $O(\log^2 p + \log q)$ steps per operation,
 and Attiya and Fouren's $\Omega(\min(c,\log\log p))$ lower bound \cite{DBLP:conf/opodis/AttiyaF17}.
 It would be interesting to determine how the true step complexity of lock-free queues (or, more generally, bags)
 depends on $p$.

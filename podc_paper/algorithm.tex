@@ -22,7 +22,7 @@ will serve as the linearization ordering of the operations.
 To propagate operations from a node $\var{v}$'s children to $\var{v}$, $P$ first observes
 the blocks in both of $\var{v}$'s children that are not already in $\var{v}$,
 creates a new block by combining information from those blocks, and attempts to append this 
-new block to $\var{v}$'s \fld{blocks} array using a \op{CAS} instruction.
+new block to $\var{v}$'s \fld{blocks} array using a \op{CAS}.
 Following \cite{DBLP:conf/fsttcs/JayantiP05}, we call this a 3-step sequence a
 \op{Refresh} on $\var{v}$. %(see Figure \ref{fig::propagstep}).
 A \op{Refresh}'s \op{CAS} may fail if there is another concurrent \op{Refresh} on $\var{v}$.
@@ -40,21 +40,21 @@ dequeue must return.  To do this, $P$ first determines which block in the root c
 $P$ does this by finding the dequeue's location in each node along the path from the leaf to the root.
 Then, $P$ determines whether the queue is empty when its dequeue is linearized. 
 If so, it returns \nl\ and we call it a \emph{null dequeue}.
-If not, $P$ computes the rank\footnote{We say that the $r$th element in a sequence has rank $r$ within that sequence.} $r$ of its dequeue among all non-null dequeues in the linearization ordering,
-finds the $r$th enqueue in the linearization, and returns that enqueue's value.
+If not, $P$ computes the rank $r$ of its dequeue among all non-null dequeues in the linearization ordering.  (We say that the $r$th element in a sequence has \emph{rank} $r$ within that sequence.)
+$P$ then returns the value of the $r$th enqueue in the linearization.
 
 We must choose what to store in each block so that the following tasks can be done efficiently.
 \begin{enumerate}[label={(T\arabic*)}]
 \item
 \label{construct}
-Construct a block for node $\var{v}$ that represents the operations contained in consecutive blocks in $\var{v}$'s children, as required for a \op{Refresh}.
+Construct a block for node $\var{v}$ that represents the operations in consecutive blocks in $\var{v}$'s children, as required for a \op{Refresh}.
 \item
 \label{findinroot}
 Given a dequeue in a leaf that has been propagated to the root, find that operation's position in the root's \fld{blocks} array.
 \item
 \label{findrank}
-Given a dequeue's position in the root, determine if it is a null dequeue (i.e., if the queue is empty when it is linearized)
-or determine the rank $r$ of the enqueue whose value it should return.
+Given a dequeue's position in the root, decide if it is a null dequeue (i.e., if the queue is empty when it is linearized)
+or determine the rank $r$ of the enqueue whose value it returns.
 \item
 \label{findenqueue}
 Find the $r$th enqueue in the linearization ordering.
@@ -419,7 +419,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \begin{minipage}[t]{0.585\textwidth}
 
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{50}
+\setcounter{ALG@line}{57}
 \Function{void}{Advance}{\typ{Node} \var{v}, \typ{int} \var{h}} \com\ set \var{v}.\fld{blocks}[\var{h}].\fld{super} and increment \var{v}.\fld{head} from \var{h} to $\var{h}+1$
     \If{$\var{v}\neq \var{root}$}
 	    \State \var{h\sub{p}} \assign\ \var{v}.\fld{parent}.\head \label{readParentHead}
@@ -470,6 +470,8 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
         \State \Return \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}\label{findAnswer}
     \EndIf
 \EndFunction{FindResponse}
+
+\spac 
 
 \Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
     \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] is non-\nl\ and contains at least \var{i} enqueues}
@@ -586,12 +588,13 @@ Since the enqueue is linearized before the dequeue, $b_e\leq b$.  To find the le
 Then, \op{GetEnqueue} is used to trace down through the tree to find the required enqueue in a leaf.
 
 \opemph{GetEnqueue}(\var{v, b, i}) returns the argument of the
-$i$th enqueue in the $b$th block of \typ{Node} $\var{v}$. 
-The range of subblocks of a block is determined using the \fld{end\sub{left}} and
-\fld{end\sub{right}} fields of the block and its previous block. Then,
-the exact subblock is found using binary search on the \fld{sum\sub{enq}}
-field (line~\ref{getChild}). 
-\here{explain a little more?}
+$i$th enqueue in the $b$th block $B$ of \typ{Node} $\var{v}$. 
+It recursively finds the location of the enqueue in each node along the path from $v$ to a leaf, which stores the argument explicitly.
+\op{GetEnqueue} first determines which child of \var{v} contains the enqueue, and
+then finds the range of blocks within that child that are subblocks of $B$ using information stored
+in $B$ and the block that precedes $B$ in $v$.
+\op{GetEnqueue} finds the exact subblock containing the enqueue using a binary search on the \fld{sum\sub{enq}}
+field (line~\ref{getChild}) and proceeds recursively down the tree.
 
 
 

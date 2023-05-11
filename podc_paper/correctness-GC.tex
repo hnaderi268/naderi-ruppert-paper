@@ -443,9 +443,9 @@ So if a subsequent \op{Refresh} by process $P$
 ever calls \op{AddBlock} on \var{v} again, the block it passes as the third argument
 will have $\index>r\cdot G$, so $P$ will not perform an $r$th helping phase on \var{v} again.
 
-Each helping phase takes $O(p)$ steps to read the \var{last} array,
+Each helping phase takes $O(p)$ steps to read the \var{last} array, and
 $O(p \log p \log(p+q_{max}))$ steps to \op{Help},
-followed by $O(\log(p+q_{max}))$ steps to split and insert a new node into a RBT.
+and $O(\log(p+q_{max}))$ steps to split and insert a new node into a RBT.
 Thus, for each integer $r$ and each node \var{v}, a total of $O(p^2\log p\log(p+q_{max}))$ steps
 are performed by all processes during their $r$th helping phase on \var{v}.
 We can amortize these steps over the operations that appear in 

@@ -4,9 +4,8 @@
 
 \paragraph{List-based Queues.}
 The MS-queue \cite{MS98} is a lock-free queue that has stood the test of time.
-A version of it is
-included in the standard Java Concurrency Package.  %java.util.concurrent.ConcurrentLinkedQueue
-See the paper that introduced it for a survey of the early history of concurrent queues.
+The standard Java Concurrency Package includes a version of it.  %java.util.concurrent.ConcurrentLinkedQueue
+See \cite{MS98} for a survey of the early history of concurrent queues.
 As mentioned above, the MS-queue suffers from the CAS retry problem because of contention at the front and back of the queue.
 Thus, it is lock-free but not wait-free and has an amortized step complexity of $\Theta(p)$ per operation.
 
@@ -22,18 +21,17 @@ However, when there are $p$ concurrent enqueues (and no dequeues), the CAS retry
 is still present.
 The baskets queue of
 Hoffman, Shalev, and Shavit~\cite{DBLP:conf/opodis/HoffmanSS07} 
-attempts to reduce contention by grouping concurrent enqueues into baskets.
+attempts to reduces contention by grouping concurrent enqueues into baskets.
 An enqueue that fails its CAS is put in the basket with the enqueue that succeeded.
-Enqueues within a basket determine their order among themselves without having to access the back of the queue.
+Enqueues within a basket order  themselves without having to access the back of the queue.
 However, if $p$ concurrent enqueues are in the same basket
 the CAS retry problem occurs when they order themselves using CAS instructions.
 Both modifications still have $\Omega(p)$ amortized step complexity.
 
-Kogan and Herlihy \cite{DBLP:conf/podc/KoganH14} described how to use futures to improve
-the performance of the MS-queue.
+Kogan and Herlihy \cite{DBLP:conf/podc/KoganH14} improved the MS-queue's performance using \emph{futures}.
 Operations return future
 objects instead of responses. Later, when an operation's response is needed, it
-can be evaluated using the corresponding future object.
+is evaluated using the future object.
 This allows batches of enqueues or dequeues to be done at once on an MS-queue.
 However, the implementation satisfies a weaker correctness condition than linearizability.
 Milman-Sela et al.~\cite{MKLLP22} extended this approach to allow batches
@@ -43,18 +41,18 @@ They use some properties of the queue size before and after a batch, similar to 
 In the worst case, where operations require their response right away,
 batches have size 1, and both of these implementations behave like a standard MS-queue.
 
+In the MS-queue, an enqueue requires two CAS steps.
 Ladan-Mozes and Shavit~\cite{DBLP:journals/dc/Ladan-MozesS08}
-presented an optimistic  queue implementation. 
+presented an optimistic  queue implementation
 %MS-queue uses
 %two \nf{CAS}es to do an enqueue: one to change the tail to the new
 %node and another one to change the next pointer of the previous node
 %to the new node. 
-In the MS-queue, an enqueue requires two CAS steps.
-The optimistic queue uses a doubly-linked list to reduce the number of
+that uses a doubly-linked list to reduce the number of
 \texttt{CAS} instructions to one in the best case. 
 Pointers in the doubly-linked list can be inconsistent, but are fixed when necessary by traversing the list.
-Although this fixing is rare in practice, it yields an amortized complexity of $\Omega(qp)$ 
-steps per operation for worst-case executions.
+This fixing is rare in practice, but it yields an amortized complexity of $\Omega(qp)$ 
+steps per operation in the worst case.
 
 Kogan and Petrank~\cite{DBLP:conf/ppopp/KoganP11} 
 used Herlihy's helping
@@ -142,22 +140,22 @@ to implement a queue, but its step complexity is also $\Omega(p)$.
 \here{Double check this.}
 
 \paragraph{Restricted Queues.}
-David introduced the first sublinear-time queue
+David gave the first sublinear-time queue
 \cite{DBLP:conf/wdag/David04}, but it works only for a single enqueuer.
 It uses fetch\&increment and swap  instructions and takes $O(1)$ steps per operation, but
 uses unbounded memory.  Bounding the space increases the steps per operation to $\Omega(p)$.
 Jayanti and Petrovic gave a wait-free polylogarithmic
-queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but it works only for a single dequeuer. 
+queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but only for a single dequeuer. 
 Our \ordering\ tree is similar to the tree structure they use to agree on a linearization ordering.
-Concurrently with our work, which first appeared in \cite{Nad22}, Johnen, Khattabi and Milani \cite{JKM23} built on \cite{DBLP:conf/fsttcs/JayantiP05} to give a wait-free queue implementation 
+Concurrently with our work, which first appeared in \cite{Nad22}, Johnen, Khattabi and Milani \cite{JKM23} built on \cite{DBLP:conf/fsttcs/JayantiP05} to give a wait-free queue  
 that achieves $O(\log p)$ steps for enqueue operations but fails to achieve polylogarithmic step complexity for dequeues: their dequeue operations take $O(k \log p)$ steps if there are $k$ dequeuers.
 
 \here{Should we mention https://arxiv.org/abs/2103.11926 , which seems to have a queue for 2 enqueuers and 2 dequeuers ?  May not be worth mentioning because then $p$ is a constant, so complexity in terms of $p$ doesn't make sense.}
 
 \paragraph{Other Primitives.}
-Khanchandani and Wattenhofer \cite{KW18} gave a wait-free queue implementation
+Khanchandani and Wattenhofer \cite{KW18} gave a wait-free queue 
 with $O(\sqrt{p})$ step complexity using non-standard synchronization primitives
-called half-increment and half-max, which can be viewed as particular kinds of
+called half-increment and half-max, which can be viewed as %particular kinds of
 double-word read-modify-write operations.
 They use this as evidence that their primitives can be more efficient than CAS
 since previous CAS-based queues all required $\Omega(p)$ step complexity.

@@ -16,9 +16,9 @@ the \var{leaf} array allows processes to access one another's leaves to perform 
 the \var{last} array is used to determine which blocks are safe to discard.
 \begin{itemize}
 \item \typ{Node[]} \var{leaf}$[1..p]$ \Comment{\var{leaf}$[k]$ is the leaf assigned to process $k$}
-\item \typ{int[]} \var{last}$[1..p]$ \Comment{\var{last}$[k]$ is the largest \fld{index} of a block in the root  that process $k$}\\
-\mbox{ }\Comment{has observed to contain either an enqueue whose value has}\\
-\mbox{ }\Comment{been dequeued or a null dequeue }
+\item \typ{int[]} \var{last}$[1..p]$ \Comment{\var{last}$[k]$ is the largest \fld{index} of a block in the}\\
+\mbox{ }\Comment{root that process $k$ has observed to contain either an en-}\\
+\mbox{ }\Comment{queue whose value has been dequeued or a null dequeue }
 \end{itemize}
 
 The \fld{blocks} field of each node in the \ordering\ tree is implemented as a pointer to the root of a RBT of \typ{Blocks} rather than an infinite array.  
@@ -39,9 +39,9 @@ Each \typ{Block} has an additional field.
 \begin{itemize}
 \item \typ{int} \var{index} \Comment{position this block would have in the \fld{blocks} array}
 \end{itemize}
-To facilitate helping, each \typ{Block} in a leaf has one more additional field.
+To facilitate helping, each \typ{Block} in a leaf has one more additional field that is used only for blocks that store a dequeue operation.
 \begin{itemize}
-\item \typ{Object} \var{response} \Comment{response of the operation in the block, if it is a dequeue}
+\item \typ{Object} \var{response} \Comment{response of the dequeue in the block}
 \end{itemize}
 
 \here{Talk about what happens if a block is not found in an RBT}

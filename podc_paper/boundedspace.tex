@@ -28,7 +28,7 @@ Moreover, the insertion should succeed only if the newly inserted block has a la
 Thus, we can use a particularly simple concurrent RBT implementation.
 A sequential RBT can be made persistent using the classic node-copying technique of 
 Driscoll et al.~\cite{DSST89}:  all RBT nodes are immutable, and operations on the 
-RBT are performed by making a new copy of each RBT node $x$ that must be modified, as well
+RBT make a new copy of each RBT node $x$ that must be modified, as well
 as each RBT node along the path from the RBT's root to~$x$.
 The RBT reachable from the new copy of the root is the result of applying the RBT operation.
 This only adds a constant factor to the running time of any routine designed for a (sequential) RBT.

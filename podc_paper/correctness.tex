@@ -16,9 +16,9 @@ Finally, we prove linearizability in Section \ref{sec::linearizability}.
 A \typ{Block} object's fields, except for \fld{super}, are immutable:  they are written only 
 when the block is created.
 % at line \ref{enqNew} or \ref{deqNew} (for a leaf's block) or lines \ref{initNewBlock}--\ref{computeLength} (for an internal node's block).  
-Moreover, only a \op{CAS} at line \ref{setSuper1} can modify the \fld{super} field 
-(from \nl\ to a non-\nl\ value), so it is written only once.
-Similarly, only a \op{CAS} at line \ref{cas} can modify an element of a node's \fld{blocks} array 
+Moreover, only a \op{CAS} at line \ref{setSuper1}  modifies  \fld{super}  
+(from \nl\ to a non-\nl\ value), so it is changed only once.
+Similarly, only a \op{CAS} at line \ref{cas} modifies an element of a node's \fld{blocks} array 
 (from \nl\ to a non-\nl\ value), so blocks are permanently added to nodes.
 Only a \op{CAS} at line \ref{incrementHead} can update a node's \head\ field by incrementing it,
 which implies the following.
@@ -27,9 +27,9 @@ which implies the following.
 For each node \var{v},  \var{v}.\fld{head} is non-decreasing over time.
 \end{observation}
 
-\begin{lemma} \label{lem::headInc}
+\begin{observation} \label{lem::headInc}
 Let $R$ be an instance of \opa{Refresh}{v} whose call to \op{CreateBlock} returns a non-\nl\ block.  When $R$ terminates, \var{v}.\head\ is strictly greater than the value $R$ reads from it at line \ref{readHead}.
-\end{lemma}
+\end{observation}
 \begin{proof}
 After $R$'s \op{CAS} at line \ref{incrementHead}, \var{v}.\head\ is no longer equal to the value \var{h}
 read at line \ref{readHead}.  The claim follows from \Cref{nonDecreasingHead}.
@@ -179,7 +179,7 @@ Since blocks are permanently added to nodes, if $\var{v}$ contains $op$ at some 
 
 \begin{lemma}\label{successfulRefresh}
 Let $R$ be a call to \op{Refresh}($\var{v}$) that performs a successful \op{CAS} on line \ref{cas} (or terminates at line \ref{addOP}).
-In the configuration after that CAS (or termination, respectively), $\var{v}$ contains all operations that $\var{v}$'s children contained 
+After that CAS (or termination, respectively), $\var{v}$ contains all operations that $\var{v}$'s children contained 
 when $R$ executed line~\ref{readHead}.
 \end{lemma}
 \begin{proof}
@@ -225,7 +225,7 @@ By \Cref{blockNotEmpty}, this means the ranges of blocks are empty, so that $\va
 Hence, $B$ is already a subblock of some block in $\var{v}$, so $\var{v}$ contains $op$.
 \end{proof}
 
-We now show that a double \op{Refresh} propagates blocks as required.
+We now show  a double \op{Refresh} propagates blocks as required.
 
 \begin{lemma}\label{lem::doubleRefresh}
 Consider two consecutive terminating calls $R_1$, $R_2$ to \op{Refresh}($\var{v}$) by the same process.
@@ -264,7 +264,7 @@ There is at most one such block in each node, by \Cref{lem::noDuplicates}.
 
 See Appendix \ref{app::tracingDetails} for detailed proofs for this section.
 
-We first show the \fld{super} field is accurate, since \op{IndexDequeue} uses it to trace superblocks up the tree.  This is proved by showing that the \fld{super} field of a block $B$ in node $\var{v}$ is read from the 
+We first show the \fld{super} field is accurate, since \op{IndexDequeue} uses it to trace superblocks up the tree.  This is proved by showing that the \fld{super} field of a block $B$ in node $\var{v}$ is read from  
 \var{v}.\fld{parent}'s \var{head} field close to the time that $B$'s superblock $B_s$ is installed in the parent node.
 On one hand, $B.super$ is written before $B_s$ is installed:
 \op{Advance} writes $B.super$ before advancing $\var{v}.\head$  past $B$'s index, which must happen before the \op{CreateBlock} that creates
@@ -283,7 +283,7 @@ Let $B=\var{v}.\var{blocks}[b]$.
 %The reader may wonder when the case $b\nf{.super}=s$ happens. This can happen when $
 %\nf{$n$.parent.blocks[$B$.super]}=\nf{null}$ when $B$\nf{.super} is written and $R_p$ puts its created block 
 %into \nf{$n$.parent.blocks[$B$\nf{.super}]} afterwards.
-Showing  \op{GetEnqueue} and \op{IndexDequeue} work correctly is mostly just checking that they correctly compute the index of the required block
+To show  \op{GetEnqueue} and \op{IndexDequeue} work correctly, we  just  check that they correctly compute the index of the required block
 and the operation's rank within the block.  
 For \op{IndexDequeue}, we use \Cref{superRelation} each time \op{IndexDequeue} goes one step up the tree.
 \here{mention somewhere why precondition of IndexDequeue is true? also check that block of parent indexed by sup in that routine is non-null}

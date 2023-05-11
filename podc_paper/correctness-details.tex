@@ -23,20 +23,22 @@ The proof for line \ref{deqNew}, where $B$ has a single dequeue, is similar.
 Now suppose $\var{v}$ is an internal node. By the definition of subblocks in (\ref{defsubblock}) and \Cref{lem::headProgress}, the
 subblocks of $\var{v}.\fld{blocks}[1..i]$ are $\var{v}.\fld{left.blocks}[1..B.\eleft]$ 
 and $\var{v}.\fld{right.blocks}[1..B.\eright]$.
-Thus, the enqueues in $E(\var{v}.\fld{blocks}[0])\cdots E(\var{v}.\fld{blocks}[i])$ are those in
-$E(\var{v}.\fld{left.blocks}[0]) \cdots E(\var{v}.\fld{left.blocks}[B.\eleft])$ and
+Thus, the enqueues in $E(\var{v}.\fld{blocks}[0])\cdots E(\var{v}.\fld{blocks}[i])$ are those in\linebreak
+$E(\var{v}.\fld{left.blocks}[0]) \cdots E(\var{v}.\fld{left.blocks}[B.\eleft])$ and those in \linebreak
 $E(\var{v}.\fld{left.blocks}[0]) \cdots E(\var{v}.\fld{left.blocks}[B.\eright])$.
-By the hypothesis, the total number of these enqueues is $\var{v}.\fld{left.blocks}[B.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right.blocks}[B.\eright].\fld{sum\sub{enq}}$, which is the value that line \ref{createSumEnq} stored in $B.\fld{sum\sub{enq}}$ when $B$ was created.
+By the hypothesis, the total number of these enqueues is \linebreak
+$\var{v}.\fld{left.blocks}[B.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right.blocks}[B.\eright].\fld{sum\sub{enq}}$, \linebreak
+which is the value that line \ref{createSumEnq} stored in $B.\fld{sum\sub{enq}}$ when $B$ was created.
 The proof for \fld{sum\sub{deq}} (stored on line~\ref{createSumDeq}) is similar.
 \end{proof}
 
 \superRelationRes*
 \begin{proof}
-We first show $B.\fld{super}\leq s$.
-Let $R_s$ be the instance of \op{Refresh}($\var{v}.\fld{parent}$) that installs the superblock of $B$ 
+We first show that $B.\fld{super}\leq s$.
+Let $R_s$ be the instance of \op{Refresh}($\var{v}.\fld{parent}$) that installs $B$'s superblock 
 in $\var{v}.\fld{parent.blocks}[s]$.
 By the definition of subblocks (\ref{defsubblock}), $R_s$'s read $r$ of $\var{v}.head$ at line \ref{createEndLeft} or \ref{createEndRight} obtains a value greater than $b$.
-By \Cref{lem::headPosition}, $B.\fld{super} \neq \nl$ when $r$ occurs, which means
+By \Cref{lem::headPosition}, $B.\fld{super}$ is not $\nl$ when $r$ occurs, which means
 that $B.\fld{super}$ was set (by line~\ref{setSuper1}) to a value read from $\var{v}.\fld{parent}.\head$ before $r$.
 When $r$ occurs, $\var{v}.\fld{parent.blocks}[s] = \nl$, since the later \op{CAS} by $R_s$ at line
 \ref{cas} succeeds.
@@ -44,9 +46,9 @@ So, by \Cref{lem::headPosition}, $\var{v}.\fld{parent}.\head \leq s$ when $r$ oc
 Since the value stored $B.\fld{super}$ was read from $\var{v}.\fld{parent.head}$ before $r$ and the \head\ field is non-decreasing by \Cref{nonDecreasingHead}, it follows that $B.super\leq s$.
 
 Next, we show that $B.\fld{super}\geq s-1$.
-The value stored in $B.\fld{super}$ at line \ref{setSuper1} is read from $\var{v}.\fld{parent}.\head$ at line \ref{readParentHead} and \head\ values are always at least 1, so $B.\fld{super} \geq 1$.
-So, if $s\leq 2$, the claim is trivial.  Assume $s>2$ for the remainder of the proof.
-By \Cref{lem::headProgress}, $\var{v}.\fld{parent.blocks}[s-1]\neq \nl$.  Let $R_{s-1}$ be the call to
+The value stored in $B.\fld{super}$ at line \ref{setSuper1} is read from $\var{v}.\fld{parent}.\head$ at line \ref{readParentHead} and \head\ is always at least 1, so $B.\fld{super} \geq 1$.
+So, if $s\leq 2$, the claim is trivial.  Assume $s>2$ for the rest of the proof.
+By \Cref{lem::headProgress}, $\var{v}.\fld{parent.blocks}[s-1]$ is not $\nl$.  Let $R_{s-1}$ be the call to
 $\op{Refresh}(\var{v}.\fld{parent})$ that installed the block in $\var{v}.\fld{parent.blocks}[s-1]$.
 Let $r'$ be the step when $R_{s-1}$ reads $s-1$ in $\var{v}.\fld{parent}.\head$ at line \ref{readHead}.
 This read $r'$ must be before $B$ is installed in $\var{v}$;
@@ -109,7 +111,7 @@ returns the required result, by the induction hypothesis.
 \sizeCorrectRes*
 \begin{proof}
 We prove the claim by induction on $b$. 
-The base case when ${b=0}$ is trivial, since the queue is initially empty and 
+The base case when ${b=0}$ is trivially true, since the queue is initially empty and 
 $\var{root}.\fld{blocks}[0]$ contains an empty block whose \size\ field is $0$. 
 Assuming the claim holds for $b-1$, we prove it for $b$.
 The \fld{size} field of the block $B$ installed in $\var{root}.\fld{blocks}[b]$ is computed

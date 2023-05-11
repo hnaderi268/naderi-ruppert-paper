@@ -7,7 +7,7 @@ Detailed proofs omitted from Section \ref{sec::correctness} for lack of space ap
 
 \sumRes*
 \begin{proof}
-Initially, each \fld{blocks} array only contains an empty block $B_0$ in location 0.
+Initially, each \fld{blocks} array  contains only an empty block $B_0$ in location 0.
 By definition, $E(B_0)$ and $D(B_0)$ are empty sequences.
 Moreover, $B_0.\fld{sum\sub{enq}} = B_0.\fld{sum\sub{deq}} = 0$, so the claim is true.
 
@@ -23,83 +23,85 @@ The proof for line \ref{deqNew}, where $B$ has a single dequeue, is similar.
 Now suppose $\var{v}$ is an internal node. By the definition of subblocks in (\ref{defsubblock}) and \Cref{lem::headProgress}, the
 subblocks of $\var{v}.\fld{blocks}[1..i]$ are $\var{v}.\fld{left.blocks}[1..B.\eleft]$ 
 and $\var{v}.\fld{right.blocks}[1..B.\eright]$.
-Thus, the enqueues in $E(\var{v}.\fld{blocks}[0])\cdots E(\var{v}.\fld{blocks}[i])$ are those in
-$E(\var{v}.\fld{left.blocks}[0]) \cdots E(\var{v}.\fld{left.blocks}[B.\eleft])$ and
+Thus, the enqueues in $E(\var{v}.\fld{blocks}[0])\cdots E(\var{v}.\fld{blocks}[i])$ are those in\linebreak
+$E(\var{v}.\fld{left.blocks}[0]) \cdots E(\var{v}.\fld{left.blocks}[B.\eleft])$ and those in \linebreak
 $E(\var{v}.\fld{left.blocks}[0]) \cdots E(\var{v}.\fld{left.blocks}[B.\eright])$.
-By the hypothesis, the total number of these enqueues is $\var{v}.\fld{left.blocks}[B.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right.blocks}[B.\eright].\fld{sum\sub{enq}}$, which is the value that line \ref{createSumEnq} stored in $B.\fld{sum\sub{enq}}$ when $B$ was created.
+By the hypothesis, the total number of these enqueues is \linebreak
+$\var{v}.\fld{left.blocks}[B.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right.blocks}[B.\eright].\fld{sum\sub{enq}}$, \linebreak
+which is the value that line \ref{createSumEnq} stored in $B.\fld{sum\sub{enq}}$ when $B$ was created.
 The proof for \fld{sum\sub{deq}} (stored on line~\ref{createSumDeq}) is similar.
 \end{proof}
 
 \superRelationRes*
 \begin{proof}
-We first show $B.\fld{super}\leq s$.
-Let $R_s$ be the instance of \op{Refresh}($v.\fld{parent}$) that installs the superblock of $B$ 
-in $v.\fld{parent.blocks}[s]$.
-By the definition of subblocks (\ref{defsubblock}), $R_s$'s read $r$ of $v.head$ at line \ref{createEndLeft} or \ref{createEndRight} obtains a value greater than $b$.
-By \Cref{lem::headPosition}, $B.\fld{super} \neq \nl$ when $r$ occurs, which means
-that $B.\fld{super}$ was set (by line~\ref{setSuper1}) to a value read from $v.\fld{parent}.\head$ before $r$.
-When $r$ occurs, $v.\fld{parent.blocks}[s] = \nl$, since the later \op{CAS} by $R_s$ at line
+We first show that $B.\fld{super}\leq s$.
+Let $R_s$ be the instance of \op{Refresh}($\var{v}.\fld{parent}$) that installs $B$'s superblock 
+in $\var{v}.\fld{parent.blocks}[s]$.
+By the definition of subblocks (\ref{defsubblock}), $R_s$'s read $r$ of $\var{v}.head$ at line \ref{createEndLeft} or \ref{createEndRight} obtains a value greater than $b$.
+By \Cref{lem::headPosition}, $B.\fld{super}$ is not $\nl$ when $r$ occurs, which means
+that $B.\fld{super}$ was set (by line~\ref{setSuper1}) to a value read from $\var{v}.\fld{parent}.\head$ before $r$.
+When $r$ occurs, $\var{v}.\fld{parent.blocks}[s] = \nl$, since the later \op{CAS} by $R_s$ at line
 \ref{cas} succeeds.
-So, by \Cref{lem::headPosition}, $v.\fld{parent}.\head \leq s$ when $r$ occurs.
-Since the value stored $B.\fld{super}$ was read from $v.\fld{parent.head}$ before $r$ and the \head\ field is non-decreasing by \Cref{nonDecreasingHead}, it follows that $B.super\leq s$.
+So, by \Cref{lem::headPosition}, $\var{v}.\fld{parent}.\head \leq s$ when $r$ occurs.
+Since the value stored $B.\fld{super}$ was read from $\var{v}.\fld{parent.head}$ before $r$ and the \head\ field is non-decreasing by \Cref{nonDecreasingHead}, it follows that $B.super\leq s$.
 
 Next, we show that $B.\fld{super}\geq s-1$.
-The value stored in $B.\fld{super}$ at line \ref{setSuper1} is read from $v.\fld{parent}.\head$ at line \ref{readParentHead} and \head\ values are always at least 1, so $B.\fld{super} \geq 1$.
-So, if $s\leq 2$, the claim is trivial.  Assume $s>2$ for the remainder of the proof.
-By \Cref{lem::headProgress}, $v.\fld{parent.blocks}[s-1]\neq \nl$.  Let $R_{s-1}$ be the call to
-$\op{Refresh}(v.\fld{parent})$ that installed the block in $v.\fld{parent.blocks}[s-1]$.
-Let $r'$ be the step when $R_{s-1}$ reads $s-1$ in $v.\fld{parent}.\head$ at line \ref{readHead}.
-This read $r'$ must be before $B$ is installed in $v$;
+The value stored in $B.\fld{super}$ at line \ref{setSuper1} is read from $\var{v}.\fld{parent}.\head$ at line \ref{readParentHead} and \head\ is always at least 1, so $B.\fld{super} \geq 1$.
+So, if $s\leq 2$, the claim is trivial.  Assume $s>2$ for the rest of the proof.
+By \Cref{lem::headProgress}, $\var{v}.\fld{parent.blocks}[s-1]$ is not $\nl$.  Let $R_{s-1}$ be the call to
+$\op{Refresh}(\var{v}.\fld{parent})$ that installed the block in $\var{v}.\fld{parent.blocks}[s-1]$.
+Let $r'$ be the step when $R_{s-1}$ reads $s-1$ in $\var{v}.\fld{parent}.\head$ at line \ref{readHead}.
+This read $r'$ must be before $B$ is installed in $\var{v}$;
 otherwise, \Cref{successfulRefresh} would imply that $B$ is a subblock of one of 
-$v.\fld{parent.blocks}[1..s-1]$, contrary to the hypothesis.
-Now, consider the call to \op{Advance}($v, b$) that writes $B.\fld{super}$.
+$\var{v}.\fld{parent.blocks}[1..s-1]$, contrary to the hypothesis.
+Now, consider the call to \op{Advance}($\var{v}, b$) that writes $B.\fld{super}$.
 It is invoked either 
-at line \ref{helpAdvance} after seeing $v.\fld{blocks}[b]\neq \nl$ at line \ref{ifHeadnotNull}
-or at line \ref{advance} after ensuring $v.\fld{blocks}[b]\neq \nl$ at line~\ref{cas}.
+at line \ref{helpAdvance} after seeing $\var{v}.\fld{blocks}[b]\neq \nl$ at line \ref{ifHeadnotNull}
+or at line \ref{advance} after ensuring $\var{v}.\fld{blocks}[b]\neq \nl$ at line~\ref{cas}.
 Either way, the \op{Advance} is invoked after $B$ is installed, and therefore after $r'$.
-By \Cref{nonDecreasingHead}, $v.\fld{parent}.\head$ is non-decreasing, so 
-the value this \op{Advance} reads in $v.\fld{parent}.\head$ and
-writes in $B.\fld{super}$ is greater than or equal to the value $s-1$ that $r'$ reads in $v.\fld{parent}.\head$.
+By \Cref{nonDecreasingHead}, $\var{v}.\fld{parent}.\head$ is non-decreasing, so 
+the value this \op{Advance} reads in $\var{v}.\fld{parent}.\head$ and
+writes in $B.\fld{super}$ is greater than or equal to the value $s-1$ that $r'$ reads in $\var{v}.\fld{parent}.\head$.
 \end{proof}
 
 \indexDequeueRes*
 \begin{proof}
-We prove the claim by induction on the depth of node $v$. The base case where $v$ is the root is trivial (see Line \ref{indexBaseCase}).
-Assuming the claim holds for $v$'s parent, we prove it for $v$.
-Let $B=v.\fld{blocks}[b]$ and $B'$ be the superblock of $B$.
-\op{IndexDequeue}($v, b, i$) first computes the index $sup$ of $B'$ in $v.\fld{parent}$.
+We prove the claim by induction on the depth of node $\var{v}$. The base case where $\var{v}$ is the root is trivial (see Line \ref{indexBaseCase}).
+Assuming the claim holds for $\var{v}$'s parent, we prove it for $\var{v}$.
+Let $B=\var{v}.\fld{blocks}[b]$ and $B'$ be the superblock of $B$.
+\op{IndexDequeue}($\var{v}, b, i$) first computes the index $sup$ of $B'$ in $\var{v}.\fld{parent}$.
 By \Cref{superRelation}, this index is either $B.super$ or $B.super+1$.
-The correct index is determined by testing on line \ref{supertest} whether $B$ is not a subblock of $v.\fld{parent.blocks}[B.\fld{super}]$.
+The correct index is determined by testing on line \ref{supertest} whether $B$ is not a subblock of $\var{v}.\fld{parent.blocks}[B.\fld{super}]$.
 
 Next, the position of the required dequeue in $D(B')$ is computed in 
 lines \ref{computeISuperStart}--\ref{computeISuperEnd}. 
-We first add the number of dequeues in the subblocks of $B'$ in $v$ that precede $B$ on line \ref{computeISuperStart}.
-If $v$ is the right child of its parent, then all of the subblocks of $B'$ from $v$'s left sibling
+We first add the number of dequeues in the subblocks of $B'$ in $\var{v}$ that precede $B$ on line \ref{computeISuperStart}.
+If $\var{v}$ is the right child of its parent, then all of the subblocks of $B'$ from $\var{v}$'s left sibling
 also precede the required dequeue, so we add the number of dequeues in those subblocks in line \ref{considerLeftBeforeRight}.
 
-Finally, \op{IndexDequeue} is called recursively on $v$'s parent.
+Finally, \op{IndexDequeue} is called recursively on $\var{v}$'s parent.
 Since $B$ has been propagated to the root, so has its superblock $B'$.
 Thus, all preconditions of the recursive call are met.
 By the induction hypothesis, the recursive call returns the location of the required dequeue in the root.\end{proof}
 
 \getEnqRes*
 \begin{proof}
-We prove the claim by induction on the height of node $v$.
-If $v$ is a leaf, the hypothesis implies that $i=1$ and the block $v.\fld{blocks}[b]$ represents 
-an enqueue whose argument is stored in $v.\fld{blocks}[b].\fld{element}$.
+We prove the claim by induction on the height of node $\var{v}$.
+If $\var{v}$ is a leaf, the hypothesis implies that $i=1$ and the block $\var{v}.\fld{blocks}[b]$ represents 
+an enqueue whose argument is stored in $\var{v}.\fld{blocks}[b].\fld{element}$.
 \op{GetEnqueue} returns the argument of this enqueue at line \ref{getBaseCase}.
 
-Assuming the claim holds for $v$'s children, we prove it for $v$.
-Let $B$ be $v.\fld{blocks}[b]$.
+Assuming the claim holds for $\var{v}$'s children, we prove it for $\var{v}$.
+Let $B$ be $\var{v}.\fld{blocks}[b]$.
 By (\ref{defSeqs}),
 $E(B)$ is obtained by concatenating the enqueue sequences of the direct subblocks
 of $B$, which are listed in (\ref{defsubblock}).
 By \Cref{lem::sum}, $\var{sum\sub{left}}-\var{prev\sub{left}}$ is the number
-of enqueues in $E(B)$ that come from $B$'s subblocks in $v$'s left child.
-Thus, $dir$ is set to the direction for the child of $v$ that contains the required enqueue.
+of enqueues in $E(B)$ that come from $B$'s subblocks in $\var{v}$'s left child.
+Thus, $dir$ is set to the direction for the child of $\var{v}$ that contains the required enqueue.
 Moreover, when line \ref{endChooseDir} is reached, $i$ is the position of the required enqueue within the portion $E'$ of $E(B)$ that comes from that child.
 Thus,  line \ref{getChild} finds the index $b'$ of the subblock $B'$ containing the required enqueue.
-By \Cref{lem::sum}, $v.\var{dir.blocks}[b'-1].\var{sum\sub{enq}} - \var{prev\sub{dir}}$ is the number of 
+By \Cref{lem::sum}, $\var{v}.\var{dir.blocks}[b'-1].\var{sum\sub{enq}} - \var{prev\sub{dir}}$ is the number of 
 enqueues in $E'$ before the enqueues of block $B'$, so
 the value $i'$ computed on line \ref{getChildIndex} is the position of the required enqueue within $E(B')$.
 Thus, the recursive call on line \ref{getRecurse} satisfies its precondition, and 
@@ -109,7 +111,7 @@ returns the required result, by the induction hypothesis.
 \sizeCorrectRes*
 \begin{proof}
 We prove the claim by induction on $b$. 
-The base case when ${b=0}$ is trivial, since the queue is initially empty and 
+The base case when ${b=0}$ is trivially true, since the queue is initially empty and 
 $\var{root}.\fld{blocks}[0]$ contains an empty block whose \size\ field is $0$. 
 Assuming the claim holds for $b-1$, we prove it for $b$.
 The \fld{size} field of the block $B$ installed in $\var{root}.\fld{blocks}[b]$ is computed

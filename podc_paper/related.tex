@@ -2,15 +2,15 @@
 
 \section{Related Work}
 
-\emph{List-based Queues.}
+\paragraph{List-based Queues.}
 The MS-queue \cite{MS98} is a lock-free queue that has stood the test of time.
-A version of it is
-included in the standard Java Concurrency Package.  %java.util.concurrent.ConcurrentLinkedQueue
-See the paper that introduced it for a survey of the early history of concurrent queues.
+The standard Java Concurrency Package includes a version of it.  %java.util.concurrent.ConcurrentLinkedQueue
+See \cite{MS98} for a survey of the early history of concurrent queues.
 As mentioned above, the MS-queue suffers from the CAS retry problem because of contention at the front and back of the queue.
-Thus, it is lock-free but not wait-free and has an amortized\Hossein{Maybe we can say worst-case. I see that you have used amortized step complexity consistently everywhere but maybe it is fair to say that these papers were not designed to improve the worst-case amortized step complexity.}
-\Eric{Amortized step complexity is defined in first parag of paper to be worst case over all executions of the average number of steps per operation, so I think the worst-case aspect of it is clear.  Also, if we just said ``worst-case'' without ``amortized'' it would be confused with worst-case of an individual operation, which is infinite in this case.  By the way, saying that previous implementations have $\Omega(p)$ step complexity, even in the amortized sense, makes the new contribution even more of a contrast.}
-step complexity of $\Theta(p)$ per operation.
+Thus, it is lock-free but not wait-free and has an amortized step complexity of $\Theta(p)$ per operation.
+
+%\Hossein{Maybe we can say worst-case. I see that you have used amortized step complexity consistently everywhere but maybe it is fair to say that these papers were not designed to improve the worst-case amortized step complexity.}
+%\Eric{Amortized step complexity is defined in first parag of paper to be worst case over all executions of the average number of steps per operation, so I think the worst-case aspect of it is clear.  Also, if we just said ``worst-case'' without ``amortized'' it would be confused with worst-case of an individual operation, which is infinite in this case.  By the way, saying that previous implementations have $\Omega(p)$ step complexity, even in the amortized sense, makes the new contribution even more of a contrast.}
 
 Many papers have described ways to reduce contention in the MS-queue.
 Moir et al.~\cite{DBLP:conf/spaa/MoirNSS05} 
@@ -21,18 +21,17 @@ However, when there are $p$ concurrent enqueues (and no dequeues), the CAS retry
 is still present.
 The baskets queue of
 Hoffman, Shalev, and Shavit~\cite{DBLP:conf/opodis/HoffmanSS07} 
-attempts to reduce contention by grouping concurrent enqueues into baskets.
+attempts to reduces contention by grouping concurrent enqueues into baskets.
 An enqueue that fails its CAS is put in the basket with the enqueue that succeeded.
-Enqueues within a basket determine their order among themselves without having to access the back of the queue.
+Enqueues within a basket order  themselves without having to access the back of the queue.
 However, if $p$ concurrent enqueues are in the same basket
 the CAS retry problem occurs when they order themselves using CAS instructions.
 Both modifications still have $\Omega(p)$ amortized step complexity.
 
-Kogan and Herlihy \cite{DBLP:conf/podc/KoganH14} described how to use futures to improve
-the performance of the MS-queue.
+Kogan and Herlihy \cite{DBLP:conf/podc/KoganH14} improved the MS-queue's performance using \emph{futures}.
 Operations return future
 objects instead of responses. Later, when an operation's response is needed, it
-can be evaluated using the corresponding future object.
+is evaluated using the future object.
 This allows batches of enqueues or dequeues to be done at once on an MS-queue.
 However, the implementation satisfies a weaker correctness condition than linearizability.
 Milman-Sela et al.~\cite{MKLLP22} extended this approach to allow batches
@@ -42,18 +41,18 @@ They use some properties of the queue size before and after a batch, similar to 
 In the worst case, where operations require their response right away,
 batches have size 1, and both of these implementations behave like a standard MS-queue.
 
+In the MS-queue, an enqueue requires two CAS steps.
 Ladan-Mozes and Shavit~\cite{DBLP:journals/dc/Ladan-MozesS08}
-presented an optimistic  queue implementation. 
+presented an optimistic  queue implementation
 %MS-queue uses
 %two \nf{CAS}es to do an enqueue: one to change the tail to the new
 %node and another one to change the next pointer of the previous node
 %to the new node. 
-In the MS-queue, an enqueue requires two CAS steps.
-The optimistic queue uses a doubly-linked list to reduce the number of
+that uses a doubly-linked list to reduce the number of
 \texttt{CAS} instructions to one in the best case. 
-Pointers in the doubly-linked list can be inconsistent, but are fixed when needed by traversing the list.
-Although this fixing is rare in practice, it yields an amortized complexity of $\Omega(qp)$ 
-steps per operation for worst-case executions.
+Pointers in the doubly-linked list can be inconsistent, but are fixed when necessary by traversing the list.
+This fixing is rare in practice, but it yields an amortized complexity of $\Omega(qp)$ 
+steps per operation in the worst case.
 
 Kogan and Petrank~\cite{DBLP:conf/ppopp/KoganP11} 
 used Herlihy's helping
@@ -70,7 +69,7 @@ the amortized step complexity remains~$\Omega(p)$.
 \Hossein{I get what this sentence means, but from a high overview i think it is inaccurate. Since the step complexity of MS-queue is infinite, so nothing can be added to it and a wait-free queue is always better than a lock-free queue in the worst-case.}
 \Eric{I modified the wording.  I also added the material about fast-path slow-path here (since I had forgotten that paper also applies it to a queue), and fixed the paragraph about FPSP method below when discussing array-based queues.}
 
-\emph{Array-Based Queues.}
+\paragraph{Array-Based Queues.}
 Arrays can be used to implement queues with bounded capacity \cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01}.  
 %Similar to the front and back pointers of list-based queues, indices
 Dequeues and enqueues update
@@ -81,6 +80,7 @@ These solutions also use $\Omega(p)$ steps per operation due to the CAS retry pr
 
 Morrison and Afek \cite{DBLP:conf/ppopp/MorrisonA13} also used a linked list of (circular) arrays.
 To avoid the CAS retry problem, concurrent operations try to claim spots in an array using fetch\&increment instructions.
+(It was shown recently that this implementation can be modified to use single-word CAS instructions rather than double-width CAS \cite{RK23}.)
 If livelock between enqueues and a racing dequeue prevent enqueues from claiming a spot,
 the enqueues fall back on using a CAS to add a new array to the linked list, 
 and the CAS retry problem reappears.
@@ -128,42 +128,46 @@ due either to the CAS retry problem or helping mechanisms.
 %is linearizable but not lock-free and they present experiments that
 %show their algorithm performs well in some situations. 
 
-\emph{Universal Constructions.}
+\paragraph{Universal Constructions.}
 One can also build a queue using a universal construction \cite{10.1145/114005.102808}.
 Jayanti \cite{DBLP:conf/podc/Jayanti98a} observed that
 the universal construction of Afek, Dauber, and
 Touitou~\cite{DBLP:conf/stoc/AfekDT95} can be modified to use $O(\log p)$ steps per operation, 
 assuming that words can store $\Omega(p \log p)$ bits. 
 (Thus, in terms of operations on reasonably-sized $O(\log p)$-bit words, their construction would take $\Omega(p\log p)$ steps per operation.)
-Fatourou and Kallimanis \cite{FK14} used their universal construction based on fetch\&add and LL/SC instructions
+Fatourou and Kallimanis \cite{FK14} used their own universal construction based on fetch\&add and LL/SC instructions
 to implement a queue, but its step complexity is also $\Omega(p)$.
 \here{Double check this.}
 
-\emph{Restricted Queues.}
-David introduced the first sublinear-time queue
+\paragraph{Restricted Queues.}
+David gave the first sublinear-time queue
 \cite{DBLP:conf/wdag/David04}, but it works only for a single enqueuer.
 It uses fetch\&increment and swap  instructions and takes $O(1)$ steps per operation, but
 uses unbounded memory.  Bounding the space increases the steps per operation to $\Omega(p)$.
-Jayanti and Petrovic gave a wait-free poly-logarithmic
-queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but it works only for a single dequeuer. 
+Jayanti and Petrovic gave a wait-free polylogarithmic
+queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but only for a single dequeuer. 
 Our \ordering\ tree is similar to the tree structure they use to agree on a linearization ordering.
+Concurrently with our work, which first appeared in \cite{Nad22}, Johnen, Khattabi and Milani \cite{JKM23} built on \cite{DBLP:conf/fsttcs/JayantiP05} to give a wait-free queue  
+that achieves $O(\log p)$ steps for enqueue operations but fails to achieve polylogarithmic step complexity for dequeues: their dequeue operations take $O(k \log p)$ steps if there are $k$ dequeuers.
 
 \here{Should we mention https://arxiv.org/abs/2103.11926 , which seems to have a queue for 2 enqueuers and 2 dequeuers ?  May not be worth mentioning because then $p$ is a constant, so complexity in terms of $p$ doesn't make sense.}
 
-\emph{Other Primitives.}
-Khanchandani and Wattenhofer \cite{KW18} gave a wait-free queue implementation
+\paragraph{Other Primitives.}
+Khanchandani and Wattenhofer \cite{KW18} gave a wait-free queue 
 with $O(\sqrt{p})$ step complexity using non-standard synchronization primitives
-called half-increment and half-max, which can be viewed as particular kinds of
+called half-increment and half-max, which can be viewed as %particular kinds of
 double-word read-modify-write operations.
 They use this as evidence that their primitives can be more efficient than CAS
 since previous CAS-based queues all required $\Omega(p)$ step complexity.
 Our new implementation counters this argument.
 
-\emph{Fetch\&Increment Objects.}
-There are implementations of fetch\&increment objects that use a polylogarithmic number of steps per operation. \cite{ERW12,10.1007/978-3-642-41527-2_20}
-Our approach is similar to that of Ellen, Ramachandran and Woelfel \cite{ERW12},
-which also uses a tree structure to keep track of the fetch\&increments
-that have been performed, as in the universal construction of \cite{DBLP:conf/stoc/AfekDT95}.
+\paragraph{Fetch\&Increment Objects.}
+Ellen, Ramachandran and Woelfel \cite{ERW12} gave an implementation of 
+fetch\&increment objects that uses a polylogarithmic number of steps per operation.
+Like our queue, they also use a tree structure similar to the universal construction of 
+\cite{DBLP:conf/stoc/AfekDT95} to keep track of the operations
+that have been performed.
 However, our construction requires more intricate
 data structures to represent sets of operations, since a queue's state cannot be represented as succinctly
 as the single-word state of a fetch\&increment object.
+Ellen and Woelfel \cite{10.1007/978-3-642-41527-2_20} gave an improved implementation of fetch\&increment with better step complexity.

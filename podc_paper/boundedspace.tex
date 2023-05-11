@@ -1,6 +1,6 @@
 % !TEX root =  podc-submission.tex
 
-\section{Reducing Space Usage}
+\section{Bounding Space Usage}
 \label{reducing}
 
 Operations remain in the \fld{blocks} arrays forever. 
@@ -22,22 +22,22 @@ using the \fld{sum\sub{enq}} field, since the RBT is also sorted with respect to
 Known lock-free search trees have step complexity that includes a term linear in $p$ \cite{EFHR14,Ko20}.  
 However, we do not require all the standard search tree operations.
 Instead of a standard insertion, we allow a \op{Refresh}'s insertion to fail if another
-concurrent \op{Refresh} succeeds in inserting a node, just as the CAS on line \ref{cas}
-can fail if a concurrent \op{Refresh} does a successful CAS.
-Moreover, the insertion should succeed only if the newly inserted block has a larger index than any other node in the RBT.
+concurrent \op{Refresh} succeeds in inserting a block, just as the \op{CAS} on line \ref{cas}
+can fail if a concurrent \op{Refresh} does a successful \op{CAS}.
+Moreover, the insertion should succeed only if the newly inserted block has a larger index than any other block in the RBT.
 Thus, we can use a particularly simple concurrent RBT implementation.
 A sequential RBT can be made persistent using the classic node-copying technique of 
-Driscoll et al.~\cite{DSST89}:  all nodes are immutable, and operations on the 
-tree are performed by making a new copy of each node $v$ that must be modified, as well
-as each node along the path from the root to $v$.
-The tree reachable from the new copy of the root is the result of applying the tree operation.
+Driscoll et al.~\cite{DSST89}:  all RBT nodes are immutable, and operations on the 
+RBT make a new copy of each RBT node $x$ that must be modified, as well
+as each RBT node along the path from the RBT's root to~$x$.
+The RBT reachable from the new copy of the root is the result of applying the RBT operation.
 This only adds a constant factor to the running time of any routine designed for a (sequential) RBT.
 Once a process has performed an update to the RBT representing the blocks of a node 
-$v$ in the \ordering\ tree, 
-it uses a CAS to swing $v$'s pointer from the previous RBT root to the new RBT root.
+$\var{v}$ in the \ordering\ tree, 
+it uses a CAS to swing $\var{v}$'s pointer from the previous RBT root to the new RBT root.
 A search in the RBT can simply read the pointer to the RBT root and perform a standard
 sequential search on it.
-Bashari and Woelfel ~\cite{DBLP:conf/podc/BashariW21} used persistent red-black trees in a similar way to implement a snapshot data structure.
+Bashari and Woelfel ~\cite{DBLP:conf/podc/BashariW21} used persistent RBTs in a similar way for a snapshot data structure.
 
 To prevent RBTs from growing without bound, we would like to discard
 blocks that are no longer needed.
@@ -47,7 +47,7 @@ Blocks should be kept if they contain operations still in progress.
 Moreover, a block containing an \op{Enqueue}($x$) must be kept until $x$ is dequeued.
 
 To maintain good amortized time, we periodically do a garbage collection (GC) phase.
-If a \op{Refresh} on a node adds a block whose \var{index} is a multiple of $G=(p\ceil{\log p})^2$, it does GC to remove obsolete blocks from the node's RBT.
+If a \op{Refresh} on a node adds a block whose \var{index} is a multiple of $G=p^2\ceil{\log p}$, it does GC to remove obsolete blocks from the node's RBT.
 To determine which blocks can be thrown away, we use a global array $\var{last}[1..p]$ where 
 each process writes the index of the last block in the root
 containing a null dequeue or an enqueue whose element it dequeued.
@@ -64,14 +64,14 @@ by another process's GC phase.  If $op$
 is a dequeue, $op$ must have been helped before $B$ was discarded, so $op$ can simply read its response from
 its own leaf.  If $op$ is an enqueue, it can simply terminate.
 
-We show that GC ensures each RBT has size $O(pq+p^3\log p)$, so RBT operations take $O(\log(p+q))$ time.
+Our GC scheme ensures each RBT has  $O(q+p^2\log p)$ blocks, so RBT operations take $O(\log(p+q))$ time.
 Excluding GC, an operation does $O(1)$ operations on RBTs at each level of the tree for a total of
-$O(\log p(\log p +\log q))$ steps.
+$O(\log p\log(p + q))$ steps.
 A GC phase takes $O(p\log p \log(p+q))$ steps to help complete all pending operations.
-If all processes carry out this GC phase, it takes a total of $O(p^2\log p\log(p+q))=O(\frac{G\log(p+q)}{\log p})$ steps.
-Thus, each node contributes $O(\frac{\log(p+q)}{\log p})$ steps to each operation in an amortized sense
-since there are at least $G$ operations between two GC phases.
-Adding up over all nodes an operation visits, 
-an operation spends $O(\log(p+q))$ steps doing GC in an amortized sense.
+If all processes carry out this GC phase, it takes a total of $O(p^2\log p\log(p+q))=O(G\log(p+q))$ steps.
+Since there are at least $G$ operations between two GC phases, each node contributes $O(\log(p+q))$ steps to each operation in an amortized sense.
+Adding up over all nodes an operation may have to do GC on, 
+an operation spends $O(\log p\log(p+q))$ steps doing GC in an amortized sense.
+So the total amortized step complexity is  $O(\log p \log(p+q))$ per operation.
 %Doing GC less frequently would yield better constant factors in the amortized number of steps per operation but use more space.
 

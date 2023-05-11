@@ -5,7 +5,8 @@
 There has been a great deal of research in the past several decades on the design of shared queues.
 Besides being a fundamental data structure, queues are used in
 significant concurrent applications, including OS kernels \cite{MP91}, memory management \cite{BBFRSW21}\here{try to find an older, more canonical reference},
-packet processing \cite{DPDK}, synchronization \cite{KAE23},\here{is this a good citation for this?}
+%packet processing \cite{DPDK}, 
+synchronization \cite{KAE23},\here{is this a good citation for this?}
 and sharing resources or tasks.
 We focus on shared queues that are \emph{linearizable} \cite{HW90}, meaning that operations
 appear to take place atomically, and \emph{lock-free}, meaning that some operation on the queue
@@ -58,7 +59,7 @@ lock-free queues use
 $\Omega(p)$ CAS instructions, even in an amortized sense.
 Both versions of our queue use single-word CAS on reasonably-sized 
 words.
-We assume that a word is large enough to store an item to be enqueued (or at least a pointer to it).  We also assume that the number of operations performed on the queue can be stored in $O(1)$ words.
+We assume that a word is large enough to store an item to be enqueued (or at least a pointer to it).  We also assume that the number of operations performed on the queue can be stored (in binary) in $O(1)$ words.
 This is analogous to the assumption for the classical RAM model that the number of bits per word is logarithmic in the problem size.
 For the space-bounded version, we unlink unneeded objects from our data structure.
 We do not address the orthogonal problem of reclaiming memory; we assume a safe

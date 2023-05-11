@@ -46,7 +46,7 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field 
 
 \here{Talk about what happens if a block is not found in an RBT}
 
-Pseudocode for the space-bounded implementation appears in Figure \ref{pseudocode1GC}--\ref{pseudocode2GC}.
+Pseudocode for the space-bounded implementation appears in Figures \ref{pseudocode1GC} and \ref{pseudocode2GC}.
 New or modified code appears in blue.
 The \op{Propagate} and \op{GetEnqueue} routines are unchanged.
 A few lines have been added to \op{FindResponse} to update the \var{last} array
@@ -397,8 +397,9 @@ inserts the new block
 and finally performs a \op{CAS} to swing the node's \fld{blocks} pointer to the new RBT.
 
 To determine the oldest block in a node \var{v} to keep, the \opemph{SplitBlock} routine  first
-finds the most recent block $B_{root}$ in the root that contains either an enqueue that has been dequeued
-or a null dequeue using the \var{last} array.  By the FIFO property of queues, all enqueues in blocks before $B_{root}$ are either
+uses the \var{last} array to
+find the most recent block $B_{root}$ in the root that contains either an enqueue that has been dequeued
+or a null dequeue.  By the FIFO property of queues, all enqueues in blocks before $B_{root}$ are either
 dequeued or will be dequeued by a dequeue that is currently in progress.  Once those pending dequeues have been
 helped to complete by line \ref{invokeHelp},
 it is safe to discard any blocks in the root older than $B_{root}$, as well
@@ -418,7 +419,7 @@ The \opemph{Propagated} function is used to determine whether the dequeue has pr
 In the code, we use $\var{v}.\fld{blocks}[i]$ to refer to the block in the RBT stored in $\var{v}.\fld{blocks}$
 with index~$i$.
 A search for this block may sometimes not find it, if it has already been discarded
-by another process's GC.
+by another process's GC phase.
 As mentioned in Section \ref{reducing}, if this happens to an enqueue operation,
 the enqueue can simply terminate because the fact that the block is gone means that another
 process has helped the enqueue reach the root of the ordering tree.
@@ -426,11 +427,11 @@ Similarly, if  a dequeue operation performs a failed search on a RBT, the dequeu
 written in the \fld{response} field of the 
 leaf block that represents the dequeue and terminate, since some other process
 will have written the \fld{response} there before discarding the needed block.
-We do not explicitly write this early termination every time we do a lookup in an RBT.
+We do not explicitly write this early termination in the pseudocode every time we do a lookup in an RBT.
 There is one exception to this rule:  if an RBT lookup for block $B$ returns \nl\
 on line \ref{SBlookup1} or \ref{SBlookup2} of
 \op{SplitBlock} because the required block has been discarded, 
-we continue doing GC, since we do not a GC phase on one node
+we continue doing GC, since we do not want a GC phase on one node
 to be prevented from cleaning up its RBT because a GC phase on a different node threw away some blocks
 that were needed.
 Line \ref{substitute} says what to do in this case.

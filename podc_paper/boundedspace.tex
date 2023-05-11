@@ -57,7 +57,7 @@ by computing the dequeue's response and writing it in the block in the leaf that
 Once this helping is complete, it follows from the FIFO property of the queue that elements enqueued 
 in $\fld{root.blocks}[1..m-1]$ have all been dequeued, so GC can discard all subblocks of those.
 Fortunately, there is an  RBT \op{Split} operation that can remove
-these blocks in logarithmic time \cite[Sec.~4.2]{Tar83}.
+these obsolete blocks from an RBT in logarithmic time \cite[Sec.~4.2]{Tar83}.
 
 An operation $op$'s search of a RBT may fail to find the required block $B$ that has been removed 
 by another process's GC phase.  If $op$

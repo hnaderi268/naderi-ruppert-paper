@@ -13,7 +13,7 @@ how the set of blocks in a node's RBT can be modified.
 \begin{lemma}\label{RBTupdates}
 Suppose a step of the algorithm changes $\var{v}.\fld{blocks}$ from a non-empty tree $T$ to $T'$.
 If the set of \fld{index} values  in $T$ is $I$, then the set of \fld{index} values in $T'$ is 
-$(I \cap [m-1,\infty))\cup \{\max(I) + 1\}$ for some $m$.
+$(I \cap [m-1,\infty))\cup \{\max(I) + 1\}$ for some~$m$.
 \end{lemma}
 \begin{proof}
 The RBT of a node is updated only at line \ref{appendLeafGC} or \ref{casGC}.
@@ -28,7 +28,7 @@ So the claim is satisfied.
 
 If line \ref{casGC} of a \op{Refresh} modifies $\var{v}.\fld{blocks}$, then \var{v} is an internal node.
 After reading $T$ from $\var{v}.\fld{blocks}$ at line \ref{refreshReadTGC},
-then creates the  block \var{new},
+the \op{Refresh} then creates the  block \var{new},
 and then calls \op{AddBlock}($T,new$) to create $T'$.
 Line \ref{createIndexGC} sets $\var{new}.\var{index} = \max(I)+1$.
 The \op{AddBlock} that creates $T'$ may optionally \op{Split} the RBT and then add $new$ to it.
@@ -100,7 +100,7 @@ and the definition of subblocks given in (\ref{defsubblock}).
 In particular, \Cref{lem::sum} says that nodes in an in-order traversal of a RBT have non-decreasing
 values of \fld{sum\sub{enq}}  so the searches of a RBT based on
 \fld{sum\sub{enq}} values in lines
-\ref{getChildGC} and \ref{FRsearchGC} can be done in logarithmic time.
+\ref{FRsearchGC} and \ref{getChildGC} can be done in logarithmic time.
 
 \subsubsection{Propagating Operations to the Root}
 
@@ -122,7 +122,7 @@ Let $i$ be the index of the block containing $op$ that was in \var{v}'s RBT befo
 $R$ executed line \ref{refreshReadTGC}.
 We consider two cases.
 
-Suppose $R$'s call to \op{CreateBlock} returns a new block $B'$.  Then, $R$'s \op{CAS} at line \ref{cas} 
+Suppose $R$'s call to \op{CreateBlock} returns a new block $B'$.  Then, $R$'s \op{CAS} at line \ref{casGC} 
 installs $B'$ in $\var{v}.\fld{blocks}$.
 The \op{CreateBlock} set $B'.\eleft$ to the maximum \fld{index} in $\var{v}.\fld{left}$'s RBT at line \ref{createEndLeftGC}.
 By \Cref{nonEmptyIncreasing}, this maximum \fld{index} is bigger than $i$.

@@ -10,7 +10,7 @@ Each tree node  stores an array of \emph{blocks}, where each block represents a
 sequence of enqueues and a sequence of dequeues.
 See Figure \ref{orderingtree} for an example.
 In this section, we use an infinite array of blocks in each node.
-Section \ref{reducing} describes how to replace the infinite array by a representation with bounded space.
+Section \ref{reducing} describes how to replace the infinite array by a representation that uses bounded space.
 
 To perform an operation on the queue, a process $P$ appends a new block containing that  
 operation to the \fld{blocks} array in $P$'s leaf.
@@ -25,7 +25,7 @@ creates a new block by combining information from those blocks, and attempts to 
 new block to $\var{v}$'s \fld{blocks} array using a \op{CAS}.
 Following \cite{DBLP:conf/fsttcs/JayantiP05}, we call this a 3-step sequence a
 \op{Refresh} on $\var{v}$. %(see Figure \ref{fig::propagstep}).
-A \op{Refresh}'s \op{CAS} may fail if there is another concurrent \op{Refresh} on $\var{v}$.
+A \op{Refresh}'s \op{CAS} may fail if there is another concurrent \op{Refresh} on~$\var{v}$.
 However, since a successful \op{Refresh} propagates multiple pending operations 
 from $\var{v}$'s children to $\var{v}$,
 we can prove that if two \op{Refresh}es by $P$ on $\var{v}$ fail,
@@ -74,14 +74,14 @@ Enq(a) Enq(e) Deq\sub{2} $\mid$ Enq(b) Deq\sub{4} Deq\sub{5} $\mid$ Enq(d) Enq(f
 \caption{\label{implicit}The actual, implicit representation of the tree shown in Figure \ref{orderingtree}.
 The leaf blocks simply show the \fld{element} field.
 Internal blocks show the \fld{sum\sub{enq}} and \fld{sum\sub{deq}} fields,
-and \eleft\ and \eright\ fields are shown using arrows as before.
+and \eleft\ and \eright\ fields are shown using arrows as in Figure \ref{orderingtree}.
 Root blocks also have the additional \fld{size} field.
 The \fld{super} field is not shown.}
 \end{figure*}
 
 \subsection{Linearization Ordering}
 
-Performing a double refresh at each node along the path from the leaf to the root ensures 
+Performing a double \op{Refresh} at each node along the path from the leaf to the root ensures 
 a block containing the operation is appended to the root before the operation completes.
 So, if an operation $op_1$ terminates before another operation $op_2$ begins, 
 $op_1$ will be in an earlier block than $op_2$ in the root's blocks array.
@@ -117,12 +117,12 @@ D(B) &=& D(B^L_1)\cdots D(B^L_\ell)\cdot D(B^R_1) \cdots D(B^R_r)\label{defSeqs}
 \end{eqnarray}
 We say the block $B$ \emph{contains} the operations in $E(B)$ and $D(B)$.
 
-Finally, when linearizing the operations propagated to the root, we must
-choose how to order operations within a block.  Any ordering within a block would work, since all operations
-in a block are concurrent with one another.  We choose to put
+When linearizing the operations propagated to the root, we must
+choose how to order operations within a block.  
+We choose to put
 each block's enqueues before its dequeues.
 Thus, if the root's blocks array contains blocks $B_1, \ldots, B_k$, the 
-linearization ordering is 
+linearization ordering~is 
 \begin{equation}
 L=E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k).
 \label{linearization}
@@ -302,11 +302,12 @@ B.\fld{size} &=& \max(0, B'.\fld{size} + (B.\fld{sum\sub{enq}}-B'.\fld{sum\sub{e
 
 The only remaining field is $B.\fld{super}$.  When the block 
 $B$ is created for a \node\ $\var{v}$, we do not yet know where its
-superblock will eventually be installed in $B$'s parent.
+superblock will eventually be installed in \var{v}'s parent.
 So, we leave $B.\fld{super}$ blank.  
 Soon after $B$ is installed,
-a call to \op{Advance} at line \ref{helpAdvance} or \ref{advance} by some process will
-set \var{B}.\fld{super} to a value read from \var{par}.\fld{head}.
+%a call to \op{Advance} at line \ref{helpAdvance} or \ref{advance} by 
+some process will
+set \var{B}.\fld{super} to a value read from the \fld{head} field of \var{v}'s parent.
 We shall show that this happens soon enough that $B.\fld{super}$ can differ from the true index of $B'$
 by at most 1.
 %After $B$ is installed 
@@ -523,7 +524,7 @@ Since \op{Append} writes only to the process's own leaf, there cannot be concurr
 \op{Append} then calls \op{Propagate} to ensure the operation represented by \var{B} is propagated to the root.
 
 \opemph{Propagate}(\var{v}) guarantees that any blocks that are in \var{v}'s children when \op{Propagate} is invoked are propagated to the root.
-It uses the double refresh idea described
+It uses the double \op{Refresh} idea described
 above and invokes two \op{Refresh}es on \var{v} in Lines
 \ref{firstRefresh} and \ref{secondRefresh}. 
 If both fail to add a block to \var{v}, it means some other process has done a successful \op{Refresh}

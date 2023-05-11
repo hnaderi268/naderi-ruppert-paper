@@ -172,7 +172,7 @@ so these sequences cannot both be empty.
 \subsection{Propagating Operations to the Root}
 \label{sec::propagating}
 
-Next, we show two \op{Refresh}es suffice to propagate operations from a child to its parent.
+In the next two lemmas, we show two \op{Refresh}es suffice to propagate operations from a child to its parent.
 We say that node $\var{v}$ \emph{contains} an operation $op$ if some block in $\var{v}.\fld{blocks}$ contains $op$.
 %\here{move this defn earlier and just recall it here?}
 Since blocks are permanently added to nodes, if $\var{v}$ contains $op$ at some time, $v$ contains $op$ at all later times too.

@@ -21,7 +21,7 @@ However, when there are $p$ concurrent enqueues (and no dequeues), the CAS retry
 is still present.
 The baskets queue of
 Hoffman, Shalev, and Shavit~\cite{DBLP:conf/opodis/HoffmanSS07} 
-attempts to reduces contention by grouping concurrent enqueues into baskets.
+attempts to reduce contention by grouping concurrent enqueues into baskets.
 An enqueue that fails its CAS is put in the basket with the enqueue that succeeded.
 Enqueues within a basket order  themselves without having to access the back of the queue.
 However, if $p$ concurrent enqueues are in the same basket
@@ -73,7 +73,7 @@ the amortized step complexity remains~$\Omega(p)$.
 Arrays can be used to implement queues with bounded capacity \cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01}.  
 %Similar to the front and back pointers of list-based queues, indices
 Dequeues and enqueues update
-indexes of the front and back elements using CAS instructions.
+indices of the front and back elements using CAS instructions.
 Gidenstam, Sundell, and Tsigas~\cite{DBLP:conf/opodis/GidenstamST10} avoid
 the capacity constraint by using a linked list of arrays.
 These solutions also use $\Omega(p)$ steps per operation due to the CAS retry problem.
@@ -100,8 +100,7 @@ and the CAS retry problem reappears.
 % dequeue reads t=4 at line 53
 % go back to (*) and repeat this sequence
 This approach is similar to the fast-path slow-path methodology \cite{10.1145/2370036.2145835}.
-Other queues \cite{Nik19,10.1145/3490148.3538572,DBLP:conf/ppopp/YangM16} also used this methodology
-on array-based queues.
+Other array-based queues \cite{Nik19,10.1145/3490148.3538572,DBLP:conf/ppopp/YangM16} also used this methodology.
 In worst-case executions that use the slow path,
 they also take $\Omega(p)$ steps per operation, 
 due either to the CAS retry problem or helping mechanisms.

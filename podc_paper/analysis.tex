@@ -8,7 +8,7 @@ Each \op{Enqueue} or \op{Dequeue} operation performs $O(\log p)$ \op{CAS} instru
 \end{proposition}
 \begin{proof}
 An operation invokes \op{Refresh} at most twice at each of the $\ceil{\log_2 p}$ levels of the tree.
-A \op{Refresh} does at most 7 \op{CAS} steps: one in line \ref{cas} and two from each \op{Advance} in line \ref{helpAdvance} or~\ref{advance}.
+A \op{Refresh} does at most 5 \op{CAS} steps: one in line \ref{cas} and two during each \op{Advance} in line \ref{helpAdvance} or~\ref{advance}.
 \end{proof}
 
 

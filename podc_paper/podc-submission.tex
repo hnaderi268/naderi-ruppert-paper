@@ -29,8 +29,8 @@
 %% for your publication.
 %%
 %%
-\documentclass[sigconf]{acmart}
-%\documentclass[acmsmall,nonacm]{acmart}
+%\documentclass[sigconf]{acmart} % FOR CAMERA-READY VERSION
+\documentclass[sigconf, authorversion=true,nonacm=true]{acmart} % FOR ARXIV VERSION
 
 \usepackage{tikz-qtree}
 \usepackage{algorithm}
@@ -335,10 +335,12 @@ We thank Franck van Breugel and the anonymous referees for their helpful comment
 Funding was provided by the Natural Sciences and Engineering Research Council of Canada.
 \end{acks}
 
+\newpage
+
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{queues.bib}
 
-\pagebreak
+\newpage
 
 \appendix
 \input{correctness-details}

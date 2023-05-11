@@ -67,8 +67,8 @@ each level instead of using the \fld{super} field.
 
 \renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTDOUBLE}{\com\ #1}}
 
-\begin{figure}
-\begin{minipage}[t]{0.465\textwidth}
+\begin{figure*}
+\begin{minipage}[t]{0.41\textwidth}
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{200}
 
@@ -100,8 +100,8 @@ each level instead of using the \fld{super} field.
 \spac
 
 \gc{
-\Function{Object}{CompleteDeq}{\var{leaf}, $h$}
-    \State \linecomment Finish propagated dequeue in $\var{leaf}.\fld{blocks}[h]$
+\Function{Object}{CompleteDeq}{\var{leaf}, $h$} 
+    \State \linecomment finish propagated dequeue in $\var{leaf}.\fld{blocks}[h]$
     \State $\langle \var{b}, \var{i}\rangle \assign\ \Call{IndexDequeue}{\var{leaf}, h, 1}$
     \State $\var{res} \assign \Call{FindResponse}{b, i}$
 	\State \Return{\var{res}}
@@ -110,8 +110,7 @@ each level instead of using the \fld{super} field.
 
 \spac
 
-\Function{void}{Append}{\typ{Block} \var{B}} 
-    \State \linecomment{append block to leaf and propagate to root}
+\Function{void}{Append}{\typ{Block} \var{B}}  \linecomment{append block to leaf and propagate to root}
     \gc{\State \var{leaf}.\fld{blocks} \assign \Call{AddBlock}{\var{leaf}, \var{leaf}.\fld{blocks}, \var{B}}\label{appendLeafGC}}
     \State \Call{Propagate}{\var{leaf}.\fld{parent}} 
 \EndFunction{Append}
@@ -119,8 +118,8 @@ each level instead of using the \fld{super} field.
 \spac
 
 \gc{
-\Function{RBT}{AddBlock}{\typ{Node} \var{v}, \typ{RBT} \var{T}, \typ{Block} \var{B}}
-    \State \linecomment{add block $\var{B}\neq\nl$ to \var{T}, doing GC if necessary}
+\Function{RBT}{AddBlock}{\typ{Node} \var{v}, \typ{RBT} \var{T}, \typ{Block} \var{B}} 
+    \State \linecomment{add block $\var{B}\neq\nl$ to \var{T}; do GC if necessary}
     \If{\var{B}.\fld{index} is a multiple of $G$}
     	\State \linecomment{Do garbage collection}\label{GCstart}
         \State $s \assign \Call{SplitBlock}{\var{v}}.\var{index}$\label{callSplitBlock}
@@ -153,13 +152,7 @@ each level instead of using the \fld{super} field.
 \EndFunction{SplitBlock}
 }
 
-
-\end{algorithmic}
-\end{minipage}
-\begin{minipage}[t]{0.529\textwidth}
-
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{249}
+\spac
 
 \Function{void}{Propagate}{\typ{Node} \var{v}}
     \State \linecomment{propagate blocks from \var{v}'s children to root}
@@ -174,8 +167,7 @@ each level instead of using the \fld{super} field.
 
 \spac
 
-\Function{boolean}{Refresh}{\typ{Node} \var{v}}
-	\State \linecomment{try to append a new block to $\var{v}.\fld{blocks}$}
+\Function{boolean}{Refresh}{\typ{Node} \var{v}} \linecomment{try to append a new block to $\var{v}.\fld{blocks}$}
 	\gc{
 	\State $T \assign \var{v}.\fld{blocks}$\label{refreshReadTGC}
     \State $\var{h} \assign \Call{MaxBlock}{T}.\fld{index}+1$ \label{refreshReadMax}
@@ -191,12 +183,16 @@ each level instead of using the \fld{super} field.
 
 \EndFunction{Refresh}
 
-\spac
+\end{algorithmic}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.56\textwidth}
 
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{267}
 
 \gc{
-\Function{boolean}{Propagated}{\typ{Node} \var{v}, \typ{int} \var{b}}
-    \State \linecomment{check if $\var{v}.\fld{blocks}[b]$ has  propagated to \var{root}}
+\Function{boolean}{Propagated}{\typ{Node} \var{v}, \typ{int} \var{b}}  \linecomment{check if $\var{v}.\fld{blocks}[b]$ has  propagated to \var{root}}
     \State \linecomment{Precondition:  $\var{v}.\fld{blocks}[b]$ exists}
     \If {$\var{v} = \var{root}$} \Return{true}
     \Else
@@ -214,10 +210,8 @@ each level instead of using the \fld{super} field.
 \spac
 
 \Function{$\langle\typ{int}, \typ{int}\rangle$}{IndexDequeue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}}
-    \State \linecomment{return $\langle\var{x, y}\rangle$ such that \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$}
-    \State \linecomment{is \var{y}th dequeue of $D(\var{root}.\fld{blocks}[\var{x}])$}
-    \State \linecomment{Precondition: \var{v}.\fld{blocks}[\var{b}] exists and has propagated}
-    \State \linecomment{to root and $D(\var{v}.\fld{blocks}[\var{b}])$ has at least \var{i} dequeues}
+    \State \linecomment{return $\langle\var{x, y}\rangle$ such that \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$ is \var{y}th dequeue of $D(\var{root}.\fld{blocks}[\var{x}])$}
+    \State \linecomment{Precondition: \var{v}.\fld{blocks}[\var{b}] exists and has propagated to root and $|D(\var{v}.\fld{blocks}[\var{b}])|\geq \var{i}$}
     \If{$\var{v} = \var{root}$} \Return $\langle\var{b, i}\rangle$ \label{indexBaseCaseGC}
     \Else
 	    \State \fld{dir} \assign\ (\var{v}.\fld{parent.left} = \var{v} ? \fld{left} : \fld{right}) 
@@ -227,37 +221,25 @@ each level instead of using the \fld{super} field.
 		\State $B_p'$ \assign max block in $T$ with $\edir < b$\label{searchsuper2}
 	    }
 	    \State \linecomment{compute index \var{i} of dequeue in superblock $B_p$}
-	    \State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{b}-1].\fld{sum\sub{deq}} -$ \\
-	    		$\var{v}.\fld{blocks}[\gc{B_p'}.\edir].\fld{sum\sub{deq}}$}
+	    \State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{b}-1].\fld{sum\sub{deq}} -
+	    		\var{v}.\fld{blocks}[\gc{B_p'}.\edir].\fld{sum\sub{deq}}$}
         \If{$\fld{dir} = \fld{right}$} 
-        	\State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\gc{B_p}.\eleft].\fld{sum\sub{deq}} - \mbox{ }$\\
-					$\var{v}.\fld{blocks}[\gc{B_p'}.\eleft].\fld{sum\sub{deq}}$}\label{considerLeftBeforeRightGC}
+        	\State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\gc{B_p}.\eleft].\fld{sum\sub{deq}} - \mbox{ }
+					\var{v}.\fld{blocks}[\gc{B_p'}.\eleft].\fld{sum\sub{deq}}$}\label{considerLeftBeforeRightGC}
         \EndIf \label{computeISuperEndGC}
         \State \Return\Call{IndexDequeue}{\var{v}.\fld{parent}, $\gc{B_p.\fld{index}}$, \var{i}}
     \EndIf
 \EndFunction{IndexDequeue}
 
-
-\end{algorithmic}
-\end{minipage}
-\vspace*{-4mm}
-\caption{Bounded-space queue implementation.\label{pseudocode1GC}  $G$ is a constant, which we choose to be $p^2 \ceil{\log p}$.}
-\end{figure}
-
-\begin{figure}
-\begin{minipage}[t]{0.465\textwidth}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{302}
+\spac
 
 \gc{
-\Function{void}{Help}{}
-    \State \linecomment{help pending operations}
+\Function{void}{Help}{} \linecomment{help pending operations}
     
     \For{$\ell$ in $\var{leaf}[1..k]$}
         \State $\var{B} \assign \Call{MaxBlock}{\ell.\fld{blocks}}$
     	%\State \Call{Propagate}{$\ell.\fld{parent}$}   <--- don't do this because recursive helping could be infinite loop
-        \If{$\var{B}.\fld{element} = \nl$ and $\var{B}.\fld{index}>0$ 
-        					\State \hspace*{4mm} and \Call{Propagated}{$\ell, \var{B}.\fld{index}$}} 
+        \If{$\var{B}.\fld{element} = \nl$ and $\var{B}.\fld{index}>0$ and \Call{Propagated}{$\ell, \var{B}.\fld{index}$}} 
             \State \linecomment{operation is a propagated dequeue}
             \State $\var{B}.\fld{response} \assign\ \Call{CompleteDeq}{\ell, \var{B}.\fld{index}}$ 
         \EndIf
@@ -266,23 +248,22 @@ each level instead of using the \fld{super} field.
 }
 \spac
 
-\Function{Block}{CreateBlock}{\typ{Node} \var{v}, \typ{int} \var{i}} 
-    \State\linecomment{create new block  to install in \var{v}.\fld{blocks}[\var{i}]}
+\Function{Block}{CreateBlock}{\typ{Node} \var{v}, \typ{int} \var{i}} \linecomment{create new block  to install in \var{v}.\fld{blocks}[\var{i}]}
     \State let \var{new} be a new \typ{Block} \label{initNewBlockGC}
     \gc{
     \State \var{new}.\eleft \assign\ $\Call{MaxBlock}{\var{v}.\fld{left}.\fld{blocks}}.\fld{index}$\label{createEndLeftGC}
     \State \var{new}.\eright \assign\ $\Call{MaxBlock}{\var{v}.\fld{right}.\fld{blocks}}.\fld{index}$\label{createEndRightGC}
     \State $\var{new}.\fld{index} \assign i$\label{createIndexGC}
     }
-	\State \hangbox{\var{new}.\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + \\
-			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{enq}}}
-	\State \hangbox{\var{new}.\fld{sum\sub{deq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{deq}} + \\
-			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{deq}}}
+	\State \var{new}.\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + 
+			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{enq}}
+	\State \var{new}.\fld{sum\sub{deq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{deq}} +
+			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{deq}}
     \State \var{num\sub{enq}} \assign\ $\var{new}.\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{enq}}$\label{computeNumEnqGC}
     \State \var{num\sub{deq}} \assign\ $\var{new}.\fld{sum\sub{deq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{deq}}$
     \If{$\var{v} = \var{root}$}
-        \State \hangbox{\var{new}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + \\
-        	\var{num\sub{enq}} - \var{num\sub{deq}}$)}\label{computeLengthGC}
+        \State \var{new}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + 
+        	\var{num\sub{enq}} - \var{num\sub{deq}}$)\label{computeLengthGC}
     \EndIf
     \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$}\label{testEmptyGC}
         \State \Return \nl \hfill \com\ no blocks to be propagate to \var{v}\label{CBnullGC}
@@ -291,21 +272,13 @@ each level instead of using the \fld{super} field.
     \EndIf
 \EndFunction{CreateBlock}
 
+\spac 
 
-
-
-\end{algorithmic}
-\end{minipage}
-\begin{minipage}[t]{0.529\textwidth}
-\begin{algorithmic}[1]
-\setcounter{ALG@line}{351}
-\Function{element}{FindResponse}{\typ{int} \var{b}, \typ{int} \var{i}}
-    \State \linecomment{find response to \var{i}th dequeue in $D(\var{root}.\fld{blocks}[\var{b}])$}
+\Function{element}{FindResponse}{\typ{int} \var{b}, \typ{int} \var{i}} \linecomment{find response to \var{i}th dequeue in $D(\var{root}.\fld{blocks}[\var{b}])$}
     \State \linecomment{Precondition:  $1\leq i\leq |D(\var{root}.\fld{blocks}[\var{b}])|$}
-    \State \hangbox{\var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} - \mbox{ }$\\
-    		$\var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$}\label{FRnumenqGC}
-    \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmptyGC}
-    	\State \linecomment{ queue is empty when dequeue occurs}
+    \State \var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} - \mbox{ }$
+    		$\var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$\label{FRnumenqGC}
+    \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmptyGC} \linecomment{queue is empty when dequeue occurs}
         \gc{
         \If{$b > \var{last}[\var{id}]$} $\var{last}[\var{id}]\assign b$
         \EndIf
@@ -314,10 +287,9 @@ each level instead of using the \fld{super} field.
     \Else \ \linecomment{response is the \var{e}th enqueue in the root}
         \State \var{e} \assign\ \var{i} + \var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}} - 
 			\var{root}.\fld{blocks}[\var{b}-1].\size\label{computeEGC}
-		\State \linecomment{compute enqueue's block using binary search}
-		\State find min $b_e \leq \var{b}$ with $\var{root}.\fld{blocks}[b_e].\fld{sum\sub{enq}} \geq \var{e}$\label{FRsearchGC}
-		\State \linecomment{find rank of enqueue within its block}
-		\State $i_e \assign\ \var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$
+		 
+		\State find min $b_e \leq \var{b}$ with $\var{root}.\fld{blocks}[b_e].\fld{sum\sub{enq}} \geq \var{e}$\label{FRsearchGC} \linecomment{use binary search}
+		\State $i_e \assign\ \var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$ \linecomment{find rank of enqueue within its block}
 		\gc{
         \State \var{res} \assign \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}\label{findAnswerGC}
         \If {$b_e > \var{last}[\var{id}]$} $\var{last}[\var{id}]\assign b_e$
@@ -327,14 +299,15 @@ each level instead of using the \fld{super} field.
     \EndIf
 \EndFunction{FindResponse}
 
-
 \end{algorithmic}
 \end{minipage}
+\vspace*{-4mm}
+\caption{Bounded-space queue implementation.\label{pseudocode1GC}  $G$ is a constant, which we choose to be $p^2 \ceil{\log p}$.}
+\end{figure*}
 
-\spac
-
+\begin{figure*}
 \begin{algorithmic}[1]
-\setcounter{ALG@line}{332}
+\setcounter{ALG@line}{341}
 
 \Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
     \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] exists and contains at least \var{i} enqueues}
@@ -359,7 +332,7 @@ each level instead of using the \fld{super} field.
 \end{algorithmic}
 
 \caption{Bounded-space queue implementation, continued.\label{pseudocode2GC}}
-\end{figure}
+\end{figure*}
 
 
 

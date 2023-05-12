@@ -122,8 +122,9 @@ Let $i$ be the index of the block containing $op$ that was in \var{v}'s RBT befo
 $R$ executed line \ref{refreshReadTGC}.
 We consider two cases.
 
-Suppose $R$'s call to \op{CreateBlock} returns a new block $B'$.  Then, $R$'s \op{CAS} at line \ref{casGC} 
-installs $B'$ in $\var{v}.\fld{blocks}$.
+Suppose $R$'s call to \op{CreateBlock} returns a new block $B'$
+that is installed in $\var{v}.\fld{blocks}$
+by $R$'s \op{CAS} at line \ref{casGC}.
 The \op{CreateBlock} set $B'.\eleft$ to the maximum \fld{index} in $\var{v}.\fld{left}$'s RBT at line \ref{createEndLeftGC}.
 By \Cref{nonEmptyIncreasing}, this maximum \fld{index} is bigger than $i$.
 By the definition of subblocks, some block in \var{v} contains $B$ as a subblock
@@ -181,7 +182,7 @@ or written in the \fld{response} field of a dequeue, and
 \item
 each dequeue contained in the block has terminated or some process has written to the \fld{response} field in the leaf block that represents it.
 \end{itemize}
-Intuitively, once a block is finished, operations no longer need to pass through the block
+Intuitively, once a block is finished, operations no longer need  the block
 to compute responses to operations.
 The following is an immediate consequence of the definition of finished and what it means for an operation to be contained in a block.
 
@@ -208,7 +209,7 @@ We show that every step preserves the invariant.
 We need only consider a step $st$ that modifies a node's RBT.
 The minimum \fld{index} of \var{v}'s RBT can only change when \var{v}'s RBT changes, either at line 
 \ref{appendLeafGC} (if \var{v} is a leaf) or at line \ref{casGC} (if \var{v} is an internal node).
-In either case, the step $st$ changes $\var{v}.\fld{blocks}$ is changed
+In either case, the step $st$ changes $\var{v}.\fld{blocks}$ 
 from $T$ to $T'$, where $T'$ is obtained by  a call $A$ to \op{AddBlock}(\var{v}, $T$, $B$).
 (In the case of a leaf \var{v}, this is true because only the process that owns the leaf ever
 writes to $\var{v}.\fld{blocks}$.)
@@ -235,9 +236,10 @@ For the base case, suppose $x$ is the root.
 \op{SplitBlock} finds the maximum value $m$ in \var{last}, which is the index of some block
 that contains an operation that is either a null dequeue or an enqueue whose value is the response for a dequeue that has been propagated to the root (since these are the only ways that an entry of \var{last} can be set to $m$).
 By the FIFO property of queues, the values enqueued by enqueues in $\var{root}.\fld{blocks}[1..m-1]$
-are all dequeued by operations of $\var{root}.\fld{blocks}[1..m]$.
+are all dequeued by operations that have already been installed in $\var{root}.\fld{blocks}$ before
+the end of the \op{SplitBlock}.
 Between the termination of $A$'s call to \op{SplitBlock} at line \ref{callSplitBlock}
-and the \op{CAS} step $st$ after $A$ terminates, the $A$ helps all pending dequeues at line \ref{invokeHelp}.
+and the \op{CAS} step $st$ after $A$ terminates,  $A$ helps all pending dequeues at line \ref{invokeHelp}.
 Thus, after this helping (and before step $st$),
 $\var{root}.\fld{blocks}[1..m-1]$ are all finished blocks, so the claim is true.
 
@@ -251,7 +253,7 @@ Otherwise, \op{SplitBlock}($x$) returns the block $B$ at line \ref{substitute}.
 By the induction hypothesis, the block $B_p$ computed at line \ref{SBrecurse}
 (and all earlier blocks of $x$) are finished when $st$ occurs.
 By \Cref{subblocksFinished}, the block $B$ in $x$ indexed by $B_p.\eleft$ or $B_p.\eright$
-is also finished when $st$ occurs.
+is also finished when $st$ occurs.  This completes the proof of \Cref{splitfinished}.
 \renewcommand{\qedsymbol}{$\diamondsuit$}
 \end{proof}
 
@@ -279,7 +281,7 @@ Any block that GC removes from an RBT is finished, by \Cref{lem::finished}, so i
 the root (for example, during the \op{CreateBlock} routine), then a block containing
 the operation itself has been removed from a RBT, so the operation has propagated to the root,
 by the definition of finished.
-Moreover, by \Cref{lem::finished}, if the operation is a dequeue, then its result is in its \op{response} field.
+Moreover, by \Cref{lem::finished}, if the operation is a dequeue, then its result is in its \fld{response} field.
 
 After propagation to the root, a \op{Dequeue} must access blocks that contain the dequeue,
 as well as the enqueue whose value it will return (if it is not a null dequeue).
@@ -331,7 +333,7 @@ it contains at most $2q_{max}+4p+1$ blocks.
 \begin{proof}
 Consider the invocation $A$ of \op{AddBlock} that updates a node \var{v}'s RBT with the insertion of a block whose 
 \fld{index} is a multiple of $G$.
-$A$ performs a GC phase.
+Then, $A$ performs a GC phase.
 Let $C$ be the configuration before $A$ invokes \op{SplitBlock} on line \ref{callSplitBlock}.
 That call to \op{SplitBlock} recurses up to the root, where it computes $m$ by reading the \var{last}
 array.
@@ -343,7 +345,7 @@ We first bound the number of operations in $L_2$.
 
 The number of enqueues in $L_2$ whose values are still in the queue at the end of $L_2$ is at most $q_{max}$.
 Any enqueue in $L_2$ whose value is not still in the queue at the end of $L_2$
-must still be in progress at $C$; otherwise the process that dequeued it would have
+must still be in progress at~$C$; otherwise the process that dequeued it would have
 set its \var{last} entry to a value greater than the index of the block of the root that contains the enqueue prior to $C$,
 contradicting the definition of $m$.
 So, there are at most $p$ enqueues in $L_2$ whose values are still in the queue at the end of $L_2$.
@@ -415,9 +417,9 @@ The amortized step complexity of each operation is $O(\log p \log(p+q_{max}))$.
 \end{mytheorem}
 \begin{proof}
 \here{this proof may need some modification since code was changed to change how split point is computed}
-It follows from \Cref{RBTbound} and the fact that $G=p^2\ceil{\log p}$
+It follows from \Cref{RBTbound} and our choice of $G=p^2\ceil{\log p}$
 that all the RBT routines we use to perform \op{Split}, \op{Insert} and searches for
-blocks with a particular index or for a \fld{sum\sub{enq}} value (in line \ref{FRsearchGC} or \ref{getChildGC}) can all be done in $O(\log(p+q_{max}))$ steps.
+blocks with a particular index or for a \fld{sum\sub{enq}} value (in line \ref{FRsearchGC} or \ref{getChildGC}) can  be done in $O(\log(p+q_{max}))$ steps.
 
 First, we bound the number of steps taken \emph{excluding} the GC phase in line \ref{GCstart}--\ref{GCend}.
 An \op{Enqueue} or null \op{Dequeue} does $O(1)$ RBT operations and other work at each level of the tree during \op{Propagate},
@@ -427,9 +429,10 @@ and call \op{GetEnqueue}.  At each level of the tree, \op{GetEnqueue} does $O(1)
 Thus, a \op{Dequeue} also takes $O(\log p \log(p+q_{max}))$ steps.
 
 Now we consider the additional steps a process takes while doing GC in line \ref{GCstart}--\ref{GCend}
-and show that the amortized number of GC steps each operation takes is also $O(\log p\log(p+q_{max}))$.
+and show that the amortized number of GC steps each operation performs is also $O(\log p\log(p+q_{max}))$.
 If a process does GC in a call to \op{AddBlock}($\var{v},T,B$) where $B$ has \fld{index} $r\cdot G$ for some integer $r$, we call this the process's \emph{$r$th helping phase on \var{v}}.
-We argue that each process $P$ can do an $r$th helping phase on \var{v} at most once as follows.
+
+We argue that each process $P$ can do an $r$th helping phase on \var{v} at most once.
 Consider $P$'s first call $A$ to \op{AddBlock} that does an $r$th helping phase on \var{v}.
 Let $\var{v},T,B$ be the arguments of $A$.
 Any call to \op{AddBlock} on internal node \var{v} is from line \ref{refreshABGC} of \op{Refresh}, so $B.\fld{index}$
@@ -441,15 +444,15 @@ Either way, by \Cref{RBTupdates}, \var{v}'s RBT's maximum \fld{index} will be at
 after this CAS.
 So if a subsequent \op{Refresh} by process $P$ 
 ever calls \op{AddBlock} on \var{v} again, the block it passes as the third argument
-will have $\index>r\cdot G$, so $P$ will not perform an $r$th helping phase on \var{v} again.
+will have $\fld{index}>r\cdot G$, so $P$ will not perform an $r$th helping phase on \var{v} again.
 
 Each helping phase takes $O(p)$ steps to read the \var{last} array, and
-$O(p \log p \log(p+q_{max}))$ steps to \op{Help},
+$O(p \log p \log(p+q_{max}))$ steps in \op{Help},
 and $O(\log(p+q_{max}))$ steps to split and insert a new node into a RBT.
 Thus, for each integer $r$ and each node \var{v}, a total of $O(p^2\log p\log(p+q_{max}))$ steps
 are performed by all processes during their $r$th helping phase on \var{v}.
 We can amortize these steps over the operations that appear in 
-$\var{v}.\fld{blocks}[(r-1)p^2+1..p^2]$.
+$\var{v}.\fld{blocks}[(r-1)G+1..rG]$.
 By \Cref{blockNotEmpty}, there are at least $G$ such operations, 
 so each operation's amortized number of steps for GC at each node along the path from its leaf to the root
 is $O(p^2\log p\log(p+q_{max})/G)=O(\log(p+q_{max}))$.
@@ -458,7 +461,7 @@ Hence each operation's amortized number of GC steps is $O(\log p\log(p+q_{max}))
 
 The implementation remains wait-free:  the depth of recursion in each routine is  bounded
 by the height of the tree and the only loop is the counted loop in the \op{Help} routine.
-Since each operation still only does two \op{CAS} instructions at each level of the tree (at line \ref{casGC}), the following proposition still holds for the space-bounded version of the queue.
+Since each operation still  does only two \op{CAS} instructions at each level of the tree (at line \ref{casGC}), the following proposition still holds for the space-bounded version of the queue.
 
 \begin{customprop}{\bf{\ref{casbound}}$'$}
 Each operation performs $O(\log p)$ \op{CAS} instructions in the worst case.

@@ -6,7 +6,8 @@
 Operations remain in the \fld{blocks} arrays forever. 
 This uses space proportional to the number of enqueues that have been invoked.
 Now, we modify the implementation to remove blocks that are no longer needed, so that space usage is
-polynomial in $p$ and $q$, while (amortized) step complexity is still polylogarithmic.  For lack of space, details are in Appendix~\ref{reducing-details}.
+polynomial in $p$ and $q$, while (amortized) step complexity is still polylogarithmic.  For lack of space, details are in %Appendix~\ref{reducing-details}.
+\cite{full}.
 We replace the \fld{blocks} array in each node by a red-black tree (RBT)
 that stores the blocks.
 Each block has an additional \fld{index} field

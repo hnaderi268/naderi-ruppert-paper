@@ -570,7 +570,7 @@ the \opemph{IndexDequeue} routine finds the dequeue's location in the root.
 More precisely, \opa{IndexDequeue}{v, b, i}
 computes the block in the root and the rank
 within that block  of the \var{i}th dequeue of the block \var{B} stored in \var{v}.\fld{blocks}[\var{b}].
-Lines \ref{idsup1}--\ref{idsup3} compute the location of $B$'s superblock in \var{v}'s parent, taking into account the fact that $B.\fld{super}$ may be off by one from the superblock's true index.
+Lines \ref{idsup1}--\ref{idsup3} compute the location of $B$'s superblock in \var{v}'s parent, taking into account the fact that $B.\fld{super}$ may differ from the superblock's true index by one.
 The arithmetic in lines \ref{computeISuperStart}--\ref{computeISuperEnd} compute the dequeue's 
 rank within the superblock's sequence of dequeues, using  (\ref{defSeqs}).
 
@@ -586,7 +586,7 @@ If not, line \ref{computeE} computes the rank \var{e} of the
 A binary search on the \fld{sum\sub{enq}} fields of \var{root}.\fld{blocks} finds the index $b_e$ of the block that contains 
 the \var{e}th enqueue.
 Since the enqueue is linearized before the dequeue, $b_e\leq b$.  To find the left end of the range for the binary search for $b_e$, we can first do a doubling search \cite{BY76}, comparing \var{e} to the \fld{sum\sub{enq}} fields at indices $b-1, b-2, b-4, b-8, \ldots$.
-Then, \op{GetEnqueue} is used to trace down through the tree to find the required enqueue in a leaf.
+Then, \op{GetEnqueue} traces down through the tree to find the required enqueue in a leaf.
 
 \opemph{GetEnqueue}(\var{v, b, i}) returns the argument of the
 $i$th enqueue in the $b$th block $B$ of \typ{Node} $\var{v}$. 

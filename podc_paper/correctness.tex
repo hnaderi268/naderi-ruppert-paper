@@ -143,8 +143,9 @@ By \Cref{lem::subblocksDistinct}, $\var{v}.\fld{blocks}[i]$ and $\var{v}.\fld{bl
 
 The accuracy of the values stored in the \fld{sum\sub{enq}} and \fld{sum\sub{deq}} fields
 on lines \ref{enqNew}, \ref{deqNew}, \ref{createSumEnq} and \ref{createSumDeq} follows easily
-from the definition of subblocks.  See Appendix 
-\ref{app::tracingDetails} for a detailed proof of \Cref{lem::sum}.
+from the definition of subblocks.  See 
+%Appendix \ref{app::tracingDetails} 
+the full version \cite{full} for a detailed proof of \Cref{lem::sum}.
 
 \begin{restatable}{invariant}{sumRes}
 \label{lem::sum}
@@ -262,7 +263,9 @@ There is at most one such block in each node, by \Cref{lem::noDuplicates}.
 \subsection{Correctness of \opemph{GetEnqueue} and \opemph{IndexDequeue}}
 \label{sec::tracingCorrect}
 
-See Appendix \ref{app::tracingDetails} for detailed proofs for this section.
+See 
+%Appendix \ref{app::tracingDetails}
+the full version \cite{full} for detailed proofs for this section.
 
 We first show the \fld{super} field is accurate, since \op{IndexDequeue} uses it to trace superblocks up the tree.  This is proved by showing that the \fld{super} field of a block $B$ in node $\var{v}$ is read from  
 \var{v}.\fld{parent}'s \var{head} field close to the time that $B$'s superblock $B_s$ is installed in the parent node.
@@ -318,7 +321,10 @@ Also, if $op_{1}$ terminates before $op_{2}$ begins, then $op_{1}$
 is propagated to the root before $op_2$ begins, so $op_1$ appears before $op_2$ in $L$.
 \end{proof}
 
-A simple proof (in Appendix \ref{app::tracingDetails}) shows that \fld{size} fields are computed correctly.
+A simple proof (in 
+%Appendix \ref{app::tracingDetails})
+the full version \cite{full})
+shows that \fld{size} fields are computed correctly.
 \begin{restatable}{lemma}{sizeCorrectRes}
 \label{sizeCorrectness}
 If the operations of $\var{root}.\fld{blocks}[0..b]$ are applied sequentially in the order of~$L$ on an initially empty queue, the resulting queue has $\var{root}.\fld{blocks}[b].\size$ elements.  

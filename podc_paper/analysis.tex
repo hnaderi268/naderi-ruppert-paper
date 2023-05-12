@@ -46,8 +46,8 @@ If $c$ is the execution's maximum point contention, $B$ has at most $c$ direct~s
 Suppose $B$ contains an operation of process $p$.
 Let $op$ be the earliest operation by $p$ contained in $B$.
 When $op$ terminates, $op$ is contained in $B$ by \Cref{lem::appendExactlyOnce}.
-Thus, $B$ cannot contain any later operations by $p$, since $B$ is created before
-those operations are invoked.
+Since $B$ is created before
+those operations are invoked, $B$ cannot contain any later operations by $p$.
 
 Let $t$ be the earliest termination of any operation contained in $B$.
 By \Cref{lem::appendExactlyOnce}, $B$ is created before $t$, so all operations contained in $B$

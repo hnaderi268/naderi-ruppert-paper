@@ -1,0 +1,67 @@
+\documentclass[compress]{beamer}
+
+\usepackage{color}
+\usepackage{amssymb}
+\usepackage{times}
+\usepackage[T1]{fontenc}
+\usepackage[normalem]{ulem} % for striking through text
+
+\mode<presentation>
+{
+  \usetheme{Warsaw}
+  \usecolortheme{beaver}
+  \usefonttheme{structurebold}
+
+  % or ...
+
+  \setbeamercovered{transparent}
+  % or whatever (possibly just delete it)
+}
+\logo{\includegraphics[width=15mm]{YorkLogo.pdf}}
+
+\newcommand{\Red}[1]{{\color{red}#1}}
+\newcommand{\Blue}[1]{{\color{blue}#1}}
+\newcommand{\Green}[1]{{\color{green}#1}}
+
+\newcommand{\tb}{\hspace*{10mm}}
+
+\newcommand{\ignore}[1]{}
+
+\title{A Wait-Free Queue with Polylogarithmic Step Complexity}
+
+\author{Hossein Naderibeni \and Eric Ruppert}
+\date{June 21, 2023}
+
+
+\begin{document}
+
+\begin{frame}
+\maketitle
+\end{frame}
+
+\begin{frame}{Lock-Free Queue using CAS}
+Michael and Scott Queue [PODC 1996]
+
+\bigskip
+
+% We store the elements of the queue in a singly-linked list.
+% Enqueues add elements at the left end and dequeues remove elements from the right end.
+% Each enqueue creates new node and performs a CAS on the tail node's next pointer to add it to the left end (and then advances the Tail pointer)
+% Each dequeue uses a CAS to advance the Head pointer
+
+\only<1>{\input{MSQueue-48to50.pdf_t}}
+\only<2>{\input{MSQueue-48to51.pdf_t}}
+\only<3>{\input{MSQueue-48to52.pdf_t}}
+\only<4>{\input{MSQueue-48-50to53.pdf_t}}
+\only<5>{\input{MSQueue-50to54.pdf_t}}
+\end{frame}
+
+\begin{frame}{CAS Retry Problem}
+
+
+
+\end{frame}
+
+
+
+\end{document}

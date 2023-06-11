@@ -23,7 +23,10 @@
 \newcommand{\Blue}[1]{{\color{blue}#1}}
 \newcommand{\Green}[1]{{\color{green}#1}}
 
+\newcommand{\op}[1]{\mbox{\sc #1}}
 \newcommand{\tb}{\hspace*{10mm}}
+
+\renewcommand{\log}{\mbox{log }} % font looks funny for usual \log
 
 \newcommand{\ignore}[1]{}
 
@@ -57,11 +60,148 @@ Michael and Scott Queue [PODC 1996]
 \end{frame}
 
 \begin{frame}{CAS Retry Problem}
+Suppose $p$ processes want to enqueue simultaneously.
+\medskip
 
+\only<1>{\input{CASretry-49to50.pdf_t}}
+\only<2>{\input{CASretry-49to51.pdf_t}}
+\only<3->{\input{CASretry-49to52.pdf_t}}
+
+\medskip
+\visible<4->{
+\begin{itemize}
+\item one CAS of next pointer succeeds.
+\item other \op{Enqueues} must try again.
+\item<5> $\Rightarrow$ starvation and $\Omega(p)$ steps per operation (amortized)
+\end{itemize}
+}
+\end{frame}
+
+\begin{frame}{Other Lock-Free Queues}
+
+Other \Red{list-based} queues
+\begin{itemize}
+\item
+add elimination array \hfill {\small [Moir et al.\ 2005]}
+\item
+baskets queue \hfill {\small [Hoffman, Shalev, Shavit 2007]}
+\item
+doubly-linked list + optimism \hfill {\small [Ladan-Mozes, Shavit 2008]}
+\item
+fast path, slow path \hfill {\small [Kogan, Petrank 2012]}
+\item
+futures \hfill {\small [Kogan, Herlihy 2014]}
+\end{itemize}
+\visible<2->{All have CAS retry problem  \hfill {\small [Morrisson, Afek 2013]}}
+
+\smallskip
+
+\visible<3->{So do \Red{array-based} queues
+
+\smallskip
+
+All$^*$ previous queues take amortized $\Omega(p)$ steps per operation}
+
+\end{frame}
+
+\begin{frame}{$^*$Exceptions: Sublinear Time Queues}
+
+\begin{block}{Restricted queues}
+\begin{itemize}
+\item
+1 enqueuer, multiple dequeuers \hfill {\small [David 2004]}
+\item
+1 dequeuer, multiple enqueuers \hfill {\small [Jayanti, Petrovic 2005]}
+\end{itemize}
+\end{block}
+
+\pause 
+
+\begin{block}{Other primitives}
+\begin{itemize}
+\item
+$O(\sqrt{p})$ using unusual double-word RMW instructions
+ \hfill {\small [Khanchandani, Wattenhofer 2018]}
+\end{itemize}
+\end{block}
+
+\pause
+
+\begin{block}{Universal constructions}
+\begin{itemize}
+\item
+$O(\log p)$ using huge words\\
+\mbox{ }\hfill{\small [Afek, Dauber, Touitou 1995; Jayanti 1998]}
+\item
+$\Omega(p)$ with reasonably-sized words
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Lower Bound}
+
+All previous multi-enqueuer, multi-dequeuer queues take\\
+$\Omega(p)$ steps per operation.
+
+\medskip
+
+For many  data structures, fastest lock-free operations take
+$O(sequential\ complexity + contention)$ steps
+
+\pause
+
+\begin{block}{Lower Bound \hfill {\small [Attiya, Fouren 2017]}}
+\begin{itemize}
+\item
+Amortized step complexity for any bag is $\Omega(contention)$.
+\pause
+\item
+But lower bound holds only if $contention$ is $O(\log\log p)$
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+\begin{frame}{Our Result}
+
+\begin{block}{New Queue}
+\begin{itemize}
+\item $O(\log p)$ steps per \op{Enqueue}
+\item $O(\log^2 p + \log q)$ steps per \op{Dequeue}
+\item wait-free
+\item uses CAS on reasonable-size words
+\item bounded space version: $O(\log p\ \log(p+q))$ amortized steps per operation
+(relies on safe GC)
+\end{itemize}
+\end{block}
+
+$p = \#$ processes\\
+$q = \#$ elements in queue
+
+\medskip
+
+Previous lock-free queues take $\Omega(p)$ steps per operation.
 
 
 \end{frame}
 
+\begin{frame}{Future Directions}
+
+\begin{itemize}
+\item
+Practical implementation\\
+(perhaps slow path of fast path slow path method)
+\item
+Extend technique to other data structures\\
+ (stacks and deques are recently done)
+ \item
+Close gap between\\
+$\Omega(\log \log p)$ lower bound \hfill {\small [Attiya Fouren 2017]}\\
+$O(\log^2 p + \log q)$ upper bound \hfill {\small [this work]}
+
+\end{itemize}
+
+\end{frame}
 
 
 \end{document}

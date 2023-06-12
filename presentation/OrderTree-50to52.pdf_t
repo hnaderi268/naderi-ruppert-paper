@@ -1,0 +1,41 @@
+\begin{picture}(0,0)%
+\includegraphics{OrderTree-50to52.pdf}%
+\end{picture}%
+\setlength{\unitlength}{3158sp}%
+%
+\begingroup\makeatletter\ifx\SetFigFont\undefined%
+\gdef\SetFigFont#1#2#3#4#5{%
+  \reset@font\fontsize{#1}{#2pt}%
+  \fontfamily{#3}\fontseries{#4}\fontshape{#5}%
+  \selectfont}%
+\fi\endgroup%
+\begin{picture}(6624,2265)(289,-2764)
+\put(4576,-1486){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\Blue{E(C)}, \Purple{D}$}%
+}}}}
+\put(4276,-2236){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\Blue{E(C)}$}%
+}}}}
+\put(826,-2686){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\Red{P_1}$}%
+}}}}
+\put(4426,-2686){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\Blue{P_3}$}%
+}}}}
+\put(6226,-2686){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\Purple{P_4}$}%
+}}}}
+\put(376,-2236){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\Red{E(A)}$}%
+}}}}
+\put(2176,-2236){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\Green{E(B)}$}%
+}}}}
+\put(5776,-2236){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\Purple{D}$}%
+}}}}
+\put(3976,-2236){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\Blue{D}$}%
+}}}}
+\put(676,-1486){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\Red{E(A)}$}%
+}}}}
+\put(4276,-1486){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\Blue{D}$}%
+}}}}
+\put(1276,-736){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\Blue{D}$}%
+}}}}
+\put(2626,-2686){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\Green{P_2}$}%
+}}}}
+\put(1276,-1486){\makebox(0,0)[lb]{\smash{{\SetFigFont{10}{12.0}{\rmdefault}{\mddefault}{\updefault}{\color[rgb]{0,0,0}$\Green{E(B)}$}%
+}}}}
+\end{picture}%

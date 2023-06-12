@@ -22,6 +22,7 @@
 \newcommand{\Red}[1]{{\color{red}#1}}
 \newcommand{\Blue}[1]{{\color{blue}#1}}
 \newcommand{\Green}[1]{{\color{green}#1}}
+\newcommand{\Purple}[1]{{\color{violet}#1}}
 
 \newcommand{\op}[1]{\mbox{\sc #1}}
 \newcommand{\tb}{\hspace*{10mm}}
@@ -184,13 +185,53 @@ Previous lock-free queues take $\Omega(p)$ steps per operation.
 
 \end{frame}
 
-\begin{frame}
+\begin{frame}{Ordering Tree}
+\visible<5>{\hfill Use ordering in root as linearization\hfill}
+\medskip
 
+\only<1>{\input{OrderTree-50.pdf_t}}%
+\only<2>{\input{OrderTree-50to51.pdf_t}}%
+\only<3>{\input{OrderTree-50to52.pdf_t}}%
+\only<4->{\input{OrderTree-50to53.pdf_t}}
 
 \end{frame}
 
+\begin{frame}{Propagating Operations to the Root}
+
+\begin{enumerate}
+\item
+Append operation to your leaf
+\item
+At each node $v$ on path to root refresh {\it twice}:
+\begin{enumerate}[(a)]
+\item
+Read unpropagated operations in both of $v$'s children
+\item
+CAS them into $v$
+\end{enumerate}
+\end{enumerate}
+
+\pause
+\medskip
+
+Double Refresh:\\
+If your CAS on $v$ fails twice, then\\
+another process has propagated your operation to $v$.
+
+\pause
+\medskip
+Avoids CAS retry problem.
+\end{frame}
+
+\begin{frame}{Main Challenge}
+
+Refresh may have to propagate up to $p$ operations\\
+$\Rightarrow$ need an \Red{implicit representation}
 
 
+
+
+\end{frame}
 
 
 

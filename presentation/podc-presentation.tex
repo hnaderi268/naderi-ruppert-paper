@@ -43,6 +43,39 @@
 \maketitle
 \end{frame}
 
+
+\begin{frame}{Queues:  Breaking Linear-Time Bottleneck}
+
+Problem:  implement lock-free FIFO queue
+\begin{itemize}
+\item shared by $p$ processes
+\item use single-word CAS (reasonable-sized words)
+\item support multiple enqueuers, dequeuers
+\end{itemize}
+
+\medskip
+\pause
+
+Many previous solutions for this problem.
+
+\medskip
+
+All require $\Omega(p)$ steps per operation\\
+$\rightarrow$ Real obstacle to scalability
+
+\pause
+\begin{block}{Our New Queue}
+\begin{itemize}
+\item $O(\log p)$ steps per \op{Enqueue}
+\item $O(\mbox{log}^2 p + \log q)$ steps per \op{Dequeue} ($q=$ size of queue)
+\item wait-free
+\end{itemize}
+\end{block}
+
+
+\end{frame}
+
+
 \begin{frame}{Lock-Free Queue using CAS}
 Michael and Scott Queue [PODC 1996]
 
@@ -168,7 +201,7 @@ But lower bound holds only if $contention$ is $O(\log\log p)$
 \begin{block}{Our New Queue}
 \begin{itemize}
 \item $O(\log p)$ steps per \op{Enqueue}
-\item $O(\log^2 p + \log q)$ steps per \op{Dequeue}
+\item $O(\mbox{log}^2 p + \log q)$ steps per \op{Dequeue}
 \item wait-free
 \item uses CAS on reasonable-size words
 \item bounded space version: $O(\log p\ \log(p+q))$ amortized steps per operation
@@ -233,7 +266,7 @@ $\Rightarrow$ need an \Red{implicit representation}
 \begin{frame}{Requirements for Implicit Representation}
 
 % 60% size; others are 80%
-\hspace*{7mm}
+%\hspace*{7mm}
 \only<1>{\input{OrderTree-5}}% 50-53
 \only<2>{\input{OrderTree-6}}% 48,50-53
 \only<3>{\input{OrderTree-7}}% 50-54
@@ -317,6 +350,7 @@ determine rank of \op{Dequeue} among non-null \op{Dequeues}
 \begin{itemize}
 \item $O(\log p)$ steps per \op{Enqueue}
 \item $O(\mbox{log}^2 p + \log q)$ steps per \op{Dequeue}
+\item $O(\log p)$ CAS steps per \op{Dequeue}
 \item<2> Unbounded space
 \end{itemize}
 \end{block}
@@ -328,7 +362,7 @@ $q = \#$ elements in queue
 \begin{frame}{Bounding Space}
 
 \begin{itemize}
-\item Replace array of blocks with a red-black tree of blocks
+\item Replace each array of blocks with a red-black tree of blocks
 \item Periodically split RBT and discard obsolete blocks
 \item Processes  help one another to ensure blocks are obsolete
 \end{itemize}

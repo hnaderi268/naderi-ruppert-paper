@@ -31,10 +31,10 @@ Blocks : Blocks.fig
 	./fig2layer 0.6 0 +1 Blocks
 	./fig2layer 0.6 1 +50 Blocks
 	./fig2layer 0.6 2 +49:50 Blocks
-	./fig2layer 0.6 3 +47:51 Blocks
-	./fig2layer 0.6 4 +46:51 Blocks
-	./fig2layer 0.6 5 +46,48:50,52 Blocks
-	./fig2layer 0.6 6 +46,48:51,53,54 Blocks
-	./fig2layer 0.6 7 +46,48:51,53,55 Blocks
-	./fig2layer 0.6 8 +46,48:51,53,56 Blocks
-	./fig2layer 0.6 9 +46,48:51,57 Blocks
+	./fig2layer 0.6 3 +45,47:51 Blocks
+	./fig2layer 0.6 4 +45:51 Blocks
+	./fig2layer 0.6 5 +45:46,48:50,52 Blocks
+	./fig2layer 0.6 6 +45:46,48:51,53,54 Blocks
+	./fig2layer 0.6 7 +45:46,48:51,53,55 Blocks
+	./fig2layer 0.6 8 +45:46,48:51,53,56 Blocks
+	./fig2layer 0.6 9 +45:46,48:51,57 Blocks

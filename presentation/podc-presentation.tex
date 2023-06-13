@@ -53,20 +53,20 @@ Michael and Scott Queue [PODC 1996]
 % Each enqueue creates new node and performs a CAS on the tail node's next pointer to add it to the left end (and then advances the Tail pointer)
 % Each dequeue uses a CAS to advance the Head pointer
 
-\only<1>{\input{MSQueue-48to50.pdf_t}}
-\only<2>{\input{MSQueue-48to51.pdf_t}}
-\only<3>{\input{MSQueue-48to52.pdf_t}}
-\only<4>{\input{MSQueue-48-50to53.pdf_t}}
-\only<5>{\input{MSQueue-50to54.pdf_t}}
+\only<1>{\input{MSQueue-1}}% 48-50
+\only<2>{\input{MSQueue-2}}% 48-51
+\only<3>{\input{MSQueue-3}}% 48-52
+\only<4>{\input{MSQueue-4}}% 48,50-53
+\only<5>{\input{MSQueue-5}}% 50-54
 \end{frame}
 
 \begin{frame}{CAS Retry Problem}
 Suppose $p$ processes want to enqueue simultaneously.
 \medskip
 
-\only<1>{\input{CASretry-49to50.pdf_t}}
-\only<2>{\input{CASretry-49to51.pdf_t}}
-\only<3->{\input{CASretry-49to52.pdf_t}}
+\only<1>{\input{CASretry-1}}% 49-50
+\only<2>{\input{CASretry-2}}% 49-52
+\only<3->{\input{CASretry-3}}% 49-52
 
 \medskip
 \visible<4->{
@@ -163,9 +163,9 @@ But lower bound holds only if $contention$ is $O(\log\log p)$
 
 \end{frame}
 
-\begin{frame}{Our Result}
+\begin{frame}{Breaking Linear-Time Bottleneck}
 
-\begin{block}{New Queue}
+\begin{block}{Our New Queue}
 \begin{itemize}
 \item $O(\log p)$ steps per \op{Enqueue}
 \item $O(\log^2 p + \log q)$ steps per \op{Dequeue}
@@ -187,12 +187,12 @@ Previous lock-free queues take $\Omega(p)$ steps per operation.
 
 \begin{frame}{Ordering Tree}
 \visible<5>{\hfill Use ordering in root as linearization\hfill}
-\medskip
 
-\only<1>{\input{OrderTree-50.pdf_t}}%
-\only<2>{\input{OrderTree-50to51.pdf_t}}%
-\only<3>{\input{OrderTree-50to52.pdf_t}}%
-\only<4->{\input{OrderTree-50to53.pdf_t}}
+\hspace*{-7mm}
+\only<1>{\input{OrderTree-1}}% 50
+\only<2>{\input{OrderTree-2}}% 50-51
+\only<3>{\input{OrderTree-3}}% 49-52
+\only<4->{\input{OrderTree-4}}% 50-53
 
 \end{frame}
 
@@ -214,7 +214,7 @@ CAS them into $v$
 \pause
 \medskip
 
-Double Refresh:\\
+\Red{Double Refresh}:\\
 If your CAS on $v$ fails twice, then\\
 another process has propagated your operation to $v$.
 
@@ -228,12 +228,123 @@ Avoids CAS retry problem.
 Refresh may have to propagate up to $p$ operations\\
 $\Rightarrow$ need an \Red{implicit representation}
 
+\end{frame}
 
+\begin{frame}{Requirements for Implicit Representation}
 
+% 60% size; others are 80%
+\hspace*{7mm}
+\only<1>{\input{OrderTree-5}}% 50-53
+\only<2>{\input{OrderTree-6}}% 48,50-53
+\only<3>{\input{OrderTree-7}}% 50-54
+\only<4>{\input{OrderTree-8}}% 50-55
+\only<5>{\input{OrderTree-9}}% 50-56
+
+Must support following in polylog time
+\begin{itemize}
+\pause
+\item Refresh: promote batch of ops from children to parent
+\pause
+\item Find my \op{Dequeue} in root
+\pause
+\item Check if \op{Dequeue} returns null, or otherwise\\
+determine rank of \op{Dequeue} among non-null \op{Dequeues}
+\pause
+\item Find \op{Enqueue} of given rank (and its argument)
+\end{itemize}
 
 \end{frame}
 
+\begin{frame}{Implicit Representation:  Blocks}
 
+\only<1>{\input{OrderTree-5}}% 50-53
+\only<2->{\input{OrderTree-10}}% 47,50-53
+
+\vfill 
+
+\only<1-2>{\input{Blocks-0}}% none
+\only<3>{\input{Blocks-1}}% 50
+\only<4>{\input{Blocks-2}}% 49-50
+\only<5>{\input{Blocks-3}}% 47-51
+\only<6>{\input{Blocks-4}}% 46-51
+
+\end{frame}
+
+\begin{frame}{Adding a Block for a Refresh}
+\input{OrderTree-6}% 48,50-53
+
+\vfill
+
+\input{Blocks-5}% 46,48-50,52
+\end{frame}
+
+\begin{frame}{Tracing a \op{Dequeue} to the Root}
+\input{OrderTree-7}% 50-54
+
+\vfill
+
+\input{Blocks-6}% 46,48-51,53,54
+\end{frame}
+
+\begin{frame}{Check if \op{Dequeue} Returns Null}
+\input{OrderTree-7}% 50-54
+
+\vfill
+
+\input{Blocks-7}
+\end{frame}
+
+
+\begin{frame}{Rank of \op{Dequeue} Among Non-Null \op{Dequeues}}
+\input{OrderTree-8}%
+
+\vfill
+
+\input{Blocks-8}
+\end{frame}
+
+\begin{frame}{Find \op{Enqueue} of Given Rank}
+\input{OrderTree-9}
+
+\vfill
+
+\input{Blocks-9}
+\end{frame}
+
+\begin{frame}{Our Result}
+
+\begin{block}{New Wait-Free Queue}
+\begin{itemize}
+\item $O(\log p)$ steps per \op{Enqueue}
+\item $O(\mbox{log}^2 p + \log q)$ steps per \op{Dequeue}
+\item<2> Unbounded space
+\end{itemize}
+\end{block}
+
+$p = \#$ processes\\
+$q = \#$ elements in queue
+\end{frame}
+
+\begin{frame}{Bounding Space}
+
+\begin{itemize}
+\item Replace array of blocks with a red-black tree of blocks
+\item Periodically split RBT and discard obsolete blocks
+\item Processes  help one another to ensure blocks are obsolete
+\end{itemize}
+
+\begin{block}{Bounded-Space Queue}
+\begin{itemize}
+\item Amortized $O(\log p\ \log(p+q))$ steps per operation
+\item $O(pq+p^3\log p)$ space
+\item Still wait-free
+\end{itemize}
+\end{block}
+
+$p = \#$ processes\\
+$q = \#$ elements in queue
+
+\end{frame}
 
 
 
@@ -249,7 +360,7 @@ Extend technique to other data structures\\
  \item
 Close gap between\\
 $\Omega(\log \log p)$ lower bound \hfill {\small [Attiya Fouren 2017]}\\
-$O(\log^2 p + \log q)$ upper bound \hfill {\small [this work]}
+$O(\mbox{log}^2 p + \log q)$ upper bound \hfill {\small [this work]}
 
 \end{itemize}
 

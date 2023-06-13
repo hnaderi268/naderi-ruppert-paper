@@ -1,0 +1,28 @@
+#!/bin/sh
+#
+# convert some layers of fig file to tex format (will also create auxiliary .pdf files that
+# are needed).  To use this programme, just type
+# fig2layer mag seqnum layers file1
+# mag is the magnification
+# seqnum is the sequence number for the output file
+# layers is the list of depths in fig2dev format; e.g +10,40,55:70 means keep only
+# elements with depth 10, 40 and 55 through 70.  A leading - omits those depths.
+# Don't type the .fig ending
+# Generated files will be file-seqnum.tex and file-seqnum.pdf
+#
+# Then, in the LaTeX file, type \input{file} (don't type the .tex ending).
+# needs epsfig package and may need graphicx and color packages.
+#
+# This was written in July 2010.
+
+mag=$1
+seqnum=$2
+layers=$3
+filename=$4
+
+echo "fig2dev -D $layers -L pdftex -p 0 -m $mag ${filename}.fig > ${filename}-${seqnum}.pdf"
+fig2dev -D $layers -L pdftex -p 0 -m $mag ${filename}.fig > ${filename}-${seqnum}.pdf
+echo "% magnification factor used by fig2layer = " $mag > ${filename}-${seqnum}.tex
+echo "% layers used by fig2layer = " $layers >> ${filename}-${seqnum}.tex
+echo "fig2dev -D $layers -L pdftex_t -m $mag -p ${filename}-${seqnum}.pdf ${filename}.fig > ${filename}-${seqnum}.tex"
+fig2dev -D $layers -L pdftex_t -m $mag -p ${filename}-${seqnum}.pdf ${filename}.fig >> ${filename}-${seqnum}.tex

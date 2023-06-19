@@ -29,6 +29,10 @@
 
 \renewcommand{\log}{\mbox{log }} % font looks funny for usual \log
 
+\newcommand{\itemnum}[1]{% reproduce beamer numbers as in enumerated lists
+\setcounter{enumi}{#1}\usebeamertemplate{enumerate item}% 
+}
+
 \newcommand{\ignore}[1]{}
 
 \title{A Wait-Free Queue with Polylogarithmic Step Complexity}
@@ -247,9 +251,10 @@ CAS them into $v$
 \pause
 \medskip
 
-\Red{Double Refresh}:\\
+\begin{block}{Double Refresh}
 If your CAS on $v$ fails twice, then\\
 another process has propagated your operation to $v$.
+\end{block}
 
 \pause
 \medskip

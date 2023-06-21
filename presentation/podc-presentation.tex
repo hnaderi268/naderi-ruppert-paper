@@ -35,7 +35,8 @@
 
 \newcommand{\ignore}[1]{}
 
-\title{A Wait-Free Queue with Polylogarithmic Step Complexity}
+\title{A Wait-Free Queue with\\
+Polylogarithmic Step Complexity}
 
 \author{Hossein Naderibeni \and Eric Ruppert}
 \date{June 21, 2023}
@@ -51,7 +52,7 @@
 
 \begin{frame}{Queues:  Breaking Linear-Time Bottleneck}
 
-Problem:  implement lock-free FIFO queue
+Problem:  implement linearizable, lock-free FIFO queue
 \begin{itemize}
 \item shared by $p$ processes
 \item use single-word CAS (reasonable-sized words)
@@ -107,10 +108,10 @@ Suppose $p$ processes want to enqueue simultaneously.
 \only<3->{\input{CASretry-3}}% 49-52
 
 \medskip
-\visible<4->{
+\visible<3->{
 \begin{itemize}
-\item one CAS of next pointer succeeds.
-\item other \op{Enqueues} must try again.
+\item<3-> one CAS of next pointer succeeds.
+\item<4-> other \op{Enqueues} must try again.
 \item<5> $\Rightarrow$ starvation and $\Omega(p)$ steps per operation (amortized)
 \end{itemize}
 }
@@ -131,7 +132,7 @@ fast path, slow path \hfill {\small [Kogan, Petrank 2012]}
 \item
 futures \hfill {\small [Kogan, Herlihy 2014]}
 \end{itemize}
-\visible<2->{All have CAS retry problem  \hfill {\small [Morrisson, Afek 2013]}}
+\visible<2->{All have CAS retry problem  \hfill {\small [Morrison, Afek 2013]}}
 
 \smallskip
 
@@ -217,9 +218,9 @@ But lower bound holds only if $contention$ is $O(\log\log p)$
 $p = \#$ processes\\
 $q = \#$ elements in queue
 
-\medskip
-
-Previous lock-free queues take $\Omega(p)$ steps per operation.
+%\medskip
+%
+%Previous lock-free queues take $\Omega(p)$ steps per operation.
 
 \end{frame}
 

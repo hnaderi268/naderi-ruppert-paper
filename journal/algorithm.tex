@@ -1,0 +1,601 @@
+% !TEX root =  podc-submission.tex
+
+\section{Queue Implementation} \label{DescriptQ}
+
+\subsection{Overview}
+Our \emph{\ordering\ tree} data structure is used to agree on a total ordering of the operations performed on the queue.
+It is a static binary tree of height $\ceil{\log_2 p}$ with one leaf 
+for each process. 
+Each tree node  stores an array of \emph{blocks}, where each block represents a 
+sequence of enqueues and a sequence of dequeues.
+See Figure \ref{orderingtree} for an example.
+In this section, we use an infinite array of blocks in each node.
+Section \ref{reducing} describes how to replace the infinite array by a representation that uses bounded space.
+
+To perform an operation on the queue, a process $P$ appends a new block containing that  
+operation to the \fld{blocks} array in $P$'s leaf.
+Then, $P$ attempts to propagate the operation to each node along the path from that leaf to the root of the tree.
+We shall define a total order on all operations that have been propagated to the root, which 
+will serve as the linearization ordering of the operations.
+
+\Eric{Reworded following parag after Hossein's comments of Jan 4}
+To propagate operations from a node $\var{v}$'s children to $\var{v}$, $P$ first observes
+the blocks in both of $\var{v}$'s children that are not already in $\var{v}$,
+creates a new block by combining information from those blocks, and attempts to append this 
+new block to $\var{v}$'s \fld{blocks} array using a \op{CAS}.
+Following \cite{DBLP:conf/fsttcs/JayantiP05}, we call this a 3-step sequence a
+\op{Refresh} on $\var{v}$. %(see Figure \ref{fig::propagstep}).
+A \op{Refresh}'s \op{CAS} may fail if there is another concurrent \op{Refresh} on~$\var{v}$.
+However, since a successful \op{Refresh} propagates multiple pending operations 
+from $\var{v}$'s children to $\var{v}$,
+we can prove that if two \op{Refresh}es by $P$ on $\var{v}$ fail,
+then $P$'s operation has been propagated to $\var{v}$ by some other process, so $P$ can continue 
+onwards towards the~root.
+
+Now suppose $P$'s operation has been propagated all the way to the root.
+If $P$'s operation is an enqueue, it has obtained a place in the linearization ordering and can terminate.
+If $P$'s operation is a dequeue, $P$ must use information in the tree to compute the value that the
+dequeue must return.  To do this, $P$ first determines which block in the root contains its dequeue
+(since the dequeue may have been propagated to the root by some other process).
+$P$ does this by finding the dequeue's location in each node along the path from the leaf to the root.
+Then, $P$ determines whether the queue is empty when its dequeue is linearized. 
+If so, it returns \nl\ and we call it a \emph{null dequeue}.
+If not, $P$ computes the rank $r$ of its dequeue among all non-null dequeues in the linearization ordering.  (We say that the $r$th element in a sequence has \emph{rank} $r$ within that sequence.)
+$P$ then returns the value of the $r$th enqueue in the linearization.
+
+We must choose what to store in each block so that the following tasks can be done efficiently.
+\begin{enumerate}[label={(T\arabic*)}]
+\item
+\label{construct}
+Construct a block for node $\var{v}$ that represents the operations in consecutive blocks in $\var{v}$'s children, as required for a \op{Refresh}.
+\item
+\label{findinroot}
+Given a dequeue in a leaf that has been propagated to the root, find that operation's position in the root's \fld{blocks} array.
+\item
+\label{findrank}
+Given a dequeue's position in the root, decide if it is a null dequeue (i.e., if the queue is empty when it is linearized)
+or determine the rank $r$ of the enqueue whose value it returns.
+\item
+\label{findenqueue}
+Find the $r$th enqueue in the linearization ordering.
+\end{enumerate}
+Since these tasks depend on the linearization ordering, we describe that ordering next.
+
+\begin{figure*}[t]
+\input{tournamentTree.pdf_t}
+\caption{An example \ordering\ tree with four processes. 
+We show explicitly the enqueue sequence and dequeue sequence represented by each block in the \fld{blocks} arrays of the seven nodes.  The leftmost element of each \fld{blocks} array is a dummy block.
+Arrows represent the indices stored in \eleft\ and \eright\ fields of blocks (as described in Section \ref{sec:fields}).
+The fourth process's Deq\sub{6} is still propagating towards the root.
+The linearization order for this tree is
+Enq(a) Enq(e) Deq\sub{2} $\mid$ Enq(b) Deq\sub{4} Deq\sub{5} $\mid$ Enq(d) Enq(f) Enq(h) Deq\sub{1} $\mid$ Enq(c) Deq\sub{3} $\mid$ Enq(g), where vertical bars indicate boundaries of blocks in the root.\label{orderingtree}}
+\medskip
+\input{implicit.pdf_t}
+\caption{\label{implicit}The actual, implicit representation of the tree shown in Figure \ref{orderingtree}.
+The leaf blocks simply show the \fld{element} field.
+Internal blocks show the \fld{sum\sub{enq}} and \fld{sum\sub{deq}} fields,
+and \eleft\ and \eright\ fields are shown using arrows as in Figure \ref{orderingtree}.
+Root blocks also have the additional \fld{size} field.
+The \fld{super} field is not shown.}
+\end{figure*}
+
+\subsection{Linearization Ordering}
+
+Performing a double \op{Refresh} at each node along the path from the leaf to the root ensures 
+a block containing the operation is appended to the root before the operation completes.
+So, if an operation $op_1$ terminates before another operation $op_2$ begins, 
+$op_1$ will be in an earlier block than $op_2$ in the root's blocks array.
+Thus, we linearize operations according to the block they belong to in the root's array.
+We can choose how to order operations in the same block, since they must be concurrent.
+
+Each block in a leaf represents one operation.
+Each block $B$ in an internal node $\var{v}$ results from merging
+several consecutive blocks from each of $\var{v}$'s children.
+The merged blocks in $\var{v}$'s children are called the \emph{direct subblocks} of $B$.
+A block $B'$ is a \emph{subblock} of $B$ if it is a direct subblock of $B$
+or a subblock of a direct subblock of $B$.
+A block $B$ represents the set of operations in all of $B$'s subblocks in leaves of the tree.
+The operations propagated by a \op{Refresh} are all pending when the \op{Refresh} occurs,
+so there is at most one operation per process.
+Hence, a block represents at most $p$ operations in total.  
+Moreover, we never append empty blocks, so 
+each block represents at least one operation and it follows that a block can have at most $p$ direct subblocks.
+
+As mentioned above, we are free to order operations within a block however we like.
+We order the enqueues and dequeues separately, and put the 
+operations propagated from the left child before the operations from the right child.
+More formally, we inductively define sequences $E(B)$ and $D(B)$ of the enqueues and dequeues
+represented by a block $B$.
+If $B$ is a block in a leaf representing an enqueue operation, its enqueue sequence $E(B)$ is that operation
+and its dequeue sequence $D(B)$ is empty.  If $B$ is a block in a leaf representing a dequeue, $D(B)$ is that single operation and $E(B)$ is empty.
+If $B$ is a block in an internal node $\var{v}$ with direct subblocks $B^L_1, \ldots, B^L_\ell$ from 
+$\var{v}$'s left child
+and $B^R_1,\ldots,B^R_r$ from $\var{v}$'s right child, then $B$'s operation sequences are defined by the concatenations 
+\begin{eqnarray}
+E(B) &=& E(B^L_1)\cdots E(B^L_\ell)\cdot E(B^R_1) \cdots E(B^R_r) \mbox{ and }\nonumber\\
+D(B) &=& D(B^L_1)\cdots D(B^L_\ell)\cdot D(B^R_1) \cdots D(B^R_r)\label{defSeqs}
+\end{eqnarray}
+We say the block $B$ \emph{contains} the operations in $E(B)$ and $D(B)$.
+
+When linearizing the operations propagated to the root, we must
+choose how to order operations within a block.  
+We choose to put
+each block's enqueues before its dequeues.
+Thus, if the root's blocks array contains blocks $B_1, \ldots, B_k$, the 
+linearization ordering~is 
+\begin{equation}
+L=E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k).
+\label{linearization}
+\end{equation}
+
+\subsection{Designing a Block Representation to Solve Tasks \ref{construct} to \ref{findenqueue}}
+\label{sec:fields}
+
+\renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTSINGLE}{\com\ #1}}
+\begin{figure}
+\begin{algorithmic}
+\setcounter{ALG@line}{1}
+\Statex \linecomment{Shared variable}
+\begin{itemize}
+\item \typ{Node} \var{root} \Comment{root of binary tree of \tt{Node}s with one leaf per process}
+\end{itemize}
+
+\Statex \linecomment{Thread-local variable}
+\begin{itemize}
+\item \typ{Node} \var{leaf} \Comment{process's leaf in the tree}
+\end{itemize}
+
+\Statex $\blacktriangleright$ \typ{Node}
+\begin{itemize}
+\item \typ{Node} \fld{left}, \fld{right}, \fld{parent} \Comment{tree pointers initialized  when creating the tree}
+\item \typ{Block}[0..$\infty$] \fld{blocks} \Comment{blocks that have been propagated to this node;}\linebreak
+	\mbox{ }\Comment{\var{blocks}[0] is empty block whose integer fields are 0}
+\item \typ{int} \head \Comment{position to append next \block\ to \fld{blocks}, initially 1}
+\end{itemize}
+
+\Statex $\blacktriangleright$ \typ{Block} 
+
+\begin{itemize}
+  	\item \typ{int} \fld{sum\sub{enq}, sum\sub{deq}}
+  		\Comment{number of enqueues, dequeues in \fld{blocks} array}\linebreak
+		\mbox{ }\Comment{up to this block (inclusive)}
+  	\item \typ{int} \fld{super}
+  		\Comment{approximate index of superblock in \fld{parent.blocks}}
+	\item[\com] Blocks in internal \nodes\ have the following additional fields
+	\begin{itemize}[leftmargin=3mm]
+		\item[$\bullet$] \typ{int} \eleft, \eright
+  		\Comment{index of last direct subblock in the left and right child}
+	\end{itemize}
+  	\item[\com] Blocks in leaf \nodes\ have the following additional field
+  	\begin{itemize}[leftmargin=3mm]
+		\item[$\bullet$] \typ{Object} \fld{element}
+  		\Comment{\var{x} for \opa{Enqueue}{x} operation; otherwise \nl}
+	\end{itemize}
+	\item[\com] Blocks in the root \node\ have the following additional field
+	\begin{itemize}[leftmargin=3mm]
+		\item[$\bullet$] \typ{int} \size%
+  		\Comment{size of queue after performing all operations up }\linebreak
+		\mbox{ }\Comment{to the end of this block}
+	\end{itemize}
+\end{itemize}
+
+%\Statex {\com\  Blocks in internal nodes have the following additional fields}
+%\Statex $\blacktriangleright$ \tt{\sl{InternalBlock} extends \sl{Block}} \sf{\com\ the following additional fields are used only for blocks in internal nodes}
+%\begin{itemize}
+%	\item \tt{int} \eleft, \eright
+%  		\Comment{index of last direct subblock in the left and right child}
+%\end{itemize}
+
+%\Statex {\com\ Blocks in leaf nodes have the following additional field}
+%\Statex $\blacktriangleright$ \tt{\sl{LeafBlock} extends \sl{Block}} \sf{\com\ the following additional field is used only for blocks in leaves}
+%\begin{itemize}
+%  \item \tt{\sl{Object} element}
+%  \Comment{if the block's operation is \tt{enqueue(x)} then \tt{element=x}, otherwise \tt{element=null}.}
+%\end{itemize}
+
+%\Statex {\com\ Blocks in the root node have the following additional field}
+%\Statex $\blacktriangleright$ \tt{\sl{RootBlock} extends \sl{InternalBlock}} \sf{\com\ the following additional field is used only for blocks in the root}
+%\begin{itemize}
+%  \item \tt{\sl{int} \size}%
+%  \Comment{size of the queue after performing all operations up to the end of this block}
+%\end{itemize}
+
+\end{algorithmic}
+\caption{Objects used in the \ordering\ tree data structure.\label{object-fields}\Eric{Fix indentation}}
+\end{figure}
+
+Each \node\ of the \ordering\ tree has an infinite array called \fld{blocks}.
+To simplify the code, \fld{blocks}[0] is initialized with an empty \block\ $B_0$, 
+where $E(B_0)$ and $D(B_0)$ are empty sequences.
+Each \node's \fld{head} index  stores the position in the \fld{blocks} array to be used
+for the next attempt to append a \block.
+
+If a block contained an explicit representation of its sequences of enqueues and dequeues,
+it would take $\Omega(p)$ time to construct a block, which would be too slow for task \ref{construct}.
+Instead, the block stores an implicit representation of the sequences.
+We now explain how we designed the fields for this implicit representation. 
+Refer to Figure \ref{implicit} for an example showing how the tree in Figure \ref{orderingtree} is actually represented, and Figure \ref{object-fields} for the definitions of the fields of \blocks\ and \nodes.
+
+%The information stored in a \block\ depends on whether it is in an internal node or a leaf.
+A block in a leaf represents a single enqueue or dequeue.  The block's \fld{element} field stores the value
+enqueued if the operation is an enqueue, or \nl\ if the operation is a dequeue.
+
+\here{If space permits, we might want to add some examples in the following paragraphs that refer back to Figure \ref{implicit}.}
+
+Each block in an internal \node\ $\var{v}$ has fields \eleft\ and \eright\ that store the indices of the block's last direct subblock in $\var{v}$'s left and right child.  
+Thus, the direct subblocks of $\var{v}.\fld{blocks}[b]$ are
+\begin{eqnarray}\label{defsubblock}
+\var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[b\!-\!1].\fld{end\sub{left}}\!+\!1..\var{v}.\fld{blocks}[b].\fld{end\sub{left}}] \mbox{ and}\nonumber\\
+\var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[b\!-\!1].\fld{end\sub{right}}\!+\!1..\var{v}.\fld{blocks}[b].\fld{end\sub{right}}].\!
+\end{eqnarray}
+The \eleft\ and \eright\ fields allow us to navigate to a block's direct subblocks.
+Blocks also store some prefix sums:
+%the block in 
+$\var{v}.\fld{blocks}[b]$ has two fields \fld{sum\sub{enq}} and \fld{sum\sub{deq}}
+that store the total numbers of enqueues and dequeues in $\var{v}.\fld{blocks}[1..\var{b}]$.
+We use these to search for a particular operation.
+% pinpoint the  location of an operation among the subblocks of a given block.
+For example, consider finding the $r$th enqueue $E_r$ in the linearization.
+A binary search for $r$ on \fld{sum\sub{enq}} fields of the root's blocks 
+finds the block  containing $E_r$.
+If we know a block $B$ in a \node\ $\var{v}$ contains $E_r$,
+we can use the \fld{sum\sub{enq}} field again to determine which child of $\var{v}$ contains $E_r$
+and then do a binary search
+among the direct subblocks of $B$ in that child.
+Thus, we work our way down the tree until we find the leaf block that  stores 
+$E_r$ explicitly.
+%Now, suppose we want to find the $r$th enqueue in the linearization ordering for task \ref{findenqueue}.Let $B_1, B_2, \ldots, B_k$ be the blocks in the root.
+%First, we need prefix sums of the number of enqueues in $E(B_1)\cdot E(B_2)\cdots E(B_i)$
+%so that we can do a binary search for the block $B_e$ that contains the $r$th enqueue.
+%This prefix sum also allows us to know the rank $r'$ within $E(B_e)$ of the $r$th enqueue.
+%Once we have $r'$, we need the number of enqueues that $B_e$ received from its left child
+%to determine whether the enqueue came from the left or right child of the root.
+%Suppose the enqueue came from the right child $v_r$.
+%Then, we know that the index of the block in $v_r$ that contains the enqueue
+%is between $B_{e-1}.\eright + 1$ and $B_e$.\eright.
+%We can again do a binary search within this range.
+%For this, we can again use the prefix sums of the number of enqueues in any prefix of the array $v_r.blocks$.
+%We can then continue in this way down the tree until reaching a leaf where the enqueue is stored explicitly.
+We shall show that the binary search in the root can be done in $O(\log p + \log q)$ steps,
+and the binary search within each other \node\ along the path to a leaf takes $O(\log p)$ steps,
+for a total of $O(\log^2 p + \log q)$ steps for task \ref{findenqueue}.
+%All information needed for this search process can be derived from the 
+%\eleft, \eright\ and \fld{sum\sub{enq}} fields.
+
+A block is called the \emph{superblock} of all of its direct subblocks.
+To facilitate task \ref{findinroot}, each block $B$ has a field \fld{super} that contains
+the (approximate) index of its superblock in the parent \node's \fld{blocks} array (it may differ from the true index by 1).
+%We shall ensure that the value of $B.\fld{super}$ differs from the true index of $B$'s superblock by at most 1.
+This allows a process to determine the true location of the superblock by checking the \eleft\ or \eright\ values of just two \blocks\ in the parent \node.
+Thus, starting from an operation in a leaf's block, one can use these indices to track the 
+operation  up the path to the root, and determine the operation's location in a root block
+in $O(\log p)$ time.
+
+Now consider task \ref{findrank}.
+To determine whether the queue is empty when a dequeue occurs,
+each block in the root has a \fld{size} field storing the number of elements
+in the queue after all operations in the linearization up to that block (inclusive) 
+have been done.
+We can  determine which dequeues in a block $B_d$ in the root are null dequeues using
+$B_{d-1}.\fld{size}$, which is the size of the queue just before $B_d$'s operations, and the number of enqueues and dequeues in $B_d$.
+Moreover, the total number of non-null dequeues in blocks $B_1, \ldots, B_{d-1}$ 
+is $B_{d-1}.\fld{sum\sub{enq}}-B_{d-1}.\fld{size}$.
+We can use this information to determine the
+rank of a non-null dequeue in $B_d$ among all non-null dequeues in the linearization, which is the rank  (among all enqueues) of the enqueue
+whose value the dequeue should return.
+
+Having defined the fields required for tasks \ref{findinroot}, \ref{findrank} and \ref{findenqueue},
+we can easily see how to construct a new block $B$ during a \op{Refresh} in $O(1)$ time.
+A \op{Refresh} on \node\ $\var{v}$ reads the values $h_{\ell}$ and~$h_{r}$ of the \fld{head} fields of $\var{v}$'s children and stores 
+$h_{\ell}-1$ and $h_{r}-1$ in $B.\eleft$ and $B.\eright$.
+Then, we can compute 
+\begin{eqnarray*}
+B.\fld{sum\sub{enq}}&=&\var{v}.\fld{left}.\fld{blocks}[B.\eleft].\fld{sum\sub{enq}} \\
+&&+ \var{v}.\fld{right}.\fld{blocks}[B.\eright].\fld{sum\sub{enq}}.
+\end{eqnarray*}
+For a block $B$ in the root, $B.\fld{size}$ is computed using the \fld{size} field of the previous block $B'$ and
+the number of enqueues and dequeues in~$B$:
+\begin{eqnarray*}
+B.\fld{size} &=& \max(0, B'.\fld{size} + (B.\fld{sum\sub{enq}}-B'.\fld{sum\sub{enq}})\\ 
+			&& \hspace*{19mm} - (B.\fld{sum\sub{deq}} - B'.\fld{sum\sub{deq}})).	
+\end{eqnarray*}
+
+The only remaining field is $B.\fld{super}$.  When the block 
+$B$ is created for a \node\ $\var{v}$, we do not yet know where its
+superblock will eventually be installed in \var{v}'s parent.
+So, we leave $B.\fld{super}$ blank.  
+Soon after $B$ is installed,
+%a call to \op{Advance} at line \ref{helpAdvance} or \ref{advance} by 
+some process will
+set \var{B}.\fld{super} to a value read from the \fld{head} field of \var{v}'s parent.
+We shall show that this happens soon enough that $B.\fld{super}$ can differ from the true index of $B'$
+by at most 1.
+%After $B$ is installed 
+%in $\var{v}.\fld{blocks}[\var{h}]$, processes cooperate to fill in $B.\fld{super}$ 
+%when they attempt to advance $\var{v}.\fld{head}$ from $h$ to $h+1$,
+%using a value they read from the \fld{head} field of $\var{v}$'s parent.
+%As mentioned above, this might not be the exact index of $B$'s superblock, but we
+%shall prove that it is close.
+
+\subsection{Details of the Implementation}
+
+We now discuss the queue implementation in more detail.  Pseudocode is provided in Figure \ref{pseudocode1}.
+%We use $v.\var{blocks[i].num\sub{enq}}$ as shorthand for 
+%$v.\var{blocks[i].sum\sub{enq} - blocks[i-1].sum\sub{enq}}$, that is, 
+%the number of enqueues in the block.  (For $\var{i}=0$, $v.\var{blocks[0].num\sub{enq}} = 0$.)
+%We use \var{num\sub{deq}} similarly.
+%\here{Check if the num abbreviation is really needed in the code--how many times do we use it?}
+
+\renewcommand{\algorithmiccomment}[1]{\hfill\eqparbox{COMMENTDOUBLE}{\com\ #1}}
+
+\here{For consistency of notation, perhaps change $n$ to $B$ in code for Enqueue, Dequeue.  Maybe also new to B for CreateBlock, Refresh.}
+
+\begin{figure*}
+\begin{minipage}[t]{0.405\textwidth}
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{0}
+
+\Function{void}{Enqueue}{\typ{Object} \var{e}} 
+    \State \hangbox{let \var{B} be a new \typ{Block} with \fld{element} \assign\ \var{e},\\
+		$\fld{sum\sub{enq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}}+1$,\\
+		$\fld{sum\sub{deq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}$}\label{enqNew}
+    \State \Call{Append}{\var{B}}
+\EndFunction{Enqueue}
+
+\spac
+
+\Function{Object}{Dequeue()}{} 
+    \State \hangbox{let \var{B} be a new \typ{Block} with \fld{element} \assign\ \nl,\\
+	    $\fld{sum\sub{enq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}}$,\\
+	    $\fld{sum\sub{deq}} \assign\ \var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}+1$}\label{deqNew}
+    \State \Call{Append}{\var{B}}
+    \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, $\var{leaf.}\head-1$, $1$}\label{invokeIndexDequeue}
+    \State \Return{ \Call{FindResponse}{\var{b, i}}}\label{deqRest}
+\EndFunction{Dequeue}
+
+\spac
+
+\Function{void}{Append}{\typ{Block} \var{B}} \com\ append block to leaf and propagate to root
+    \State \var{leaf.}\fld{blocks}[\var{leaf.}\head] \assign\ \var{B}\label{appendLeaf}
+    \State $\var{leaf.}\head\ \assign\ \var{leaf.}\head+1$ \label{appendEnd} 
+    \State \Call{Propagate}{\var{leaf.}\fld{parent}} 
+\EndFunction{Append}
+
+\spac
+
+\Function{void}{Propagate}{\typ{Node} \var{v}} \com\ propagate blocks from \var{v}'s children to root
+    \If{\bf{not} \Call{Refresh}{\var{v}}} \label{firstRefresh}  \hfill \com\ double refresh
+        \State \Call{Refresh}{\var{v}} \label{secondRefresh}
+    \EndIf
+    \If{$\var{v} \neq \var{root}$} \hfill \com\ recurse up tree
+        \State \Call{Propagate}{\var{v}.\fld{parent}}
+    \EndIf
+\EndFunction{Propagate}
+
+\spac
+
+\Function{boolean}{Refresh}{\typ{Node} \var{v}} \com\ try to append a new block to \var{v}.\fld{blocks}
+    \State \var{h} \assign\ \var{v}.\head \label{readHead}
+    \ForEach{\fld{dir} {\keywordfont{in}} $\{\fld{left, right}\}$} \label{startHelpChild1}
+        \State \var{childHead} \assign\ \var{v}.\fld{dir}.\head \label{readChildHead}
+        \If{\var{v}.\fld{dir.blocks}[\var{childHead}] $\neq$ \nl} \label{ifHeadnotNull}
+            \State \Call{Advance}{\var{v}.\fld{dir}, \var{childHead}} \label{helpAdvance}
+        \EndIf
+    \EndFor \label{endHelpChild1}
+    \State \var{new} \assign\ \Call{CreateBlock}{\var{v, h}} \label{invokeCreateBlock}
+    \If{\var{new = \nl}} \Return{\tr} \label{addOP} 
+	\Else
+	    \State \var{result} \assign\ \Call{CAS}{\var{v}.\fld{blocks}[\var{h}], \nl, \var{new}} \label{cas}
+    	\State \Call{Advance}{\var{v, h}}\label{advance}
+    	\State \Return{ \var{result}}
+	\EndIf
+\EndFunction{Refresh}
+
+\spac
+
+
+\Function{Block}{CreateBlock}{\typ{Node} \var{v}, \typ{int} \var{i}} 
+    \State \linecomment{create new block for a \op{Refresh} to install in \var{v}.\fld{blocks}[\var{i}]}
+    \State let \var{new} be a new \typ{Block} \label{initNewBlock}
+    \State \var{new}.\eleft \assign\ $\var{v}.\fld{left}.\head - 1$\label{createEndLeft}
+    \State \var{new}.\eright \assign\ $\var{v}.\fld{right}.\head - 1$\label{createEndRight}
+	\State \hangbox{\var{new}.\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + \\
+			\hspace*{11mm}\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{enq}}}\label{createSumEnq}
+	\State \hangbox{\var{new}.\fld{sum\sub{deq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{deq}} + \\
+			\hspace*{11mm}\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{deq}}}\label{createSumDeq}
+    \State \var{num\sub{enq}} \assign\ $\var{new}.\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{enq}}$\label{computeNumEnq}
+    \State \var{num\sub{deq}} \assign\ $\var{new}.\fld{sum\sub{deq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{deq}}$
+    \If{$\var{v} = \var{root}$}
+        \State \hangbox{\var{new}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + \var{num\sub{enq}} - \var{num\sub{deq}}$)}\label{computeLength}
+    \EndIf
+    \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$}\label{testEmpty}
+        \State \Return \nl \hfill \com\ no blocks need to be propagated to \var{v}
+    \Else
+        \State \Return \var{new}
+    \EndIf
+\EndFunction{CreateBlock}
+
+\end{algorithmic}
+\end{minipage}
+\begin{minipage}[t]{0.585\textwidth}
+
+\begin{algorithmic}[1]
+\setcounter{ALG@line}{57}
+\Function{void}{Advance}{\typ{Node} \var{v}, \typ{int} \var{h}} \com\ set \var{v}.\fld{blocks}[\var{h}].\fld{super} and increment \var{v}.\fld{head} from \var{h} to $\var{h}+1$
+    \If{$\var{v}\neq \var{root}$}
+	    \State \var{h\sub{p}} \assign\ \var{v}.\fld{parent}.\head \label{readParentHead}
+    	\State \Call{CAS}{\var{v}.\fld{blocks}[\var{h}].\fld{super}, \nl, \var{h\sub{p}}} \label{setSuper1}
+	\EndIf
+    \State \Call{CAS}{\var{v}.\head, \var{h}, \var{h}+1} \label{incrementHead}
+\EndFunction{Advance}
+
+\spac
+
+\Function{$\langle\typ{int}, \typ{int}\rangle$}{IndexDequeue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \com\ return $\langle\var{b}', \var{i}'\rangle$ such that \var{i}th dequeue in
+    \State \linecomment{$D(\var{v}.\fld{blocks}[\var{b}])$ is $(\var{i}')$th dequeue of $D(\var{root}.\fld{blocks}[\var{b}'])$}
+    \State \linecomment{Precondition: $\var{v}.\fld{blocks}[\var{b}]$ is not \nl, was propagated to root, and contains at least}
+    \State \linecomment{\var{i} dequeues}
+    \If{$\var{v} = \var{root}$} \Return $\langle\var{b, i}\rangle$ \label{indexBaseCase}
+    \Else
+	    \State \fld{dir} \assign\ (\var{v}.\fld{parent.left} = \var{v} ? \fld{left} : \fld{right}) 
+    	\State \var{sup} \assign\ \var{v}.\fld{blocks}[\var{b}].\fld{super}\label{idsup1}
+	    \If{$\var{b} > \var{v}.\fld{parent.blocks}[\var{sup}].\fld{end\sub{dir}}$} \var{sup} \assign\ $\var{sup}+1$\label{supertest}\label{idsup2}
+	    \EndIf\label{idsup3}
+	    \State \linecomment{compute index \var{i} of dequeue in superblock}
+	    \State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{b}-1].\fld{sum\sub{deq}} -$ 
+	    		$\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}-1].\edir].\fld{sum\sub{deq}}$}\label{computeISuperStart}
+        \If{$\fld{dir} = \fld{right}$} 
+        	\State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}].\eleft].\fld{sum\sub{deq}} - \mbox{ }$\\
+					$\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}-1].\eleft].\fld{sum\sub{deq}}$}\label{considerLeftBeforeRight}
+        \EndIf \label{computeISuperEnd}
+        \State \Return\Call{IndexDequeue}{\var{v}.\fld{parent}, \var{sup}, \var{i}}
+    \EndIf
+\EndFunction{IndexDequeue}
+
+\spac
+
+\Function{element}{FindResponse}{\typ{int} \var{b}, \typ{int} \var{i}} \com\ find response to \var{i}th dequeue in $D(\var{root}.\fld{blocks}[\var{b}])$
+    \State \linecomment{Precondition:  $1\leq i\leq |D(\var{root}.\fld{blocks}[\var{b}])|$}
+    %  $i\geq 1$ and \var{root}.\fld{blocks}[\var{b}] is non-null and}
+    %  \State \linecomment{contains at least \var{i} dequeues}
+    \State \hangbox{\var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} - \var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$}\label{FRNum}
+    \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmpty}
+        \State \Return \nl \hfill \com\ queue is empty when dequeue occurs\label{returnNull}
+    \Else \ \linecomment{response is the \var{e}th enqueue in the root}
+        \State \var{e} \assign\ \var{i} + \var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}} - 
+			\var{root}.\fld{blocks}[\var{b}-1].\size\label{computeE}
+		\State \linecomment{compute enqueue's block using binary search}
+		\State find min $b_e\leq \var{b}$ with $\var{root}.\fld{blocks}[b_e].\fld{sum\sub{enq}} \geq \var{e}$\label{FRb}
+		\State \linecomment{find rank of enqueue within its block}
+		\State $i_e \assign\ \var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$\label{FRi}
+        \State \Return \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}\label{findAnswer}
+    \EndIf
+\EndFunction{FindResponse}
+
+\spac 
+
+\Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
+    \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] is non-\nl\ and contains at least \var{i} enqueues}
+	
+    \If{\var{v} is a leaf node} \Return \var{v}.\fld{blocks}[\var{b}].\fld{element} \label{getBaseCase}
+    \Else 
+        \State \var{sum\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[\var{b}].\eleft].\fld{sum\sub{enq}} 
+        \State \linecomment{\var{sum\sub{left}} is the number of enqueues in \var{v}.\fld{blocks}[1..$\var{b}$] from \var{v}'s left child}
+        \State \var{prev\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eleft].\fld{sum\sub{enq}} 
+        \State \linecomment{\var{prev\sub{left}} is the number of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from \var{v}'s left child}
+        \State \var{prev\sub{right}} \assign\ \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eright].\fld{sum\sub{enq}} 
+        \State \linecomment{\var{prev\sub{right}} is the number of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from \var{v}'s right child}
+        \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \label{leftOrRight} \Comment{required enqueue is in \var{v}.\fld{left}}
+            \State \fld{dir} \assign\ \fld{left}
+        \Else \Comment{required enqueue is in \var{v}.\fld{right}}
+            \State \fld{dir} \assign\ \fld{right}
+            \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$
+        \EndIf \label{endChooseDir}
+        \State \linecomment{Use binary search to find enqueue's block in \var{v}.\fld{dir} and its rank within block}
+        \State \hangbox{find minimum $\var{b}'$ in range [\var{v}.\fld{blocks}[$\var{b}-1$].\edir+1..\var{v}.\fld{blocks}[\var{b}].\edir] such that\\
+        	 $\var{v}.\fld{dir.blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$\label{getChild}}
+        \State $\var{i}'$ \assign\ $\var{i} - (\var{v}.\fld{dir.blocks}[\var{b}'-1].\fld{sum\sub{enq}} - \var{prev\sub{dir}})$\label{getChildIndex}
+        \State \Return\Call{GetEnqueue}{\var{v}.\fld{dir}, $\var{b}'$, $\var{i}'$} \label{getRecurse}
+    \EndIf
+\EndFunction{GetEnqueue}
+
+\end{algorithmic}
+\end{minipage}
+\vspace*{-3mm}
+\caption{Queue implementation.\label{pseudocode1}}
+\end{figure*}
+
+An \opemph{Enqueue}(\var{e}) appends a \block\ to the process's leaf.
+The block has $\fld{element}=\var{e}$ to indicate it represents an \op{Enqueue}(\var{e}) operation.
+It suffices to propagate the operation to the root and
+then use its position in the linearization for future \op{Dequeue}
+operations.
+
+A \opemph{Dequeue} also appends a \block\ to the process's leaf.
+The block has $\fld{element}=\nl$ to indicate that it represents a \op{Dequeue} operation.
+After propagating the operation to the root, it computes
+its position in the root using
+\op{IndexDequeue} and then computes its response by calling \op{FindResponse}. 
+
+\opemph{Append}(\var{B}) first adds the block \var{B} to the invoking process's leaf.
+The leaf's \fld{head} field stores the first empty slot in the leaf's \fld{blocks} array,
+so the \op{Append} writes \var{B} there and increments \fld{head}.
+Since \op{Append} writes only to the process's own leaf, there cannot be concurrent updates to a leaf.
+\op{Append} then calls \op{Propagate} to ensure the operation represented by \var{B} is propagated to the root.
+
+\opemph{Propagate}(\var{v}) guarantees that any blocks that are in \var{v}'s children when \op{Propagate} is invoked are propagated to the root.
+It uses the double \op{Refresh} idea described
+above and invokes two \op{Refresh}es on \var{v} in Lines
+\ref{firstRefresh} and \ref{secondRefresh}. 
+If both fail to add a block to \var{v}, it means some other process has done a successful \op{Refresh}
+that propagated blocks that were in \var{v}'s children prior to line \ref{firstRefresh} to \var{v}.
+Then, \op{Propagate} recurses to \var{v}.\fld{parent} to continue propagating blocks up to the root.  
+
+%\paragraph{\tt{Refresh()} and \tt{Advance()}}
+A \opemph{Refresh} on node \var{v} creates a block representing the new blocks
+in \var{v}'s
+children and tries to append it to \var{v}.\fld{blocks}. 
+Line \ref{readHead} reads \var{v}.\fld{head} into the local variable \var{h}.
+Line \ref{invokeCreateBlock} creates the new block to install in \var{v}.\fld{blocks}[\var{h}].
+If line \ref{invokeCreateBlock} returns \nl\ instead of a new block, there were no new blocks in \var{v}'s children to propagate to \var{v}, so \op{Refresh} can return true at line \ref{addOP} and terminate.
+Otherwise, the CAS at line \ref{cas} tries to install the new block into \var{v}.\fld{blocks}[\var{h}].
+Either this CAS succeeds or some other process has installed a  block in this location.
+Either way, line \ref{advance} then calls \opemph{Advance} to advance \var{v}'s head index 
+from \var{h} to $\var{h}+1$
+and fill in the \fld{super} field of the most recently appended block.
+The boolean value returned by \op{Refresh} indicates whether its CAS succeeded.
+A \op{Refresh} may pause after a successful CAS before calling \op{Advance} at line \ref{advance},
+so other processes help keep \fld{head} up to date by  calling \op{Advance}, 
+either at line \ref{helpAdvance} during a \op{Refresh} on \var{v}'s parent or line \ref{advance} during a \op{Refresh} on~\var{v}.
+
+\opemph{CreateBlock}(\var{v, i}) is used
+by \op{Refresh} to construct a block to be installed in \var{v}.\fld{blocks}[\var{i}].
+%The block \var{new} is created in Line \ref{initNewBlock}. 
+The \eleft\ and \eright\ fields store the indices of the last blocks appended to \var{v}'s
+children, obtained by reading the \fld{head} index in \var{v}'s children.
+Since the \fld{sum\sub{enq}} field should store the number of enqueues in
+\var{v}.\fld{blocks}[1..\var{i}] and these enqueues come from \var{v}.\fld{left.blocks}[1..\var{new}.\eleft] and \var{v}.\fld{blocks}[1..\var{new}.\eright], line \ref{createSumEnq} sets
+\fld{sum\sub{enq}} to the sum of $\var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}}$ and $\var{v}.\fld{right}.\fld{blocks}[\var{new}.\eright].\fld{sum\sub{enq}}$.
+Line \ref{computeNumEnq} sets \var{num\sub{enq}} to the number of enqueues in the new block by
+subtracting  the number of enqueues  in \var{v}.\fld{blocks}[$1..\var{i}-1$] from \var{new}.\fld{sum\sub{enq}}.
+The values of \var{new}.\fld{sum\sub{deq}} and \var{num\sub{deq}} are computed similarly.
+Then, if \var{new}
+is going to be installed in the root, line \ref{computeLength} computes the \fld{size} field, which
+represents the number of elements in the queue after the operations in the block are performed.
+Finally, if the new block contains no operations, \op{CreateBlock} returns \nl\ to indicate
+ there is no need to install it.
+
+Once a dequeue is appended to a block of the process's leaf and propagated to the root,
+the \opemph{IndexDequeue} routine finds the dequeue's location in the root.
+More precisely, \opa{IndexDequeue}{v, b, i}
+computes the block in the root and the rank
+within that block  of the \var{i}th dequeue of the block \var{B} stored in \var{v}.\fld{blocks}[\var{b}].
+Lines \ref{idsup1}--\ref{idsup3} compute the location of $B$'s superblock in \var{v}'s parent, taking into account the fact that $B.\fld{super}$ may differ from the superblock's true index by one.
+The arithmetic in lines \ref{computeISuperStart}--\ref{computeISuperEnd} compute the dequeue's 
+rank within the superblock's sequence of dequeues, using  (\ref{defSeqs}).
+
+%Thus, after \var{B} is installed, the call to \op{Advance} at line \ref{advance} sets the value of \var{B}.\fld{super} by reading \var{par}.\fld{head}.
+%As mentioned earlier, other processes may help by calling \op{Advance} at line \ref{helpAdvance} or \ref{advance} to ensure that $\var{B}.\fld{super}$ is filled in soon after \var{B} is installed.
+%We shall show {$B$.\fld{super}}  differs
+%from the index of $B'$ by at most~1. 
+
+To compute the response of the $i$th \op{Dequeue} in the $b$th block
+of the root, \opemph{FindResponse}(\var{b, i}) determines at line \ref{checkEmpty} if the queue is empty.
+If not, line \ref{computeE} computes the rank \var{e} of the
+\op{Enqueue} whose argument is the \op{Dequeue}'s response. 
+A binary search on the \fld{sum\sub{enq}} fields of \var{root}.\fld{blocks} finds the index $b_e$ of the block that contains 
+the \var{e}th enqueue.
+Since the enqueue is linearized before the dequeue, $b_e\leq b$.  To find the left end of the range for the binary search for $b_e$, we can first do a doubling search \cite{BY76}, comparing \var{e} to the \fld{sum\sub{enq}} fields at indices $b-1, b-2, b-4, b-8, \ldots$.
+Then, \op{GetEnqueue} traces down through the tree to find the required enqueue in a leaf.
+
+\opemph{GetEnqueue}(\var{v, b, i}) returns the argument of the
+$i$th enqueue in the $b$th block $B$ of \typ{Node} $\var{v}$. 
+It recursively finds the location of the enqueue in each node along the path from $v$ to a leaf, which stores the argument explicitly.
+\op{GetEnqueue} first determines which child of \var{v} contains the enqueue, and
+then finds the range of blocks within that child that are subblocks of $B$ using information stored
+in $B$ and the block that precedes $B$ in $v$.
+\op{GetEnqueue} finds the exact subblock containing the enqueue using a binary search on the \fld{sum\sub{enq}}
+field (line~\ref{getChild}) and proceeds recursively down the tree.
+
+
+

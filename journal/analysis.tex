@@ -1,0 +1,89 @@
+% !TEX root =  podc-submission.tex
+
+\section{Analysis}
+We now analyze the number of steps and the number of \op{CAS} instructions performed by operations.
+
+\begin{proposition}\label{casbound}
+Each \op{Enqueue} or \op{Dequeue} operation performs $O(\log p)$ \op{CAS} instructions.
+\end{proposition}
+\begin{proof}
+An operation invokes \op{Refresh} at most twice at each of the $\ceil{\log_2 p}$ levels of the tree.
+A \op{Refresh} does at most 5 \op{CAS} steps: one in line \ref{cas} and two during each \op{Advance} in line \ref{helpAdvance} or~\ref{advance}.
+\end{proof}
+
+
+
+\begin{lemma}\label{dSearchTime}
+The search that \op{FindResponse}$(b,i)$ does at line \ref{FRb} to find the index $b_e$ of the block in the root containing the $e$th enqueue takes $O(\log (\var{root}.\fld{blocks}[b_e].\size + \var{root}.\fld{blocks}[b-1].\size))$ steps.
+\end{lemma}
+\begin{proof}
+Let the blocks in the root be $B_1, \ldots, B_\ell$.
+The doubling search for $b_e$ takes $O(\log (b-b_e))$ steps,
+so we prove $b - b_e \leq 2 \cdot B_{b_e}.\size + B_{b-1}.\size + 1$.
+If $b \leq b_e+1$, then this is trivial, so assume  $b>b_e+1$.
+%
+As shown in \Cref{linearCorrect}, the dequeue that calls \op{FindResponse} is in $B_b$ and is supposed to return an enqueue in $B_{b_e}$.
+Thus, there can be at most $B_{b_e}.\size$ dequeues in 
+$D(B_{b_e+1}) \cdots D(B_{b-1})$; otherwise in the sequential execution $L$,
+all elements enqueued before the end of
+$E(B_{b_e})$ would be dequeued before $D(B_b)$. 
+Furthermore, by \Cref{sizeCorrectness}, the size of the queue  after the prefix of $L$ corresponding to 
+$B_1,\ldots,B_{b-1}$  is 
+$B_{b-1}.\size \geq B_{b_e}.size + |E(B_{b_e+1})\cdots E(B_{b-1})| - |D(B_{b_e+1})\cdots D(B_{b-1})|$.
+Thus, $|E(B_{b_e+1})\cdots E(B_{b-1})| \leq B_{b-1}.\size + |D(B_{b_e+1})\cdots D(B_{b-1})| \leq B_{b-1}.\size + B_{b_e}.\size$.
+So, the total number of operations in $B_{b_e+1}, \ldots, B_{b-1}$ is at most
+$B_{b-1}.\size + 2\cdot B_{b_e}.\size$.
+Each of these $b-1-b_e$ blocks contains at least one operation, by \Cref{blockNotEmpty}.
+So, $b-1-b_e \leq B_{b-1}.\size + 2\cdot B_{b_e}.\size$.
+\end{proof}
+
+The following lemma helps bound the time for \op{GetEnqueue}.
+\begin{lemma}\label{blockSize}
+Each block $B$ in each node contains at most one operation of each process.
+If $c$ is the execution's maximum point contention, $B$ has at most $c$ direct~subblocks.
+\end{lemma}
+\begin{proof}
+Suppose $B$ contains an operation of process $p$.
+Let $op$ be the earliest operation by $p$ contained in $B$.
+When $op$ terminates, $op$ is contained in $B$ by \Cref{lem::appendExactlyOnce}.
+Since $B$ is created before
+those operations are invoked, $B$ cannot contain any later operations by $p$.
+
+Let $t$ be the earliest termination of any operation contained in $B$.
+By \Cref{lem::appendExactlyOnce}, $B$ is created before $t$, so all operations contained in $B$
+are invoked before $t$.  Thus, all are  running concurrently at $t$, so $B$ contains at most $c$ operations.
+By definition, the direct subblocks of $B$ contain these $c$ operations, and each operation is contained
+in exactly one of these subblocks, by Lemma \ref{lem::subblocksDistinct}.
+By \Cref{blockNotEmpty}, each direct subblock of $B$ contains at least one operation,
+so $B$ has at most $c$ direct subblocks.
+\end{proof}
+
+We now bound step complexity in terms of the number of processes $p$, the maximum contention $c\leq p$, and the size of the queue. 
+
+\begin{mytheorem}\label{enqDeqTime}
+Each \op{Enqueue} and null Dequeue takes $O(\log p)$ steps 
+and each non-null \op{Dequeue} takes
+$O(\log p\log c + \log q_e+ \log q_d)$ steps,
+where $q_d$ is the size of the queue when the \op{Dequeue} is linearized and 
+$q_e$ is the size of the queue when the \op{Enqueue} of the value returned is linearized.
+\end{mytheorem}
+\begin{proof}
+An \op{Enqueue} or null \op{Dequeue} creates a block, appends it to the process's 
+leaf and propagates it to the root.  The \op{Propagate}  does $O(1)$ steps 
+at each node on the path from the process's leaf to the root.
+A null \op{Dequeue} additionally calls \op{IndexDequeue}, which also does $O(1)$ steps
+at each node on this path. 
+So, the total number of steps for either type of operation is $O(\log p)$.
+
+A non-null \op{Dequeue} must also search at line \ref{FRb} and call \op{GetEnqueue}
+at line \ref{findAnswer}.
+By \Cref{dSearchTime}, the doubling search takes $O(\log(q_e+q_d+p))$ steps,
+since the size of the queue can change by at most $p$ within one block (by \Cref{blockSize}).
+\op{GetEnqueue} does a binary search within each node on a path from the root to a leaf.
+Each node $\var{v}$'s search is within the subblocks of one block in $\var{v}$'s parent.
+By \Cref{blockSize}, each such search takes $O(\log c)$ steps, for a total of $O(\log p\log c)$ steps.
+\end{proof}
+
+\begin{corollary}
+The queue implementation is wait-free.
+\end{corollary}

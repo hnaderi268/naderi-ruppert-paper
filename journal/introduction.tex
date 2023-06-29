@@ -1,0 +1,80 @@
+% !TEX root =  podc-submission.tex
+
+\section{Introduction}
+
+There has been a great deal of research in the past several decades on the design of shared queues.
+Besides being a fundamental data structure, queues are used in
+significant concurrent applications, including OS kernels \cite{MP91}, memory management \cite{BBFRSW21}\here{try to find an older, more canonical reference},
+%packet processing \cite{DPDK}, 
+synchronization \cite{KAE23},\here{is this a good citation for this?}
+and sharing resources or tasks.
+We focus on shared queues that are \emph{linearizable} \cite{HW90}, meaning that operations
+appear to take place atomically, and \emph{lock-free}, meaning that some operation on the queue
+is guaranteed to complete regardless of how asynchronous processes are scheduled to take~steps.
+
+The lock-free MS-queue of Michael and Scott \cite{MS98} is a classic shared queue implementation.
+It uses a singly-linked list with pointers to the front and back nodes.
+To dequeue or enqueue an element, the front or back pointer is updated by a 
+compare-and-swap (CAS) instruction.
+If this CAS fails, the operation must retry.
+In the worst case, this means that each successful CAS may cause all other processes to
+fail and retry, leading to an amortized step complexity of $\Omega(p)$ per operation in a system of $p$ processes.
+(To measure amortized step complexity of a lock-free implementation, we consider all possible finite executions
+and divide the number of steps in the execution by the number of operations  in the execution.)
+Numerous papers have suggested modifications to the MS-queue \cite{DBLP:conf/opodis/HoffmanSS07,DBLP:conf/podc/KoganH14,DBLP:conf/ppopp/KoganP11,DBLP:journals/dc/Ladan-MozesS08,MKLLP22,DBLP:conf/spaa/MoirNSS05,RC17}, but 
+all still have $\Omega(p)$ amortized step complexity as a result of
+contention on the front and back of the queue.
+Morrison and Afek \cite{DBLP:conf/ppopp/MorrisonA13} called this the \emph{CAS retry problem}.
+The same problem occurs in array-based implementations of queues \cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01,DBLP:conf/opodis/GidenstamST10}.
+Solutions that tried to sidestep this problem using fetch\&increment \cite{DBLP:conf/ppopp/MorrisonA13,DBLP:conf/ppopp/YangM16,Nik19,10.1145/3490148.3538572}
+rely on slower mechanisms to handle worst-case executions and still have $\Omega(p)$ step complexity.
+
+Many concurrent data structures that keep track of a set of elements also have an $\Omega(p)$ term in their step complexity, as observed by Ruppert \cite{Rup16}.
+For example, lock-free lists \cite{FR04,Sha15}, stacks \cite{Tre86} and search trees \cite{EFHR14} 
+have an $\Omega(c)$ term in their step complexity, where $c$ represents contention,
+the number of processes that access the data structure concurrently, which can be $p$ in the worst case.
+Attiya and Fouren \cite{DBLP:conf/opodis/AttiyaF17} proved 
+that amortized $\Omega(c)$ steps per operation are indeed necessary
+for any CAS-based implementation of a lock-free bag data structure, which provides operations
+to insert an element or remove an arbitrary element (chosen non-deterministically).
+Since a queue trivially implements a bag, this lower bound also applies to queues.
+Although this might seem to settle the step complexity of lock-free queues, the lower bound
+holds only if $c$ is $O(\log\log p)$ so it should be stated more precisely as
+%At first glance, this would seem to settle the question of the step complexity of lock-free queues.
+%However, the lower bound leaves a loophole:  it holds only if $c$ is $O(\log\log p)$.
+%Thus, the lower bound could be stated more precisely as 
+an amortized bound of $\Omega(\min(c,\log\log p))$ steps per operation.
+
+We exploit this loophole.  We show  it is, in fact, possible for a linearizable queue
+to have step complexity sublinear in $p$.
+Our queue is the first whose step complexity  is polylogarithmic in $p$ and in $q$, the number of elements in the queue.
+It is \emph{wait-free}, meaning that every operation is guaranteed to complete within a finite number of its own steps.
+For ease of presentation, we first give an unbounded-space construction where enqueues take $O(\log p)$ steps and
+dequeues take $O(\log^2 p + \log q)$ steps,
+and then modify it to bound the space
+while  having $O(\log p\log( p+ q))$ amortized step complexity  per operation.
+Moreover, each operation does $O(\log p)$ CAS instructions in the worst case, whereas previous
+lock-free queues use 
+%an unbounded number of CAS instructions in the worst case and 
+$\Omega(p)$ CAS instructions, even in an amortized sense.
+Both versions of our queue use single-word CAS on reasonably-sized 
+words.
+We assume that a word is large enough to store an item to be enqueued (or at least a pointer to it).  We also assume that the number of operations performed on the queue can be stored (in binary) in $O(1)$ words.
+This is analogous to the assumption for the classical RAM model that the number of bits per word is logarithmic in the problem size.
+For the space-bounded version, we unlink unneeded objects from our data structure.
+We do not address the orthogonal problem of reclaiming memory; we assume a safe
+garbage collector, such as the highly optimized one that Java provides.
+
+Our queue uses a binary tree, called the \emph{\ordering\ tree}, where each process has its own leaf.
+A process adds its operations to its leaf.
+As in previous work (e.g., \cite{DBLP:conf/stoc/AfekDT95,DBLP:conf/fsttcs/JayantiP05}), operations are propagated from the leaves up to the root in a cooperative way that ensures wait-freedom
+and avoids the CAS retry problem.
+Operations in the root are ordered, 
+and this order is used to linearize the operations and compute their responses.
+\here{Either here or in related work section, talk about previous usage of ordering tree and how ours differs from it}
+Explicitly storing  operations in the tree nodes would be too costly.
+Instead, we use a novel implicit representation of sets
+of operations that allows us to quickly merge two sets from the children of a node,
+and quickly access any  operation in a~set.
+A preliminary version of this work appeared in~\cite{Nad22}.
+\here{Maybe say a little more about techniques used in the implementation, if space permits}

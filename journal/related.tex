@@ -1,4 +1,4 @@
-% !TEX root =  podc-submission.tex
+% !TEX root =  queue.tex
 
 \section{Related Work}
 
@@ -170,3 +170,11 @@ However, our construction requires more intricate
 data structures to represent sets of operations, since a queue's state cannot be represented as succinctly
 as the single-word state of a fetch\&increment object.
 Ellen and Woelfel \cite{10.1007/978-3-642-41527-2_20} gave an improved implementation of fetch\&increment with better step complexity.
+
+\paragraph{Lower Bounds.}
+As mentioned in the introduction, it follows from Attiya and Fouren's lower bound on bag data structures
+\cite{DBLP:conf/opodis/AttiyaF17} that the
+amortized step complexity of operations on a queue is $\Omega(\min(c,\log\log p))$, where $c$ is contention.
+Subsequently, Jayanti, Tarjan and Boix-Adser\`{a} \cite{JTB19} proved a stronger $\Omega(\log p)$ lower bound on
+the amortized step complexity of queue operations.
+

@@ -1,4 +1,4 @@
-% !TEX root =  podc-submission.tex
+% !TEX root =  queue.tex
 
 \section{Future Directions}
 
@@ -11,11 +11,10 @@ A possible application of our queue  might be to use it as the slow path in the
 fast-path slow-path methodology  \cite{10.1145/2370036.2145835} to
 get a queue that has good performance in practice while also having good worst-case step complexity.
 
-A gap remains between our queue, which takes $O(\log^2 p + \log q)$ steps per operation,
-and Attiya and Fouren's $\Omega(\min(c,\log\log p))$ lower bound \cite{DBLP:conf/opodis/AttiyaF17}.
-It would be interesting to determine how the true step complexity of lock-free queues (or, more generally, bags)
-depends on $p$.
-Since a queue is also a bag, our queue is the first lock-free bag we know of that has polylogarithmic step complexity.
+It would be interesting to close the gap that remains between our queue, which takes $O(\log^2 p + \log q)$ steps per operation,
+and Jayanti, Tarjan and Boix-Adser\`{a}'s $\Omega(\log p)$ lower bound \cite{JTB19}.
+For the more relaxed bag data structure the gap is larger between the  $\Omega(\min(c,\log\log p))$ lower bound \cite{DBLP:conf/opodis/AttiyaF17} and our upper bound of $O(\log^2 p + \log q)$.
+Could the complexity for either queues or bags be made polylogarithmic in $p$ while being independent of the size $q$ of the data structure?
 
 We believe the approach used here to implement a lock-free queue 
 could be applied to obtain other lock-free
@@ -29,5 +28,12 @@ provides three operations: \opa{Append}{e} to add an element \var{e} to the end 
 %A \opa{get}{i} is similar to \op{GetEnqueue}, taking $O(\log n + \log^2p)$ steps when the vector has $n$ elements.  
 %An \opa{index}{e} is similar to \op{IndexDequeue} (except operating on enqueues instead of dequeues) and would take $O(\log p)$ steps.
 \here{doublecheck all preceding claims for accuracy.}
-We are investigating whether a similar approach can be used for stacks, deques or even priority queues.
+Building on the work described in this paper, Asbell and Ruppert \cite{AR23} have
+designed stacks and doubly-ended queues with polylogarithmic amortized step
+complexity.  This required a substantially different representation of the data stored in the ordering tree.
+\here{?  They also showed that a randomized implementation of the ordering tree technique can
+be used to obtain a (doubly-ended) queue with O(\here{?}) amortized expected step complexity,
+beating the  $\Omega(\min(c,\log\log p))$ lower bound on deterministic algorithms.}
+Whether the ordering tree could also be used to obtain a priority queue with polylogarithmic step complexity
+remains an open question.
 

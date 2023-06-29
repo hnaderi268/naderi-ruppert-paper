@@ -1,4 +1,4 @@
-% !TEX root =  podc-submission.tex
+% !TEX root =  queue.tex
 
 \section{Introduction}
 
@@ -57,6 +57,7 @@ Moreover, each operation does $O(\log p)$ CAS instructions in the worst case, wh
 lock-free queues use 
 %an unbounded number of CAS instructions in the worst case and 
 $\Omega(p)$ CAS instructions, even in an amortized sense.
+Since a queue is also a bag, our queue is the first lock-free bag that we know of that has polylogarithmic step complexity.
 Both versions of our queue use single-word CAS on reasonably-sized 
 words.
 We assume that a word is large enough to store an item to be enqueued (or at least a pointer to it).  We also assume that the number of operations performed on the queue can be stored (in binary) in $O(1)$ words.

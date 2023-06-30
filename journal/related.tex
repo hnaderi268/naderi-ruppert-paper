@@ -69,14 +69,17 @@ the amortized step complexity remains~$\Omega(p)$.
 \Hossein{I get what this sentence means, but from a high overview i think it is inaccurate. Since the step complexity of MS-queue is infinite, so nothing can be added to it and a wait-free queue is always better than a lock-free queue in the worst-case.}
 \Eric{I modified the wording.  I also added the material about fast-path slow-path here (since I had forgotten that paper also applies it to a queue), and fixed the paragraph about FPSP method below when discussing array-based queues.}
 
-Dodds, Haas and Kirsch described how a queue could be implemented similarly
-to their lock-free stack \cite{DHK15}.  To enqueue an item, a process adds the item, together with an associated timestamp,
+Haas \cite{Haa15} described a queue implementation based on timestamping.
+% This queue is also sketched in \cite{DHK15}.
+% A different? linearizability proof for this queue appears in Khyza et al.\ \cite{KDGP17}.
+To enqueue an item, a process adds the item, together with an associated timestamp,
 to the process's own single-enqueuer multi-dequeuer queue, which is implemented as a linked list.  
-Although enqueues are very efficient, dequeues take $\Omega(p)$ steps to look at all $p$ lists
-and return an item with the oldest timestamp.
-(Items added by concurrent enqueues may get the same timestamp.)
-Moreover, concurrent dequeues may compete to claim the same item using a CAS, resulting
-in a CAS retry problem.
+Items added by concurrent enqueues may get the same timestamp.
+Although enqueues are very efficient, dequeues look at all $p$ lists
+to find and return an item with the oldest timestamp.
+This is compounded by the fact that dequeues may compete to claim the same item using a CAS, resulting
+in a CAS retry problem.  As a result, the amortized step complexity for dequeue operations
+is $\Omega(p^2)$.
 
 \paragraph{Array-Based Queues.}
 Arrays can be used to implement queues with bounded capacity \cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01}.  

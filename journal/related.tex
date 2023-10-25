@@ -36,8 +36,8 @@ This allows batches of enqueues or dequeues to be done at once on an MS-queue.
 However, the implementation satisfies a weaker correctness condition than linearizability.
 Milman-Sela et al.~\cite{MKLLP22} extended this approach to allow batches
 to mix enqueues and dequeues.
-\here{Is this worth saying:
-They use some properties of the queue size before and after a batch, similar to a part of our work.}
+%\here{Is this worth saying:
+%They use some properties of the queue size before and after a batch, similar to a part of our work.}
 In the worst case, where operations require their response right away,
 batches have size 1, and both of these implementations behave like a standard MS-queue.
 
@@ -140,12 +140,22 @@ due either to the CAS retry problem or helping mechanisms.
 %show their algorithm performs well in some situations. 
 
 \paragraph{Universal Constructions.}
+\Eric{Rewrote this paragraph on Oct 25}
 One can also build a queue using a universal construction \cite{10.1145/114005.102808}.
+Afek, Dauber, and Touitou's universal construction~\cite{DBLP:conf/stoc/AfekDT95}
+introduced the technique where a process must climb a binary tree while helping any other processes it sees along the way to reach the root,
+and this technique is the basis of our queue implementation.
 Jayanti \cite{DBLP:conf/podc/Jayanti98a} observed that
-the universal construction of Afek, Dauber, and
-Touitou~\cite{DBLP:conf/stoc/AfekDT95} can be modified to use $O(\log p)$ steps per operation, 
+their construction can be modified to use $O(\log p)$ steps per operation, 
 assuming that words can store $\Omega(p \log p)$ bits. 
-(Thus, in terms of operations on reasonably-sized $O(\log p)$-bit words, their construction would take $\Omega(p\log p)$ steps per operation.)
+However, if more reasonably-sized $O(\log p)$-bit words words are used, the construction would take $\Omega(p\log p)$ steps per operation.
+There are two obstacles to making this construction more efficient:
+it is expensive to manipulate lists of up to $p$ operations that must be propagated along a path
+up to the root, and
+when a batch of up to $p$ operations reaches the root, it is expensive to perform all of them on the
+implemented data structure.
+In our work, we devise a novel way of doing this implicitly for batches of operations on a queue.
+
 Fatourou and Kallimanis \cite{FK14} used their own universal construction based on fetch\&add and LL/SC instructions
 to implement a queue, but its step complexity is also $\Omega(p)$.
 \here{Double check this.}
@@ -157,20 +167,21 @@ It uses fetch\&increment and swap  instructions and takes $O(1)$ steps per opera
 uses unbounded memory.  Bounding the space increases the steps per operation to $\Omega(p)$.
 Jayanti and Petrovic gave a wait-free polylogarithmic
 queue~\cite{DBLP:conf/fsttcs/JayantiP05}, but only for a single dequeuer. 
-Our \ordering\ tree is similar to the tree structure they use to agree on a linearization ordering.
+Like our queue, theirs uses the cooperative tree-climbing
+technique of Afek, Dauber and Touitou~\cite{DBLP:conf/stoc/AfekDT95}.
 Concurrently with our work, which first appeared in \cite{Nad22}, Johnen, Khattabi and Milani \cite{JKM23} built on \cite{DBLP:conf/fsttcs/JayantiP05} to give a wait-free queue  
 that achieves $O(\log p)$ steps for enqueue operations but fails to achieve polylogarithmic step complexity for dequeues: their dequeue operations take $O(k \log p)$ steps if there are $k$ dequeuers.
 
-\here{Should we mention https://arxiv.org/abs/2103.11926 , which seems to have a queue for 2 enqueuers and 2 dequeuers ?  May not be worth mentioning because then $p$ is a constant, so complexity in terms of $p$ doesn't make sense.}
+%\here{Should we mention https://arxiv.org/abs/2103.11926 , which seems to have a queue for 2 enqueuers and 2 dequeuers ?  May not be worth mentioning because then $p$ is a constant, so complexity in terms of $p$ doesn't make sense.}
 
 \paragraph{Other Primitives.}
 Khanchandani and Wattenhofer \cite{KW18} gave a wait-free queue 
 with $O(\sqrt{p})$ step complexity using non-standard synchronization primitives
 called half-increment and half-max, which can be viewed as %particular kinds of
 double-word read-modify-write operations.
-They use this as evidence that their primitives can be more efficient than CAS
+They use this as evidence to argue that their primitives can be more efficient than CAS
 since previous CAS-based queues all required $\Omega(p)$ step complexity.
-Our new implementation counters this argument.
+Our new implementation undermines that argument.
 
 \paragraph{Fetch\&Increment Objects.}
 Ellen, Ramachandran and Woelfel \cite{ERW12} gave an implementation of 
@@ -181,12 +192,20 @@ that have been performed.
 However, our construction requires more intricate
 data structures to represent sets of operations, since a queue's state cannot be represented as succinctly
 as the single-word state of a fetch\&increment object.
-Ellen and Woelfel \cite{10.1007/978-3-642-41527-2_20} gave an improved implementation of fetch\&increment with better step complexity.
+Ellen and Woelfel \cite{10.1007/978-3-642-41527-2_20} then gave an improved implementation of fetch\&increment with better step complexity.
 
 \paragraph{Lower Bounds.}
 As mentioned in the introduction, it follows from Attiya and Fouren's lower bound on bag data structures
 \cite{DBLP:conf/opodis/AttiyaF17} that the
 amortized step complexity of operations on a queue is $\Omega(\min(c,\log\log p))$, where $c$ is contention.
-Subsequently, Jayanti, Tarjan and Boix-Adser\`{a} \cite{JTB19} proved a stronger $\Omega(\log p)$ lower bound on
+Subsequently, Jayanti, Tarjan and Boix-Adser\`{a} \cite{JTB19} proved a  $\Omega(\log c)$ lower bound on
 the amortized step complexity of queue operations.
+The combination of these lower bounds is shown schematically in Figure \ref{graph-lb}.
+If we are interested in the complexity only as a function of $p$, the second result
+gives us an $\Omega(\log p)$ lower bound, since $c$ can be as high as $p$.
+
+\begin{figure}
+\input{graph-lb.pdf_t}
+\caption{Known lower bounds on amortized step complexity of queue operations when contention is~$c$ in a system of $p$ processes.\label{graph-lb}}
+\end{figure}
 

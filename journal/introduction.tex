@@ -70,12 +70,11 @@ Our queue uses a binary tree, called the \emph{\ordering\ tree}, where each proc
 A process adds its operations to its leaf.
 As in previous work (e.g., \cite{DBLP:conf/stoc/AfekDT95,DBLP:conf/fsttcs/JayantiP05}), operations are propagated from the leaves up to the root in a cooperative way that ensures wait-freedom
 and avoids the CAS retry problem.
-Operations in the root are ordered, 
-and this order is used to linearize the operations and compute their responses.
-\here{Either here or in related work section, talk about previous usage of ordering tree and how ours differs from it}
-Explicitly storing  operations in the tree nodes would be too costly.
-Instead, we use a novel implicit representation of sets
-of operations that allows us to quickly merge two sets from the children of a node,
-and quickly access any  operation in a~set.
+Operations reach the root in batches and are linearized in the order they reach the root.
+Since a batch can have up to $p$ operations, explicitly recording the list of operations composing a batch
+or applying them one-by-one to the queue would be too costly.
+Instead, we use a novel implicit representation of batches
+of queue operations that allows us to quickly merge two batches from the children of a node,
+and quickly access any  operation in a~batch.
 A preliminary version of this work appeared in~\cite{Nad22}.
 \here{Maybe say a little more about techniques used in the implementation, if space permits}

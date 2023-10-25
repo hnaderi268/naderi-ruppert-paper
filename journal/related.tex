@@ -66,8 +66,6 @@ with their wait-free queue (as the slow path).
 Ramalhete and Correia \cite{RC17} added a different helping mechanism to the MS-queue.
 Although these approaches can perform well in practice,
 the amortized step complexity remains~$\Omega(p)$. 
-\Hossein{I get what this sentence means, but from a high overview i think it is inaccurate. Since the step complexity of MS-queue is infinite, so nothing can be added to it and a wait-free queue is always better than a lock-free queue in the worst-case.}
-\Eric{I modified the wording.  I also added the material about fast-path slow-path here (since I had forgotten that paper also applies it to a queue), and fixed the paragraph about FPSP method below when discussing array-based queues.}
 
 Haas \cite{Haa15} described a queue implementation based on timestamping.
 % This queue is also sketched in \cite{DHK15}.

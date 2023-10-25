@@ -1,4 +1,4 @@
-\documentclass[iicol,lineno,referee,pdflatex]{sn-jnl} 
+\documentclass[iicol,lineno,pdflatex]{sn-jnl} 
 
 \usepackage{tikz-qtree}
 \usepackage{manyfoot} % needed to make sn-jnl class work
@@ -129,7 +129,7 @@
 \title{A Wait-free Queue with Polylogarithmic Step Complexity}
 \author[1]{\fnm{Hossein} \sur{Naderibeni}}
 \author*[1]{\fnm{Eric} \sur{Ruppert}}\email{ruppert@eecs.yorku.ca}
-\affil*[1]{\orgname{York University}, \orgaddress{\city{Toronto}, \country{Canada}}}
+\affil[1]{\orgname{York University}, \orgaddress{\city{Toronto}, \country{Canada}}}
 
 %\orcid{0000-0001-5613-8701}
 %%
@@ -167,7 +167,6 @@
 
 \begin{document}
 
-\maketitle
 
 \abstract{
 We present a novel linearizable wait-free queue implementation using single-word CAS instructions.  
@@ -178,8 +177,10 @@ $O(\log^2 p +\log q)$ steps per dequeue, where $q$ is the size of the queue.
 A bounded-space version of the implementation has $O(\log p \log(p+q))$ amortized step complexity  per operation.
 }
 
+\maketitle
 
-\Eric{Remove references to appendix and replace with tech report}
+
+\Eric{Remove references to full version}
 
 \input{introduction}
 
@@ -209,7 +210,6 @@ Funding was provided by the Natural Sciences and Engineering Research Council of
 %\newpage
 %
 \appendix
-\input{correctness-details}
 \input{algorithm-GC}
 \input{correctness-GC}
 

@@ -18,7 +18,7 @@ Then, $P$ attempts to propagate the operation to each node along the path from t
 We shall define a total order on all operations that have been propagated to the root, which 
 will serve as the linearization ordering of the operations.
 
-\Eric{Reworded following parag after Hossein's comments of Jan 4}
+%\Eric{Reworded following parag after Hossein's comments of Jan 4}
 To propagate operations from a node $\var{v}$'s children to $\var{v}$, $P$ first observes
 the blocks in both of $\var{v}$'s children that are not already in $\var{v}$,
 creates a new block by combining information from those blocks, and attempts to append this 
@@ -157,8 +157,7 @@ L=E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k).
 
 \begin{itemize}
   	\item \typ{int} \fld{sum\sub{enq}, sum\sub{deq}}
-  		\Comment{number of enqueues, dequeues in \fld{blocks} array}\linebreak
-		\mbox{ }\Comment{up to this block (inclusive)}
+  		\Comment{number of enqueues, dequeues in \fld{blocks} array up to this block (inclusive)}
   	\item \typ{int} \fld{super}
   		\Comment{approximate index of superblock in \fld{parent.blocks}}
 	\item[\com] Blocks in internal \nodes\ have the following additional fields

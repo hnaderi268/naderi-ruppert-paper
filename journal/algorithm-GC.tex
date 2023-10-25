@@ -156,7 +156,7 @@ each level instead of using the \fld{super} field.
 
 \Function{void}{Propagate}{\typ{Node} \var{v}}
     \State \linecomment{propagate blocks from \var{v}'s children to root}
-    \If{\bf{not} \Call{Refresh}{\var{v}}} \label{firstRefreshGC}  \hfill \com\ double refresh
+    \If{{\keywordfont not} \Call{Refresh}{\var{v}}} \label{firstRefreshGC}  \hfill \com\ double refresh
         \State \Call{Refresh}{\var{v}} \label{secondRefreshGC}
     \EndIf
     \If{$\var{v} \neq \var{root}$} \hfill \com\ recurse up tree
@@ -172,7 +172,7 @@ each level instead of using the \fld{super} field.
 	\State $T \assign \var{v}.\fld{blocks}$\label{refreshReadTGC}
     \State $\var{h} \assign \Call{MaxBlock}{T}.\fld{index}+1$ \label{refreshReadMax}
     }
-    \State \var{new} \assign\ \Call{CreateBlock}{\var{v, h}} \label{invokeCreateBlockGC}
+    \State $\var{new} \assign\ \Call{CreateBlock}{\var{v, h}}$ \label{invokeCreateBlockGC}
     \If{\var{new = \nl}} \Return{\tr} \label{addOPGC}
     \Else  
     	\gc{
@@ -285,8 +285,8 @@ each level instead of using the \fld{super} field.
         }
         \State \Return \nl \hfill \label{returnNullGC}
     \Else \ \linecomment{response is the \var{e}th enqueue in the root}
-        \State \var{e} \assign\ \var{i} + \var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}} - 
-			\var{root}.\fld{blocks}[\var{b}-1].\size\label{computeEGC}
+        \State $\var{e} \assign\ \var{i} + \var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}} - 
+			\var{root}.\fld{blocks}[\var{b}-1].\size$\label{computeEGC}
 		 
 		\State find min $b_e \leq \var{b}$ with $\var{root}.\fld{blocks}[b_e].\fld{sum\sub{enq}} \geq \var{e}$\label{FRsearchGC} \linecomment{use binary search}
 		\State $i_e \assign\ \var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$ \linecomment{find rank of enqueue within its block}
@@ -337,17 +337,17 @@ each level instead of using the \fld{super} field.
 
 
 %\begin{algorithm}
-%\caption{\tt{\sl{Node}}}
+%\caption{\typ{Node}}
 %\begin{algorithmic}[1]
 %\setcounter{ALG@line}{25}
 %
-%\Statex $\leadsto$ \textsf{Precondition: \tt{blocks[start..end]} contains a block with \tt{sum\sub{enq}} greater than or equal to \tt{x}}
-%\Statex \com\ \textmd{Does a binary search for~the value \tt{x} of \tt{sum\sub{enq}} field and returns the index of the leftmost block in\\
-%\com\ \tt{blocks[start..end]} whose \tt{sum\sub{enq}} is $\geq$ \tt{x}}.
-%\Function{int}{BinarySearch}{\sl{int} x, \sl{int} start, \sl{int} end}
-% \State \Return \tt{min\{j: blocks[j].sum\sub{enq}$\geq$x\}}
+%\Statex $\leadsto$ \textsf{Precondition: \var{blocks[start..end]} contains a block with \fld{sum\sub{enq}} greater than or equal to \var{x}}
+%\Statex \com\ \textmd{Does a binary search for~the value \var{x} of \fld{sum\sub{enq}} field and returns the index of the leftmost block in\\
+%\com\ \var{blocks[start..end]} whose \fld{sum\sub{enq}} is $\geq$ \var{x}}.
+%\Function{int}{BinarySearch}{\typ{int} x, \typ{int} start, \typ{int} end}
+% \State \Return $\min\{j: \fld{blocks}[j].\fld{sum\sub{enq}} \geq x\}}
 %\While{\nf{start<end}}
-%\State \tt{\sl{int}} \tt{mid \assign\ floor((start+end)/2)}
+%\State \typ{int} \var{mid} \assign\ floor((start+end)/2)
 %\If{\nf{blocks[mid].sum\sub{enq}<x}}
 %\State \nf{start \assign\ mid+1}
 %\Else
@@ -361,22 +361,22 @@ each level instead of using the \fld{super} field.
 %\end{algorithm}
 
 %\begin{algorithm}
-%\caption{\tt{\sl{Root}}}
+%\caption{\typ{Root}}
 %\begin{algorithmic}[1]
 %\setcounter{ALG@line}{36}
 %\Statex
-%\Statex $\leadsto$ \textsf{Precondition: \tt{root.blocks[end].sum\sub{enq} $\geq$ \tt{e}}}
-%\Statex \com\ \textmd{Returns \tt{<b,i>} such that $E_\nf{e}(\nf{root})$ is $E_\nf{i}(\nf{root},\nf{b})$, i.e., the \nf{e}th \nf{Enqueue} in the \nf{root} is the \nf{i}th \nf{Enqueue} within \\
+%\Statex $\leadsto$ \textsf{Precondition: \var{root.blocks[end].sum\sub{enq} $\geq$ \var{e}}}
+%\Statex \com\ \textmd{Returns \var{<b,i>} such that $E_\nf{e}(\nf{root})$ is $E_\nf{i}(\nf{root},\nf{b})$, i.e., the \nf{e}th \nf{Enqueue} in the \nf{root} is the \nf{i}th \nf{Enqueue} within \\
 %\com\ the \nf{b}th block in the \nf{root}.}
 %
-%\Function{<int, int>}{DoublingSearch}{\sl{int} e, \sl{int} end}
-%\State \tt{start \assign\ end-1} \label{dsearchStart}
-%\While{\tt{root.blocks[start].sum\sub{enq}}$\geq$\tt{e}}
-%\State \tt{start \assign\ max(start-(end-start), 0)} \label{doubling}
+%\Function{<int, int>}{DoublingSearch}{\typ{int} e, \typ{int} end}
+%\State \var{start \assign\ end-1} \label{dsearchStart}
+%\While{\var{root.blocks[start].sum\sub{enq}}$\geq$\var{e}}
+%\State \var{start \assign\ max(start-(end-start), 0)} \label{doubling}
 %\EndWhile \label{dsearchEnd}
-%\State \tt{b \assign\ root.BinarySearch(e, start, end)} \label{dsearchBinarySearch}
-%\State \tt{i \assign\ e- root.blocks[b-1].sum\sub{enq}} \label{DSearchComputei}
-%\State\Return \tt{<b,i>}
+%\State \var{b \assign\ root.BinarySearch(e, start, end)} \label{dsearchBinarySearch}
+%\State \var{i \assign\ e- root.blocks[b-1].sum\sub{enq}} \label{DSearchComputei}
+%\State\Return \var{<b,i>}
 %\EndFunction{DoublingSearch}
 %\end{algorithmic}
 %\end{algorithm}

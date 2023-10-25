@@ -1,43 +1,9 @@
-%%
-%% This is file generated with the docstrip utility from the source file: 
-%%
-%% samples.dtx  (with options: `acmsmall-conf')
-%% With some modifications for PODC 2023.
-%% For the copyright see the source file.
-%%
-%%
-%% Commands for TeXCount
-%TC:macro \cite [option:text,text]
-%TC:macro \citep [option:text,text]
-%TC:macro \citet [option:text,text]
-%TC:envir table 0 1
-%TC:envir table* 0 1
-%TC:envir tabular [ignore] word
-%TC:envir displaymath 0 word
-%TC:envir math 0 word
-%TC:envir comment 0 0
-%%
-%%
-%% The first command in your LaTeX source must be the \documentclass
-%% command.
-%%
-%% For submission and review of your manuscript please change the
-%% command to \documentclass[manuscript, screen, review]{acmart}.
-%%
-%% When submitting camera ready or to TAPS, please change the command
-%% to \documentclass[sigconf]{acmart} or whichever template is required
-%% for your publication.
-%%
-%%
-\documentclass{article} % FOR CAMERA-READY VERSION
-%\documentclass[sigconf, authorversion=true,nonacm=true]{acmart} % FOR ARXIV VERSION
+\documentclass[iicol,lineno,referee,pdflatex]{sn-jnl} 
 
 \usepackage{tikz-qtree}
+\usepackage{manyfoot} % needed to make sn-jnl class work
 \usepackage{algorithm}
 \usepackage{algpseudocode}
-\makeatletter
-\renewcommand{\ALG@beginalgorithmic}{\footnotesize}
-\makeatother
 \usepackage{graphicx}
 \usepackage{subcaption}
 \usepackage{hyperref}
@@ -48,22 +14,22 @@
 \usepackage{cleveref}
 \usepackage{thmtools,thm-restate}
 \usepackage{mathabx} % for \blacktriangleright symbol
-
-%\renewcommand*\contentsname{Table of Contents}
-
 \usepackage{multicol}
-\setlength\columnsep{24pt}
-%\renewcommand{\baselinestretch}{2}
+\usepackage{eqparbox}
+
+\makeatletter
+\renewcommand{\ALG@beginalgorithmic}{\footnotesize}
+\makeatother
 
 \numberwithin{equation}{section}
 
 \def\draft{1}  % set to 1 for draft (include comments, color edits), 0 for clean final copy (omit comments, edits in black)
 \if\draft 1
 \usepackage{showkeys}
-\newcommand{\mycomment}[3]{{\color{#2}{[\bf{#1: #3}]}}}
+\newcommand{\mycomment}[3]{{\color{#2}{[\textbf{#1: #3}]}}}
 \newcommand{\myedit}[2]{{\color{#1}{#2}}\normalcolor}
 \newcommand{\rebuttaledit}[2]{{\color{#1}{#2}}\normalcolor}
-\newcommand{\here}[1]{\bf{[[[#1]]]}}
+\newcommand{\here}[1]{\textbf{[[[#1]]]}}
 %\usepackage{showkeys}
 \else
 \newcommand{\mycomment}[3]{}
@@ -82,7 +48,7 @@
 \newcommand{\blocks}{blocks}
 \newcommand{\ordering}{ordering}
 
-\algnewcommand\algorithmicforeach{\bf{for each}}
+\algnewcommand\algorithmicforeach{\textbf{for each}}
 \algdef{S}[FOR]{ForEach}[1]{\algorithmicforeach\ #1\ \algorithmicdo}
 
 \algdef{S}[FUNCTION]{Function}
@@ -92,9 +58,8 @@
    [1]{\algorithmicend\ \op{{#1}}}
 
 \algrenewcommand\Call[2]{\op{#1}\ifthenelse{\equal{#2}{}}{}{(#2)}}
-\usepackage{eqparbox}
 
-\newcommand\keywordfont{\sffamily\bfseries}
+\renewcommand\keywordfont{\sffamily\bfseries}
 \algrenewcommand\algorithmicend{{\keywordfont end}}
 \algrenewcommand\algorithmicfor{{\keywordfont for}}
 \algrenewcommand\algorithmicforeach{{\keywordfont for each}}
@@ -106,18 +71,11 @@
 \algrenewcommand\algorithmicelse{{\keywordfont else}}
 \algrenewcommand\algorithmicreturn{{\keywordfont return}}
 
-
-
 \renewcommand\thealgorithm{}
 \newcommand{\setalglineno}[1]{%
   \setcounter{ALC@line}{\numexpr#1-1}}
 
 \newcommand{\sub}[1]{\textsubscript{#1}}
-\renewcommand{\tt}[1]{\texttt{#1}}
-\renewcommand{\sl}[1]{\textsl{#1}}
-\renewcommand{\it}[1]{\textit{#1}}
-\renewcommand{\sc}[1]{\textsc{#1}}
-\renewcommand{\bf}[1]{\textbf{#1}}
 \newcommand{\nf}[1]{{\normalfont{\texttt{#1}}}}
 \newcommand{\cmt}[1]{\Comment{#1}}
 \newcommand{\head}{\fld{head}}
@@ -132,8 +90,8 @@
 \newcommand{\spac}{\medskip}
 \newcommand{\assign}{\mbox{:=}}
 
-\newcommand{\var}[1]{\mbox{\textnormal{\it{#1}}}}
-\newcommand{\fld}[1]{\mbox{\it{#1}}}
+\newcommand{\var}[1]{\mbox{\textnormal{\textit{#1}}}}
+\newcommand{\fld}[1]{\mbox{\textit{#1}}}
 \newcommand{\typ}[1]{\mbox{\sf #1}}
 \newcommand{\ceil}[1]{\lceil #1 \rceil}
 \newcommand{\nl}{\mbox{\sf null}}
@@ -141,7 +99,7 @@
 \newcommand{\fa}{\mbox{\sf false}}
 \newcommand{\opa}[2]{\op{#1(\var{#2})}}
 \newcommand{\op}[1]{{\sf #1}}
-\newcommand{\opemph}[1]{{\sf \bf{#1}}}
+\newcommand{\opemph}[1]{{\sf \textbf{#1}}}
 \newcommand{\com}{$\triangleright$}
 \newcommand{\linecomment}[1]{\com\ #1}
 \newcommand{\gc}[1]{\color{blue}#1\color{black}}
@@ -167,74 +125,13 @@
   {\renewcommand\theinnercustomprop{#1}\innercustomprop}
   {\endinnercustomprop}
 
-%%
-%% \BibTeX command to typeset BibTeX logo in the docs
-\AtBeginDocument{%
-  \providecommand\BibTeX{{%
-    Bib\TeX}}}
-
-%%
-%% Submission ID.
-%% Use this when submitting an article to a sponsored event. You'll
-%% receive a unique submission ID from the organizers
-%% of the event, and this ID should be used as the parameter to this command.
-%%\acmSubmissionID{123-A56-BU3}
-
-%%
-%% For managing citations, it is recommended to use bibliography
-%% files in BibTeX format.
-%%
-%% You can then either use BibTeX with the ACM-Reference-Format style,
-%% or BibLaTeX with the acmnumeric or acmauthoryear sytles, that include
-%% support for advanced citation of software artefact from the
-%% biblatex-software package, also separately available on CTAN.
-%%
-%% Look at the sample-*-biblatex.tex files for templates showcasing
-%% the biblatex styles.
-%%
-
-%%
-%% The majority of ACM publications use numbered citations and
-%% references.  The command \citestyle{authoryear} switches to the
-%% "author year" style.
-%%
-
-%%
-%% end of the preamble, start of the body of the document source.
 
 \title{A Wait-free Queue with Polylogarithmic Step Complexity}
+\author[1]{\fnm{Hossein} \sur{Naderibeni}}
+\author*[1]{\fnm{Eric} \sur{Ruppert}}\email{ruppert@eecs.yorku.ca}
+\affil*[1]{\orgname{York University}, \orgaddress{\city{Toronto}, \country{Canada}}}
 
-%%
-%% The "author" command and its associated commands are used to define
-%% the authors and their affiliations.
-%% Of note is the shared affiliation of the first two authors, and the
-%% "authornote" and "authornotemark" commands
-%% used to denote shared contribution to the research.
-
-%\author{Hossein Naderibeni}
-%\email{hnaderi268@gmail.com}
-%\affiliation{%
-%  \institution{York University}
-%  \streetaddress{P.O. Box 1212}
-%  \city{Toronto}
-%  \state{Ontario}
-%  \country{Canada}
-%  \postcode{43017-6221}
-%}
-%\author{Eric Ruppert}
-%\affiliation{%
-%  \institution{York University}
-%  \streetaddress{P.O. Box 1212}
-%  \city{Toronto}
-%  \state{Ontario}
-%  \country{Canada}
-%  \postcode{43017-6221}
-%}
-%\email{ruppert@cse.yorku.ca}
 %\orcid{0000-0001-5613-8701}
-
-%\settopmatter{printacmref=false}  % REMOVE THIS LINE FOR CAMERA READY
-
 %%
 %% The code below is generated by the tool at http://dl.acm.org/ccs.cfm.
 %% Please copy and paste the code instead of the example below.
@@ -272,14 +169,14 @@
 
 \maketitle
 
-\begin{abstract}
+\abstract{
 We present a novel linearizable wait-free queue implementation using single-word CAS instructions.  
 Previous lock-free queue implementations from \op{CAS} all have amortized step complexity of 
 $\Omega(p)$ per operation in worst-case executions, where $p$ is the number of processes that 
 access the queue.  Our new wait-free queue  takes $O(\log p)$ steps per enqueue and 
 $O(\log^2 p +\log q)$ steps per dequeue, where $q$ is the size of the queue.  
 A bounded-space version of the implementation has $O(\log p \log(p+q))$ amortized step complexity  per operation.
-\end{abstract}
+}
 
 
 \Eric{Remove references to appendix and replace with tech report}

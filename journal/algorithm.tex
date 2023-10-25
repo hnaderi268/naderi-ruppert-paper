@@ -137,7 +137,7 @@ L=E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k).
 \setcounter{ALG@line}{1}
 \Statex \linecomment{Shared variable}
 \begin{itemize}
-\item \typ{Node} \var{root} \Comment{root of binary tree of \tt{Node}s with one leaf per process}
+\item \typ{Node} \var{root} \Comment{root of binary tree of \typ{Node}s with one leaf per process}
 \end{itemize}
 
 \Statex \linecomment{Thread-local variable}
@@ -180,23 +180,23 @@ L=E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k).
 \end{itemize}
 
 %\Statex {\com\  Blocks in internal nodes have the following additional fields}
-%\Statex $\blacktriangleright$ \tt{\sl{InternalBlock} extends \sl{Block}} \sf{\com\ the following additional fields are used only for blocks in internal nodes}
+%\Statex $\blacktriangleright$ \typ{InternalBlock} extends \typ{Block} \sf{\com\ the following additional fields are used only for blocks in internal nodes}
 %\begin{itemize}
-%	\item \tt{int} \eleft, \eright
+%	\item \typ{int} \eleft, \eright
 %  		\Comment{index of last direct subblock in the left and right child}
 %\end{itemize}
 
 %\Statex {\com\ Blocks in leaf nodes have the following additional field}
-%\Statex $\blacktriangleright$ \tt{\sl{LeafBlock} extends \sl{Block}} \sf{\com\ the following additional field is used only for blocks in leaves}
+%\Statex $\blacktriangleright$ \typ{LeafBlock} extends \typ{Block} \sf{\com\ the following additional field is used only for blocks in leaves}
 %\begin{itemize}
-%  \item \tt{\sl{Object} element}
-%  \Comment{if the block's operation is \tt{enqueue(x)} then \tt{element=x}, otherwise \tt{element=null}.}
+%  \item \typ{Object} \var{element}
+%  \Comment{if the block's operation is enqueue(x) then element=x, otherwise element=null.}
 %\end{itemize}
 
 %\Statex {\com\ Blocks in the root node have the following additional field}
-%\Statex $\blacktriangleright$ \tt{\sl{RootBlock} extends \sl{InternalBlock}} \sf{\com\ the following additional field is used only for blocks in the root}
+%\Statex $\blacktriangleright$ \typ{RootBlock} extends \typ{InternalBlock} \sf{\com\ the following additional field is used only for blocks in the root}
 %\begin{itemize}
-%  \item \tt{\sl{int} \size}%
+%  \item \typ{int} \size%
 %  \Comment{size of the queue after performing all operations up to the end of this block}
 %\end{itemize}
 
@@ -364,7 +364,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \spac
 
 \Function{void}{Propagate}{\typ{Node} \var{v}} \com\ propagate blocks from \var{v}'s children to root
-    \If{\bf{not} \Call{Refresh}{\var{v}}} \label{firstRefresh}  \hfill \com\ double refresh
+    \If{{\keywordfont not} \Call{Refresh}{\var{v}}} \label{firstRefresh}  \hfill \com\ double refresh
         \State \Call{Refresh}{\var{v}} \label{secondRefresh}
     \EndIf
     \If{$\var{v} \neq \var{root}$} \hfill \com\ recurse up tree
@@ -531,7 +531,6 @@ If both fail to add a block to \var{v}, it means some other process has done a s
 that propagated blocks that were in \var{v}'s children prior to line \ref{firstRefresh} to \var{v}.
 Then, \op{Propagate} recurses to \var{v}.\fld{parent} to continue propagating blocks up to the root.  
 
-%\paragraph{\tt{Refresh()} and \tt{Advance()}}
 A \opemph{Refresh} on node \var{v} creates a block representing the new blocks
 in \var{v}'s
 children and tries to append it to \var{v}.\fld{blocks}. 

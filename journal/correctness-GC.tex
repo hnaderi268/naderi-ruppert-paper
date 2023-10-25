@@ -463,6 +463,6 @@ The implementation remains wait-free:  the depth of recursion in each routine is
 by the height of the tree and the only loop is the counted loop in the \op{Help} routine.
 Since each operation still  does only two \op{CAS} instructions at each level of the tree (at line \ref{casGC}), the following proposition still holds for the space-bounded version of the queue.
 
-\begin{customprop}{\bf{\ref{casbound}}$'$}
+\begin{customprop}{\textbf{\ref{casbound}}$'$}
 Each operation performs $O(\log p)$ \op{CAS} instructions in the worst case.
 \end{customprop}

@@ -82,7 +82,7 @@ in a CAS retry problem.  As a result, the amortized step complexity for dequeue 
 is $\Omega(p^2)$.
 
 \paragraph{Array-Based Queues.}
-Arrays can be used to implement queues with bounded capacity \cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01}.  
+Arrays can be used to implement queues with bounded capacity \cite{DBLP:conf/iceccs/ColvinG05,PMG16,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01}.  
 %Similar to the front and back pointers of list-based queues, indices
 Dequeues and enqueues update
 indices of the front and back elements using CAS instructions.
@@ -116,6 +116,8 @@ Other array-based queues \cite{Nik19,10.1145/3490148.3538572,DBLP:conf/ppopp/Yan
 In worst-case executions that use the slow path,
 they also take $\Omega(p)$ steps per operation, 
 due either to the CAS retry problem or helping mechanisms.
+
+\here{Maybe mention experimental work of \cite{KLM+23} here or in intro}
 
 %Nikolaev and Ravindran~\cite{10.1145/3490148.3538572} present a
 %wait-free queue that uses the fast-path slow-path methodology. Their

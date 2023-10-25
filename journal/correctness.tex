@@ -231,11 +231,11 @@ Intuitively, since there are no operations in $\var{v}$'s children to promote, $
 We formalize this intuition.
 The value computed at line \ref{createSumEnq} is
 \begin{eqnarray*}
-\var{num\sub{enq}} \hspace*{-2mm}
-&=& \hspace*{-2mm} \var{v}.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}} \\
+\var{num\sub{enq}}
+&=&  \var{v}.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}} \\
 && + \var{v}.\fld{right.blocks}[new.\eright].\fld{sum\sub{enq}}\\
 &&  - \var{v}.\fld{blocks}[h-1].\fld{sum\sub{enq}} \\
-&=& \hspace*{-2mm}\var{v}.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}}\\
+&=& \var{v}.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}}\\
 && + \var{v}.\fld{right.blocks}[new.\eright].\fld{sum\sub{enq}} \\
 &&- \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft].\fld{sum\sub{enq}} \\
 && - \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright].\fld{sum\sub{enq}}.

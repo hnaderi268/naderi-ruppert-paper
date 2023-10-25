@@ -180,7 +180,7 @@ which is the value that line \ref{createSumEnq} stored in $B.\fld{sum\sub{enq}}$
 The proof for \fld{sum\sub{deq}} (stored on line~\ref{createSumDeq}) is similar.
 \end{proof}
 
-\ref{lem::sum} allows us to prove that every block a \op{Refresh} installs contains at least one operation.
+Invariant \ref{lem::sum} allows us to prove that every block a \op{Refresh} installs contains at least one operation.
 
 \begin{corollary}\label{blockNotEmpty}
 If a block $B$ is in $\var{v}.\fld{blocks}[i]$ where $i>0$, then $E(B)$ and $D(B)$ are not both empty.
@@ -196,6 +196,8 @@ so these sequences cannot both be empty.
 
 \subsection{Propagating Operations to the Root}
 \label{sec::propagating}
+
+\here{cref doesn't seem to be working (it calls everything a theorem)}
 
 In the next two lemmas, we show two \op{Refresh}es suffice to propagate operations from a child to its parent.
 We say that node $\var{v}$ \emph{contains} an operation $op$ if some block in $\var{v}.\fld{blocks}$ contains $op$.
@@ -414,10 +416,7 @@ Also, if $op_{1}$ terminates before $op_{2}$ begins, then $op_{1}$
 is propagated to the root before $op_2$ begins, so $op_1$ appears before $op_2$ in $L$.
 \end{proof}
 
-A simple proof (in 
-%Appendix \ref{app::tracingDetails})
-the full version \cite{full})
-shows that \fld{size} fields are computed correctly.
+We next show that \fld{size} fields are computed correctly.
 \begin{lemma}
 \label{sizeCorrectness}
 If the operations of $\var{root}.\fld{blocks}[0..b]$ are applied sequentially in the order of~$L$ on an initially empty queue, the resulting queue has $\var{root}.\fld{blocks}[b].\size$ elements.  
@@ -434,14 +433,14 @@ By the induction hypothesis, $root.\fld{blocks}[b-1].\size$ gives the size of th
 of block $B$ are performed.
 By \Cref{lem::sum}, the values of \var{num\sub{enq}} and \var{num\sub{deq}}
 are the number of enqueues and dequeues contained in $B$.
-Hence, the size of the queue after the operations of $B$ are performed (with enqueues before dequeues as specified by $L$)
+Hence, the size of the queue after the operations of $B$ are performed (with enqueues before dequeues as specified by~$L$)
 is $\max(0, \var{root}.\fld{blocks}[b-1].\size + \var{num\sub{enq}} - \var{num\sub{deq}})$.
 \end{proof}
 
-Next, we show operations return the same response as they would in the sequential execution $L$.
+Next, we show each operation returns the same response as it would in the sequential execution~$L$.
 
 \begin{lemma}\label{linearCorrect}
-Each terminating dequeue returns the response it would in the sequential execution $L$.
+Each terminating dequeue returns the response it would in the sequential execution~$L$.
 \end{lemma}
 \begin{proof}
 If a dequeue $D$ terminates, it is contained in some block in the root, by \Cref{lem::appendExactlyOnce}.

@@ -475,19 +475,15 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 	
     \If{\var{v} is a leaf node} \Return \var{v}.\fld{blocks}[\var{b}].\fld{element} \label{getBaseCase}
     \Else 
-        \State \var{sum\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[\var{b}].\eleft].\fld{sum\sub{enq}} 
-        \State \linecomment{\var{sum\sub{left}} is the number of enqueues in \var{v}.\fld{blocks}[1..$\var{b}$] from \var{v}'s left child}
-        \State \var{prev\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eleft].\fld{sum\sub{enq}} 
-        \State \linecomment{\var{prev\sub{left}} is the number of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from \var{v}'s left child}
-        \State \var{prev\sub{right}} \assign\ \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eright].\fld{sum\sub{enq}} 
-        \State \linecomment{\var{prev\sub{right}} is the number of enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from \var{v}'s right child}
-        \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \label{leftOrRight} \Comment{required enqueue is in \var{v}.\fld{left}}
-            \State \fld{dir} \assign\ \fld{left}
+        \State \var{sum\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[\var{b}].\eleft].\fld{sum\sub{enq}} \Comment{\#\ enqueues in \var{v}.\fld{blocks}[1..$\var{b}$] from \var{v}.\fld{left}}
+        \State \var{prev\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eleft].\fld{sum\sub{enq}} \Comment{\#\ enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from \var{v}.\fld{left}}
+        \State \var{prev\sub{right}} \assign\ \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eright].\fld{sum\sub{enq}} \Comment{\#\ enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from \var{v}.\fld{right}}
+        \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \fld{dir} \assign\ \fld{left}\label{leftOrRight} \Comment{required enqueue is in \var{v}.\fld{left}}
         \Else \Comment{required enqueue is in \var{v}.\fld{right}}
             \State \fld{dir} \assign\ \fld{right}
             \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$
         \EndIf \label{endChooseDir}
-        \State \linecomment{find enqueue's block in \var{v}.\fld{dir} and its rank within block}
+        \State \linecomment{find enqueue's block in \var{v}.\fld{dir.blocks} and its rank within block}
         \State \hangbox{use binary search to find minimum $\var{b}'$ in range [\var{v}.\fld{blocks}[$\var{b}-1$].\edir+1..\var{v}.\fld{blocks}[\var{b}].\edir] such\\
         	 that $\var{v}.\fld{dir.blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$\label{getChild}}
         \State $\var{i}'$ \assign\ $\var{i} - (\var{v}.\fld{dir.blocks}[\var{b}'-1].\fld{sum\sub{enq}} - \var{prev\sub{dir}})$\label{getChildIndex}

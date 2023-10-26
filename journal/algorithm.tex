@@ -9,8 +9,9 @@ for each process.
 Each tree node  stores an array of \emph{blocks}, where each block represents a 
 sequence of enqueues and a sequence of dequeues.
 See Figure \ref{orderingtree} for an example.
-In this section, we use an infinite array of blocks in each node.
-Section \ref{reducing} describes how to replace the infinite array by a representation that uses bounded space.
+For ease of presentation,
+we use an infinite array of blocks in each node in this section.
+Then, in Section \ref{reducing}, we describe how to replace the infinite array by a representation that uses bounded space.
 
 To perform an operation on the queue, a process $P$ appends a new block containing that  
 operation to the \fld{blocks} array in $P$'s leaf.
@@ -19,11 +20,13 @@ We shall define a total order on all operations that have been propagated to the
 will serve as the linearization ordering of the operations.
 
 %\Eric{Reworded following parag after Hossein's comments of Jan 4}
-To propagate operations from a node $\var{v}$'s children to $\var{v}$, $P$ first observes
+To propagate operations from a node $\var{v}$'s children to $\var{v}$, $P$ performs the following
+three steps.
+$P$ first observes
 the blocks in both of $\var{v}$'s children that are not already in $\var{v}$,
 creates a new block by combining information from those blocks, and attempts to append this 
 new block to $\var{v}$'s \fld{blocks} array using a \op{CAS}.
-Following \cite{DBLP:conf/fsttcs/JayantiP05}, we call this a 3-step sequence a
+Following \cite{DBLP:conf/fsttcs/JayantiP05}, we call this three-step sequence a
 \op{Refresh} on $\var{v}$. %(see Figure \ref{fig::propagstep}).
 A \op{Refresh}'s \op{CAS} may fail if there is another concurrent \op{Refresh} on~$\var{v}$.
 However, since a successful \op{Refresh} propagates multiple pending operations 
@@ -64,11 +67,12 @@ Since these tasks depend on the linearization ordering, we describe that orderin
 \begin{figure*}[t]
 \input{tournamentTree.pdf_t}
 \caption{An example \ordering\ tree with four processes. 
+E(x) denotes an Enqueue(x) operation and D\sub{1} to D\sub{6} denote Dequeue operations.
 We show explicitly the enqueue sequence and dequeue sequence represented by each block in the \fld{blocks} arrays of the seven nodes.  The leftmost element of each \fld{blocks} array is a dummy block.
 Arrows represent the indices stored in \eleft\ and \eright\ fields of blocks (as described in Section \ref{sec:fields}).
-The fourth process's Deq\sub{6} is still propagating towards the root.
+The fourth process's D\sub{6} is still propagating towards the root.
 The linearization order for this tree is
-Enq(a) Enq(e) Deq\sub{2} $\mid$ Enq(b) Deq\sub{4} Deq\sub{5} $\mid$ Enq(d) Enq(f) Enq(h) Deq\sub{1} $\mid$ Enq(c) Deq\sub{3} $\mid$ Enq(g), where vertical bars indicate boundaries of blocks in the root.\label{orderingtree}}
+E(a) E(e) D\sub{2} $\mid$ E(b) D\sub{4} D\sub{5} $\mid$ E(d) E(f) E(h) D\sub{1} $\mid$ E(c) D\sub{3} $\mid$ E(g), where vertical bars indicate boundaries of blocks in the root.\label{orderingtree}}
 \medskip
 \input{implicit.pdf_t}
 \caption{\label{implicit}The actual, implicit representation of the tree shown in Figure \ref{orderingtree}.
@@ -86,7 +90,7 @@ a block containing the operation is appended to the root before the operation co
 So, if an operation $op_1$ terminates before another operation $op_2$ begins, 
 $op_1$ will be in an earlier block than $op_2$ in the root's blocks array.
 Thus, we linearize operations according to the block they belong to in the root's array.
-We can choose how to order operations in the same block, since they must be concurrent.
+We can choose how to order operations within the same block, since they must be concurrent.
 
 Each block in a leaf represents one operation.
 Each block $B$ in an internal node $\var{v}$ results from merging
@@ -113,20 +117,20 @@ $\var{v}$'s left child
 and $B^R_1,\ldots,B^R_r$ from $\var{v}$'s right child, then $B$'s operation sequences are defined by the concatenations 
 \begin{eqnarray}
 E(B) &=& E(B^L_1)\cdots E(B^L_\ell)\cdot E(B^R_1) \cdots E(B^R_r) \mbox{ and }\nonumber\\
-D(B) &=& D(B^L_1)\cdots D(B^L_\ell)\cdot D(B^R_1) \cdots D(B^R_r)\label{defSeqs}
+D(B) &=& D(B^L_1)\cdots D(B^L_\ell)\cdot D(B^R_1) \cdots D(B^R_r).
+\label{defSeqs}
 \end{eqnarray}
 We say the block $B$ \emph{contains} the operations in $E(B)$ and $D(B)$.
 
-When linearizing the operations propagated to the root, we must
-choose how to order operations within a block.  
-We choose to put
-each block's enqueues before its dequeues.
+When linearizing operations within one of the root's blocks, we choose
+to put the block's enqueues before its dequeues.
 Thus, if the root's blocks array contains blocks $B_1, \ldots, B_k$, the 
 linearization ordering~is 
 \begin{equation}
-L=E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k).
-\label{linearization}
+L=E(B_1)\cdot D(B_1) \cdot E(B_2) \cdot D(B_2) \cdots E(B_k) \cdot D(B_k).\label{linearization}
 \end{equation}
+
+\Eric{I've edited this far}
 
 \subsection{Designing a Block Representation to Solve Tasks \ref{construct} to \ref{findenqueue}}
 \label{sec:fields}

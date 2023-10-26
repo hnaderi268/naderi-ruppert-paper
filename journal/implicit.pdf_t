@@ -1,7 +1,7 @@
 \begin{picture}(0,0)%
 \includegraphics{implicit.pdf}%
 \end{picture}%
-\setlength{\unitlength}{1895sp}%
+\setlength{\unitlength}{2052sp}%
 %
 \begingroup\makeatletter\ifx\SetFigFont\undefined%
 \gdef\SetFigFont#1#2#3#4#5{%

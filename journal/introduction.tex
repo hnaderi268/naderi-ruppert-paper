@@ -4,32 +4,33 @@
 
 There has been a great deal of research in the past several decades on the design of shared queues.
 Besides being a fundamental data structure, queues are used in
-significant concurrent applications, including OS kernels \cite{MP91}, memory management \cite{BBFRSW21}\here{try to find an older, more canonical reference},
+significant concurrent applications, including OS kernels \cite{MP91}, memory management (e.g.,\cite{BBFRSW21}),
+% ouroboros paper by Winter et al 2020 might be a source for queues used for mem management (in context of GPUs)
 %packet processing \cite{DPDK}, 
-synchronization \cite{KAE23},\here{is this a good citation for this?}
+synchronization \cite{KAE23},%\here{is this a good citation for this?}
 and sharing resources or tasks.
 We focus on shared queues that are \emph{linearizable} \cite{HW90}, meaning that operations
 appear to take place atomically, and \emph{lock-free}, meaning that some operation on the queue
 is guaranteed to complete regardless of how asynchronous processes are scheduled to take~steps.
+We study the \emph{amortized step complexity} per operation, which is measured by taking the maximum, over all possible
+executions, of the number of steps in the execution divided by the total number of enqueue and dequeue operations in the execution.
 
-The lock-free MS-queue of Michael and Scott \cite{MS98} is a classic shared queue implementation.
+The lock-free \emph{MS-queue} of Michael and Scott \cite{MS98} is a classic shared queue implementation.
 It uses a singly-linked list with pointers to the front and back nodes.
 To dequeue or enqueue an element, the front or back pointer is updated by a 
 compare-and-swap (CAS) instruction.
 If this CAS fails, the operation must retry.
 In the worst case, this means that each successful CAS may cause all other processes to
 fail and retry, leading to an amortized step complexity of $\Omega(p)$ per operation in a system of $p$ processes.
-(To measure amortized step complexity of a lock-free implementation, we consider all possible finite executions
-and divide the number of steps in the execution by the number of operations  in the execution.)
 Numerous papers have suggested modifications to the MS-queue \cite{DBLP:conf/opodis/HoffmanSS07,DBLP:conf/podc/KoganH14,DBLP:conf/ppopp/KoganP11,DBLP:journals/dc/Ladan-MozesS08,MKLLP22,DBLP:conf/spaa/MoirNSS05,RC17}, but 
 all still have $\Omega(p)$ amortized step complexity as a result of
 contention on the front and back of the queue.
 Morrison and Afek \cite{DBLP:conf/ppopp/MorrisonA13} called this the \emph{CAS retry problem}.
-The same problem occurs in array-based implementations of queues \cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01,DBLP:conf/opodis/GidenstamST10}.
-Solutions that tried to sidestep this problem using fetch\&increment \cite{DBLP:conf/ppopp/MorrisonA13,DBLP:conf/ppopp/YangM16,Nik19,10.1145/3490148.3538572}
+The same problem occurs in array-based implementations of queues \cite{DBLP:conf/iceccs/ColvinG05,DBLP:conf/opodis/GidenstamST10,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01}.
+Solutions that tried to sidestep this problem using fetch\&increment \cite{DBLP:conf/ppopp/MorrisonA13,Nik19,10.1145/3490148.3538572,DBLP:conf/ppopp/YangM16}
 rely on slower mechanisms to handle worst-case executions and still have $\Omega(p)$ step complexity.
 
-Many concurrent data structures that keep track of a set of elements also have an $\Omega(p)$ term in their step complexity, as observed by Ruppert \cite{Rup16}.
+Many concurrent data structures that keep track of a set of elements also have an $\Omega(p)$ term in their step complexity, as observed by Ruppert~\cite{Rup16}.
 For example, lock-free lists \cite{FR04,Sha15}, stacks \cite{Tre86} and search trees \cite{EFHR14} 
 have an $\Omega(c)$ term in their step complexity, where $c$ represents contention,
 the number of processes that access the data structure concurrently, which can be $p$ in the worst case.
@@ -48,7 +49,7 @@ an amortized bound of $\Omega(\min(c,\log\log p))$ steps per operation.
 We exploit this loophole.  We show  it is, in fact, possible for a linearizable queue
 to have step complexity sublinear in $p$.
 Our queue is the first whose step complexity  is polylogarithmic in $p$ and in $q$, the number of elements in the queue.
-It is \emph{wait-free}, meaning that every operation is guaranteed to complete within a finite number of its own steps.
+It is also \emph{wait-free}, meaning that every operation is guaranteed to complete within a finite number of its own steps.
 For ease of presentation, we first give an unbounded-space construction where enqueues take $O(\log p)$ steps and
 dequeues take $O(\log^2 p + \log q)$ steps,
 and then modify it to bound the space
@@ -57,7 +58,8 @@ Moreover, each operation does $O(\log p)$ CAS instructions in the worst case, wh
 lock-free queues use 
 %an unbounded number of CAS instructions in the worst case and 
 $\Omega(p)$ CAS instructions, even in an amortized sense.
-Since a queue is also a bag, our queue is the first lock-free bag that we know of that has polylogarithmic step complexity.
+Since a queue is also a bag, our queue is the first lock-free bag  with polylogarithmic step complexity.
+
 Both versions of our queue use single-word CAS on reasonably-sized 
 words.
 We assume that a word is large enough to store an item to be enqueued (or at least a pointer to it).  We also assume that the number of operations performed on the queue can be stored (in binary) in $O(1)$ words.
@@ -77,4 +79,4 @@ Instead, we use a novel implicit representation of batches
 of queue operations that allows us to quickly merge two batches from the children of a node,
 and quickly access any  operation in a~batch.
 A preliminary version of this work appeared in~\cite{Nad22}.
-\here{Maybe say a little more about techniques used in the implementation, if space permits}
+%\here{Maybe say a little more about techniques used in the implementation, if space permits}

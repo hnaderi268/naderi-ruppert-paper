@@ -115,7 +115,7 @@ In worst-case executions that use the slow path,
 they also take $\Omega(p)$ steps per operation, 
 due either to the CAS retry problem or helping mechanisms.
 
-\here{Maybe mention experimental work of \cite{KLM+23} here or in intro}
+%\here{Maybe mention experimental work of \cite{KLM+23} here or in intro}
 
 %Nikolaev and Ravindran~\cite{10.1145/3490148.3538572} present a
 %wait-free queue that uses the fast-path slow-path methodology. Their
@@ -175,8 +175,14 @@ that achieves $O(\log p)$ steps for enqueue operations but fails to achieve poly
 %\here{Should we mention https://arxiv.org/abs/2103.11926 , which seems to have a queue for 2 enqueuers and 2 dequeuers ?  May not be worth mentioning because then $p$ is a constant, so complexity in terms of $p$ doesn't make sense.}
 
 \paragraph{Other Primitives.}
+Li \cite{Li01} implemented a non-blocking linearizable queue using only the weak primitives
+test\&set, fetch\&add and swap.
+This implementation's amortized step complexity is not bounded
+as a function of the number of processes and the size of the queue.
+(It depends on the total number of enqueues in the execution.)
+
 Khanchandani and Wattenhofer \cite{KW18} gave a wait-free queue 
-with $O(\sqrt{p})$ step complexity using non-standard synchronization primitives
+with $O(\sqrt{p})$ step complexity using some strong non-standard synchronization primitives
 called half-increment and half-max, which can be viewed as %particular kinds of
 double-word read-modify-write operations.
 They use this as evidence to argue that their primitives can be more efficient than CAS

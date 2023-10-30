@@ -125,16 +125,16 @@ each level instead of using the \fld{super} field.
 
 \spac
 
-\Function{boolean}{Refresh}{\typ{Node} \var{v}} \Comment{try to append a new block to $\var{v}.\fld{blocks}$}
+\Function{boolean}{Refresh}{\typ{Node} \var{v}} \Comment{try to append a new block $B$ to $\var{v}.\fld{blocks}$}
 	\gc{
 	\State $T$ \assign\ $\var{v}.\fld{blocks}$\label{refreshReadTGC}
     \State $\var{h}$ \assign\ $\Call{MaxBlock}{T}.\fld{index}+1$ \label{refreshReadMax}
     }
-    \State $\var{new}$ \assign\ $\Call{CreateBlock}{\var{v, h}}$ \label{invokeCreateBlockGC}
-    \If{\var{new = \nl}} \Return{\tr} \label{addOPGC}
+    \State $\var{B}$ \assign\ $\Call{CreateBlock}{\var{v, h}}$ \label{invokeCreateBlockGC}
+    \If{\var{B = \nl}} \Return{\tr} \label{addOPGC}
     \Else  
     	\gc{
-	    \State $T'$ \assign\ $\Call{AddBlock}{v, T, \var{new}}$\label{refreshABGC}
+	    \State $T'$ \assign\ $\Call{AddBlock}{v, T, \var{B}}$\label{refreshABGC}
 		\State \Return \Call{CAS}{\var{v}.\fld{blocks}, $T$, $T'$}\label{casGC}
 		}
     \EndIf
@@ -213,24 +213,24 @@ each level instead of using the \fld{super} field.
 
 \spac
 
-\Function{Block}{CreateBlock}{\typ{Node} \var{v}, \typ{int} \var{i}} \linecomment{create new block  to install in \var{v}.\fld{blocks}[\var{i}]}
-    \State \hangbox{let \var{new} be a new \typ{Block} with fields\label{initNewBlockGC}
+\Function{Block}{CreateBlock}{\typ{Node} \var{v}, \typ{int} \var{i}} \linecomment{create new block $B$ to install in \var{v}.\fld{blocks}[\var{i}]}
+    \State \hangbox{let \var{B} be a new \typ{Block} with fields\label{initNewBlockGC}
     \gc{
     	\eleft\ \assign\ $\Call{MaxBlock}{\var{v}.\fld{left}.\fld{blocks}}.\fld{index}$\label{createEndLeftGC},\\
     \eright\ \assign\ $\Call{MaxBlock}{\var{v}.\fld{right}.\fld{blocks}}.\fld{index}$,\label{createEndRightGC}
     \fld{index} \assign\ $i$\label{createIndexGC}
     }\\
-	\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{enq}} + 
-			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{enq}}\\
-	\fld{sum\sub{deq}} \assign\ \var{v}.\fld{left.blocks}[\var{new}.\eleft].\fld{sum\sub{deq}} +
-			\var{v}.\fld{right.blocks}[\var{new}.\eright].\fld{sum\sub{deq}}}
-    \State \var{num\sub{enq}} \assign\ $\var{new}.\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{enq}}$\label{computeNumEnqGC}
-    \State \var{num\sub{deq}} \assign\ $\var{new}.\fld{sum\sub{deq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{deq}}$
-    \If{$\var{v} = \var{root}$} \var{new}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + 
+	\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{B}.\eleft].\fld{sum\sub{enq}} + 
+			\var{v}.\fld{right.blocks}[\var{B}.\eright].\fld{sum\sub{enq}}\\
+	\fld{sum\sub{deq}} \assign\ \var{v}.\fld{left.blocks}[\var{B}.\eleft].\fld{sum\sub{deq}} +
+			\var{v}.\fld{right.blocks}[\var{B}.\eright].\fld{sum\sub{deq}}}
+    \State \var{num\sub{enq}} \assign\ $\var{B}.\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{enq}}$\label{computeNumEnqGC}
+    \State \var{num\sub{deq}} \assign\ $\var{B}.\fld{sum\sub{deq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{deq}}$
+    \If{$\var{v} = \var{root}$} \var{B}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + 
         	\var{num\sub{enq}} - \var{num\sub{deq}}$)\label{computeLengthGC}
     \EndIf
     \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$} \Return \nl \hfill \Comment{no blocks need to be propagated to \var{v}}\label{testEmptyGC}\label{CBnullGC}
-    \Else\ \Return \var{new}
+    \Else\ \Return \var{B}
     \EndIf
 \EndFunction{CreateBlock}
 

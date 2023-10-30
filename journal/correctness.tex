@@ -27,17 +27,17 @@ which implies the following.
 For each node \var{v},  \var{v}.\fld{head} is non-decreasing over time.
 \end{observation}
 
-\begin{observation} \label{lem::headInc}
+\begin{observation} \label{obs::headInc}
 Let $R$ be an instance of \opa{Refresh}{v} whose call to \op{CreateBlock} returns a non-\nl\ block.  When $R$ terminates, \var{v}.\head\ is strictly greater than the value $R$ reads from it at line \ref{readHead}.
 \end{observation}
 \begin{proof}
 After $R$'s \op{CAS} at line \ref{incrementHead}, \var{v}.\head\ is no longer equal to the value \var{h}
-read at line \ref{readHead}.  The claim follows from \Cref{nonDecreasingHead}.
+read at line \ref{readHead}.  The claim follows from Observation \ref{nonDecreasingHead}.
 \end{proof}
 
 Now we show $\var{v}.\fld{blocks}[\var{v}.\head]$ is either the last non-\nl\ block or the first \nl\ block in node $\var{v}$.
 
-\begin{invariant}\label{lem::headPosition} 
+\begin{invariant}\label{inv::headPosition} 
 For $0 \leq i < \var{v}.\head$, $\var{v}.\fld{blocks}[i]\neq\nl$.  For $i>\var{v}.\head$, $\var{v}.\fld{blocks}[i]=\nl$.
 If $\var{v}\neq \var{root}$,  $\var{v}.\fld{blocks}[i].super \neq \nl$ for $0<i<\var{v}.\head$.
 \end{invariant}
@@ -50,7 +50,7 @@ by a successful \op{CAS} at line \ref{cas}.
 The \op{CAS} changes $\var{v}.\fld{blocks}[h]$ from \nl\ to a non-\nl\ value.
 Since $\var{v}.\fld{blocks}[h]$ is \nl\ before the CAS, $\var{v}.\head \leq h$ by the hypothesis.
 Since $h$ was read from $\var{v}.\head$ earlier at line \ref{readHead}, the current value of 
-$\var{v}.\head$ is at least $h$ by \Cref{nonDecreasingHead}.
+$\var{v}.\head$ is at least $h$ by Observation \ref{nonDecreasingHead}.
 So, $\var{v}.\head=h$ when the \op{CAS} occurs and a change to $\var{v}.\fld{blocks}[\var{v}.\head]$ preserves the invariant.
 
 Now, assume the claim holds before a change to $\var{v}.\head$, which can only be an increment from $h$ to $h+1$
@@ -77,10 +77,10 @@ The following two lemmas show that no operation appears in more than one block o
 Let $B$ be the block in $\var{v}.\fld{blocks}[b]$.
 Before creating $B$ at line \ref{invokeCreateBlock}, the \op{Refresh} that installed $B$
 read $b$ from $\var{v}.\head$ at line \ref{readHead}.
-At that time, $\var{v}.\fld{blocks}[b-1]$ contained a block $B'$, by \Cref{lem::headPosition}.
+At that time, $\var{v}.\fld{blocks}[b-1]$ contained a block $B'$, by Invariant \ref{inv::headPosition}.
 Thus, the \op{CreateBlock}($\var{v},b-1$) that created $B'$ terminated before the \op{CreateBlock}($\var{v},b$) that
 created $B$ started.
-It follows from \Cref{nonDecreasingHead} that the value that 
+It follows from Observation \ref{nonDecreasingHead} that the value that 
 line \ref{createEndLeft} of \op{CreateBlock}($\var{v},b-1$) stores in $B'.\fld{end\sub{left}}$   
 is less than or equal to the value that line \ref{createEndLeft} of \op{CreateBlock}($\var{v},b$) 
 stores in $B.\fld{end\sub{left}}$.
@@ -98,7 +98,7 @@ If $B$ and $B'$ are in leaves, they have no subblocks, so the claim holds.
 Assume the claim holds for nodes at depth $d+1$ and let $B$ and $B'$ be two blocks in nodes at depth $d$.
 Consider the direct subblocks of $B$ and $B'$ defined by~(\ref{defsubblock}).
 If $B$ and $B'$ are in different nodes at depth $d$, then their direct subblocks are disjoint.
-If $B$ and $B'$ are in the same node, it follows from \Cref{lem::headProgress} that their direct subblocks are disjoint.
+If $B$ and $B'$ are in the same node, it follows from Lemma \ref{lem::headProgress} that their direct subblocks are disjoint.
 Either way, their direct subblocks (at depth $d+1$) are disjoint, so the claim follows from the induction hypothesis.
 \end{proof}
 
@@ -107,7 +107,7 @@ Moreover, we can now prove each operation is contained in at most one block of e
 and hence appears at most once in the linearization~$L$.
 
 \here{Might be able to get rid of this corollary and just cite previous lemma instead to save space}
-\begin{corollary}\label{lem::noDuplicates}
+\begin{corollary}\label{cor::noDuplicates}
 For  $i\neq j$, $\var{v}.\fld{blocks}[i]$ and $\var{v}.\fld{blocks}[j]$ cannot both contain the same operation.
 \end{corollary}
 \begin{proof}
@@ -115,7 +115,7 @@ A block $B$ contains the operations in $B$'s subblocks in leaves of the tree.
 An operation by process $P$ appears in just one block of $P$'s leaf, so
 an operation 
 cannot be in two different leaf blocks. 
-By \Cref{lem::subblocksDistinct}, $\var{v}.\fld{blocks}[i]$ and $\var{v}.\fld{blocks}[j]$ have no common subblocks, so the claim follows.
+By Lemma \ref{lem::subblocksDistinct}, $\var{v}.\fld{blocks}[i]$ and $\var{v}.\fld{blocks}[j]$ have no common subblocks, so the claim follows.
 \end{proof}
 
 
@@ -146,7 +146,7 @@ on lines \ref{enqNew}, \ref{deqNew}, \ref{createSumEnq} and \ref{createSumDeq} f
 from the definition of subblocks.
 
 \begin{invariant}
-\label{lem::sum}
+\label{inv::sum}
 If $B$ is a block stored in $\var{v}.\fld{blocks}[i]$, then
 \begin{eqnarray*}
 B.\fld{sum\sub{enq}} &=& | E(\var{v}.\fld{blocks}[0])\cdots E(\var{v}.\fld{blocks}[i]) | \mbox{ and}\\
@@ -168,7 +168,7 @@ Since $B.\fld{sum\sub{enq}}$ is set to $\var{v}.\fld{blocks}[i-1].\fld{sum\sub{e
 $B.\fld{sum\sub{deq}}$ is set to $\var{v}.\fld{blocks}[i-1].\fld{sum\sub{deq}}$, the claim follows from the hypothesis.
 The proof for line~\ref{deqNew}, where $B$ has a single dequeue, is similar.
 
-Now suppose $\var{v}$ is an internal node. By the definition of subblocks in (\ref{defsubblock}) and \Cref{lem::headProgress}, the
+Now suppose $\var{v}$ is an internal node. By the definition of subblocks in (\ref{defsubblock}) and Lemma \ref{lem::headProgress}, the
 subblocks of $\var{v}.\fld{blocks}[1..i]$ are $\var{v}.\fld{left.blocks}[1..B.\eleft]$ 
 and $\var{v}.\fld{right.blocks}[1..B.\eright]$.
 Thus, the enqueues in $E(\var{v}.\fld{blocks}[0])\cdots E(\var{v}.\fld{blocks}[i])$ are those in
@@ -180,7 +180,7 @@ which is the value that line \ref{createSumEnq} stored in $B.\fld{sum\sub{enq}}$
 The proof for \fld{sum\sub{deq}} (stored on line~\ref{createSumDeq}) is similar.
 \end{proof}
 
-Invariant \ref{lem::sum} allows us to prove that every block a \op{Refresh} installs contains at least one operation.
+Invariant \ref{inv::sum} allows us to prove that every block a \op{Refresh} installs contains at least one operation.
 
 \begin{corollary}\label{blockNotEmpty}
 If a block $B$ is in $\var{v}.\fld{blocks}[i]$ where $i>0$, then $E(B)$ and $D(B)$ are not both empty.
@@ -188,7 +188,7 @@ If a block $B$ is in $\var{v}.\fld{blocks}[i]$ where $i>0$, then $E(B)$ and $D(B
 \begin{proof}
 The \op{Refresh} that installed $B$ got $B$ as the response to its call to \op{CreateBlock} on line \ref{invokeCreateBlock}.
 Thus, at line \ref{testEmpty}, $\var{num\sub{enq}}+\var{num\sub{deq}}\neq 0$.
-By \Cref{lem::sum}, $\var{num\sub{enq}} = |E(B)|$ and $\var{num\sub{deq}} = |D(B)|$,
+By Invariant \ref{inv::sum}, $\var{num\sub{enq}} = |E(B)|$ and $\var{num\sub{deq}} = |D(B)|$,
 so these sequences cannot both be empty.
 \end{proof}
 
@@ -212,18 +212,18 @@ when $R$ executed line~\ref{readHead}.
 \begin{proof}
 Suppose $\var{v}$'s child (without loss of generality, $\var{v}.\fld{left}$) contained an operation $op$ 
 when $R$ executed line \ref{readHead}.
-Let $i$ be the index such that the block $B=\var{v}.\fld{left.blocks}[i]$ contains $op$.
-By \Cref{nonDecreasingHead} and \Cref{lem::headProgress}, the value of $childHead$ that $R$ reads from
+Let $i$ be the index such that the block $B_\ell=\var{v}.\fld{left.blocks}[i]$ contains $op$.
+By Observation \ref{nonDecreasingHead} and Lemma \ref{lem::headProgress}, the value of $childHead$ that $R$ reads from
 $\var{v}.\fld{left.head}$ in line \ref{readChildHead} is at least $i$.
 If it is equal to $i$, $R$ calls \op{Advance} at line \ref{helpAdvance}, which ensures that 
 $\var{v}.\fld{left.head} > i$.
-Then, $R$ calls \op{CreateBlock}($\var{v},h$) in line \ref{invokeCreateBlock}, where $h$ is the value $R$ reads at line \ref{readHead}.
+Then, $R$ creates a new block $B$ by calling \op{CreateBlock}($\var{v},h$) at line \ref{invokeCreateBlock}, where $h$ is the value $R$ reads at line \ref{readHead}.
 \op{CreateBlock} reads a value greater than $i$ from $\var{v}.\fld{left.head}$ at line \ref{createEndLeft}.
-Thus, $new.\eleft \geq i$.  We consider two cases.
+Thus, $B.\eleft \geq i$.  We consider two cases.
 
-Suppose $R$'s call to \op{CreateBlock} returns the new block $B'$ and $R$'s \op{CAS} at line \ref{cas} 
-installs $B'$ in $\var{v}.\fld{blocks}$.
-Then, $B$ is a subblock of some block in $\var{v}$, since  $B'.\eleft$ is greater than or equal to $B$'s index
+Suppose $R$'s \op{CAS} at line \ref{cas} 
+installs $B$ in $\var{v}.\fld{blocks}$.
+Then, $B_\ell$ is a subblock of some block in $\var{v}$, since  $B.\eleft$ is greater than or equal to $B_\ell$'s index
 $i$ in $\var{v}.\fld{left.blocks}$.
 Hence $\var{v}$ contains $op$, as required.
 
@@ -234,22 +234,22 @@ We formalize this intuition.
 The value computed at line \ref{createSumEnq} is
 \begin{eqnarray*}
 \var{num\sub{enq}}
-&=&  \var{v}.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}} \\
-&& + \var{v}.\fld{right.blocks}[new.\eright].\fld{sum\sub{enq}}\\
+&=&  \var{v}.\fld{left.blocks}[B.\eleft].\fld{sum\sub{enq}} \\
+&& + \var{v}.\fld{right.blocks}[B.\eright].\fld{sum\sub{enq}}\\
 &&  - \var{v}.\fld{blocks}[h-1].\fld{sum\sub{enq}} \\
-&=& \var{v}.\fld{left.blocks}[new.\eleft].\fld{sum\sub{enq}}\\
-&& + \var{v}.\fld{right.blocks}[new.\eright].\fld{sum\sub{enq}} \\
+&=& \var{v}.\fld{left.blocks}[B.\eleft].\fld{sum\sub{enq}}\\
+&& + \var{v}.\fld{right.blocks}[B.\eright].\fld{sum\sub{enq}} \\
 &&- \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft].\fld{sum\sub{enq}} \\
 && - \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright].\fld{sum\sub{enq}}.
 \end{eqnarray*}
-It follows from \Cref{lem::sum} that $num\sub{enq}$ is the total  number of enqueues  in 
-$\var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft+1..new.\eleft]$ and
-$\var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright+1..new.\eright]$.
+It follows from Invariant \ref{inv::sum} that $num\sub{enq}$ is the total  number of enqueues  in 
+$\var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft+1..B.\eleft]$ and
+$\var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright+1..B.\eright]$.
 Similarly, $num\sub{deq}$ is the total number of dequeues contained in these blocks.
 Since $num\sub{enq}+num\sub{deq}=0$ at line \ref{testEmpty},
 these blocks contain no operations.
-By \Cref{blockNotEmpty}, this means the ranges of blocks are empty, so that $\var{v}.\fld{blocks}[h-1].\eleft \geq \var{new}.\eleft \geq i$.
-Hence, $B$ is already a subblock of some block in $\var{v}$, so $\var{v}$ contains $op$.
+By Corollary \ref{blockNotEmpty}, this means the ranges of blocks are empty, so that $\var{v}.\fld{blocks}[h-1].\eleft \geq \var{B}.\eleft \geq i$.
+Hence, $B_\ell$ is already a subblock of some block in $\var{v}$, so $\var{v}$ contains $op$.
 \end{proof}
 
 We now show  a double \op{Refresh} propagates blocks as required.
@@ -261,17 +261,17 @@ are contained in $\var{v}$ when $R_2$ terminates.
 \end{lemma}
 \begin{proof}
 If either $R_1$ or $R_2$ performs a successful \op{CAS} at line \ref{cas} or terminates at line \ref{addOP}, the claim follows
-from \Cref{successfulRefresh}.
+from Lemma \ref{successfulRefresh}.
 So suppose both $R_1$ and $R_2$ perform a failed \op{CAS} at line \ref{cas}.
 Let $h_1$ and $h_2$ be the values $R_1$ and $R_2$ read from $\var{v}.\head$ at line \ref{readHead}.
-By \Cref{lem::headInc}, $h_2>h_1$.
-By \Cref{lem::headProgress}, $\var{v}.blocks[h_2]=\nl$ when $R_1$ executes line \ref{readHead}.
+By Observation \ref{obs::headInc}, $h_2>h_1$.
+By Lemma \ref{lem::headProgress}, $\var{v}.blocks[h_2]=\nl$ when $R_1$ executes line \ref{readHead}.
 Since $R_2$ fails its \op{CAS} on $\var{v}.blocks[h_2]$, some other \op{Refresh} $R_3$ must have done
 a successful \op{CAS} on $\var{v}.blocks[h_2]$ before $R_2$'s \op{CAS}.
-$R_3$ must have executed line \ref{readHead} after $R_1$, since $R_3$ read the value $h_2$ from $\var{v}.\head$ and the value of $\var{v}.\head$ is non-decreasing, by \Cref{nonDecreasingHead}.
+$R_3$ must have executed line \ref{readHead} after $R_1$, since $R_3$ read the value $h_2$ from $\var{v}.\head$ and the value of $\var{v}.\head$ is non-decreasing, by Observation \ref{nonDecreasingHead}.
 Thus, all operations contained in $\var{v}$'s children when $R_1$ begins
 are also contained in $\var{v}$'s children when $R_3$ later executes line \ref{readHead}.
-By \Cref{successfulRefresh}, these operations are contained in $\var{v}$ when $R_3$ performs its successful \op{CAS},
+By Lemma \ref{successfulRefresh}, these operations are contained in $\var{v}$ when $R_3$ performs its successful \op{CAS},
 which is before $R_2$'s failed \op{CAS}.
 \end{proof}
 
@@ -281,10 +281,9 @@ When an \op{Append}($B$) terminates, $B$'s operation is contained in exactly one
 \begin{proof}
 \op{Append} adds $B$ to the process's leaf and calls \op{Propagate}, which
 does a double \op{Refresh}~on each internal node on the path $P$ from the leaf to the root.
-By \Cref{lem::doubleRefresh}, this ensures a block in each node on $P$ contains $B$'s operation.
-There is at most one such block in each node, by \Cref{lem::noDuplicates}.
+By Lemma \ref{lem::doubleRefresh}, this ensures a block in each node on $P$ contains $B$'s operation.
+There is at most one such block in each node, by Corollary \ref{cor::noDuplicates}.
 \end{proof}
-
 
 \subsection{Correctness of \opemph{GetEnqueue} and \opemph{IndexDequeue}}
 \label{sec::tracingCorrect}
@@ -295,7 +294,7 @@ On one hand, $B.super$ is written before $B_s$ is installed:
 \op{Advance} writes $B.super$ before advancing $\var{v}.\head$  past $B$'s index, which must happen before the \op{CreateBlock} that creates
 $B_s$ gets the value of $B_s.\eleft$ or $B_s.\eright$.
 On the other hand, $B.\fld{super}$ cannot be written too long before $B_s$ is installed:
-$B.\fld{super}$ is written after $B$ is installed, and \Cref{successfulRefresh} ensures that $B$ is propagated to the
+$B.\fld{super}$ is written after $B$ is installed, and Lemma \ref{successfulRefresh} ensures that $B$ is propagated to the
 parent soon after.
 
 \begin{lemma}
@@ -308,28 +307,28 @@ We first show that $B.\fld{super}\leq s$.
 Let $R_s$ be the instance of \op{Refresh}($\var{v}.\fld{parent}$) that installs $B$'s superblock 
 in $\var{v}.\fld{parent.blocks}[s]$.
 By the definition of subblocks (\ref{defsubblock}), $R_s$'s read $r$ of $\var{v}.head$ at line \ref{createEndLeft} or \ref{createEndRight} obtains a value greater than $b$.
-By \Cref{lem::headPosition}, $B.\fld{super}$ is not $\nl$ when $r$ occurs, which means
+By Invariant \ref{inv::headPosition}, $B.\fld{super}$ is not $\nl$ when $r$ occurs, which means
 that $B.\fld{super}$ was set (by line~\ref{setSuper1}) to a value read from $\var{v}.\fld{parent}.\head$ before $r$.
 When $r$ occurs, $\var{v}.\fld{parent.blocks}[s] = \nl$, since the later \op{CAS} by $R_s$ at line
 \ref{cas} succeeds.
-So, by \Cref{lem::headPosition}, $\var{v}.\fld{parent}.\head \leq s$ when $r$ occurs.
-Since the value stored in $B.\fld{super}$ was read from $\var{v}.\fld{parent.head}$ before $r$ and the \head\ field is non-decreasing by \Cref{nonDecreasingHead}, it follows that $B.super\leq s$.
+So, by Invariant \ref{inv::headPosition}, $\var{v}.\fld{parent}.\head \leq s$ when $r$ occurs.
+Since the value stored in $B.\fld{super}$ was read from $\var{v}.\fld{parent.head}$ before $r$ and the \head\ field is non-decreasing by Observation \ref{nonDecreasingHead}, it follows that $B.super\leq s$.
 
 Next, we show that $B.\fld{super}\geq s-1$.
 The value stored in $B.\fld{super}$ at line \ref{setSuper1} is read from $\var{v}.\fld{parent}.\head$ at line \ref{readParentHead} and \head\ is always at least 1, so $B.\fld{super} \geq 1$.
 So, if $s\leq 2$, the claim is trivial.  Assume $s>2$ for the rest of the proof.
-By \Cref{lem::headProgress}, $\var{v}.\fld{parent.blocks}[s-1]$ is not $\nl$.  Let $R_{s-1}$ be the call to
+By Lemma \ref{lem::headProgress}, $\var{v}.\fld{parent.blocks}[s-1]$ is not $\nl$.  Let $R_{s-1}$ be the call to
 $\op{Refresh}(\var{v}.\fld{parent})$ that installed the block in $\var{v}.\fld{parent.blocks}[s-1]$.
 Let $r'$ be the step when $R_{s-1}$ reads $s-1$ in $\var{v}.\fld{parent}.\head$ at line \ref{readHead}.
 This read $r'$ must be before $B$ is installed in $\var{v}$;
-otherwise, \Cref{successfulRefresh} would imply that $B$ is a subblock of one of 
+otherwise, Lemma \ref{successfulRefresh} would imply that $B$ is a subblock of one of 
 $\var{v}.\fld{parent.blocks}[1..s-1]$, contrary to the hypothesis.
 Now, consider the call to \op{Advance}($\var{v}, b$) that writes $B.\fld{super}$.
 It is invoked either 
 at line \ref{helpAdvance} after seeing $\var{v}.\fld{blocks}[b]\neq \nl$ at line \ref{ifHeadnotNull}
 or at line \ref{advance} after ensuring $\var{v}.\fld{blocks}[b]\neq \nl$ at line~\ref{cas}.
 Either way, the \op{Advance} is invoked after $B$ is installed, and therefore after $r'$.
-By \Cref{nonDecreasingHead}, $\var{v}.\fld{parent}.\head$ is non-decreasing, so 
+By Observation \ref{nonDecreasingHead}, $\var{v}.\fld{parent}.\head$ is non-decreasing, so 
 the value this \op{Advance} reads in $\var{v}.\fld{parent}.\head$ and
 writes in $B.\fld{super}$ is greater than or equal to the value $s-1$ that $r'$ reads in $\var{v}.\fld{parent}.\head$.
 \end{proof}
@@ -340,11 +339,10 @@ writes in $B.\fld{super}$ is greater than or equal to the value $s-1$ that $r'$ 
 %into \nf{$n$.parent.blocks[$B$\nf{.super}]} afterwards.
 To show  \op{GetEnqueue} and \op{IndexDequeue} work correctly, we  just  check that they correctly compute the index of the required block
 and the operation's rank within the block.  
-For \op{IndexDequeue}, we use \Cref{superRelation} each time \op{IndexDequeue} goes one step up the tree.
+For \op{IndexDequeue}, we use Lemma \ref{superRelation} each time \op{IndexDequeue} goes one step up the tree.
 \here{mention somewhere why precondition of IndexDequeue is true? also check that block of parent indexed by sup in that routine is non-null}
 
-\begin{lemma}
-\label{lem::indexDequeue}
+\begin{lemma}\label{lem::indexDequeue}
 If $\var{v}.\fld{blocks}[b]$ has been propagated to the root and $1\leq i\leq |D(\var{v}.\fld{blocks}[b])|$, 
  then \op{IndexDequeue}($\var{v}, b, i$) returns $\langle b',i' \rangle$ such that the \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$ is the $(i')$th dequeue of $D(\var{root}.\fld{blocks}[b'])$.
 \end{lemma}
@@ -354,7 +352,7 @@ We prove the claim by induction on the depth of node $\var{v}$. The base case wh
 Assuming the claim holds for $\var{v}$'s parent, we prove it for $\var{v}$.
 Let $B=\var{v}.\fld{blocks}[b]$ and $B'$ be the superblock of $B$.
 \op{IndexDequeue}($\var{v}, b, i$) first computes the index $sup$ of $B'$ in $\var{v}.\fld{parent}$.
-By \Cref{superRelation}, this index is either $B.super$ or $B.super+1$.
+By Lemma \ref{superRelation}, this index is either $B.super$ or $B.super+1$.
 The correct index is determined by testing on line \ref{supertest} whether $B$ is a subblock of $\var{v}.\fld{parent.blocks}[B.\fld{super}]+1$.
 
 Next, the position of the required dequeue in $D(B')$ is computed in 
@@ -369,8 +367,7 @@ Thus, all preconditions of the recursive call are met.
 By the induction hypothesis, the recursive call returns the location of the required dequeue in the root.\end{proof}
 
 
-\begin{lemma}
-\label{lem::get}
+\begin{lemma}\label{lem::get}
 If $1\leq i\leq |E(\var{v}.\fld{blocks}[b])|$ then \op{getEnqueue}($\var{v},b,i$) returns the argument of the $i$th enqueue in $E(\var{v}.\fld{blocks}[b])$.
 \end{lemma}
 
@@ -385,12 +382,12 @@ Let $B$ be $\var{v}.\fld{blocks}[b]$.
 By (\ref{defSeqs}),
 $E(B)$ is obtained by concatenating the enqueue sequences of the direct subblocks
 of $B$, which are listed in (\ref{defsubblock}).
-By \Cref{lem::sum}, $\var{sum\sub{left}}-\var{prev\sub{left}}$ is the number
+By Invariant \ref{inv::sum}, $\var{sum\sub{left}}-\var{prev\sub{left}}$ is the number
 of enqueues in $E(B)$ that come from $B$'s subblocks in $\var{v}$'s left child.
 Thus, $dir$ is set to the direction for the child of $\var{v}$ that contains the required enqueue.
 Moreover, when line \ref{endChooseDir} is reached, $i$ is the position of the required enqueue within the portion $E'$ of $E(B)$ that comes from that child.
 Thus,  line \ref{getChild} finds the index $b'$ of the subblock $B'$ containing the required enqueue.
-By \Cref{lem::sum}, $\var{v}.\var{dir.blocks}[b'-1].\var{sum\sub{enq}} - \var{prev\sub{dir}}$ is the number of 
+By Invariant \ref{inv::sum}, $\var{v}.\var{dir.blocks}[b'-1].\var{sum\sub{enq}} - \var{prev\sub{dir}}$ is the number of 
 enqueues in $E'$ before the enqueues of block $B'$, so
 the value $i'$ computed on line \ref{getChildIndex} is the position of the required enqueue within $E(B')$.
 Thus, the recursive call on line \ref{getRecurse} satisfies its precondition, and 
@@ -409,8 +406,8 @@ if one operation $op_1$ terminates before another operation $op_2$ begins, then 
 $L$ is a legal linearization ordering.
 \end{lemma}
 \begin{proof}
-By \Cref{lem::noDuplicates}, $L$ is a permutation of a subset of the operations in the execution.
-By \Cref{lem::appendExactlyOnce}, each terminating operation is propagated to the root before it terminates,
+By Corollary \ref{cor::noDuplicates}, $L$ is a permutation of a subset of the operations in the execution.
+By Lemma \ref{lem::appendExactlyOnce}, each terminating operation is propagated to the root before it terminates,
 so it appears in $L$.
 Also, if $op_{1}$ terminates before $op_{2}$ begins, then $op_{1}$ 
 is propagated to the root before $op_2$ begins, so $op_1$ appears before $op_2$ in $L$.
@@ -431,7 +428,7 @@ The \fld{size} field of the block $B$ installed in $\var{root}.\fld{blocks}[b]$ 
 at line \ref{computeLength} of a call to \op{CreateBlock}(\var{root, b}).
 By the induction hypothesis, $root.\fld{blocks}[b-1].\size$ gives the size of the queue before the operations
 of block $B$ are performed.
-By \Cref{lem::sum}, the values of \var{num\sub{enq}} and \var{num\sub{deq}}
+By Invariant \ref{inv::sum}, the values of \var{num\sub{enq}} and \var{num\sub{deq}}
 are the number of enqueues and dequeues contained in $B$.
 Hence, the size of the queue after the operations of $B$ are performed (with enqueues before dequeues as specified by~$L$)
 is $\max(0, \var{root}.\fld{blocks}[b-1].\size + \var{num\sub{enq}} - \var{num\sub{deq}})$.
@@ -443,15 +440,15 @@ Next, we show each operation returns the same response as it would in the sequen
 Each terminating dequeue returns the response it would in the sequential execution~$L$.
 \end{lemma}
 \begin{proof}
-If a dequeue $D$ terminates, it is contained in some block in the root, by \Cref{lem::appendExactlyOnce}.
-By \Cref{lem::indexDequeue}, $D$'s call to \op{IndexDequeue} on line \ref{invokeIndexDequeue}
+If a dequeue $D$ terminates, it is contained in some block in the root, by Lemma \ref{lem::appendExactlyOnce}.
+By Lemma \ref{lem::indexDequeue}, $D$'s call to \op{IndexDequeue} on line \ref{invokeIndexDequeue}
 returns a pair $\langle b,i\rangle$ such that $D$ is the $i$th dequeue in the block 
 $B=\var{root}.\fld{blocks}[b]$.
 $D$ then calls \op{FindResponse}($b,i$) on line \ref{deqRest}.
-By \Cref{sizeCorrectness}, the queue contains $\var{root}.\fld{blocks}[b-1].\fld{size}$ elements
+By Lemma \ref{sizeCorrectness}, the queue contains $\var{root}.\fld{blocks}[b-1].\fld{size}$ elements
 after the operations in $\var{root}.\fld{blocks}[1..b-1]$ are performed sequentially 
 in the order given by $L$.
-By \Cref{lem::sum}, the value of \var{num\sub{enq}} computed on line \ref{FRNum}
+By Invariant \ref{inv::sum}, the value of \var{num\sub{enq}} computed on line \ref{FRNum}
 is the number of enqueues in $B$.
 Since the enqueues in block $B$ precede the dequeues,
 the queue is empty when the $i$th dequeue of $B$ occurs if 
@@ -463,13 +460,13 @@ in the sequential execution $L$ is $\var{root}.\fld{blocks}[b-1].\fld{sum\sub{en
 the number of non-\nl\ dequeues in that prefix of $L$.
 Hence, line \ref{computeE} sets $e$ to the rank of $D$ among all the non-\nl\ dequeues in $L$.
 Thus, in the sequential execution~$L$, $D$ returns the value enqueued by the $e$th enqueue in $L$.
-By \Cref{lem::sum}, this enqueue is the $i_e$th enqueue 
+By Invariant \ref{inv::sum}, this enqueue is the $i_e$th enqueue 
 in $E(\var{root}.\fld{blocks}[b_e])$, where
 $b_e$ and $i_e$ are the values $D$ computes on line \ref{FRb} and \ref{FRi}.
-By \Cref{lem::get}, the call to \op{GetEnqueue} returns the argument of the required enqueue.
+By Lemma \ref{lem::get}, the call to \op{GetEnqueue} returns the argument of the required enqueue.
 \end{proof}
 
-Combining \Cref{linearSat} and \Cref{linearCorrect} provides our main result.
+Combining Lemmas \ref{linearSat} and \ref{linearCorrect} provides our main result.
 
 \begin{mytheorem}
 The queue implementation is linearizable.

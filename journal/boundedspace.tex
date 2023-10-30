@@ -16,7 +16,7 @@ is replaced by an attempt to insert a new block with index $i$ into the RBT.
 Accessing the block in $\fld{blocks}[i]$ is 
 replaced by searching the RBT for the  index $i$.
 The binary searches for a block in line \ref{FRb} and \ref{getChild} can simply search the RBT
-using the \fld{sum\sub{enq}} field, since the RBT is also sorted with respect to this field, by \Cref{lem::sum}.
+using the \fld{sum\sub{enq}} field, since the RBT is also sorted with respect to this field, by Invariant \ref{inv::sum}.
  
 Known lock-free search trees have step complexity that includes a term linear in $p$ \cite{EFHR14,Ko20}.  
 However, we do not require all the standard search tree operations.

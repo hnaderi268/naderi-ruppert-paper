@@ -286,16 +286,17 @@ There is at most one such block in each node, by Corollary \ref{cor::noDuplicate
 \subsection{Correctness of \opemph{GetEnqueue} and \opemph{IndexDequeue}}
 \label{sec::tracingCorrect}
 
-\er{edited this far}
-
-We first show the \fld{super} field is accurate, since \op{IndexDequeue} uses it to trace superblocks up the tree.  This is proved by showing that the \fld{super} field of a block $B$ in node $\var{v}$ is read from  
-\var{v}.\fld{parent}'s \var{head} field close to the time that $B$'s superblock $B_s$ is installed in the parent node.
-On one hand, $B.super$ is written before $B_s$ is installed:
-\op{Advance} writes $B.super$ before advancing $\var{v}.\head$  past $B$'s index, which must happen before the \op{CreateBlock} that creates
-$B_s$ gets the value of $B_s.\eleft$ or $B_s.\eright$.
-On the other hand, $B.\fld{super}$ cannot be written too long before $B_s$ is installed:
-$B.\fld{super}$ is written after $B$ is installed, and Lemma \ref{successfulRefresh} ensures that $B$ is propagated to the
-parent soon after.
+In this section, we show that the routines used to compute responses to \op{Dequeue}
+operations work correctly.
+We first prove the \fld{super} field is accurate, since \op{IndexDequeue} uses it to trace superblocks up the tree.  We do this by showing that the \fld{super} field of a block $B$ in node $\var{v}$ is read from  
+\var{v}.\fld{parent}'s \var{head} field close to the time that $B$'s superblock $B_s$ is installed in $v$'s parent.
+In particular, $B.super$ is written after $B$ is installed, but before $B_s$ is installed.
+%On one hand, $B.super$ is written before $B_s$ is installed:
+%\op{Advance} writes $B.super$ before advancing $\var{v}.\head$  past $B$'s index, which must happen before the \op{CreateBlock} that creates
+%$B_s$ gets the value of $B_s.\eleft$ or $B_s.\eright$.
+%On the other hand, $B.\fld{super}$ cannot be written too long before $B_s$ is installed:
+%$B.\fld{super}$ is written after $B$ is installed, and Lemma \ref{successfulRefresh} ensures that $B$ is propagated to the
+%parent soon after.
 
 \begin{lemma}
 \label{superRelation}
@@ -306,7 +307,8 @@ If $\var{v}.\fld{parent.blocks}[s]$ is the superblock of $B$ then $s-1\leq B.\fl
 We first show that $B.\fld{super}\leq s$.
 Let $R_s$ be the instance of \op{Refresh}($\var{v}.\fld{parent}$) that installs $B$'s superblock 
 in $\var{v}.\fld{parent.blocks}[s]$.
-By the definition of subblocks (\ref{defsubblock}), $R_s$'s read $r$ of $\var{v}.head$ at line \ref{createEndLeft} or \ref{createEndRight} obtains a value greater than $b$.
+By the definition of subblocks (\ref{defsubblock}), $R_s$'s read $r$ of $\var{v}.head$ at line \ref{createEndLeft} %or \ref{createEndRight} 
+obtains a value greater than $b$.
 By Invariant \ref{inv::headPosition}, $B.\fld{super}$ is not $\nl$ when $r$ occurs, which means
 that $B.\fld{super}$ was set (by line~\ref{setSuper1}) to a value read from $\var{v}.\fld{parent}.\head$ before $r$.
 When $r$ occurs, $\var{v}.\fld{parent.blocks}[s] = \nl$, since the later \op{CAS} by $R_s$ at line
@@ -315,9 +317,9 @@ So, by Invariant \ref{inv::headPosition}, $\var{v}.\fld{parent}.\head \leq s$ wh
 Since the value stored in $B.\fld{super}$ was read from $\var{v}.\fld{parent.head}$ before $r$ and the \head\ field is non-decreasing by Observation \ref{nonDecreasingHead}, it follows that $B.super\leq s$.
 
 Next, we show that $B.\fld{super}\geq s-1$.
-The value stored in $B.\fld{super}$ at line \ref{setSuper1} is read from $\var{v}.\fld{parent}.\head$ at line \ref{readParentHead} and \head\ is always at least 1, so $B.\fld{super} \geq 1$.
+The value stored in $B.\fld{super}$ at line \ref{setSuper1} is read from $\var{v}.\fld{parent}.\head$ at line \ref{readParentHead} and \head\ is always at least~1, so $B.\fld{super} \geq 1$.
 So, if $s\leq 2$, the claim is trivial.  Assume $s>2$ for the rest of the proof.
-By Lemma \ref{lem::headProgress}, $\var{v}.\fld{parent.blocks}[s-1]$ is not $\nl$.  Let $R_{s-1}$ be the call to
+By Lemma~\ref{lem::headProgress}, $\var{v}.\fld{parent.blocks}[s-1]$ is not $\nl$.  Let $R_{s-1}$ be the call to
 $\op{Refresh}(\var{v}.\fld{parent})$ that installed the block in $\var{v}.\fld{parent.blocks}[s-1]$.
 Let $r'$ be the step when $R_{s-1}$ reads $s-1$ in $\var{v}.\fld{parent}.\head$ at line \ref{readHead}.
 This read $r'$ must be before $B$ is installed in $\var{v}$;
@@ -340,7 +342,7 @@ writes in $B.\fld{super}$ is greater than or equal to the value $s-1$ that $r'$ 
 To show  \op{GetEnqueue} and \op{IndexDequeue} work correctly, we  just  check that they correctly compute the index of the required block
 and the operation's rank within the block.  
 For \op{IndexDequeue}, we use Lemma \ref{superRelation} each time \op{IndexDequeue} goes one step up the tree.
-\here{mention somewhere why precondition of IndexDequeue is true? also check that block of parent indexed by sup in that routine is non-null}
+%\here{mention somewhere why precondition of IndexDequeue is true? also check that block of parent indexed by sup in that routine is non-null}
 
 \begin{lemma}\label{lem::indexDequeue}
 If $\var{v}.\fld{blocks}[b]$ has been propagated to the root and $1\leq i\leq |D(\var{v}.\fld{blocks}[b])|$, 
@@ -355,9 +357,9 @@ Let $B=\var{v}.\fld{blocks}[b]$ and $B'$ be the superblock of $B$.
 By Lemma \ref{superRelation}, this index is either $B.super$ or $B.super+1$.
 The correct index is determined by testing on line \ref{supertest} whether $B$ is a subblock of $\var{v}.\fld{parent.blocks}[B.\fld{super}]+1$.
 
-Next, the position of the required dequeue in $D(B')$ is computed in 
+Next, the position of the required dequeue in $D(B')$ (as defined by Equation (\ref{defSeqs})) is computed in 
 lines \ref{computeISuperStart}--\ref{computeISuperEnd}. 
-We first add the number of dequeues in the subblocks of $B'$ in $\var{v}$ that precede $B$ on line \ref{computeISuperStart}.
+We first add the number of dequeues in the subblocks of $B'$ in $\var{v}$ that precede $B$ on line~\ref{computeISuperStart}.
 If $\var{v}$ is the right child of its parent, then all of the subblocks of $B'$ from $\var{v}$'s left sibling
 also precede the required dequeue, so we add the number of dequeues in those subblocks in line \ref{considerLeftBeforeRight}.
 
@@ -379,12 +381,12 @@ an enqueue whose argument is stored in $\var{v}.\fld{blocks}[b].\fld{element}$.
 
 Assuming the claim holds for $\var{v}$'s children, we prove it for $\var{v}$.
 Let $B$ be $\var{v}.\fld{blocks}[b]$.
-By (\ref{defSeqs}),
+By Equation (\ref{defSeqs}),
 $E(B)$ is obtained by concatenating the enqueue sequences of the direct subblocks
 of $B$, which are listed in (\ref{defsubblock}).
 By Invariant \ref{inv::sum}, $\var{sum\sub{left}}-\var{prev\sub{left}}$ is the number
 of enqueues in $E(B)$ that come from $B$'s subblocks in $\var{v}$'s left child.
-Thus, $dir$ is set to the direction for the child of $\var{v}$ that contains the required enqueue.
+Thus, $dir$ is set to the direction for the child of $\var{v}$ that contains the required enqueue operation.
 Moreover, when line \ref{endChooseDir} is reached, $i$ is the position of the required enqueue within the portion $E'$ of $E(B)$ that comes from that child.
 Thus,  line \ref{getChild} finds the index $b'$ of the subblock $B'$ containing the required enqueue.
 By Invariant \ref{inv::sum}, $\var{v}.\var{dir.blocks}[b'-1].\var{sum\sub{enq}} - \var{prev\sub{dir}}$ is the number of 
@@ -397,10 +399,10 @@ returns the required result, by the induction hypothesis.
 \subsection{Linearizability}
 \label{sec::linearizability}
 
-We show that the linearization ordering $L$ defined in 
+We show that the linearization ordering $L$ defined in Equation
 (\ref{linearization}) is a legal permutation of a subset of the operations in 
 the execution, i.e., that it includes all operations that terminate and 
-if one operation $op_1$ terminates before another operation $op_2$ begins, then $op_2$ does not precede $op_1$ in $L$.  We also show the result each dequeue returns is the same as in the sequential execution  $L$.
+if one operation $op_1$ terminates before another operation $op_2$ begins, then $op_2$ does not precede $op_1$ in $L$.  We also show each completed dequeue returns the same result as it would in the sequential execution~$L$.
 
 \begin{lemma} \label{linearSat}
 $L$ is a legal linearization ordering.
@@ -440,12 +442,12 @@ Next, we show each operation returns the same response as it would in the sequen
 Each terminating dequeue returns the response it would in the sequential execution~$L$.
 \end{lemma}
 \begin{proof}
-If a dequeue $D$ terminates, it is contained in some block in the root, by Lemma \ref{lem::appendExactlyOnce}.
-By Lemma \ref{lem::indexDequeue}, $D$'s call to \op{IndexDequeue} on line \ref{invokeIndexDequeue}
-returns a pair $\langle b,i\rangle$ such that $D$ is the $i$th dequeue in the block 
+If a dequeue $Deq$ terminates, it is contained in some block in the root, by Lemma \ref{lem::appendExactlyOnce}.
+By Lemma \ref{lem::indexDequeue}, $Deq$'s call to \op{IndexDequeue} on line~\ref{invokeIndexDequeue}
+returns a pair $\langle b,i\rangle$ such that $Deq$ is the $i$th dequeue in the block 
 $B=\var{root}.\fld{blocks}[b]$.
-$D$ then calls \op{FindResponse}($b,i$) on line \ref{deqRest}.
-By Lemma \ref{sizeCorrectness}, the queue contains $\var{root}.\fld{blocks}[b-1].\fld{size}$ elements
+$Deq$ then calls \op{FindResponse}($b,i$) on line \ref{deqRest}.
+By Lemma~\ref{sizeCorrectness}, the queue contains $\var{root}.\fld{blocks}[b-1].\fld{size}$ elements
 after the operations in $\var{root}.\fld{blocks}[1..b-1]$ are performed sequentially 
 in the order given by $L$.
 By Invariant \ref{inv::sum}, the value of \var{num\sub{enq}} computed on line \ref{FRNum}
@@ -453,16 +455,16 @@ is the number of enqueues in $B$.
 Since the enqueues in block $B$ precede the dequeues,
 the queue is empty when the $i$th dequeue of $B$ occurs if 
 $\var{root}.\fld{blocks}[b-1].\fld{size} + \var{num\sub{enq}} < i$.
-So $D$ returns \nl\ on line \ref{returnNull} if and only if it would do so in the sequential
+So $Deq$ returns \nl\ on line \ref{returnNull} if and only if it would do so in the sequential
 execution $L$.
 Otherwise, the size of the queue after doing the operations in $\var{root}.\fld{blocks}[0..b-1]$
 in the sequential execution $L$ is $\var{root}.\fld{blocks}[b-1].\fld{sum\sub{enq}}$ minus
 the number of non-\nl\ dequeues in that prefix of $L$.
-Hence, line \ref{computeE} sets $e$ to the rank of $D$ among all the non-\nl\ dequeues in $L$.
-Thus, in the sequential execution~$L$, $D$ returns the value enqueued by the $e$th enqueue in $L$.
+Hence, line \ref{computeE} sets $e$ to the rank of $Deq$ among all the non-\nl\ dequeues in $L$.
+Thus, in the sequential execution~$L$, $Deq$ returns the value enqueued by the $e$th enqueue in $L$.
 By Invariant \ref{inv::sum}, this enqueue is the $i_e$th enqueue 
 in $E(\var{root}.\fld{blocks}[b_e])$, where
-$b_e$ and $i_e$ are the values $D$ computes on line \ref{FRb} and \ref{FRi}.
+$b_e$ and $i_e$ are the values $Deq$ computes on line \ref{FRb} and \ref{FRi}.
 By Lemma \ref{lem::get}, the call to \op{GetEnqueue} returns the argument of the required enqueue.
 \end{proof}
 
@@ -473,5 +475,5 @@ The queue implementation is linearizable.
 \end{mytheorem}
 
 
-\here{Should there be a lemma somewhere in this section that explicitly shows that each
-object we dereference is non-null?}
+%\here{Should there be a lemma somewhere in this section that explicitly shows that each
+%object we dereference is non-null?}

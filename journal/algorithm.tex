@@ -406,7 +406,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \State \var{num\sub{deq}} \assign\ $\var{B}.\fld{sum\sub{deq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{deq}}$
     \If{$\var{v} = \var{root}$} \var{B}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + \var{num\sub{enq}} - \var{num\sub{deq}}$)\label{computeLength}
     \EndIf
-    \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$} \Return \nl \Comment{no blocks need to be propagated to \var{v}} \label{testEmpty} 
+    \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$} \Return \nl\ \Comment{no blocks need to be propagated to \var{v}}\label{testEmpty} 
     \Else\ \Return \var{B}
     \EndIf
 \EndFunction{CreateBlock}
@@ -423,8 +423,8 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \spac
 
-\Function{$\langle\typ{int}, \typ{int}\rangle$}{IndexDequeue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \com\ return $\langle\var{b}', \var{i}'\rangle$ such that \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$
-    \State \linecomment{is $(\var{i}')$th dequeue of $D(\var{root}.\fld{blocks}[\var{b}'])$}
+\Function{$\langle\typ{int}, \typ{int}\rangle$}{IndexDequeue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} 
+    \State \linecomment{return $\langle\var{b}', \var{i}'\rangle$ such that \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$ is $(\var{i}')$th dequeue of $D(\var{root}.\fld{blocks}[\var{b}'])$}
     \State \linecomment{Precondition: $\var{v}.\fld{blocks}[\var{b}]$ is not \nl, was propagated to root, and contains at least \var{i} dequeues}
     \If{$\var{v} = \var{root}$} \Return $\langle\var{b, i}\rangle$ \label{indexBaseCase}
     \Else \Comment{First, find the superblock of $v.\fld{blocks}[b]$}

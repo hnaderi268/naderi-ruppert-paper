@@ -1,12 +1,13 @@
 % !TEX root =  queue.tex
 
-\section{Bounding Space Usage}
+\section{Bounded-Space Implementation}
 \label{reducing}
 
-Operations remain in the \fld{blocks} arrays forever. 
-This uses space proportional to the number of enqueues that have been invoked.
+In the implementation described in Section \ref{DescriptQ}, 
+operations remain in the \fld{blocks} arrays forever. 
+Thus, the space used continues to grow as operations are invoked.
 Now, we modify the implementation to remove blocks that are no longer needed, so that space usage is
-polynomial in $p$ and $q$, while (amortized) step complexity is still polylogarithmic. We replace the \fld{blocks} array in each node by a red-black tree (RBT)
+polynomial in $p$ and $q$, while ensuring the (amortized) step complexity is still polylogarithmic. We replace the \fld{blocks} array in each node by a red-black tree (RBT)
 that stores the blocks.
 Each block has an additional \fld{index} field
 that represents its position within the original \fld{blocks} array, and
@@ -30,7 +31,7 @@ Driscoll et al.~\cite{DSST89}:  all RBT nodes are immutable, and operations on t
 RBT make a new copy of each RBT node $x$ that must be modified, as well
 as each RBT node along the path from the RBT's root to~$x$.
 The RBT reachable from the new copy of the root is the result of applying the RBT operation.
-This only adds a constant factor to the running time of any routine designed for a (sequential) RBT.
+This  adds only a constant factor to the running time of any routine designed for a (sequential) RBT.
 Once a process has performed an update to the RBT representing the blocks of a node 
 $\var{v}$ in the \ordering\ tree, 
 it uses a CAS to swing $\var{v}$'s pointer from the previous RBT root to the new RBT root.
@@ -38,12 +39,12 @@ A search in the RBT can simply read the pointer to the RBT root and perform a st
 sequential search on it.
 Bashari and Woelfel ~\cite{DBLP:conf/podc/BashariW21} used persistent RBTs in a similar way for a snapshot data structure.
 
-To prevent RBTs from growing without bound, we would like to discard
+To prevent RBTs from growing without bound, we must discard
 blocks that are no longer needed.
 Ensuring the size of the RBT is polynomial in $p$ and $q$ will 
 also keep the running time of our operations polylogarithmic.
 Blocks should be kept if they contain operations still in progress.
-Moreover, a block containing an \op{Enqueue}($x$) must be kept until $x$ is dequeued.
+Moreover, a block containing an \op{Enqueue}($x$) operation must be kept until $x$ is dequeued.
 
 To maintain good amortized time, we periodically do a garbage collection (GC) phase.
 If a \op{Refresh} on a node adds a block whose \var{index} is a multiple of $G=p^2\ceil{\log p}$, it does GC to remove obsolete blocks from the node's RBT.
@@ -63,14 +64,14 @@ by another process's GC phase.  If $op$
 is a dequeue, $op$ must have been helped before $B$ was discarded, so $op$ can simply read its response from
 its own leaf.  If $op$ is an enqueue, it can simply terminate.
 
-Our GC scheme ensures each RBT has  $O(q+p^2\log p)$ blocks, so RBT operations take $O(\log(p+q))$ time.
-Excluding GC, an operation does $O(1)$ operations on RBTs at each level of the tree for a total of
-$O(\log p\log(p + q))$ steps.
-A GC phase takes $O(p\log p \log(p+q))$ steps to help complete all pending operations.
-If all processes carry out this GC phase, it takes a total of $O(p^2\log p\log(p+q))=O(G\log(p+q))$ steps.
-Since there are at least $G$ operations between two GC phases, each node contributes $O(\log(p+q))$ steps to each operation in an amortized sense.
-Adding up over all nodes an operation may have to do GC on, 
-an operation spends $O(\log p\log(p+q))$ steps doing GC in an amortized sense.
-So the total amortized step complexity is  $O(\log p \log(p+q))$ per operation.
+%Our GC scheme ensures each RBT has  $O(q+p^2\log p)$ blocks, so RBT operations take $O(\log(p+q))$ time.
+%Excluding GC, an operation does $O(1)$ operations on RBTs at each level of the tree for a total of
+%$O(\log p\log(p + q))$ steps.
+%A GC phase takes $O(p\log p \log(p+q))$ steps to help complete all pending operations.
+%If all processes carry out this GC phase, it takes a total of $O(p^2\log p\log(p+q))=O(G\log(p+q))$ steps.
+%Since there are at least $G$ operations between two GC phases, each node contributes $O(\log(p+q))$ steps to each operation in an amortized sense.
+%Adding up over all nodes an operation may have to do GC on, 
+%an operation spends $O(\log p\log(p+q))$ steps doing GC in an amortized sense.
+%So the total amortized step complexity is  $O(\log p \log(p+q))$ per operation.
 %Doing GC less frequently would yield better constant factors in the amortized number of steps per operation but use more space.
 

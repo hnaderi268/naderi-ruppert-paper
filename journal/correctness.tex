@@ -90,7 +90,7 @@ satisfy the claim.
 \end{proof}
 
 \begin{lemma} \label{lem::subblocksDistinct}
-If $B$ and $B'$ are two blocks in nodes at the same depth, their sets of subblocks are disjoint.
+If $B$ and $B'$ are two blocks in nodes at the same depth in the ordering tree, their sets of subblocks are disjoint.
 \end{lemma}
 \begin{proof}
 We prove the lemma by reverse induction on the depth.
@@ -106,7 +106,6 @@ It follows that each block has at most one superblock.
 Moreover, we can now prove each operation is contained in at most one block of each node,
 and hence appears at most once in the linearization~$L$.
 
-\here{Might be able to get rid of this corollary and just cite previous lemma instead to save space}
 \begin{corollary}\label{cor::noDuplicates}
 For  $i\neq j$, $\var{v}.\fld{blocks}[i]$ and $\var{v}.\fld{blocks}[j]$ cannot both contain the same operation.
 \end{corollary}
@@ -142,7 +141,8 @@ By Lemma \ref{lem::subblocksDistinct}, $\var{v}.\fld{blocks}[i]$ and $\var{v}.\f
 % \end{proof}
 
 The accuracy of the values stored in the \fld{sum\sub{enq}} and \fld{sum\sub{deq}} fields
-on lines \ref{enqNew}, \ref{deqNew}, \ref{createSumEnq} and \ref{createSumDeq} follows easily
+on lines \ref{enqNew}, \ref{deqNew} %, \ref{createSumEnq} 
+and \ref{createSumDeq} follows easily
 from the definition of subblocks.
 
 \begin{invariant}
@@ -166,7 +166,7 @@ If $\var{v}$ is a leaf, $B$ was created at line \ref{enqNew} or \ref{deqNew}.
 For line \ref{enqNew}, $B$ represents a single enqueue, so $|E(B)|=1$ and $|D(B)|=0$.
 Since $B.\fld{sum\sub{enq}}$ is set to $\var{v}.\fld{blocks}[i-1].\fld{sum\sub{enq}}+1$ and
 $B.\fld{sum\sub{deq}}$ is set to $\var{v}.\fld{blocks}[i-1].\fld{sum\sub{deq}}$, the claim follows from the hypothesis.
-The proof for line~\ref{deqNew}, where $B$ has a single dequeue, is similar.
+The proof for line~\ref{deqNew}, where $B$ represents a single dequeue, is similar.
 
 Now suppose $\var{v}$ is an internal node. By the definition of subblocks in (\ref{defsubblock}) and Lemma \ref{lem::headProgress}, the
 subblocks of $\var{v}.\fld{blocks}[1..i]$ are $\var{v}.\fld{left.blocks}[1..B.\eleft]$ 
@@ -196,8 +196,6 @@ so these sequences cannot both be empty.
 
 \subsection{Propagating Operations to the Root}
 \label{sec::propagating}
-
-\here{cref doesn't seem to be working (it calls everything a theorem)}
 
 In the next two lemmas, we show two \op{Refresh}es suffice to propagate operations from a child to its parent.
 We say that node $\var{v}$ \emph{contains} an operation $op$ if some block in $\var{v}.\fld{blocks}$ contains $op$.
@@ -287,6 +285,8 @@ There is at most one such block in each node, by Corollary \ref{cor::noDuplicate
 
 \subsection{Correctness of \opemph{GetEnqueue} and \opemph{IndexDequeue}}
 \label{sec::tracingCorrect}
+
+\er{edited this far}
 
 We first show the \fld{super} field is accurate, since \op{IndexDequeue} uses it to trace superblocks up the tree.  This is proved by showing that the \fld{super} field of a block $B$ in node $\var{v}$ is read from  
 \var{v}.\fld{parent}'s \var{head} field close to the time that $B$'s superblock $B_s$ is installed in the parent node.

@@ -276,7 +276,7 @@ index $b-1$.
 \begin{lemma}\label{blocknotfound}
 If a \op{Dequeue} operation fails to find a block in an RBT,
 %during its calls to \op{IndexDequeue} or \op{GetEnqueue}, 
-then it has been propagated to the root and its result has been written in its \fld{response} field.
+then it has been propagated to the root and its result has been written in the \fld{response} field of the leaf block it created.
 If an \op{Enqueue} operation fails to find a block in an RBT, it has been propagated to the root.
 \end{lemma}
 \begin{proof}
@@ -316,7 +316,8 @@ that the space-bounded algorithm is linearizable.
 \subsection{Analysis}
 \label{sec::GCanalysis}
 
-\here{need to prove a lemma analogous to Lemma \ref{blockSize}}
+Lemma \ref{blockSize} shows that each block contains at most one operation of each process.
+Its proof depends only on Lemma \ref{lem::subblocksDistinct}, Corollary \ref{blockNotEmpty} and Lemma \ref{lem::appendExactlyOnce}, which are all still true for the space-bounded implementation.  So the same proof of Lemma \ref{blockSize} still applies.
 
 We first bound the size of RBTs.  Let $q_{max}$ be the maximum size of the queue at any time during the sequential execution given by the linearization $L$.
 Recall that GC is done on a node every $G$ times its RBT is updated, and we chose $G$ to be $p^2\ceil{\log p}$.
@@ -332,7 +333,7 @@ Part of the proof of the following lemma is similar to the proof of Lemma \ref{d
 
 \begin{lemma}\label{boundAfterGC}
 If the maximum \fld{index} in a node's RBT is a multiple of $G$, then
-it contains at most $2q_{max}+4p+1$ blocks.
+it contains at most $3q_{max}+5p+1$ blocks.
 \end{lemma}
 \begin{proof}
 Consider the invocation $A$ of \op{AddBlock} that updates a node \var{v}'s RBT with the insertion of a block whose 
@@ -348,10 +349,11 @@ $\ell$ is the last block added to the root's RBT before $C$.
 We first bound the number of operations in $L_2$.
 
 The number of enqueues in $L_2$ whose values are still in the queue at the end of $L_2$ is at most $q_{max}$.
-Any enqueue in $L_2$ whose value is not still in the queue at the end of $L_2$
-must still be in progress at~$C$; otherwise the process that dequeued it would have
-set its \var{last} entry to a value greater than the index of the block of the root that contains the enqueue prior to $C$,
-contradicting the definition of $m$.
+If the value enqueued by any enqueue in $L_2$  is not still in the queue
+at the end of $L_2$, then the dequeue in $L_2$ that dequeued that value must still be in progress
+at $C$; otherwise the process that performed that dequeue would have set its \var{last} entry
+to the index of the root block that contains the enqueue, which is greater than $m$, before $C$, contradicting
+the fact that all values in the $last$ array at $C$ are less than or equal to $m$.
 So, there are at most $p$ enqueues in $L_2$ whose values are still in the queue at the end of $L_2$.
 Thus, there are at most $q_{max}+p$ enqueues in $L_2$.
 
@@ -360,27 +362,27 @@ then the value it returns was either in the queue at the end of $L_1$ or it was 
 Thus, there are at most $q_{max}+(q_{max}+p)$ dequeues in $L_2$ that return non-null values.
 Any dequeue in $L_2$ that returns a null value in the sequential execution $L$ must still be in progress
 at $C$; otherwise the process that performed the dequeue would have set its \var{last} entry
-to a value greater than the index of the block of the root that contains the dequeue prior to $C$, 
+to a value greater than the index of the root block that contains the dequeue prior to $C$, 
 contradicting the definition of $m$.
 So, there are at most $p$ null dequeues in $L_2$.
 Thus, there are at most $2q_{max} + 2p$ dequeues in $L_2$.
 
 $A$'s call to \op{SplitBlock} determines the index $s$ used to split \var{v}'s RBT by following 
 \eleft\ and \eright\ pointers from the root down to \var{v}.
-So, the block returned is a subblock of block $m$ of the root, unless
+So, the block returned is a subblock of the root block with index $m$, unless
 at some point along the path of subblocks the subblock has already been removed by a split,
-in which case \op{SplitBlock} returns a subblock of a block $m'>m$ in the root.
+in which case \op{SplitBlock} returns a subblock of a root block with index $m'>m$.
 
 Next, we bound the number of operations in \var{v}'s blocks that are retained when $A$  sets
 $T'\assign\op{Split}(T,s)$.
-Since $T$ was read before $C$, any operation in $T$ is either in progress at $C$ or has been propagated to the root before $C$.\here{cite a lemma about propagation before operation terminates}
+Since $T$ was read before $C$, any operation in $T$ is either in progress at $C$ or has been propagated to the root before $C$, by Lemma \ref{lem::appendExactlyOnce}.
 Thus, there are at most $p$ operations in $T$ that do not appear in $L_1\cdot L_2$.
 All the rest of the operations in blocks of $T'$ have been propagated to blocks $m..\ell$ of the root.
-There are at most $p$ operations in block $m$ of the root 
-and we showed above that there are at most $2q_{max} + 2p$ in blocks 
+By Lemma \ref{blockSize}, There are at most $p$ operations in block $m$ of the root 
+and we showed above that there are at most $3q_{max} + 3p$ in blocks 
 $m+1..\ell$ of the root.
-Thus, there are at most $2q_{max}+4p$ operations in blocks of $T'$.
-Since each block is non-empty by Corollary \ref{blockNotEmpty}, $T'$ contains at most $2q_{max}+4p$ blocks, and one more 
+Thus, there are at most $3q_{max}+5p$ operations in blocks of $T'$.
+Since each block is non-empty by Corollary \ref{blockNotEmpty}, $T'$ contains at most $3q_{max}+5p$ blocks, and one more 
 block is inserted before $A$ sets \var{v}'s \fld{blocks} to the resulting RBT.
 \end{proof}
 
@@ -395,11 +397,13 @@ The claim follows from Lemma \ref{boundAfterGC}.
 \end{proof}
 
 The following theorem bounds the space that is reachable (and therefore cannot be freed by the environment's garbage collector) at any time.
-\here{For later version:  There may be room to improve this bound by a more careful analysis since the bounds so far
-didn't use the fact that operations only appear along one path in the tree; in other words
-doing a bound on total size of all RBTs at one level of the ordering tree at once, rather than
-on each node separately, might reduce it to qlogp + poly(p).  Might also be possible to be
-more precise about how it depends on "current" size of queue rather than max size.}
+%\here{At first, I thought the following analysis could be tightened
+%by using the fact that operations only appear along one path in tree
+%so doing a bound on total size of all nodes on one level might work yield better bound.
+%But I don't think so, because we could have each process go in order to dequeue
+%everything and then enqueue q new items (where q>>p).  Then sets of enqueue operations
+%stored in each node at one level of tree would be disjoint (because of the way
+%GC is timed differently at each node).
 
 \begin{mytheorem}\label{spaceBound}
 The queue data structure uses a maximum of $O(pq_{max}+p^3\log p)$ words of memory at any time.
@@ -411,16 +415,16 @@ So the space bound follows from Corollary \ref{RBTbound} and the fact that $G$ i
 to be $p^2\ceil{\log p}$.
 \end{proof}
 
-\here{It may be possible, via a more careful analysis, to reduce the bound on space usage to $O(\log^2 p(q_{max}+p^3)$.}
-
-Although individual operations may now become more expensive because they have to perform GC,
+Performing GC on a node takes $\Theta(p \log p\log(q_{max}+p))$ steps in the worst case (as explained in the following proof),
+so an individual operation can take up to $\Theta(p \log^2 p\log(q_{max}+p))$ steps
+if it helps at each node along the path from a leaf to the root.
+However,
 we show that operations still have polylogarithmic amortized step complexity.
 
 \begin{mytheorem}
 The amortized step complexity of each operation is $O(\log p \log(p+q_{max}))$.
 \end{mytheorem}
 \begin{proof}
-\here{this proof may need some modification since code was changed to change how split point is computed}
 It follows from Corollary \ref{RBTbound} and our choice of $G=p^2\ceil{\log p}$
 that all the RBT routines we use to perform \op{Split}, \op{Insert} and searches for
 blocks with a particular index or for a \fld{sum\sub{enq}} value (in line \ref{FRsearchGC} or \ref{getChildGC}) can  be done in $O(\log(p+q_{max}))$ steps.
@@ -434,10 +438,10 @@ Thus, a \op{Dequeue} also takes $O(\log p \log(p+q_{max}))$ steps.
 
 Now we consider the additional steps a process takes while doing GC in line \ref{GCstart}--\ref{GCend}
 and show that the amortized number of GC steps each operation performs is also $O(\log p\log(p+q_{max}))$.
-If a process does GC in a call to \op{AddBlock}($\var{v},T,B$) where $B$ has \fld{index} $r\cdot G$ for some integer $r$, we call this the process's \emph{$r$th helping phase on \var{v}}.
+If a process does GC in a call to \op{AddBlock}($\var{v},T,B$) where $B$ has \fld{index} $r\cdot G$ for some integer $r$, we call this the process's \emph{$r$th GC phase on \var{v}}.
 
-We argue that each process $P$ can do an $r$th helping phase on \var{v} at most once.
-Consider $P$'s first call $A$ to \op{AddBlock} that does an $r$th helping phase on \var{v}.
+We argue that each process $P$ can do an $r$th GC phase on \var{v} at most once.
+Consider $P$'s first call $A$ to \op{AddBlock} that does an $r$th GC phase on \var{v}.
 Let $\var{v},T,B$ be the arguments of $A$.
 Any call to \op{AddBlock} on internal node \var{v} is from line \ref{refreshABGC} of \op{Refresh}, so $B.\fld{index}$
 is the maximum \fld{index} in $T$ plus 1.
@@ -448,11 +452,12 @@ Either way, by Lemma \ref{RBTupdates}, \var{v}'s RBT's maximum \fld{index} will 
 after this CAS.
 So if a subsequent \op{Refresh} by process $P$ 
 ever calls \op{AddBlock} on \var{v} again, the block it passes as the third argument
-will have $\fld{index}>r\cdot G$, so $P$ will not perform an $r$th helping phase on \var{v} again.
+will have $\fld{index}>r\cdot G$, so $P$ will not perform an $r$th GC phase on \var{v} again.
 
-Each helping phase takes $O(p)$ steps to read the \var{last} array, and
+Each GC phase takes $O(p)$ steps for \op{SplitBlock} to read the \var{last} array and figure
+out where to split the $blocks$ RBT, 
 $O(p \log p \log(p+q_{max}))$ steps in \op{Help},
-and $O(\log(p+q_{max}))$ steps to split and insert a new node into a RBT.
+and $O(\log(p+q_{max}))$ steps to split and insert a new node into the RBT.
 Thus, for each integer $r$ and each node \var{v}, a total of $O(p^2\log p\log(p+q_{max}))$ steps
 are performed by all processes during their $r$th helping phase on \var{v}.
 We can amortize these steps over the operations that appear in 
@@ -465,7 +470,7 @@ Hence each operation's amortized number of GC steps is $O(\log p\log(p+q_{max}))
 
 The implementation remains wait-free:  the depth of recursion in each routine is  bounded
 by the height of the tree and the only loop is the counted loop in the \op{Help} routine.
-Since each operation still  does only two \op{CAS} instructions at each level of the tree (at line \ref{casGC}), the following proposition still holds for the space-bounded version of the queue.
+Moreover, since each operation still  does only two \op{CAS} instructions at each level of the tree (at line \ref{casGC}), the following proposition still holds for the space-bounded version of the queue.
 
 \begin{customprop}{\textbf{\ref{casbound}}$'$}
 Each operation performs $O(\log p)$ \op{CAS} instructions in the worst case.

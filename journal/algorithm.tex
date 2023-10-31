@@ -287,7 +287,7 @@ For a block $B$ in the root, $B.\fld{size}$ is computed using the \fld{size} fie
 the number of enqueues and dequeues in~$B$:
 \begin{eqnarray*}
 B.\fld{size} &=& \max(0, B'.\fld{size} + (B.\fld{sum\sub{enq}}-B'.\fld{sum\sub{enq}})\\ 
-			&& \hspace*{19mm} - (B.\fld{sum\sub{deq}} - B'.\fld{sum\sub{deq}})).	
+			&& \hspace*{19mm}\mbox{ } - (B.\fld{sum\sub{deq}} - B'.\fld{sum\sub{deq}})).	
 \end{eqnarray*}
 
 The only remaining field is $B.\fld{super}$.  When the block 

@@ -22,14 +22,13 @@
 
 \numberwithin{equation}{section}
 
-\def\draft{1}  % set to 1 for draft (include comments, color edits), 0 for clean final copy (omit comments, edits in black)
+\def\draft{0}  % set to 1 for draft (include comments, color edits), 0 for clean final copy (omit comments, edits in black)
 \if\draft 1
 \usepackage{showkeys}
 \newcommand{\mycomment}[3]{{\color{#2}{[\textbf{#1: #3}]}}}
 \newcommand{\myedit}[2]{{\color{#1}{#2}}\normalcolor}
 \newcommand{\rebuttaledit}[2]{{\color{#1}{#2}}\normalcolor}
 \newcommand{\here}[1]{\textbf{[[[#1]]]}}
-%\usepackage{showkeys}
 \else
 \newcommand{\mycomment}[3]{}
 \newcommand{\rebuttaledit}[2]{#2}
@@ -39,7 +38,6 @@
 
 \newcommand{\Eric}[1]{\mycomment{Eric}{magenta}{#1}}
 \newcommand{\Hossein}[1]{\mycomment{Hossein}{blue}{#1}}
-\newcommand{\er}[1]{\myedit{magenta}{#1}}
 
 \newcommand{\node}{node}
 \newcommand{\nodes}{nodes}
@@ -158,7 +156,7 @@
 %% Keywords. The author(s) should pick words that accurately describe
 %% the work being presented. Separate the keywords with commas.
 
-%\keywords{concurrent data structures, wait-free queues}
+%\keywords{concurrent data structure, wait-free queue}
 
 %%
 %% This command processes the author and affiliation and title

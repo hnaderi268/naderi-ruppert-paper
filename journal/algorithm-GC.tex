@@ -377,7 +377,7 @@ Then \op{AddBlock}
 inserts the new block at line \ref{GCend} or \ref{noGC-insert}
 and returns the root of the resulting RBT.
 The \op{Append} or \op{Refresh} then stores this root into the node's \fld{blocks} field at line 
- \ref{appendLeafGC} or \ref{casGC}.
+ \ref{appendLeafGC} or~\ref{casGC}.
 
 To determine the oldest block in a node \var{v} to keep, the \opemph{SplitBlock} routine  first
 uses the \var{last} array to
@@ -418,5 +418,3 @@ we continue doing GC, since we do not want a GC phase on one node
 to be prevented from cleaning up its RBT because a GC phase on a different node threw away some blocks
 that were needed.
 Line \ref{substitute} says what to do in this case.
-
-\er{Edited this far}

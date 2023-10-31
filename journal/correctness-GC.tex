@@ -20,10 +20,10 @@ The RBT of a node is updated only at line \ref{appendLeafGC} or \ref{casGC}.
 
 If line \ref{appendLeafGC} of an \op{Append} operation modifies $\var{v}.\fld{blocks}$,
 then \var{v} is a leaf node, and no other process ever modifies $\var{v}.\fld{blocks}$.
-$T'$ was obtained from $T$ by calling \op{AddBlock}($T,B$).
+$T'$ was obtained from $T$ by calling \op{AddBlock}($v,T,B$).
 $B$ was created either by the \op{Enqueue} or \op{Dequeue} that called \op{Append}.
 Either way, $B.\fld{index} = \max(I)+1$.
-The \op{AddBlock} that creates $T'$ may optionally \op{Split} the RBT and then add $B$ to it.
+The \op{AddBlock} that creates $T'$ may optionally \op{Split} the RBT at line \ref{splitGC} and then add $B$ to it.
 So the claim is satisfied.
 
 If line \ref{casGC} of a \op{Refresh} modifies $\var{v}.\fld{blocks}$, then \var{v} is an internal node.
@@ -48,7 +48,7 @@ It follows from Lemma \ref{RBTupdates} and Corollary \ref{nonEmptyIncreasing} th
 each time a new block appears in \var{v}'s RBT, its \fld{index} is greater than any block
 that has appeared in \var{v}'s RBT earlier.
 Thus, $\var{v}.\blocks[b]$ is unique, if it exists.
-We also use this notation in the code to indicate that a search of the RBT should be performed for the block
+We also use this notation in the code to indicate that a search of the RBT $v.\fld{blocks}$ should be performed for the block
 with \fld{index} $b$.
 
 We now establish that Definition (\ref{defsubblock}) of a block's subblocks
@@ -67,7 +67,7 @@ still makes sense by proving the analogue of Lemma \ref{lem::headProgress}.
 
 
 \begin{customlemma}{\ref{lem::headProgress}$'$}\label{lem::headProgressGC}
- If $h>0$ and a block with index $h$ has been inserted into $\var{v}.\fld{blocks}$ then 
+ If $v$ is an internal node and a block with index $h>0$ has been inserted into $\var{v}.\fld{blocks}$ then 
  $\var{v}.\fld{blocks}[h-1].\fld{end\sub{left}} \leq \var{v}.\fld{blocks}[h].\fld{end\sub{left}}$ and 
  $\var{v}.\fld{blocks}[h-1].\fld{end\sub{right}} \leq \var{v}.\fld{blocks}[h].\fld{end\sub{right}}$.
 \end{customlemma}
@@ -91,23 +91,24 @@ the nodes of an in-order traversal of any RBT have non-decreasing values of
 $\eleft$ (and of $\eright$).
 Thus, the searches for a block based on \eleft\ or \eright\ values 
 at lines \ref{searchsuper3}, \ref{searchsuper1} and \ref{searchsuper2},
-which are used to look for the superblock of a node or its predecessor, can be done in logarithmic time.
+which are used to look for the superblock of a node or its predecessor, can be done 
+using an ordinary BST search.
 
 Lemma \ref{lem::subblocksDistinct}, Corollary \ref{cor::noDuplicates}, Invariant \ref{inv::sum} and Corollary \ref{blockNotEmpty} all 
 hold for the modified algorithm.  Their proofs are identical to those given in 
 Section \ref{sec::basicProperties} since they  depend only on Lemma \ref{lem::headProgress} (which can be replaced by Lemma \ref{lem::headProgressGC})
 and the definition of subblocks given in (\ref{defsubblock}).
-In particular, Invariant \ref{inv::sum} says that nodes in an in-order traversal of a RBT have non-decreasing
-values of \fld{sum\sub{enq}}  so the searches of a RBT based on
+In particular, Invariant~\ref{inv::sum} says that nodes in an in-order traversal of a RBT have non-decreasing
+values of \fld{sum\sub{enq}}  so the searches for a block based on
 \fld{sum\sub{enq}} values in lines
-\ref{FRsearchGC} and \ref{getChildGC} can be done in logarithmic time.
+\ref{FRsearchGC} and \ref{getChildGC} can be done using an ordinary BST search.
 
 \subsubsection{Propagating Operations to the Root}
 
 Next, we prove an analogue of Lemma \ref{successfulRefresh}.
 We say a node \var{v} \emph{contains} an operation
-if some block containing the operation has previously appeared in \var{v}'s RBT (even if 
-the block has been removed from the RBT by a subsequent \op{Split}).
+if some block containing the operation has previously appeared in the RBT \var{v}.\fld{block}
+(even if the block has been removed from the RBT by a subsequent \op{Split} during garbage collection).
 
 \begin{customlemma}{\ref{successfulRefresh}$'$}\label{successfulRefreshGC}
 Let $R$ be a call to \op{Refresh}(\var{v}) that performs a successful \op{CAS} on line \ref{casGC} (or terminates at line \ref{addOPGC}).
@@ -127,7 +128,7 @@ by $R$'s \op{CAS} at line \ref{casGC}.
 The \op{CreateBlock} set $B.\eleft$ to the maximum \fld{index} in $\var{v}.\fld{left}$'s RBT at line \ref{createEndLeftGC}.
 By Corollary \ref{nonEmptyIncreasing}, this maximum \fld{index} is bigger than $i$.
 By the definition of subblocks, some block in \var{v} contains $B_\ell$ as a subblock
-and therefore \var{v} contains $op$.
+and therefore \var{v} contains~$op$.
 
 Now suppose $R$'s call to \op{CreateBlock} returns \nl, causing $R$ to terminate at line \ref{addOPGC}.
 Let $h$ be the maximum \fld{index} in $T$ plus 1.
@@ -158,7 +159,7 @@ Then some other \op{CAS} on $\var{v}.\fld{blocks}$ succeeds between the time eac
 reads $\var{v}.\fld{blocks}$ at line \ref{refreshReadTGC} and performs its \op{CAS} at line \ref{casGC}.
 Consider the \op{Refresh} $R_3$ that does this successful \op{CAS} during $R_2$.
 $R_3$ must have read $\var{v}.\fld{blocks}$ after the successful \op{CAS} during $R_1$.
-The claim follows from Lemma \ref{successfulRefreshGC} applied to $R_3$.
+The claim follows from Lemma \ref{successfulRefreshGC} applied to~$R_3$.
 \end{proof}
 
 Lemma \ref{lem::appendExactlyOnce} can then be proved in the same way as in Section \ref{sec::propagating}.
@@ -189,13 +190,14 @@ The following is an immediate consequence of the definition of finished and what
 A block is finished if and only all of its subblocks are finished.
 \end{observation}
 
-\here{Technically, following proof might have to be wrapped up in a big induction with the argument
-that outputs are linearized correctly, to argue that the matchup between enqueues and dequeues
-is the same as it would be in the linearization ordering.  (Check whether this is really needed.)
-Or alternatively, we could add an assumption that if every operation agrees with the linearization
-so far, then the invariant is preserved by each step.
-Then, when proving the linearization is correct, everything will work out.
-But just leave it as is for the submission, since this is a subtle point}
+%\here{Technically, following proof might have to be wrapped up in a big induction with the argument
+%that outputs are linearized correctly, to argue that the matchup between enqueues and dequeues
+%is the same as it would be in the linearization ordering.  (Check whether this is really needed.)
+%Or alternatively, we could add an assumption that if every operation agrees with the linearization
+%so far, then the invariant is preserved by each step.
+%Then, when proving the linearization is correct, everything will work out.
+%But just leave it as is for the submission, since this is a subtle point}
+% NO, I DON'T THINK THIS IS NECESSARY
 
 \begin{invariant}\label{inv::finished}
 If the minimum \fld{index} of any block in \var{v}'s RBT is $b_{min}$, then
@@ -218,15 +220,15 @@ is unchanged and the invariant is trivially preserved.
 So consider the case where $A$ performs GC.
 We must show that any block of \var{v} whose index is less than or equal to the
 minimum \fld{index} in $T'$ is finished when $T'$ is installed in $\var{v}.\fld{blocks}$.
-Since $T'$ is obtained by discarding all blocks with \fld{index} at most $s$ (and adding
+Since $T'$ is obtained by discarding all blocks with \fld{index} values less than or equal to $s$ (and adding
 a block with a larger index), it suffices to show that all blocks that were ever added
 to \var{v}'s RBT with \fld{index} at most $s$ are finished.
 
-We must examine how $A$'s call to the recursive algorithm \op{SplitBlock} computes the value of $s$.
+We must examine how $A$'s call at line \ref{callSplitBlock} to the recursive algorithm \op{SplitBlock} computes the value of $s$.
 
 \begin{claim}\label{splitfinished}
-If one of the recursive calls to $\op{SplitBlock}(x)$ within $A$'s call to \op{SplitBlock},
-then that block and all earlier blocks in $x$ are finished when $st$ occurs.
+If one of the recursive calls to $\op{SplitBlock}(x)$ within $A$'s call to \op{SplitBlock} returns a block $B$,
+then $B$ and all earlier blocks in $x$ are finished when $st$ occurs.
 \end{claim}
 \begin{proof}[Proof of Claim]
 We prove this claim  by induction on the depth of $x$.
@@ -240,7 +242,8 @@ the end of the \op{SplitBlock}.
 Between the termination of $A$'s call to \op{SplitBlock} at line \ref{callSplitBlock}
 and the \op{CAS} step $st$ after $A$ terminates,  $A$ helps all pending dequeues at line \ref{invokeHelp}.
 Thus, after this helping (and before step $st$),
-$\var{root}.\fld{blocks}[1..m-1]$ are all finished blocks, so the claim is true.
+$\var{root}.\fld{blocks}[1..m-1]$ are all finished blocks.
+Since \op{SplitBlock} returns \var{root}.\fld{blocks}[$m-1$], the claim is true.
 
 For the induction step, we assume the claim holds for $x$'s parent, and prove it for $x$.
 We consider two cases.
@@ -267,6 +270,8 @@ This is because the first unfinished block may still be traversed by an operatio
 and when examining that block the operation may need information from the preceding block.  For example,
 when \op{FindResponse} is called on a block with index $b$, line \ref{FRnumenqGC} looks up the block with
 index $b-1$.
+
+\er{edited this far}
 
 \begin{lemma}\label{blocknotfound}
 If a \op{Dequeue} operation fails to find a block in an RBT,

@@ -16,11 +16,11 @@ and Jayanti, Tarjan and Boix-Adser\`{a}'s $\Omega(\log p)$ lower bound \cite{JTB
 For the more relaxed bag data structure the gap is larger between the  $\Omega(\min(c,\log\log p))$ lower bound \cite{DBLP:conf/opodis/AttiyaF17} and our upper bound of $O(\log^2 p + \log q)$.
 Could the complexity for either queues or bags be made polylogarithmic in $p$ while being independent of the size $q$ of the data structure?
 
-We believe the approach used here to implement a lock-free queue 
+The approach used here to implement a lock-free queue 
 could be applied to obtain other lock-free
 data structures with a polylogarithmic step complexity.
 For example, we can easily adapt the routines of the implementation in Section \ref{DescriptQ} 
-to implement a  vector data structure that stores a sequence and
+to implement a restricted kind of vector data structure that stores a sequence and
 provides three operations: \opa{Append}{e} to add an element \var{e} to the end of the sequence,
 \opa{Get}{i} to read the \var{i}th element in the sequence, and
 \opa{Index}{e} to compute the position of element \var{e} in the sequence.

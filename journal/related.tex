@@ -157,8 +157,7 @@ implemented data structure.
 In our work, we devise a novel way of doing this implicitly for batches of operations on a queue.
 
 Fatourou and Kallimanis \cite{FK14} used their own universal construction based on fetch\&add and LL/SC instructions
-to implement a queue, but its step complexity is also $\Omega(p)$.
-\here{Double check this.}
+to implement a queue, but its step complexity is also $\Omega(p)$ when words are of reasonable size.
 
 \paragraph{Restricted Queues.}
 David gave the first sublinear-time queue

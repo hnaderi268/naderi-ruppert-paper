@@ -19,15 +19,17 @@ Could the complexity for either queues or bags be made polylogarithmic in $p$ wh
 We believe the approach used here to implement a lock-free queue 
 could be applied to obtain other lock-free
 data structures with a polylogarithmic step complexity.
-For example, we can easily adapt our routines to implement a  vector data structure that stores a sequence and
+For example, we can easily adapt the routines of the implementation in Section \ref{DescriptQ} 
+to implement a  vector data structure that stores a sequence and
 provides three operations: \opa{Append}{e} to add an element \var{e} to the end of the sequence,
 \opa{Get}{i} to read the \var{i}th element in the sequence, and
 \opa{Index}{e} to compute the position of element \var{e} in the sequence.
-%\here{Can omit rest of this paragraph to save space}
-%An \opa{append}{e} is implemented like \opa{Enqueue}{e} in $O(\log p)$ steps.  
-%A \opa{get}{i} is similar to \op{GetEnqueue}, taking $O(\log n + \log^2p)$ steps when the vector has $n$ elements.  
-%An \opa{index}{e} is similar to \op{IndexDequeue} (except operating on enqueues instead of dequeues) and would take $O(\log p)$ steps.
-\here{doublecheck all preceding claims for accuracy.}
+Only the \op{Append} operations need to be propagated to the root of the ordering tree
+since the other two operations do not affect the state of the object.
+An \opa{Append}{e} is implemented like \opa{Enqueue}{e} in $O(\log p)$ steps.  
+A \opa{Get}{i} is similar to \op{GetEnqueue}, taking $O(\log n + \log^2p)$ steps when the vector has $n$ elements.  
+An \op{Index} is similar to \op{IndexDequeue} (except operating on enqueues instead of dequeues) and would take $O(\log p)$ steps if the argument is a pointer to the leaf block that contains the element~$e$.
+
 Building on the work described in this paper, Asbell and Ruppert \cite{AR23} have
 designed a doubly-ended queue with polylogarithmic amortized step
 complexity, which also yields a stack as a special case.  

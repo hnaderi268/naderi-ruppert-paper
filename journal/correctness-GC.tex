@@ -20,22 +20,22 @@ The RBT of a node is updated only at line \ref{appendLeafGC} or \ref{casGC}.
 
 If line \ref{appendLeafGC} of an \op{Append} operation modifies $\var{v}.\fld{blocks}$,
 then \var{v} is a leaf node, and no other process ever modifies $\var{v}.\fld{blocks}$.
-$T'$ was obtained from $T$ by calling \op{AddBlock}($T,B$).
+$T'$ was obtained from $T$ by calling \op{AddBlock}($v,T,B$).
 $B$ was created either by the \op{Enqueue} or \op{Dequeue} that called \op{Append}.
 Either way, $B.\fld{index} = \max(I)+1$.
-The \op{AddBlock} that creates $T'$ may optionally \op{Split} the RBT and then add $B$ to it.
+The \op{AddBlock} that creates $T'$ may optionally \op{Split} the RBT at line \ref{splitGC} and then add $B$ to it.
 So the claim is satisfied.
 
 If line \ref{casGC} of a \op{Refresh} modifies $\var{v}.\fld{blocks}$, then \var{v} is an internal node.
 After reading $T$ from $\var{v}.\fld{blocks}$ at line \ref{refreshReadTGC},
-the \op{Refresh} then creates the  block \var{new},
-and then calls \op{AddBlock}($T,new$) to create $T'$.
-Line \ref{createIndexGC} sets $\var{new}.\var{index} = \max(I)+1$.
-The \op{AddBlock} that creates $T'$ may optionally \op{Split} the RBT and then add $new$ to it.
+the \op{Refresh} then creates the  block \var{B},
+and calls \op{AddBlock}($v,T,B$) to create $T'$.
+Line \ref{createIndexGC} sets $\var{B}.\var{index} = \max(I)+1$.
+The \op{AddBlock} that creates $T'$ may optionally \op{Split} the RBT and then add $B$ to it.
 So the claim is satisfied.
 \end{proof}
 
-Since each RBT starts with a single block with \fld{index} 0, the following is an easy consequence of \Cref{RBTupdates}.
+Since each RBT starts with a single block with \fld{index} 0, the following is an easy consequence of Lemma \ref{RBTupdates}.
 \begin{corollary}\label{nonEmptyIncreasing}
 The RBT stored in each node \var{v} is never empty and always stores a set of blocks with consecutive indices.
 Moreover, its maximum \fld{index} can only increase over time.
@@ -44,11 +44,11 @@ Moreover, its maximum \fld{index} can only increase over time.
 Since RBTs are always non-empty, calls to \op{MaxBlock} have well-defined answers.  
 Throughout the proof, we use $\var{v}.\blocks[b]$ to refer to the block with \fld{index} $b$ that appeared
 in \var{v}'s tree at some time during the execution.
-It follows from \Cref{RBTupdates} and \Cref{nonEmptyIncreasing} that 
+It follows from Lemma \ref{RBTupdates} and Corollary \ref{nonEmptyIncreasing} that 
 each time a new block appears in \var{v}'s RBT, its \fld{index} is greater than any block
 that has appeared in \var{v}'s RBT earlier.
 Thus, $\var{v}.\blocks[b]$ is unique, if it exists.
-We also use this notation in the code to indicate that a search of the RBT should be performed for the block
+We also use this notation in the code to indicate that a search of the RBT $v.\fld{blocks}$ should be performed for the block
 with \fld{index} $b$.
 
 We now establish that Definition (\ref{defsubblock}) of a block's subblocks
@@ -67,7 +67,7 @@ still makes sense by proving the analogue of Lemma \ref{lem::headProgress}.
 
 
 \begin{customlemma}{\ref{lem::headProgress}$'$}\label{lem::headProgressGC}
- If $h>0$ and a block with index $h$ has been inserted into $\var{v}.\fld{blocks}$ then 
+ If $v$ is an internal node and a block with index $h>0$ has been inserted into $\var{v}.\fld{blocks}$ then 
  $\var{v}.\fld{blocks}[h-1].\fld{end\sub{left}} \leq \var{v}.\fld{blocks}[h].\fld{end\sub{left}}$ and 
  $\var{v}.\fld{blocks}[h-1].\fld{end\sub{right}} \leq \var{v}.\fld{blocks}[h].\fld{end\sub{right}}$.
 \end{customlemma}
@@ -80,37 +80,37 @@ and then line \ref{invokeCreateBlockGC} created the block $B$ with $\fld{index}=
 Since $B'$ was already in $T$ before $B$ was created, the
 \op{CreateBlock}$(\var{v},b-1)$ that created $B'$ terminated before the 
 \op{CreateBlock}$(\var{v},b)$ that created $B$ started.
-By \Cref{nonEmptyIncreasing}, the value that line \ref{createEndLeftGC} of \op{CreateBlock}$(\var{v},b-1)$ 
+By Corollary \ref{nonEmptyIncreasing}, the value that line \ref{createEndLeftGC} of \op{CreateBlock}$(\var{v},b-1)$ 
 stores in $B'.\eleft$ is less than or equal to the value that line \ref{createEndLeftGC} 
 of \op{CreateBlock}$(\var{v},b)$ stores in $B.\eleft$.  
 Similarly, the values stored in $B'.\eright$ and $B.\eright$ at line \ref{createEndRightGC} satisfy the claim.
 \end{proof}
 
-\Cref{lem::headProgressGC} implies that 
+Lemma \ref{lem::headProgressGC} implies that 
 the nodes of an in-order traversal of any RBT have non-decreasing values of
 $\eleft$ (and of $\eright$).
 Thus, the searches for a block based on \eleft\ or \eright\ values 
 at lines \ref{searchsuper3}, \ref{searchsuper1} and \ref{searchsuper2},
-which are used to look for the superblock of a node or its predecessor, can be done in logarithmic time.
+which are used to look for the superblock of a node or its predecessor, can be done 
+using an ordinary BST search.
 
-\Cref{lem::subblocksDistinct}, \Cref{lem::noDuplicates}, \Cref{lem::sum}, \Cref{blockNotEmpty} 
+Lemma \ref{lem::subblocksDistinct}, Corollary \ref{cor::noDuplicates}, Invariant \ref{inv::sum} and Corollary \ref{blockNotEmpty} all 
 hold for the modified algorithm.  Their proofs are identical to those given in 
-Section \ref{sec::basicProperties} since they  depend only on \Cref{lem::headProgress} (which can be replaced by \Cref{lem::headProgressGC})
+Section \ref{sec::basicProperties} since they  depend only on Lemma \ref{lem::headProgress} (which can be replaced by Lemma \ref{lem::headProgressGC})
 and the definition of subblocks given in (\ref{defsubblock}).
-In particular, \Cref{lem::sum} says that nodes in an in-order traversal of a RBT have non-decreasing
-values of \fld{sum\sub{enq}}  so the searches of a RBT based on
+In particular, Invariant~\ref{inv::sum} says that nodes in an in-order traversal of a RBT have non-decreasing
+values of \fld{sum\sub{enq}}  so the searches for a block based on
 \fld{sum\sub{enq}} values in lines
-\ref{FRsearchGC} and \ref{getChildGC} can be done in logarithmic time.
+\ref{FRsearchGC} and \ref{getChildGC} can be done using an ordinary BST search.
 
 \subsubsection{Propagating Operations to the Root}
 
-Next, we prove an analogue of \Cref{successfulRefresh}.
+Next, we prove an analogue of Lemma \ref{successfulRefresh}.
 We say a node \var{v} \emph{contains} an operation
-if some block containing the operation has previously appeared in \var{v}'s RBT (even if 
-the block has been removed from the RBT by a subsequent \op{Split}).
+if some block containing the operation has previously appeared in the RBT \var{v}.\fld{block}
+(even if the block has been removed from the RBT by a subsequent \op{Split} during garbage collection).
 
-\begin{customlemma}{\ref{successfulRefresh}$'$}
-\label{successfulRefreshGC}
+\begin{customlemma}{\ref{successfulRefresh}$'$}\label{successfulRefreshGC}
 Let $R$ be a call to \op{Refresh}(\var{v}) that performs a successful \op{CAS} on line \ref{casGC} (or terminates at line \ref{addOPGC}).
 In the configuration after that CAS (or termination, respectively), \var{v} contains all operations that \var{v}'s children contained 
 when $R$ executed line~\ref{refreshReadTGC}.
@@ -118,33 +118,33 @@ when $R$ executed line~\ref{refreshReadTGC}.
 \begin{proof}
 Suppose \var{v}'s child (without loss of generality, $\var{v}.\fld{left}$) contained an operation $op$ 
 when $R$ executed line \ref{refreshReadTGC}.
-Let $i$ be the index of the block containing $op$ that was in \var{v}'s RBT before 
+Let $i$ be the index of the block $B_\ell$ containing $op$ that was in \var{v}.\fld{left}'s RBT before 
 $R$ executed line \ref{refreshReadTGC}.
 We consider two cases.
 
-Suppose $R$'s call to \op{CreateBlock} returns a new block $B'$
+Suppose $R$'s call to \op{CreateBlock} returns a new block $B$
 that is installed in $\var{v}.\fld{blocks}$
 by $R$'s \op{CAS} at line \ref{casGC}.
-The \op{CreateBlock} set $B'.\eleft$ to the maximum \fld{index} in $\var{v}.\fld{left}$'s RBT at line \ref{createEndLeftGC}.
-By \Cref{nonEmptyIncreasing}, this maximum \fld{index} is bigger than $i$.
-By the definition of subblocks, some block in \var{v} contains $B$ as a subblock
-and therefore \var{v} contains $op$.
+The \op{CreateBlock} set $B.\eleft$ to the maximum \fld{index} in $\var{v}.\fld{left}$'s RBT at line \ref{createEndLeftGC}.
+By Corollary \ref{nonEmptyIncreasing}, this maximum \fld{index} is bigger than $i$.
+By the definition of subblocks, some block in \var{v} contains $B_\ell$ as a subblock
+and therefore \var{v} contains~$op$.
 
 Now suppose $R$'s call to \op{CreateBlock} returns \nl, causing $R$ to terminate at line \ref{addOPGC}.
 Let $h$ be the maximum \fld{index} in $T$ plus 1.
-By reasoning identical to the last paragraph of \Cref{successfulRefresh}'s proof,
+By reasoning identical to the last paragraph of Lemma \ref{successfulRefresh}'s proof,
 it follows from the fact that $\var{num\sub{enq}}+\var{num\sub{deq}}=0$ at line \ref{testEmptyGC}
-that the blocks $\var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft+1..new.\eleft]$ and
-$\var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright+1..new.\eright]$
+that the blocks $\var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft+1..B.\eleft]$ and
+$\var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright+1..B.\eright]$
 contain no operations.
-By \Cref{blockNotEmpty}, each block contains at least one operation, so
-these ranges must be empty, and $\var{v}.\fld{blocks}[h-1].\eleft \geq \var{new}.\eleft\geq i$.
-This implies that the block $B$ containing $op$ is a subblock of some block that has appeared
+By Corollary \ref{blockNotEmpty}, each block contains at least one operation, so
+these ranges must be empty, and $\var{v}.\fld{blocks}[h-1].\eleft \geq \var{B}.\eleft\geq i$.
+This implies that the block $B_\ell$ containing $op$ is a subblock of some block that has appeared
 in \var{v}'s RBT, so $op$ is contained in \var{v}.
 \end{proof}
 
 This allows us to show that a double \op{Refresh} propagates operations up the tree, 
-as in \Cref{lem::doubleRefresh}.
+as in Lemma \ref{lem::doubleRefresh}.
 
 \begin{customlemma}{\ref{lem::doubleRefresh}$'$}\label{lem::doubleRefreshGC}
 Consider two consecutive terminating calls $R_1$, $R_2$ to \op{Refresh}(\var{v}) by the same process.
@@ -153,16 +153,16 @@ are contained in \var{v} when $R_2$ terminates.
 \end{customlemma}
 \begin{proof}
 If either $R_1$ or $R_2$ performs a successful \op{CAS} at line \ref{casGC} or terminates at line \ref{addOPGC}, the claim follows
-from \Cref{successfulRefreshGC}.
+from Lemma \ref{successfulRefreshGC}.
 So suppose both $R_1$ and $R_2$ perform a failed \op{CAS} at line \ref{casGC}.
 Then some other \op{CAS} on $\var{v}.\fld{blocks}$ succeeds between the time each \op{Refresh}
 reads $\var{v}.\fld{blocks}$ at line \ref{refreshReadTGC} and performs its \op{CAS} at line \ref{casGC}.
 Consider the \op{Refresh} $R_3$ that does this successful \op{CAS} during $R_2$.
 $R_3$ must have read $\var{v}.\fld{blocks}$ after the successful \op{CAS} during $R_1$.
-The claim follows from \Cref{successfulRefreshGC} applied to $R_3$.
+The claim follows from Lemma \ref{successfulRefreshGC} applied to~$R_3$.
 \end{proof}
 
-\Cref{lem::appendExactlyOnce} can then be proved in the same way as in Section \ref{sec::propagating}.
+Lemma \ref{lem::appendExactlyOnce} can then be proved in the same way as in Section \ref{sec::propagating}.
 
 
 \subsubsection{GC Keeps Needed Blocks}
@@ -190,15 +190,16 @@ The following is an immediate consequence of the definition of finished and what
 A block is finished if and only all of its subblocks are finished.
 \end{observation}
 
-\here{Technically, following proof might have to be wrapped up in a big induction with the argument
-that outputs are linearized correctly, to argue that the matchup between enqueues and dequeues
-is the same as it would be in the linearization ordering.  (Check whether this is really needed.)
-Or alternatively, we could add an assumption that if every operation agrees with the linearization
-so far, then the invariant is preserved by each step.
-Then, when proving the linearization is correct, everything will work out.
-But just leave it as is for the submission, since this is a subtle point}
+%\here{Technically, following proof might have to be wrapped up in a big induction with the argument
+%that outputs are linearized correctly, to argue that the matchup between enqueues and dequeues
+%is the same as it would be in the linearization ordering.  (Check whether this is really needed.)
+%Or alternatively, we could add an assumption that if every operation agrees with the linearization
+%so far, then the invariant is preserved by each step.
+%Then, when proving the linearization is correct, everything will work out.
+%But just leave it as is for the submission, since this is a subtle point}
+% NO, I DON'T THINK THIS IS NECESSARY
 
-\begin{invariant}\label{lem::finished}
+\begin{invariant}\label{inv::finished}
 If the minimum \fld{index} of any block in \var{v}'s RBT is $b_{min}$, then
 each block with $\fld{index}$ at most $b_{min}$ that was ever added to \var{v} is finished.
 \end{invariant}
@@ -214,20 +215,20 @@ from $T$ to $T'$, where $T'$ is obtained by  a call $A$ to \op{AddBlock}(\var{v}
 (In the case of a leaf \var{v}, this is true because only the process that owns the leaf ever
 writes to $\var{v}.\fld{blocks}$.)
 If $A$ does not do GC (lines \ref{GCstart}--\ref{GCend}), 
-then $T'$ is obtained by adding a new block to $T$, so by \Cref{RBTupdates} the minimum \fld{index}
+then $T'$ is obtained by adding a new block to $T$, so by Lemma \ref{RBTupdates} the minimum \fld{index}
 is unchanged and the invariant is trivially preserved.
 So consider the case where $A$ performs GC.
 We must show that any block of \var{v} whose index is less than or equal to the
 minimum \fld{index} in $T'$ is finished when $T'$ is installed in $\var{v}.\fld{blocks}$.
-Since $T'$ is obtained by discarding all blocks with \fld{index} at most $s$ (and adding
+Since $T'$ is obtained by discarding all blocks with \fld{index} values less than or equal to $s$ (and adding
 a block with a larger index), it suffices to show that all blocks that were ever added
 to \var{v}'s RBT with \fld{index} at most $s$ are finished.
 
-We must examine how $A$'s call to the recursive algorithm \op{SplitBlock} computes the value of $s$.
+We must examine how $A$'s call at line \ref{callSplitBlock} to the recursive algorithm \op{SplitBlock} computes the value of $s$.
 
 \begin{claim}\label{splitfinished}
-If one of the recursive calls to $\op{SplitBlock}(x)$ within $A$'s call to \op{SplitBlock},
-then that block and all earlier blocks in $x$ are finished when $st$ occurs.
+If one of the recursive calls to $\op{SplitBlock}(x)$ within $A$'s call to \op{SplitBlock} returns a block $B$,
+then $B$ and all earlier blocks in $x$ are finished when $st$ occurs.
 \end{claim}
 \begin{proof}[Proof of Claim]
 We prove this claim  by induction on the depth of $x$.
@@ -241,29 +242,30 @@ the end of the \op{SplitBlock}.
 Between the termination of $A$'s call to \op{SplitBlock} at line \ref{callSplitBlock}
 and the \op{CAS} step $st$ after $A$ terminates,  $A$ helps all pending dequeues at line \ref{invokeHelp}.
 Thus, after this helping (and before step $st$),
-$\var{root}.\fld{blocks}[1..m-1]$ are all finished blocks, so the claim is true.
+$\var{root}.\fld{blocks}[1..m-1]$ are all finished blocks.
+Since \op{SplitBlock} returns \var{root}.\fld{blocks}[$m-1$], the claim is true.
 
 For the induction step, we assume the claim holds for $x$'s parent, and prove it for $x$.
 We consider two cases.
 
 If \op{SplitBlock}($x$) returns the minimum block of $x$'s RBT at line \ref{substitute},
-then the claim follows from the assumption that \Cref{lem::finished} holds at all times before $st$.
+then the claim follows from the assumption that Invariant \ref{inv::finished} holds at all times before $st$.
 
 Otherwise, \op{SplitBlock}($x$) returns the block $B$ at line \ref{substitute}.
 By the induction hypothesis, the block $B_p$ computed at line \ref{SBrecurse}
 (and all earlier blocks of $x$) are finished when $st$ occurs.
-By \Cref{subblocksFinished}, the block $B$ in $x$ indexed by $B_p.\eleft$ or $B_p.\eright$
-is also finished when $st$ occurs.  This completes the proof of \Cref{splitfinished}.
+By Observation \ref{subblocksFinished}, the block $B$ in $x$ indexed by $B_p.\eleft$ or $B_p.\eright$
+is also finished when $st$ occurs.  This completes the proof of Claim \ref{splitfinished}.
 \renewcommand{\qedsymbol}{$\diamondsuit$}
 \end{proof}
 
 If the \op{Split} at line \ref{splitGC} of $A$ modifies the RBT, then it discards
 all the blocks older than the one returned by \op{SplitBlock} at line \ref{callSplitBlock}.
-By \Cref{splitfinished}, the minimum block in the new tree will satisfy the invariant when $st$
+By Claim \ref{splitfinished}, the minimum block in the new tree will satisfy the invariant when $st$
 installs the new tree in $\var{v}.\fld{blocks}$.
 \end{proof}
 
-We remark that \Cref{lem::finished} guarantees that GC keeps one block that is finished and discards all blocks with smaller indices.
+We remark that Invariant \ref{inv::finished} guarantees that GC keeps one block that is finished and discards all blocks with smaller indices.
 This is because the first unfinished block may still be traversed by an operation in the future,
 and when examining that block the operation may need information from the preceding block.  For example,
 when \op{FindResponse} is called on a block with index $b$, line \ref{FRnumenqGC} looks up the block with
@@ -272,24 +274,24 @@ index $b-1$.
 \begin{lemma}\label{blocknotfound}
 If a \op{Dequeue} operation fails to find a block in an RBT,
 %during its calls to \op{IndexDequeue} or \op{GetEnqueue}, 
-then it has been propagated to the root and its result has been written in its \fld{response} field.
+then it has been propagated to the root and its result has been written in the \fld{response} field of the leaf block it created.
 If an \op{Enqueue} operation fails to find a block in an RBT, it has been propagated to the root.
 \end{lemma}
 \begin{proof}
-Any block that GC removes from an RBT is finished, by \Cref{lem::finished}, so if an 
+Any block that GC removes from an RBT is finished, by Invariant \ref{inv::finished}, so if an 
 \op{Enqueue} or \op{Dequeue} fails to find a block while it is propagating itself up to
 the root (for example, during the \op{CreateBlock} routine), then a block containing
 the operation itself has been removed from a RBT, so the operation has propagated to the root,
 by the definition of finished.
-Moreover, by \Cref{lem::finished}, if the operation is a dequeue, then its result is in its \fld{response} field.
+Moreover, by Invariant \ref{inv::finished}, if the operation is a dequeue, then its result is in its \fld{response} field.
 
 After propagation to the root, a \op{Dequeue} must access blocks that contain the dequeue,
 as well as the enqueue whose value it will return (if it is not a null dequeue).
-If any of those blocks have been removed, it follows from \Cref{lem::finished} that the
+If any of those blocks have been removed, it follows from Invariant \ref{inv::finished} that the
 \op{Dequeue}'s result is written in its \fld{response} field.
 \end{proof}
 
-By \Cref{blocknotfound}, an operation that fails to find a block in an RBT can terminate.
+By Lemma \ref{blocknotfound}, an operation that fails to find a block in an RBT can terminate.
 If it is a \op{Dequeue}, it can return the result written in its \fld{response} field.
 Since no other process updates the RBT in a process's leaf, the block containing the \fld{response}
 will be the last block in the leaf's RBT, and the last block of an RBT is never removed by GC.
@@ -312,11 +314,12 @@ that the space-bounded algorithm is linearizable.
 \subsection{Analysis}
 \label{sec::GCanalysis}
 
-\here{need to prove a lemma analogous to \Cref{blockSize}}
+Lemma \ref{blockSize} shows that each block contains at most one operation of each process.
+Its proof depends only on Lemma \ref{lem::subblocksDistinct}, Corollary \ref{blockNotEmpty} and Lemma \ref{lem::appendExactlyOnce}, which are all still true for the space-bounded implementation.  So the same proof of Lemma \ref{blockSize} still applies.
 
 We first bound the size of RBTs.  Let $q_{max}$ be the maximum size of the queue at any time during the sequential execution given by the linearization $L$.
 Recall that GC is done on a node every $G$ times its RBT is updated, and we chose $G$ to be $p^2\ceil{\log p}$.
-Part of the proof of the following lemma is similar to the proof of \Cref{dSearchTime}.
+Part of the proof of the following lemma is similar to the proof of Lemma \ref{dSearchTime}.
 %We say the index $b$ \emph{is marked in node \var{v}} if some process has tested
 %whether $b>\var{v}.\fld{last}[*]$ at line \ref{marktest1} or \ref{marktest2}.
 %Intuitively, a block's index value is marked 
@@ -328,7 +331,7 @@ Part of the proof of the following lemma is similar to the proof of \Cref{dSearc
 
 \begin{lemma}\label{boundAfterGC}
 If the maximum \fld{index} in a node's RBT is a multiple of $G$, then
-it contains at most $2q_{max}+4p+1$ blocks.
+it contains at most $3q_{max}+5p+1$ blocks.
 \end{lemma}
 \begin{proof}
 Consider the invocation $A$ of \op{AddBlock} that updates a node \var{v}'s RBT with the insertion of a block whose 
@@ -344,10 +347,11 @@ $\ell$ is the last block added to the root's RBT before $C$.
 We first bound the number of operations in $L_2$.
 
 The number of enqueues in $L_2$ whose values are still in the queue at the end of $L_2$ is at most $q_{max}$.
-Any enqueue in $L_2$ whose value is not still in the queue at the end of $L_2$
-must still be in progress at~$C$; otherwise the process that dequeued it would have
-set its \var{last} entry to a value greater than the index of the block of the root that contains the enqueue prior to $C$,
-contradicting the definition of $m$.
+If the value enqueued by any enqueue in $L_2$  is not still in the queue
+at the end of $L_2$, then the dequeue in $L_2$ that dequeued that value must still be in progress
+at $C$; otherwise the process that performed that dequeue would have set its \var{last} entry
+to the index of the root block that contains the enqueue, which is greater than $m$, before $C$, contradicting
+the fact that all values in the $last$ array at $C$ are less than or equal to $m$.
 So, there are at most $p$ enqueues in $L_2$ whose values are still in the queue at the end of $L_2$.
 Thus, there are at most $q_{max}+p$ enqueues in $L_2$.
 
@@ -356,27 +360,27 @@ then the value it returns was either in the queue at the end of $L_1$ or it was 
 Thus, there are at most $q_{max}+(q_{max}+p)$ dequeues in $L_2$ that return non-null values.
 Any dequeue in $L_2$ that returns a null value in the sequential execution $L$ must still be in progress
 at $C$; otherwise the process that performed the dequeue would have set its \var{last} entry
-to a value greater than the index of the block of the root that contains the dequeue prior to $C$, 
+to a value greater than the index of the root block that contains the dequeue prior to $C$, 
 contradicting the definition of $m$.
 So, there are at most $p$ null dequeues in $L_2$.
 Thus, there are at most $2q_{max} + 2p$ dequeues in $L_2$.
 
 $A$'s call to \op{SplitBlock} determines the index $s$ used to split \var{v}'s RBT by following 
 \eleft\ and \eright\ pointers from the root down to \var{v}.
-So, the block returned is a subblock of block $m$ of the root, unless
+So, the block returned is a subblock of the root block with index $m$, unless
 at some point along the path of subblocks the subblock has already been removed by a split,
-in which case \op{SplitBlock} returns a subblock of a block $m'>m$ in the root.
+in which case \op{SplitBlock} returns a subblock of a root block with index $m'>m$.
 
 Next, we bound the number of operations in \var{v}'s blocks that are retained when $A$  sets
 $T'\assign\op{Split}(T,s)$.
-Since $T$ was read before $C$, any operation in $T$ is either in progress at $C$ or has been propagated to the root before $C$.\here{cite a lemma about propagation before operation terminates}
+Since $T$ was read before $C$, any operation in $T$ is either in progress at $C$ or has been propagated to the root before $C$, by Lemma \ref{lem::appendExactlyOnce}.
 Thus, there are at most $p$ operations in $T$ that do not appear in $L_1\cdot L_2$.
 All the rest of the operations in blocks of $T'$ have been propagated to blocks $m..\ell$ of the root.
-There are at most $p$ operations in block $m$ of the root %by \Cref{blockSizeGC}
-and we showed above that there are at most $2q_{max} + 2p$ in blocks 
+By Lemma \ref{blockSize}, There are at most $p$ operations in block $m$ of the root 
+and we showed above that there are at most $3q_{max} + 3p$ in blocks 
 $m+1..\ell$ of the root.
-Thus, there are at most $2q_{max}+4p$ operations in blocks of $T'$.
-Since each block is non-empty by \Cref{blockNotEmpty}, $T'$ contains at most $2q_{max}+4p$ blocks, and one more 
+Thus, there are at most $3q_{max}+5p$ operations in blocks of $T'$.
+Since each block is non-empty by Corollary \ref{blockNotEmpty}, $T'$ contains at most $3q_{max}+5p$ blocks, and one more 
 block is inserted before $A$ sets \var{v}'s \fld{blocks} to the resulting RBT.
 \end{proof}
 
@@ -387,15 +391,17 @@ At all times, the size of a node's RBT is $O(q_{max}+p+G)$.
 \begin{proof}
 Each update to a node's RBT adds at most one block to it, increasing its maximum \fld{index} by 1.
 Thus, there are at most $G$ updates since the last time its maximum \fld{index} was a multiple of $G$.
-The claim follows from \Cref{boundAfterGC}.
+The claim follows from Lemma \ref{boundAfterGC}.
 \end{proof}
 
 The following theorem bounds the space that is reachable (and therefore cannot be freed by the environment's garbage collector) at any time.
-\here{For later version:  There may be room to improve this bound by a more careful analysis since the bounds so far
-didn't use the fact that operations only appear along one path in the tree; in other words
-doing a bound on total size of all RBTs at one level of the ordering tree at once, rather than
-on each node separately, might reduce it to qlogp + poly(p).  Might also be possible to be
-more precise about how it depends on "current" size of queue rather than max size.}
+%\here{At first, I thought the following analysis could be tightened
+%by using the fact that operations only appear along one path in tree
+%so doing a bound on total size of all nodes on one level might work yield better bound.
+%But I don't think so, because we could have each process go in order to dequeue
+%everything and then enqueue q new items (where q>>p).  Then sets of enqueue operations
+%stored in each node at one level of tree would be disjoint (because of the way
+%GC is timed differently at each node).
 
 \begin{mytheorem}\label{spaceBound}
 The queue data structure uses a maximum of $O(pq_{max}+p^3\log p)$ words of memory at any time.
@@ -403,21 +409,21 @@ The queue data structure uses a maximum of $O(pq_{max}+p^3\log p)$ words of memo
 \begin{proof}
 There are $2p-1$ nodes in the ordering tree.  Aside from the RBT, each node uses $O(1)$ memory words.
 Each process may hold pointers to $O(1)$ RBTs that are no longer current in local variables.
-So the space bound follows from \Cref{RBTbound} and the fact that $G$ is chosen
+So the space bound follows from Corollary \ref{RBTbound} and the fact that $G$ is chosen
 to be $p^2\ceil{\log p}$.
 \end{proof}
 
-\here{It may be possible, via a more careful analysis, to reduce the bound on space usage to $O(\log^2 p(q_{max}+p^3)$.}
-
-Although individual operations may now become more expensive because they have to perform GC,
+Performing GC on a node takes $\Theta(p \log p\log(q_{max}+p))$ steps in the worst case (as explained in the following proof),
+so an individual operation can take up to $\Theta(p \log^2 p\log(q_{max}+p))$ steps
+if it helps at each node along the path from a leaf to the root.
+However,
 we show that operations still have polylogarithmic amortized step complexity.
 
 \begin{mytheorem}
 The amortized step complexity of each operation is $O(\log p \log(p+q_{max}))$.
 \end{mytheorem}
 \begin{proof}
-\here{this proof may need some modification since code was changed to change how split point is computed}
-It follows from \Cref{RBTbound} and our choice of $G=p^2\ceil{\log p}$
+It follows from Corollary \ref{RBTbound} and our choice of $G=p^2\ceil{\log p}$
 that all the RBT routines we use to perform \op{Split}, \op{Insert} and searches for
 blocks with a particular index or for a \fld{sum\sub{enq}} value (in line \ref{FRsearchGC} or \ref{getChildGC}) can  be done in $O(\log(p+q_{max}))$ steps.
 
@@ -430,30 +436,31 @@ Thus, a \op{Dequeue} also takes $O(\log p \log(p+q_{max}))$ steps.
 
 Now we consider the additional steps a process takes while doing GC in line \ref{GCstart}--\ref{GCend}
 and show that the amortized number of GC steps each operation performs is also $O(\log p\log(p+q_{max}))$.
-If a process does GC in a call to \op{AddBlock}($\var{v},T,B$) where $B$ has \fld{index} $r\cdot G$ for some integer $r$, we call this the process's \emph{$r$th helping phase on \var{v}}.
+If a process does GC in a call to \op{AddBlock}($\var{v},T,B$) where $B$ has \fld{index} $r\cdot G$ for some integer $r$, we call this the process's \emph{$r$th GC phase on \var{v}}.
 
-We argue that each process $P$ can do an $r$th helping phase on \var{v} at most once.
-Consider $P$'s first call $A$ to \op{AddBlock} that does an $r$th helping phase on \var{v}.
+We argue that each process $P$ can do an $r$th GC phase on \var{v} at most once.
+Consider $P$'s first call $A$ to \op{AddBlock} that does an $r$th GC phase on \var{v}.
 Let $\var{v},T,B$ be the arguments of $A$.
 Any call to \op{AddBlock} on internal node \var{v} is from line \ref{refreshABGC} of \op{Refresh}, so $B.\fld{index}$
 is the maximum \fld{index} in $T$ plus 1.
 The \op{Refresh} that called $A$ performed a \op{CAS} at line \ref{casGC}.  Either the \op{CAS} succeeds
 or it fails because 
 some other \op{CAS} changes \var{v}.\fld{blocks} from $T$ to another tree.
-Either way, by \Cref{RBTupdates}, \var{v}'s RBT's maximum \fld{index} will be at least $r\cdot G$ at all times
+Either way, by Lemma \ref{RBTupdates}, \var{v}'s RBT's maximum \fld{index} will be at least $r\cdot G$ at all times
 after this CAS.
 So if a subsequent \op{Refresh} by process $P$ 
 ever calls \op{AddBlock} on \var{v} again, the block it passes as the third argument
-will have $\fld{index}>r\cdot G$, so $P$ will not perform an $r$th helping phase on \var{v} again.
+will have $\fld{index}>r\cdot G$, so $P$ will not perform an $r$th GC phase on \var{v} again.
 
-Each helping phase takes $O(p)$ steps to read the \var{last} array, and
+Each GC phase takes $O(p)$ steps for \op{SplitBlock} to read the \var{last} array and figure
+out where to split the $blocks$ RBT, 
 $O(p \log p \log(p+q_{max}))$ steps in \op{Help},
-and $O(\log(p+q_{max}))$ steps to split and insert a new node into a RBT.
+and $O(\log(p+q_{max}))$ steps to split and insert a new node into the RBT.
 Thus, for each integer $r$ and each node \var{v}, a total of $O(p^2\log p\log(p+q_{max}))$ steps
 are performed by all processes during their $r$th helping phase on \var{v}.
 We can amortize these steps over the operations that appear in 
 $\var{v}.\fld{blocks}[(r-1)G+1..rG]$.
-By \Cref{blockNotEmpty}, there are at least $G$ such operations, 
+By Corollary \ref{blockNotEmpty}, there are at least $G$ such operations, 
 so each operation's amortized number of steps for GC at each node along the path from its leaf to the root
 is $O(p^2\log p\log(p+q_{max})/G)=O(\log(p+q_{max}))$.
 Hence each operation's amortized number of GC steps is $O(\log p\log(p+q_{max}))$.
@@ -461,7 +468,7 @@ Hence each operation's amortized number of GC steps is $O(\log p\log(p+q_{max}))
 
 The implementation remains wait-free:  the depth of recursion in each routine is  bounded
 by the height of the tree and the only loop is the counted loop in the \op{Help} routine.
-Since each operation still  does only two \op{CAS} instructions at each level of the tree (at line \ref{casGC}), the following proposition still holds for the space-bounded version of the queue.
+Moreover, since each operation still  does only two \op{CAS} instructions at each level of the tree (at line \ref{casGC}), the following proposition still holds for the space-bounded version of the queue.
 
 \begin{customprop}{\textbf{\ref{casbound}}$'$}
 Each operation performs $O(\log p)$ \op{CAS} instructions in the worst case.

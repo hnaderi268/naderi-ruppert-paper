@@ -286,10 +286,14 @@ B.\fld{sum\sub{enq}}&=&\var{v}.\fld{left}.\fld{blocks}[B.\eleft].\fld{sum\sub{en
 &&+ \var{v}.\fld{right}.\fld{blocks}[B.\eright].\fld{sum\sub{enq}}.
 \end{eqnarray*}
 For a block $B$ in the root, $B.\fld{size}$ is computed using the \fld{size} field of the previous block $B'$ and
-the number of enqueues and dequeues in~$B$:
+the number of enqueues and dequeues in~$B$
+\rev{as follows.  Before the operations of $B$, the queue has $B'.\fld{size}$ elements.
+The enqueues of $B$ add $B.\fld{sum\sub{enq}}-B'.\fld{sum\sub{enq}}$ elements.
+Then the dequeues of $B$ remove $B.\fld{sum\sub{deq}} - B'.\fld{sum\sub{deq}}$ elements
+(unless the size becomes 0 at some point during these dequeues).  Thus, we have}
 \begin{eqnarray*}
 B.\fld{size} &=& \max(0, B'.\fld{size} + (B.\fld{sum\sub{enq}}-B'.\fld{sum\sub{enq}})\\ 
-			&& \hspace*{19mm}\mbox{ } - (B.\fld{sum\sub{deq}} - B'.\fld{sum\sub{deq}})).	
+			&& \hspace*{19mm}\mbox{ } - (B.\fld{sum\sub{deq}} - B'.\fld{sum\sub{deq}})).
 \end{eqnarray*}
 
 The only remaining field is $B.\fld{super}$.  When the block 
@@ -300,7 +304,7 @@ Soon after $B$ is installed,
 %a call to \op{Advance} at line \ref{helpAdvance} or \ref{advance} by 
 some process will
 set \var{B}.\fld{super} to a value read from the \fld{head} field of \var{v}'s parent.
-We shall show that this happens soon enough that $B.\fld{super}$ can differ from the true index of $B'$
+We shall show that this happens soon enough that $B.\fld{super}$ can differ from the true index of \rev{$B$'s superblock}
 by at most 1.
 %After $B$ is installed 
 %in $\var{v}.\fld{blocks}[\var{h}]$, processes cooperate to fill in $B.\fld{super}$ 
@@ -340,7 +344,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \State \hangbox{let \var{B} be a new \typ{Block} with fields \fld{element} \assign\ \var{e},
 		\fld{sum\sub{enq}} \assign\ $\var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}}+1$,\\
 		\fld{sum\sub{deq}} \assign\ $\var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}$}\label{enqNew}
-    \State \Call{Append}{\var{B}}
+    \State \Call{Append}{\var{B}}\label{enqAppend}
 \EndFunction{Enqueue}
 
 \spac
@@ -349,7 +353,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \State \hangbox{let \var{B} be a new \typ{Block} with fields \fld{element} \assign\ \nl,
 	    \fld{sum\sub{enq}} \assign\ $\var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}}$,\\
 	    \fld{sum\sub{deq}} \assign\ $\var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}+1$}\label{deqNew}
-    \State \Call{Append}{\var{B}}
+    \State \Call{Append}{\var{B}}\label{deqAppend}
     \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, $\var{leaf.}\head-1$, $1$}\label{invokeIndexDequeue}
     \State \Return{ \Call{FindResponse}{\var{b, i}}}\label{deqRest}
 \EndFunction{Dequeue}
@@ -359,7 +363,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \Function{void}{Append}{\typ{Block} \var{B}} \Comment{append block to leaf and propagate to root}
     \State \var{leaf.}\fld{blocks}[\var{leaf.}\head] \assign\ \var{B}\label{appendLeaf}
     \State $\var{leaf.}\head\ \assign\ \var{leaf.}\head+1$ \label{appendEnd} 
-    \State \Call{Propagate}{\var{leaf.}\fld{parent}} 
+    \State \Call{Propagate}{\var{leaf.}\fld{parent}} \label{appendProp}
 \EndFunction{Append}
 
 \spac
@@ -495,23 +499,27 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \caption{Queue implementation's \op{GetEnqueue} routine.\label{code3}}
 \end{figure*}
 
-An \opemph{Enqueue}(\var{e}) appends a \block\ to the process's leaf.
-The block's \fld{element} field is \var{e} to indicate it represents an \op{Enqueue}(\var{e}) operation.
-It suffices to propagate the operation to the root and
-then use its position in the linearization for future \op{Dequeue}
-operations.
+An \opemph{Enqueue}(\var{e}) 
+\rev{creates a new Block at line \ref{enqNew} and sets its fields to indicate
+that the Block represents an \op{Enqueue}.  The enqueued item \var{e} is stored in the block's \fld{element}
+field.
+The call to \op{Append}, described below, on line \ref{enqAppend}
+appends the \block\ to the process's leaf and ensures it is propagated to the root.}
 
-A \opemph{Dequeue} also appends a \block\ to the process's leaf.
-The block's \fld{element} field is \nl\ to indicate that it represents a \op{Dequeue} operation.
-After propagating the operation to the root, the \op{Dequeue} calls \op{IndexDequeue} to compute
+A \opemph{Dequeue} also 
+\rev{creates a new Block at line \ref{deqNew} and sets its fields to indicate
+that the Block represents a \op{Dequeue}.
+It then calls \op{Append} at line \ref{deqAppend} to append the \block\ to the process's leaf and ensure
+it is propagated to the root.
+Then,} the \op{Dequeue} calls \op{IndexDequeue} to compute
 its position in the root 
  and then calls \op{FindResponse} to compute its response.
 
 \opemph{Append}(\var{B}) first adds the block \var{B} to the invoking process's leaf.
 The leaf's \fld{head} field stores the first empty slot in the leaf's \fld{blocks} array,
-so the \op{Append} writes \var{B} there and increments \fld{head}.
+so the \op{Append} writes \var{B} there \rev{at line \ref{appendLeaf}} and then increments \fld{head} \rev{at line \ref{appendEnd}}.
 Since \op{Append} writes only to the process's own leaf, there cannot be concurrent updates to a leaf.
-\op{Append} then calls \op{Propagate} to ensure the operation represented by \var{B} is propagated to the root.
+\op{Append} then calls \op{Propagate} \rev{at line \ref{appendProp}} to ensure the operation represented by \var{B} is propagated to the root.
 
 \opemph{Propagate}(\var{v}) guarantees that any blocks that are in \var{v}'s children when \op{Propagate} is invoked are propagated to the root.
 It uses the double \op{Refresh} idea described

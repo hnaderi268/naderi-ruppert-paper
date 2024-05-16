@@ -1,0 +1,167 @@
+We thank the reviewers for their comments.  Below, we address them point-by-point.  Modifications to the manuscript are shown in magenta.
+
+> Reviewer 1
+> Minor corrections:
+> 
+> line 080, right column. Emphasize that the number of CAS operations
+> (log p) is another measure of the step complexity, different from
+> the amortized step complexity.
+
+Done.
+
+> line 465. The notion sum_enq and sum_deq is confusing. Probably use
+> count_enq and count_deq instead ? Or cnt_enq and cnt_deq ?
+
+We were concerned that count might sound like a count of the number of enqueue or dequeue operations in a single block.  We instead used sum to remind the reader that the fields of Block i store the prefix sum of the number of enqueue or dequeue operations in in Blocks 1..i (as mentioned when the fields are introduced at line 504 [check line number].
+
+> lines 526 - 528, right column. It is not clear why the expression
+> for B.size is correct if some of the dequeues are empty. Additional
+> intuition here will be very helpful.
+
+Some explanation has been added.
+
+> line 543, right column. Is B' mentioned here is the same block
+> mentioned in line 521, right column ? An additional explanation
+> would be helpful.
+
+No, this was a typo.
+
+> lines 552 - 567, right column, and lines 686 - 711, right column.
+> Adding explicit references to the lines of the code on Fig. 5 - 7
+> would help to follow the explanation.
+
+Done.
+
+> line 558, right column. The sentence "the block's element field is
+> $e$ to indicate it represents Enqueue(e) operation..." is
+> confusing. It's not immediately clear why element $e$ indicates
+> that the operation is Enqueue. Probably formulate it "the block's
+> element field $e\neq null$ indicates..."
+> 
+> lines 594 - 608 (lines 24 - 37 in the code). Add a more detailed
+> comments that explain the Refresh operation.
+> 
+> line 619 (line 44 in the code). It's not clear why the size of the
+> queue is calculated correctly. Why if some of the dequeues that are
+> counted by num_deq are empty and do not change the size of the
+> queue ? Some intuition here would be helpful.
+> 
+> line 620 (line 46 in the code). Suggestion: consider to put the
+> check whether the new block B contains no operations
+> (num_deqs+num_enqs==0) immediately after the calculation of num_enq
+> and num_deqs. First, complete the calculations that depend on the
+> values of num_enq and num_deq, and then advance to the check
+> whether v is root. If the change will be done, change the order of
+> the explanation in lines 715 - 723, right column, accordingly.
+> 
+> line 634 (line 58 of the code). In the comment, probably add an
+> additional remainder that D(v.blocks[b]) and D(root.blocks[b'])
+> represent the sequence of the dequeues represented by the
+> corresponding blocks.
+> 
+> line 640 (line 64 of the code). Add a comment that gives some
+> intuition for this line.
+> 
+> lines 643 - 645 (lines 67 - 69 of the code). Add comments that help
+> to understand the calculation of the dequeue's rank.
+> 
+> line 658 (line 81 in the code). Add additional comment that
+> doubling search is used here to find the range of the binary
+> search.
+> 
+> line 696, right column. "... and calls Refresh on $v$ twice in
+> lines 226 and 227". The lines numbers should be 17 and 18.
+> 
+> line 701, right column. "... prior to line 226" should be "...
+> prior to line 17"
+> 
+> line 706, right column. Add a description of the code in lines 26 -
+> 29 of Refresh.
+> 
+> lines 771 - 790, left column. Add explicit references to the lines
+> of the code in the description of GetEnqueue().
+> 
+> line 828, right column. Probably emphasize: if B and B' are two
+> *different* blocks at the same depth...
+> 
+> line 870, right column, Probably should be "By the definition of
+> *direct* subblocks (3.3)...".
+> 
+> lines 887, 892. left column. It look like there are two unnecessary
+> empty lines.
+> 
+> line 919, right column. Should it be "the value computed in line
+> *42*" (instead of 41) ?
+> 
+> line 983, right column. "... close to the time ..." is not clear in
+> the context of asynchronous execution. Probably state it
+> differently: "We do this by showing that B.super is written after B
+> is installed, but before B_s is installed."
+> 
+> line 1003, right column, Probably should be "By the definition of
+> *direct* subblocks (3.3)...".
+> 
+> line 1102, right column. A more detailed explanation would be
+> helpful. Particulary, if op_1 precedes op_2, in which blocks op_1
+> and op_2 can appear so that by (3.2) op_1 precedes op_2 in L ?
+> 
+> line 1255, left column. A short explanation why Corollary 23
+> follows immediately from Theorem 22 will be helpful for easier
+> reading.
+> 
+> line 1304, right column. "...will also keep the running time of our
+> operations polylogarithmic *on $p$ and $q$*"
+> 
+> 
+> Attachments:
+> • https://reviewer-feedback.springernature.com/download/attachment/c514d3ef-d0cc-4718-9d05-877061314935
+> 
+> Reviewer 2
+> A considerable amount of work in the literature of asynchronous concurrent data structures is devoted to the search of efficient wait-free or lock-free linearizable queues. The known queue implementations have unbounded step complexity and their amortized step complexity is at least linear on the number of processes. The current paper makes a significant progress in this matters, it proposes the first wait-free linearizable queue implementation whose worst-case step complexity is polylogarithmic on the total number of processes in the system and the number of elements in the queue. The implementation uses standard read, write and CAS instructions and memory locations of reasonable size.
+> 
+> The implementation is based in an ordering tree, which is a binary tree with each leaf associated to exactly one process. The main idea of the algorithm is quite simple: when a process wants to perform an operation, it first installs the operation in its leaf and then it propagates the operation in all the nodes in the path from the leaf to the root. During the process, the process might propagate other pending operations. The operation is linearized once it is installed at the root, and the response of the operation, in case it is a dequeue, can be determined by inspecting the previous operations installed in the root. The main idea of the algorithm is simple, what it is difficult is to implement the idea efficiently, i.e. in polylogarithimic number of steps.
+> 
+> Ordering trees has been used in the past in the universal construction of Afek, Dauber and Touitou, and in the polylogarithmic and linearizable single-enqueuer queue of Jayanti and Petrovic. Recently, the same approach was used by Johnen, Khattabi and Milani in their wait-free queue, but their implementation fails to have a polylogarithmic dequeue operation. 
+> 
+> After a complete related work section, the paper first shows an implementation that uses unbounded memory. The presentation of this algorithm is very nice, starting with a quite detailed overview of it, which made me follow the detailed implementation that comes after. The implementation is complicated to some extent, due to the arithmetic used to efficiently implement the simple idea the algorithm is based on. Furthermore, the linearizability proof and step complexity analysis are structured in simple pieces that makes the arguments convincing.
+> 
+> Then, the paper presents a modification of the first algorithm that uses bounded memory, more specifically polynomial on the number of processes and the size of the queue in the linearization, and with polylogarithmic amortized step complexity. As one would naturally expect, this version adds a sort of garbage collector mechanism that removes blocks of memory that are not needed anymore. I found this part of the paper harder to understand. I did not understand the need of using red-black trees, which I think complicates everything. I have no reason to think the implementation is wrong, all looks convincing to me, but I wonder if there is a way to simplify the presentation.
+> 
+> All in all, the paper is very good, delivering a solid contribution that is overall nicely presented. I recommend acceptance. I have only a few minor comments that appear below. 
+> 
+> Specific comments:
+> 
+> - ln 37, left. Missing blank space before ‘and’.
+> 
+> - I find the related work section complete. However, I wonder if it is worth citing a few works about memory reclamation, due to your bounded memory implementation.
+> 
+> - I do not understand why you do not cite the preliminary version in podc 2023. 
+> 
+> - ln 235, left. Repeated ‘words’.
+> 
+> - For completeness, I suggest to add a preliminaries section, with a reminder of the main definitions such as linearizability, step complexity, and so on. 
+> 
+> - ln 417, right. Are these direct blocks?
+> 
+> - ln 492-498. I would recall here what q stands for. Actually, I wonder if you could you use a letter that is more descriptive. 
+> 
+> - Sec 3.4, and later. At many places operations are written in different font styles. Please follow a uniform format. 
+> 
+> - ln 845-848, right. I got confused here. Lemma 4 is only about the indexes, isn't it? 
+> 
+> - ln 1084-1088, right. Here do you mean that L is a valid sequential execution of the queue.
+> 
+> - Lemma 15. After reading the proof I understood that legal linearization ordering only  means respecting real-time order. This is a concrete example why I think a preliminaries section might help.
+> 
+> - ln 1192-1993, right. Please formalize the notion of time in an execution,
+> 
+> - Theorem 22. What exactly is the size of the queue?
+> 
+> - Sec 6. Why do you need read-back trees? How is that they facilitate the task of keeping memory bounded? Why the first algorithm cannot be modified to remove bocks, let us say using some sort of epoch-based memory reclamation scheme?
+> 
+> - ln 1279-1283, left. Why? A whole path might need to be copied, isn’t it?
+> 
+> - ln 1442. Why not Help(), in accordance to Dequeue(), for example?
+> 
+> - Sec 7. Your algorithms are adaptive on the size of the queue but not on the number of processes. I wonder if an interesting future direction would be to make your algorithms fully adaptive.
+> 

@@ -54,10 +54,10 @@ For ease of presentation, we first give an unbounded-space construction where en
 dequeues take $O(\log^2 p + \log q)$ steps,
 and then modify it to bound the space
 while  having $O(\log p\log( p+ q))$ amortized step complexity  per operation.
-Moreover, each operation does $O(\log p)$ CAS instructions in the worst case, whereas previous
+Moreover, \rev{if we count only CAS instructions,} each operation does $O(\log p)$ CAS instructions in the worst case, whereas previous
 lock-free queues use 
 %an unbounded number of CAS instructions in the worst case and 
-$\Omega(p)$ CAS instructions, even in an amortized sense.
+$\Omega(p)$, even in an amortized sense.
 Since a queue is also a bag, our queue is the first lock-free bag  with polylogarithmic step complexity.
 
 Both versions of our queue use single-word CAS on reasonably-sized 

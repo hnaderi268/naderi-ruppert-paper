@@ -65,7 +65,7 @@ each level instead of using the \fld{super} field.
 \State \linecomment Shared variables
 \State \typ{Node} root \Comment{root of ordering tree}
 \gc{
-\State \typ{Node[]} \var{leaf}$[1..p]$ \Comment{\var{leaf}$[k]$ is the leaf assigned to process $k$}
+\State \typ{Node[]} \var{leaf}$[1..p]$\Comment{\var{leaf}$[k]$ is the leaf assigned to process $k$}
 \State \typ{int[]} \var{last}$[1..p]$\Comment{\var{last}$[k]$ is max \fld{index} of a root block that process $k$ saw}
 \State \mbox{ }\Comment{contains either a dequeued enqueue or a null dequeue}
 }
@@ -235,7 +235,6 @@ each level instead of using the \fld{super} field.
 \end{algorithmic}
 \caption{Bounded-space queue implementation's routines for GC and creating new \typ{Block}.\label{code2GC}}
 \end{figure*}
-
 
 \begin{figure*}
 \begin{algorithmic}[1]

@@ -289,8 +289,8 @@ For a block $B$ in the root, $B.\fld{size}$ is computed using the \fld{size} fie
 the number of enqueues and dequeues in~$B$
 \rev{as follows.  Before the operations of $B$, the queue has $B'.\fld{size}$ elements.
 The enqueues of $B$ add $B.\fld{sum\sub{enq}}-B'.\fld{sum\sub{enq}}$ elements.
-Then the dequeues of $B$ remove $B.\fld{sum\sub{deq}} - B'.\fld{sum\sub{deq}}$ elements
-(unless the size becomes 0 at some point during these dequeues).  Thus, we have}
+Then the dequeues of $B$ remove $B.\fld{sum\sub{deq}} - B'.\fld{sum\sub{deq}}$ elements.
+(If subtracting this many elements would make the new size negative because there are more dequeues than there are elements, then the new size is 0.)  Thus, we have}
 \begin{eqnarray*}
 B.\fld{size} &=& \max(0, B'.\fld{size} + (B.\fld{sum\sub{enq}}-B'.\fld{sum\sub{enq}})\\ 
 			&& \hspace*{19mm}\mbox{ } - (B.\fld{sum\sub{deq}} - B'.\fld{sum\sub{deq}})).
@@ -344,7 +344,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \State \hangbox{let \var{B} be a new \typ{Block} with fields \fld{element} \assign\ \var{e},
 		\fld{sum\sub{enq}} \assign\ $\var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}}+1$,\\
 		\fld{sum\sub{deq}} \assign\ $\var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}$}\label{enqNew}
-    \State \Call{Append}{\var{B}}\label{enqAppend}
+    \State \Call{Append}{\var{B}}\Comment{\rev{append \op{Enqueue} to \var{leaf}.\fld{blocks} and propagate to root}}\label{enqAppend}
 \EndFunction{Enqueue}
 
 \spac
@@ -353,9 +353,9 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \State \hangbox{let \var{B} be a new \typ{Block} with fields \fld{element} \assign\ \nl,
 	    \fld{sum\sub{enq}} \assign\ $\var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}}$,\\
 	    \fld{sum\sub{deq}} \assign\ $\var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}+1$}\label{deqNew}
-    \State \Call{Append}{\var{B}}\label{deqAppend}
-    \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, $\var{leaf.}\head-1$, $1$}\label{invokeIndexDequeue}
-    \State \Return{ \Call{FindResponse}{\var{b, i}}}\label{deqRest}
+    \State \Call{Append}{\var{B}}\Comment{\rev{append \op{Enqueue} to \var{leaf}.\fld{blocks} and propagate to root}}\label{deqAppend}
+    \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, $\var{leaf.}\head-1$, $1$} \Comment{\rev{find where \op{Deqeueue} is in \var{Root}.\fld{blocks}}}\label{invokeIndexDequeue}
+    \State \Return{ \Call{FindResponse}{\var{b, i}}}\Comment{\rev{find response \op{Dequeue} should return}}\label{deqRest}
 \EndFunction{Dequeue}
 
 \spac
@@ -369,7 +369,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \spac
 
 \Function{void}{Propagate}{\typ{Node} \var{v}} \Comment{propagate blocks from \var{v}'s children to root}
-    \If{{\keywordfont not} \Call{Refresh}{\var{v}}} \label{firstRefresh}  \hfill \Comment{double refresh}
+    \If{{\keywordfont not} \Call{Refresh}{\var{v}}} \label{firstRefresh}  \hfill \Comment{double refresh:  \rev{if first fails, try again}}
         \State \Call{Refresh}{\var{v}} \label{secondRefresh}
     \EndIf
     \If{$\var{v} \neq \var{root}$} \hfill \Comment{recurse up tree}
@@ -381,18 +381,18 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \Function{boolean}{Refresh}{\typ{Node} \var{v}} \Comment{try to append a new block $B$ to \var{v}.\fld{blocks}}
     \State \var{h} \assign\ \var{v}.\head \label{readHead}
-    \ForEach{\fld{dir} {\keywordfont{in}} $\{\fld{left, right}\}$} \label{startHelpChild1}
+    \ForEach{\fld{dir} {\keywordfont{in}} $\{\fld{left, right}\}$} \Comment{\rev{help advance $v$'s children's \var{head} indices, if necessary}}\label{startHelpChild1}
         \State \var{childHead} \assign\ \var{v}.\fld{dir}.\head \label{readChildHead}
         \If{\var{v}.\fld{dir.blocks}[\var{childHead}] $\neq$ \nl} \label{ifHeadnotNull}
             \State \Call{Advance}{\var{v}.\fld{dir}, \var{childHead}} \label{helpAdvance}
         \EndIf
     \EndFor \label{endHelpChild1}
-    \State \var{B} \assign\ \Call{CreateBlock}{\var{v, h}} \label{invokeCreateBlock}
-    \If{$\var{B} = \nl$} \Return{\tr} \label{addOP} 
+    \State \var{B} \assign\ \Call{CreateBlock}{\var{v, h}}\Comment{\rev{create new block to append to \var{v}.\fld{blocks}}}\label{invokeCreateBlock}
+    \If{$\var{B} = \nl$} \Return{\tr}\Comment{\rev{if no new operations to propagate to $v$, do nothing}}\label{addOP} 
 	\Else
-	    \State \var{result} \assign\ \Call{CAS}{\var{v}.\fld{blocks}[\var{h}], \nl, \var{B}} \label{cas}
-    	\State \Call{Advance}{\var{v, h}}\label{advance}
-    	\State \Return{ \var{result}}
+	    \State \var{result} \assign\ \Call{CAS}{\var{v}.\fld{blocks}[\var{h}], \nl, \var{B}}\Comment{\rev{try to add $B$ to \var{v}.\fld{blocks}}}\label{cas}
+    	\State \Call{Advance}{\var{v, h}} \Comment{\rev{advance $v.head$ from $h$ to $h+1$}}\label{advance}
+    	\State \Return{ \var{result}}\Comment{\rev{return true iff \op{CAS} succeeded}}
 	\EndIf
 \EndFunction{Refresh}
 \end{algorithmic}
@@ -410,11 +410,10 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 		\fld{sum\sub{deq}} \assign\ \var{v}.\fld{left.blocks}[\var{B}.\eleft].\fld{sum\sub{deq}} + \var{v}.\fld{right.blocks}[\var{B}.\eright].\fld{sum\sub{deq}}}\label{createSumDeq}
     \State \var{num\sub{enq}} \assign\ $\var{B}.\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{enq}}$\label{computeNumEnq}
     \State \var{num\sub{deq}} \assign\ $\var{B}.\fld{sum\sub{deq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{deq}}$
-    \If{$\var{v} = \var{root}$} \var{B}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + \var{num\sub{enq}} - \var{num\sub{deq}}$)\label{computeLength}
-    \EndIf
     \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$} \Return \nl\ \Comment{no blocks need to be propagated to \var{v}}\label{testEmpty} 
-    \Else\ \Return \var{B}
+    \ElsIf{$\var{v} = \var{root}$} \var{B}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + \var{num\sub{enq}} - \var{num\sub{deq}}$)\label{computeLength}
     \EndIf
+    \State \Return \var{B}
 \EndFunction{CreateBlock}
 
 \spac
@@ -500,14 +499,14 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \end{figure*}
 
 An \opemph{Enqueue}(\var{e}) 
-\rev{creates a new Block at line \ref{enqNew} and sets its fields to indicate
+\rev{creates a new Block at line \ref{enqNew} and sets its \fld{sum} fields to indicate
 that the Block represents an \op{Enqueue}.  The enqueued item \var{e} is stored in the block's \fld{element}
 field.
 The call to \op{Append}, described below, on line \ref{enqAppend}
 appends the \block\ to the process's leaf and ensures it is propagated to the root.}
 
 A \opemph{Dequeue} also 
-\rev{creates a new Block at line \ref{deqNew} and sets its fields to indicate
+\rev{creates a new Block at line \ref{deqNew} and sets its \fld{sum} fields to indicate
 that the Block represents a \op{Dequeue}.
 It then calls \op{Append} at line \ref{deqAppend} to append the \block\ to the process's leaf and ensure
 it is propagated to the root.
@@ -555,11 +554,11 @@ Since the \fld{sum\sub{enq}} field should store the number of enqueues in
 Line \ref{computeNumEnq} sets \var{num\sub{enq}} to the number of enqueues in the new block by
 subtracting  the number of enqueues  in \var{v}.\fld{blocks}[$1..\var{i}-1$] from \var{B}.\fld{sum\sub{enq}}.
 The values of \var{B}.\fld{sum\sub{deq}} and \var{num\sub{deq}} are computed similarly.
-Then, if \var{B}
+\rev{If the new block contains no operations, \op{CreateBlock} returns \nl\ to indicate
+ there is no need to install~it.
+Otherwise,} if \var{B}
 is going to be installed in the root, line \ref{computeLength} computes the \fld{size} field, which
 represents the number of elements in the queue after the operations in the block are performed.
-Finally, if the new block contains no operations, \op{CreateBlock} returns \nl\ to indicate
- there is no need to install~it.
 
 Once a dequeue is appended to a block of the process's leaf and propagated to the root,
 the \opemph{IndexDequeue} routine finds the dequeue's location in the root.

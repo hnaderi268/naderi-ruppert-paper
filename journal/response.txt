@@ -1,3 +1,6 @@
+*** should add new comments to GC code similar to new comments in basic code
+
+
 We thank the reviewers for their comments.  Below, we address them point-by-point.  Modifications to the manuscript are shown in magenta.
 
 > Reviewer 1
@@ -37,15 +40,21 @@ Done.
 > confusing. It's not immediately clear why element $e$ indicates
 > that the operation is Enqueue. Probably formulate it "the block's
 > element field $e\neq null$ indicates..."
-> 
+
+This paragraph has been rewritten.
+
 > lines 594 - 608 (lines 24 - 37 in the code). Add a more detailed
 > comments that explain the Refresh operation.
-> 
+
+Done.
+
 > line 619 (line 44 in the code). It's not clear why the size of the
 > queue is calculated correctly. Why if some of the dequeues that are
 > counted by num_deq are empty and do not change the size of the
 > queue ? Some intuition here would be helpful.
-> 
+
+Some explanation has been added in the text (line 526) [*** check line #].
+
 > line 620 (line 46 in the code). Suggestion: consider to put the
 > check whether the new block B contains no operations
 > (num_deqs+num_enqs==0) immediately after the calculation of num_enq
@@ -53,7 +62,9 @@ Done.
 > values of num_enq and num_deq, and then advance to the check
 > whether v is root. If the change will be done, change the order of
 > the explanation in lines 715 - 723, right column, accordingly.
-> 
+
+Done.
+
 > line 634 (line 58 of the code). In the comment, probably add an
 > additional remainder that D(v.blocks[b]) and D(root.blocks[b'])
 > represent the sequence of the dequeues represented by the

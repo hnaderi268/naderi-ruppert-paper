@@ -27,7 +27,7 @@ Some explanation has been added.
 > mentioned in line 521, right column ? An additional explanation
 > would be helpful.
 
-No, this was a typo.
+No, this was a typo, now corrected.
 
 > lines 552 - 567, right column, and lines 686 - 711, right column.
 > Adding explicit references to the lines of the code on Fig. 5 - 7
@@ -69,53 +69,81 @@ Done.
 > additional remainder that D(v.blocks[b]) and D(root.blocks[b'])
 > represent the sequence of the dequeues represented by the
 > corresponding blocks.
-> 
+
+Added reminder in caption of Figure.
+
 > line 640 (line 64 of the code). Add a comment that gives some
 > intuition for this line.
-> 
+
+Done.
+
 > lines 643 - 645 (lines 67 - 69 of the code). Add comments that help
 > to understand the calculation of the dequeue's rank.
-> 
+
+Done.
+
 > line 658 (line 81 in the code). Add additional comment that
 > doubling search is used here to find the range of the binary
 > search.
-> 
+
+Done.  Some text has been added to the text description of FindResponse to explain that the doubling search first finds the left end of the range and then performs a binary search.
+
 > line 696, right column. "... and calls Refresh on $v$ twice in
 > lines 226 and 227". The lines numbers should be 17 and 18.
-> 
+>
 > line 701, right column. "... prior to line 226" should be "...
 > prior to line 17"
-> 
+
+These have been fixed.
+
 > line 706, right column. Add a description of the code in lines 26 -
 > 29 of Refresh.
-> 
+
+Done.
+
 > lines 771 - 790, left column. Add explicit references to the lines
 > of the code in the description of GetEnqueue().
-> 
+
+This has been done, and the description has been expanded.
+
 > line 828, right column. Probably emphasize: if B and B' are two
 > *different* blocks at the same depth...
-> 
+
+Done.
+
 > line 870, right column, Probably should be "By the definition of
 > *direct* subblocks (3.3)...".
-> 
+
+Yes, clarified.
+
 > lines 887, 892. left column. It look like there are two unnecessary
 > empty lines.
-> 
+
+This seems to be a strange effect of the double-spacing option for the draft.
+
 > line 919, right column. Should it be "the value computed in line
 > *42*" (instead of 41) ?
-> 
+
+Fixed.
+
 > line 983, right column. "... close to the time ..." is not clear in
 > the context of asynchronous execution. Probably state it
 > differently: "We do this by showing that B.super is written after B
 > is installed, but before B_s is installed."
-> 
+
+This has been restated.
+
 > line 1003, right column, Probably should be "By the definition of
 > *direct* subblocks (3.3)...".
-> 
+
+Fixed.
+
 > line 1102, right column. A more detailed explanation would be
 > helpful. Particulary, if op_1 precedes op_2, in which blocks op_1
 > and op_2 can appear so that by (3.2) op_1 precedes op_2 in L ?
-> 
+
+This has been expanded.
+
 > line 1255, left column. A short explanation why Corollary 23
 > follows immediately from Theorem 22 will be helpful for easier
 > reading.

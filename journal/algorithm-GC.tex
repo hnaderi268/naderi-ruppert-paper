@@ -113,8 +113,8 @@ each level instead of using the \fld{super} field.
 \spac
 
 \Function{void}{Propagate}{\typ{Node} \var{v}} \Comment{propagate blocks from \var{v}'s children to root}
-    \If{{\keywordfont not} \Call{Refresh}{\var{v}}} \label{firstRefresh}  \hfill \Comment{double refresh}
-        \State \Call{Refresh}{\var{v}} \label{secondRefresh}
+    \If{{\keywordfont not} \Call{Refresh}{\var{v}}} \label{firstRefreshGC}  \hfill \Comment{double refresh}
+        \State \Call{Refresh}{\var{v}} \label{secondRefreshGC}
     \EndIf
     \If{$\var{v} \neq \var{root}$} \hfill \Comment{recurse up tree}
         \State \Call{Propagate}{\var{v}.\fld{parent}}

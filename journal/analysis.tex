@@ -61,7 +61,8 @@ so $B$ has at most $c$ direct subblocks.
 We now bound step complexity in terms of the number of processes $p$, the maximum contention $c\leq p$, and the size of the queue. 
 
 \begin{mytheorem}\label{enqDeqTime}
-Each \op{Enqueue} and null Dequeue takes $O(\log p)$ steps 
+\rev{The queue implementation is wait-free and}
+each \op{Enqueue} and null Dequeue takes $O(\log p)$ steps 
 and each non-null \op{Dequeue} takes
 $O(\log p\log c + \log q_e+ \log q_d)$ steps,
 where $q_d$ is the size of the queue when the \op{Dequeue} is linearized and 
@@ -77,13 +78,11 @@ So, the total number of steps for either type of operation is $O(\log p)$.
 
 A non-null \op{Dequeue} must also search at line \ref{FRb} and call \op{GetEnqueue}
 at line \ref{findAnswer}.
-By Lemma \ref{dSearchTime}, the doubling search takes $O(\log(q_e+q_d+p))$ steps,
+\rev{Since the doubling search must search a finite portion of the root's
+\var{blocks} array, it terminates within a finite number of steps.}
+Moreover, by Lemma \ref{dSearchTime}, the doubling search takes $O(\log(q_e+q_d+p))$ steps,
 since the size of the queue can change by at most $p$ within one block (by Lemma \ref{blockSize}).
 \op{GetEnqueue} does a binary search within each node on a path from the root to a leaf.
 Each node $\var{v}$'s search is within the subblocks of one block in $\var{v}$'s parent.
 By Lemma \ref{blockSize}, each such search takes $O(\log c)$ steps, for a total of $O(\log p\log c)$ steps.
 \end{proof}
-
-\begin{corollary}
-The queue implementation is wait-free.
-\end{corollary}

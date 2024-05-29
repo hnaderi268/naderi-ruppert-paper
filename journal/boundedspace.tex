@@ -7,7 +7,7 @@ In the implementation described in Section \ref{DescriptQ},
 operations remain in the \fld{blocks} arrays forever. 
 Thus, the space used continues to grow as operations are invoked.
 Now, we modify the implementation to remove blocks that are no longer needed, so that space usage is
-polynomial in $p$ and $q$, while ensuring the (amortized) step complexity is still polylogarithmic. We replace the \fld{blocks} array in each node by a red-black tree (RBT)
+polynomial in $p$ and $q$, while ensuring the (amortized) step complexity is still polylogarithmic \rev{in $p$ and $q$}. We replace the \fld{blocks} array in each node by a red-black tree (RBT)
 that stores the blocks.
 Each block has an additional \fld{index} field
 that represents its position within the original \fld{blocks} array, and
@@ -42,7 +42,7 @@ Bashari and Woelfel ~\cite{DBLP:conf/podc/BashariW21} used persistent RBTs in a 
 To prevent RBTs from growing without bound, we must discard
 blocks that are no longer needed.
 Ensuring the size of the RBT is polynomial in $p$ and $q$ will 
-also keep the running time of our operations polylogarithmic.
+also keep the running time of our operations polylogarithmic \rev{in $p$ and $q$}.
 Blocks should be kept if they contain operations still in progress.
 Moreover, a block containing an \op{Enqueue}($x$) operation must be kept until $x$ is dequeued.
 

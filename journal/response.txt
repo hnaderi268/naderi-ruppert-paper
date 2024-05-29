@@ -147,11 +147,15 @@ This has been expanded.
 > line 1255, left column. A short explanation why Corollary 23
 > follows immediately from Theorem 22 will be helpful for easier
 > reading.
-> 
+
+We found it easier to combine Theorem 22 and Corollary 23 and their
+proofs (now stated together as Theorem 22).
+
 > line 1304, right column. "...will also keep the running time of our
 > operations polylogarithmic *on $p$ and $q$*"
-> 
-> 
+
+Done.
+
 > Attachments:
 > • https://reviewer-feedback.springernature.com/download/attachment/c514d3ef-d0cc-4718-9d05-877061314935
 > 

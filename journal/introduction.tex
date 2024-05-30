@@ -30,7 +30,7 @@ The same problem occurs in array-based implementations of queues \cite{DBLP:conf
 Solutions that tried to sidestep this problem using fetch\&increment \cite{DBLP:conf/ppopp/MorrisonA13,Nik19,10.1145/3490148.3538572,DBLP:conf/ppopp/YangM16}
 rely on slower mechanisms to handle worst-case executions and still have $\Omega(p)$ step complexity.
 
-Many concurrent data structures that keep track of a set of elements also have an $\Omega(p)$ term in their step complexity, as observed by Ruppert~\cite{Rup16}.
+Many concurrent data structures that keep track of a set of elements also have an $\Omega(p)$ term in their step complexity, as observed in~\cite{Rup16}.
 For example, lock-free lists \cite{FR04,Sha15}, stacks \cite{Tre86} and search trees \cite{EFHR14} 
 have an $\Omega(c)$ term in their step complexity, where $c$ represents contention,
 the number of processes that access the data structure concurrently, which can be $p$ in the worst case.
@@ -67,6 +67,8 @@ This is analogous to the assumption for the classical RAM model that the number 
 For the space-bounded version, we unlink unneeded objects from our data structure.
 We do not address the orthogonal problem of reclaiming memory; we assume a safe
 garbage collector, such as the highly optimized one that Java provides.
+\rev{See \cite{SBM24} and the references therein for a variety of approaches to
+safe memory reclamation.}
 
 Our queue uses a binary tree, called the \emph{\ordering\ tree}, where each process has its own leaf.
 A process adds its operations to its leaf.
@@ -78,5 +80,5 @@ or applying them one-by-one to the queue would be too costly.
 Instead, we use a novel implicit representation of batches
 of queue operations that allows us to quickly merge two batches from the children of a node,
 and quickly access any  operation in a~batch.
-A preliminary version of this work appeared in~\cite{Nad22}.
+Preliminary versions of this work appeared in~\cite{Nad22,NR23}.
 %\here{Maybe say a little more about techniques used in the implementation, if space permits}

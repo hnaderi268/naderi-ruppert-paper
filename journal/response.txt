@@ -153,30 +153,26 @@ proofs (now stated together as Theorem 22).
 
 Done.
 
-> Attachments:
-> • https://reviewer-feedback.springernature.com/download/attachment/c514d3ef-d0cc-4718-9d05-877061314935
-> 
 > Reviewer 2
-> A considerable amount of work in the literature of asynchronous concurrent data structures is devoted to the search of efficient wait-free or lock-free linearizable queues. The known queue implementations have unbounded step complexity and their amortized step complexity is at least linear on the number of processes. The current paper makes a significant progress in this matters, it proposes the first wait-free linearizable queue implementation whose worst-case step complexity is polylogarithmic on the total number of processes in the system and the number of elements in the queue. The implementation uses standard read, write and CAS instructions and memory locations of reasonable size.
-> 
-> The implementation is based in an ordering tree, which is a binary tree with each leaf associated to exactly one process. The main idea of the algorithm is quite simple: when a process wants to perform an operation, it first installs the operation in its leaf and then it propagates the operation in all the nodes in the path from the leaf to the root. During the process, the process might propagate other pending operations. The operation is linearized once it is installed at the root, and the response of the operation, in case it is a dequeue, can be determined by inspecting the previous operations installed in the root. The main idea of the algorithm is simple, what it is difficult is to implement the idea efficiently, i.e. in polylogarithimic number of steps.
-> 
-> Ordering trees has been used in the past in the universal construction of Afek, Dauber and Touitou, and in the polylogarithmic and linearizable single-enqueuer queue of Jayanti and Petrovic. Recently, the same approach was used by Johnen, Khattabi and Milani in their wait-free queue, but their implementation fails to have a polylogarithmic dequeue operation. 
-> 
-> After a complete related work section, the paper first shows an implementation that uses unbounded memory. The presentation of this algorithm is very nice, starting with a quite detailed overview of it, which made me follow the detailed implementation that comes after. The implementation is complicated to some extent, due to the arithmetic used to efficiently implement the simple idea the algorithm is based on. Furthermore, the linearizability proof and step complexity analysis are structured in simple pieces that makes the arguments convincing.
-> 
+>
 > Then, the paper presents a modification of the first algorithm that uses bounded memory, more specifically polynomial on the number of processes and the size of the queue in the linearization, and with polylogarithmic amortized step complexity. As one would naturally expect, this version adds a sort of garbage collector mechanism that removes blocks of memory that are not needed anymore. I found this part of the paper harder to understand. I did not understand the need of using red-black trees, which I think complicates everything. I have no reason to think the implementation is wrong, all looks convincing to me, but I wonder if there is a way to simplify the presentation.
-> 
-> All in all, the paper is very good, delivering a solid contribution that is overall nicely presented. I recommend acceptance. I have only a few minor comments that appear below. 
-> 
+
+For the space-bounded version, we replace an infinite array by a red-black tree (using the array index as the key).  This allows us to append elements, access elements, and split off the obsolete elements, all in logarithmic time.  We realize that this additional data structure complicates the algorithm, but we were unfortunately unable to come up with a simpler way to do it.  We hoped that presenting the simpler, space-unbounded version first would make it easier to understand the space-bounded version.  We did our best to explain the transformation from the arrays to the RBTs in the first page of Section 6.
+
 > Specific comments:
 > 
 > - ln 37, left. Missing blank space before ‘and’.
-> 
+
+Fixed.
+
 > - I find the related work section complete. However, I wonder if it is worth citing a few works about memory reclamation, due to your bounded memory implementation.
-> 
+
+Although our space-bounded algorithm unlinks objects that are no longer needed from our data structure, we consider the problem of reclaiming that memory to be an orthogonal issue.  There is a rather large body of literature on memory reclamation for concurrent data structures, so we have added (at line 110 of the introduction) a reference to a very recent paper that includes a large bibliography of work in this area, to help the reader find relevant literature on it. 
+
 > - I do not understand why you do not cite the preliminary version in podc 2023. 
-> 
+
+This omission has been corrected.
+
 > - ln 235, left. Repeated ‘words’.
 > 
 > - For completeness, I suggest to add a preliminaries section, with a reminder of the main definitions such as linearizability, step complexity, and so on. 

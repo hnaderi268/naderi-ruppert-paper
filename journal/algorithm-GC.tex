@@ -63,11 +63,11 @@ each level instead of using the \fld{super} field.
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{200}
 \State \linecomment Shared variables
-\State \typ{Node} root \Comment{root of ordering tree}
+\State \typ{Node} root \Comment{root of ordering tree}%
 \gc{
 \State \typ{Node[]} \var{leaf}$[1..p]$\Comment{\var{leaf}$[k]$ is the leaf assigned to process $k$}
 \State \typ{int[]} \var{last}$[1..p]$\Comment{\var{last}$[k]$ is max \fld{index} of a root block that process $k$ saw}
-\State \mbox{ }\Comment{contains either a dequeued enqueue or a null dequeue}
+\State \mbox{ }\Comment{contains either a dequeued enqueue or a null dequeue}%
 }
 
 \spac
@@ -79,7 +79,7 @@ each level instead of using the \fld{super} field.
 		\fld{sum\sub{enq}}\ \assign\ $\var{leaf}[\var{id}].\fld{blocks}[\gc{h-1}].\fld{sum\sub{enq}}+1,$\\
 		\fld{sum\sub{deq}}\ \assign\ $\var{leaf}[\var{id}].\fld{blocks}[\gc{h-1}].\fld{sum\sub{deq}}$,
 		\gc{\fld{index}\ \assign $h$}}\label{enqNewGC}
-    \State \Call{Append}{\var{B}}
+    \State \Call{Append}{\var{B}}\Comment{\rev{append \op{Enqueue} to \var{leaf}[\var{id}].\fld{blocks}, propagate to root}}
 \EndFunction{Enqueue}
 
 \spac
@@ -90,22 +90,22 @@ each level instead of using the \fld{super} field.
 	    \fld{sum\sub{enq}}\ \assign\ $\var{leaf}[\var{id}].\fld{blocks}[\gc{h-1}].\fld{sum\sub{enq}},$\\
 	    \fld{sum\sub{deq}}\ \assign\ $\var{leaf}[\var{id}].\fld{blocks}[\gc{h-1}].\fld{sum\sub{deq}}+1$,
 	    \gc{\fld{index} \assign $h$}}\label{deqNewGC}
-    \State \Call{Append}{\var{B}}
-    \gc{\State \Return \Call{CompleteDeq}{\var{leaf}[\var{id}], $h$}}
+    \State \Call{Append}{\var{B}}\Comment{\rev{append \op{Dequeue} to \var{leaf}[\var{id}].\fld{blocks}, propagate to root}}%
+    \gc{\State \Return \Call{CompleteDeq}{\var{leaf}[\var{id}], $h$}}\Comment{\rev{compute response \op{Dequeue} should return}}
 \EndFunction{Dequeue}
 
 \spac
 
 \gc{
 \Function{Object}{CompleteDeq}{\typ{Node} \var{leaf}, \typ{int} $h$} \Comment{finish propagated dequeue in $\var{leaf}.\fld{blocks}[h]$}
-    \State $\langle \var{b}, \var{i}\rangle$ \assign\ $\Call{IndexDequeue}{\var{leaf}, h, 1}$
-    \State \Return $\Call{FindResponse}{b, i}$
+    \State $\langle \var{b}, \var{i}\rangle$ \assign\ $\Call{IndexDequeue}{\var{leaf}, h, 1}$\Comment{\rev{find where \op{Dequeue} is in \var{root}.\fld{blocks}}}
+    \State \Return $\Call{FindResponse}{b, i}$\Comment{\rev{find response \op{Dequeue} should return}}
 \EndFunction{CompleteDeq}
 }
 
 \spac
 
-\Function{void}{Append}{\typ{Block} \var{B}}  \Comment{append block to leaf and propagate to root}
+\Function{void}{Append}{\typ{Block} \var{B}}  \Comment{append block to leaf and propagate to root}%
     \gc{\State \var{leaf}[\var{id}].\fld{blocks} \assign\ \Call{AddBlock}{\var{leaf}[\var{id}], \var{leaf}[\var{id}].\fld{blocks}, \var{B}}\label{appendLeafGC}}
     \State \Call{Propagate}{\var{leaf}[\var{id}].\fld{parent}} 
 \EndFunction{Append}
@@ -113,7 +113,7 @@ each level instead of using the \fld{super} field.
 \spac
 
 \Function{void}{Propagate}{\typ{Node} \var{v}} \Comment{propagate blocks from \var{v}'s children to root}
-    \If{{\keywordfont not} \Call{Refresh}{\var{v}}} \label{firstRefreshGC}  \hfill \Comment{double refresh}
+    \If{{\keywordfont not} \Call{Refresh}{\var{v}}} \label{firstRefreshGC}  \hfill \Comment{double refresh: \rev{if first fails, try again}}
         \State \Call{Refresh}{\var{v}} \label{secondRefreshGC}
     \EndIf
     \If{$\var{v} \neq \var{root}$} \hfill \Comment{recurse up tree}
@@ -123,17 +123,17 @@ each level instead of using the \fld{super} field.
 
 \spac
 
-\Function{boolean}{Refresh}{\typ{Node} \var{v}} \Comment{try to append a new block $B$ to $\var{v}.\fld{blocks}$}
+\Function{boolean}{Refresh}{\typ{Node} \var{v}} \Comment{try to append a new block $B$ to $\var{v}.\fld{blocks}$}%
 	\gc{
 	\State $T$ \assign\ $\var{v}.\fld{blocks}$\label{refreshReadTGC}
     \State $\var{h}$ \assign\ $\Call{MaxBlock}{T}.\fld{index}+1$ \label{refreshReadMax}
     }
-    \State $\var{B}$ \assign\ $\Call{CreateBlock}{\var{v, h}}$ \label{invokeCreateBlockGC}
-    \If{\var{B = \nl}} \Return{\tr} \label{addOPGC}
+    \State $\var{B}$ \assign\ $\Call{CreateBlock}{\var{v, h}}$\Comment{\rev{create new block to append to \var{v}.\fld{blocks}}}\label{invokeCreateBlockGC}
+    \If{\var{B = \nl}} \Return{\tr}\Comment{\rev{if no new operations to propagate to \var{v}, do nothing}}\label{addOPGC}
     \Else  
     	\gc{
-	    \State $T'$ \assign\ $\Call{AddBlock}{v, T, \var{B}}$\label{refreshABGC}
-		\State \Return \Call{CAS}{\var{v}.\fld{blocks}, $T$, $T'$}\label{casGC}
+	    \State $T'$ \assign\ $\Call{AddBlock}{v, T, \var{B}}$\Comment{\rev{$T'$ is a copy of $T$ with $B$ added (and GC if needed)}}\label{refreshABGC}
+		\State \Return \Call{CAS}{\var{v}.\fld{blocks}, $T$, $T'$}\Comment{\rev{try installing $T'$ as \var{v}'s \fld{blocks} tree}}\label{casGC}%
 		}
     \EndIf
 \EndFunction{Refresh}
@@ -141,13 +141,13 @@ each level instead of using the \fld{super} field.
 \spac
 
 \gc{
-\Function{RBT}{AddBlock}{\typ{Node} \var{v}, \typ{RBT} \var{T}, \typ{Block} \var{B}} \Comment{add block $\var{B}\neq\nl$ to \var{T}; do GC if necessary}
+\Function{RBT}{AddBlock}{\typ{Node} \var{v}, \typ{RBT} \var{T}, \typ{Block} \var{B}} \Comment{do GC if necessary; add block $\var{B}\neq\nl$ to \var{T}}
     \If{\var{B}.\fld{index} is a multiple of $G$} \Comment{do garbage collection}\label{GCstart}
-        \State $s$ \assign\ \Call{SplitBlock}{\var{v}}.\var{index}\label{callSplitBlock}
-        \State \Call{Help}{}\label{invokeHelp}
+        \State $s$ \assign\ \Call{SplitBlock}{\var{v}}.\var{index}\Comment{\rev{find lowest index of block to keep}}\label{callSplitBlock}
+        \State \Call{Help}{}\Comment{\rev{help complete pending \op{Dequeues}}}\label{invokeHelp}
         \State $T'$ \assign\ \Call{Split}{$T,s$} \Comment{\op{Split} removes blocks with $\fld{index} < s$}\label{splitGC}
-        \State \Return \Call{Insert}{$T',B$}\label{GCend}
-	\Else\ \Return \Call{Insert}{$T, B$}\label{noGC-insert}
+        \State \Return \Call{Insert}{$T',B$}\Comment{\rev{add $B$ to the tree}}\label{GCend}
+	\Else\ \Return \Call{Insert}{$T, B$}\Comment{\rev{if GC not needed, just add $B$ to the tree}}\label{noGC-insert}
     \EndIf
 \EndFunction{AddBlock}
 }
@@ -160,18 +160,18 @@ each level instead of using the \fld{super} field.
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{251}
 \gc{
-\Function{Block}{SplitBlock}{\typ{Node} v} \Comment{figure out where to split \var{v}'s RBT}
-	\If{$\var{v}=\var{root}$}
-		\State $m$ \assign\ 0
+\Function{Block}{SplitBlock}{\typ{Node} v} \Comment{\rev{find lowest index of block GC should keep in \var{v}}}
+	\If{$\var{v}=\var{root}$} \Comment{return block before the last block containing a}
+		\State $m$ \assign\ 0\Comment{dequeued enqueue or null dequeue}
 		\For{$k$ \assign\ $1..p$} $m$ \assign\ $\max(m, \var{v}.\fld{last}[k])$
 		\EndFor
 		\State $B$ \assign\ $\var{root}.\fld{blocks}[m-1]$\label{SBlookup1}
-	\Else
+	\Else \Comment{\rev{return last sublock of first block kept in parent}}
 		\State $B_p$ \assign\ $\Call{SplitBlock}{\var{v}.\fld{parent}}$\label{SBrecurse}
 		\State \var{dir} \assign\ ($\var{v}=\var{v}.\fld{parent.left}$ ? \fld{left} : \fld{right})
 		\State $B$ \assign\ $\var{v}.\fld{blocks}[B_p.\edir]$\label{SBlookup2}
 	\EndIf
-	\State \Return ($B = \nl$ ? $\Call{MinBlock}{\var{v}.\var{blocks}}$ : $B$) \Comment{If $B$ was discarded, use leftmost block instead}\label{substitute}
+	\State \Return ($B = \nl$ ? $\Call{MinBlock}{\var{v}.\var{blocks}}$ : $B$) \Comment{If $B$ was discarded, keep all blocks}\label{substitute}
 \EndFunction{SplitBlock}
 }
 
@@ -179,14 +179,14 @@ each level instead of using the \fld{super} field.
 \spac
 
 \gc{
-\Function{void}{Help}{} \Comment{help pending operations}
+\Function{void}{Help}{} \Comment{help pending \op{Dequeues}}
     
     \For{$\ell$ in $\var{leaf}[1..k]$}
         \State $\var{B}$ \assign\ $\Call{MaxBlock}{\ell.\fld{blocks}}$
     	%\State \Call{Propagate}{$\ell.\fld{parent}$}   <--- don't do this because recursive helping could be infinite loop
         \If{$\var{B}.\fld{element} = \nl$ and $\var{B}.\fld{index}>0$ and \Call{Propagated}{$\ell, \var{B}.\fld{index}$}} 
             \State \linecomment{operation is a propagated dequeue}
-            \State $\var{B}.\fld{response}$ \assign\ $\Call{CompleteDeq}{\ell, \var{B}.\fld{index}}$ 
+            \State $\var{B}.\fld{response}$ \assign\ $\Call{CompleteDeq}{\ell, \var{B}.\fld{index}}$ \Comment{\rev{compute response and store it in leaf block}}
         \EndIf
     \EndFor
 \EndFunction{Help}
@@ -200,8 +200,8 @@ each level instead of using the \fld{super} field.
     \Else
     	\State $T$ \assign\ $\var{v}.\fld{parent.blocks}$
 		\State \fld{dir} \assign\ (\var{v}.\fld{parent.left} = \var{v} ? \fld{left} : \fld{right}) 
-		\If{$\Call{MaxBlock}{T}.\edir < b$} \Return \fa
-		\Else
+		\If{$\Call{MaxBlock}{T}.\edir < b$} \Return \fa\ \Comment{\rev{\var{v}.\fld{blocks}[\var{b}] has not propagated to \var{v}.\fld{parent}}}
+		\Else \Comment{\rev{check if superblock of \var{v}.\fld{blocks}[\var{b}] propagated to root}}
 			\State $B_p$ \assign\ minimum index block in $T$ with $\edir \geq b$\label{searchsuper3}
 			\State \Return \Call{Propagated}{\var{v}.\fld{parent}, $B_p$.\fld{index}}
 		\EndIf
@@ -224,12 +224,11 @@ each level instead of using the \fld{super} field.
 			\var{v}.\fld{right.blocks}[\var{B}.\eright].\fld{sum\sub{deq}}}
     \State \var{num\sub{enq}} \assign\ $\var{B}.\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{enq}}$\label{computeNumEnqGC}
     \State \var{num\sub{deq}} \assign\ $\var{B}.\fld{sum\sub{deq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{deq}}$
-    \If{$\var{v} = \var{root}$} \var{B}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + 
+    \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$} \Return \nl\ \Comment{no blocks need to be propagated to \var{v}}\label{testEmptyGC}\label{CBnullGC}
+    \ElsIf{$\var{v} = \var{root}$} \var{B}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + 
         	\var{num\sub{enq}} - \var{num\sub{deq}}$)\label{computeLengthGC}
     \EndIf
-    \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$} \Return \nl\ \Comment{no blocks need to be propagated to \var{v}}\label{testEmptyGC}\label{CBnullGC}
-    \Else\ \Return \var{B}
-    \EndIf
+    \State\Return \var{B}
 \EndFunction{CreateBlock}
 
 \end{algorithmic}
@@ -250,13 +249,14 @@ each level instead of using the \fld{super} field.
 		\State $B_p$ \assign\ min block in $T$ with $\edir \geq b$\label{searchsuper1}
 		\State $B_p'$ \assign\ max block in $T$ with $\edir < b$ \Comment{predecessor of $B_p$}\label{searchsuper2}}
 	    \State \linecomment{compute index \var{i} of dequeue in superblock $B_p$}
+	    \State \linecomment{\rev{add \# dequeues in blocks of $v$ before $v.\fld{blocks}[b]$ within superblock $B_p$}}
 	    \State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{b}-1].\fld{sum\sub{deq}} -
 	    		\var{v}.\fld{blocks}[\gc{B_p'}.\edir].\fld{sum\sub{deq}}$}
-        \If{$\fld{dir} = \fld{right}$} 
+        \If{$\fld{dir} = \fld{right}$}\Comment{\rev{add \# dequeues in $B_p$ from left sibling}}
         	\State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\gc{B_p}.\eleft].\fld{sum\sub{deq}} - \mbox{ }
 					\var{v}.\fld{blocks}[\gc{B_p'}.\eleft].\fld{sum\sub{deq}}$}\label{considerLeftBeforeRightGC}
         \EndIf \label{computeISuperEndGC}
-        \State \Return\Call{IndexDequeue}{\var{v}.\fld{parent}, $\gc{B_p.\fld{index}}$, \var{i}}
+        \State \Return\Call{IndexDequeue}{\var{v}.\fld{parent}, $\gc{B_p.\fld{index}}$, \var{i}} \Comment{\rev{recurse up the tree}}
     \EndIf
 \EndFunction{IndexDequeue}
 
@@ -277,9 +277,9 @@ each level instead of using the \fld{super} field.
 			\var{root}.\fld{blocks}[\var{b}-1].\size$\label{computeEGC}
 		 
 		\State use \gc{BST search in \var{root}.\fld{blocks} to find minimum index $b_e$ of a \typ{Block} with $\fld{sum\sub{enq}} \geq \var{e}$}\label{FRsearchGC} 
-		\State $i_e$ \assign\ $\var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$ \Comment{find rank of enqueue within its block}
+		\State $i_e$ \assign\ $\var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$ \Comment{find rank of enqueue within its block}%
 		\gc{
-        \State \var{res} \assign\ \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}\label{findAnswerGC}
+        \State \var{res} \assign\ \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}\Comment{\rev{find argument of that enqueue}}\label{findAnswerGC}
         \If {$b_e > \var{last}[\var{id}]$} $\var{last}[\var{id}]$ \assign\ $b_e$
         \EndIf
         \State \Return \var{res}
@@ -299,7 +299,7 @@ each level instead of using the \fld{super} field.
         \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \fld{dir} \assign\ \fld{left}\Comment{required enqueue is in \var{v}.\fld{left}}\label{leftOrRightGC} 
         \Else \Comment{required enqueue is in \var{v}.\fld{right}}
             \State \fld{dir} \assign\ \fld{right}
-            \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$
+            \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$\Comment{\rev{deduct \# enqueues in $v.\fld{blocks}[b]$ that came from $v.\fld{left}$}}
         \EndIf
         \State \linecomment{find enqueue's block in \var{v}.\fld{dir.blocks} and its rank within block}
         \State \gc{use BST search in \var{v}.\fld{dir.blocks} to find minimum index $\var{b}'$ of a \typ{Block} with $\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$}\label{getChildGC}

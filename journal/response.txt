@@ -1,6 +1,3 @@
-*** should add new comments to GC code similar to new comments in basic code
-
-
 We thank the reviewers for their comments.  Below, we address them point-by-point.  Modifications to the manuscript are shown in magenta.
 
 > Reviewer 1
@@ -46,7 +43,7 @@ This paragraph has been rewritten.
 > lines 594 - 608 (lines 24 - 37 in the code). Add a more detailed
 > comments that explain the Refresh operation.
 
-Done.
+Done.  Quite a few new comments have been added throughout the pseudocode.
 
 > line 619 (line 44 in the code). It's not clear why the size of the
 > queue is calculated correctly. Why if some of the dequeues that are

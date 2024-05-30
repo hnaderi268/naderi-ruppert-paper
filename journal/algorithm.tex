@@ -331,9 +331,9 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \State \hangbox{let \var{B} be a new \typ{Block} with fields \fld{element} \assign\ \nl,
 	    \fld{sum\sub{enq}} \assign\ $\var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}}$,\\
 	    \fld{sum\sub{deq}} \assign\ $\var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}+1$}\label{deqNew}
-    \State \Call{Append}{\var{B}}\Comment{\rev{append \op{Enqueue} to \var{leaf}.\fld{blocks} and propagate to root}}\label{deqAppend}
-    \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, $\var{leaf.}\head-1$, $1$} \Comment{\rev{find where \op{Deqeueue} is in \var{Root}.\fld{blocks}}}\label{invokeIndexDequeue}
-    \State \Return{ \Call{FindResponse}{\var{b, i}}}\Comment{\rev{find response \op{Dequeue} should return}}\label{deqRest}
+    \State \Call{Append}{\var{B}}\Comment{\rev{append \op{Dequeue} to \var{leaf}.\fld{blocks} and propagate to root}}\label{deqAppend}
+    \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, $\var{leaf.}\head-1$, $1$} \Comment{\rev{find where \op{Deqeueue} is in \var{root}.\fld{blocks}}}\label{invokeIndexDequeue}
+    \State \Return{\Call{FindResponse}{\var{b, i}}}\Comment{\rev{find response \op{Dequeue} should return}}\label{deqRest}
 \EndFunction{Dequeue}
 
 \spac
@@ -419,11 +419,11 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 	    \State \linecomment{\rev{add \# dequeues in blocks of $v$ before $v.\fld{blocks}[b]$ within superblock $v.\fld{parent.blocks}[\var{sup}]$}}
 	    \State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{b}-1].\fld{sum\sub{deq}} -$ 
 	    		$\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}-1].\edir].\fld{sum\sub{deq}}$}\label{computeISuperStart}
-        \If{$\fld{dir} = \fld{right}$} \Comment{\rev{add \# dequeues from left sibling}}
+        \If{$\fld{dir} = \fld{right}$} \Comment{\rev{add \# dequeues in superblock from left sibling}}
         	\State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}].\eleft].\fld{sum\sub{deq}} - \mbox{ }$\\
 					$\var{v}.\fld{blocks}[\var{v}.\fld{parent.blocks}[\var{sup}-1].\eleft].\fld{sum\sub{deq}}$}\label{considerLeftBeforeRight}
         \EndIf \label{computeISuperEnd}
-        \State \Return\Call{IndexDequeue}{\var{v}.\fld{parent}, \var{sup}, \var{i}}
+        \State \Return\Call{IndexDequeue}{\var{v}.\fld{parent}, \var{sup}, \var{i}} \Comment{\rev{recurse up the tree}}
     \EndIf
 \EndFunction{IndexDequeue}
 
@@ -441,7 +441,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 			\var{root}.\fld{blocks}[\var{b}-1].\size$ \label{computeE}
 		\State use \rev{doubling} search to find min $b_e\leq \var{b}$ with $\var{root}.\fld{blocks}[b_e].\fld{sum\sub{enq}} \geq \var{e}$\label{FRb}
 		\State $i_e \assign\ \var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$\Comment{find rank of enqueue within its block}\label{FRi}
-        \State \Return \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}\label{findAnswer}
+        \State \Return \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}\Comment{\rev{find argument of that enqueue}}\label{findAnswer}
     \EndIf
 \EndFunction{FindResponse}
 \end{algorithmic}
@@ -463,7 +463,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
         \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \fld{dir} \assign\ \fld{left}\label{leftOrRight} \Comment{required enqueue is in \var{v}.\fld{left}}
         \Else \Comment{required enqueue is in \var{v}.\fld{right}}
             \State \fld{dir} \assign\ \fld{right}
-            \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$ \Comment{\rev{deduct \# enqueues in $v.\fld{blocks}[b]$ from $v.\fld{left}$}}
+            \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$ \Comment{\rev{deduct \# enqueues in $v.\fld{blocks}[b]$ that came from $v.\fld{left}$}}
         \EndIf \label{endChooseDir}
         \State \linecomment{find enqueue's block in \var{v}.\fld{dir.blocks} and its rank within block}
         \State \hangbox{use binary search to find minimum $\var{b}'$ in range [\var{v}.\fld{blocks}[$\var{b}-1$].\edir+1..\var{v}.\fld{blocks}[\var{b}].\edir] such\\
@@ -474,7 +474,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \EndFunction{GetEnqueue}
 
 \end{algorithmic}
-\caption{Queue implementation's \op{GetEnqueue} routine.\label{code3}}
+\caption{Queue implementation's \op{GetEnqueue} routine.  \rev{Recall that $E(B)$ is the sequence of enqueues represented by block $B$}.\label{code3}}
 \end{figure*}
 
 An \opemph{Enqueue}(\var{e}) 

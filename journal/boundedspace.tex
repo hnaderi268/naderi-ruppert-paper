@@ -31,7 +31,7 @@ Driscoll et al.~\cite{DSST89}:  all RBT nodes are immutable, and operations on t
 RBT make a new copy of each RBT node $x$ that must be modified, as well
 as each RBT node along the path from the RBT's root to~$x$.
 The RBT reachable from the new copy of the root is the result of applying the RBT operation.
-This  adds only a constant factor to the running time of any routine designed for a (sequential) RBT.
+This \rev{increases the running time of any routine designed for a (sequential) RBT only by a constant factor, assuming that nodes are accessed only by following pointers from the root (as is the case for all RBT operations we require)}.
 Once a process has performed an update to the RBT representing the blocks of a node 
 $\var{v}$ in the \ordering\ tree, 
 it uses a CAS to swing $\var{v}$'s pointer from the previous RBT root to the new RBT root.

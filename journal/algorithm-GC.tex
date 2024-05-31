@@ -84,7 +84,7 @@ each level instead of using the \fld{super} field.
 
 \spac
 
-\Function{Object}{Dequeue()}{} 
+\Function{Object}{Dequeue}{} 
     \State \gc{\var{h} \assign\ \Call{MaxBlock}{\var{leaf}[\var{id}].\fld{blocks}}.\fld{index}+1}
     \State \hangbox{let \var{B} be a new \typ{Block} with fields \fld{element} \assign\ \nl,
 	    \fld{sum\sub{enq}}\ \assign\ $\var{leaf}[\var{id}].\fld{blocks}[\gc{h-1}].\fld{sum\sub{enq}},$\\

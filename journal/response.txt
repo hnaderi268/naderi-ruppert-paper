@@ -194,7 +194,9 @@ We added the reminder.  Since q stands for queue, we thought q would remind read
 Done.
 
 > - ln 845-848, right. I got confused here. Lemma 4 is only about the indexes, isn't it? 
-> 
+
+Since expression (3.3) defines subblocks in terms of indexes, we can apply Lemma 4.  Some more explanation has been added to the proof.
+
 > - ln 1084-1088, right. Here do you mean that L is a valid sequential execution of the queue.
 > 
 > - Lemma 15. After reading the proof I understood that legal linearization ordering only  means respecting real-time order. This is a concrete example why I think a preliminaries section might help.
@@ -204,10 +206,17 @@ Done.
 > - Theorem 22. What exactly is the size of the queue?
 > 
 > - Sec 6. Why do you need read-back trees? How is that they facilitate the task of keeping memory bounded? Why the first algorithm cannot be modified to remove bocks, let us say using some sort of epoch-based memory reclamation scheme?
-> 
+
+As mentioned above, we could not figure out a simpler way to do this.  
+
 > - ln 1279-1283, left. Why? A whole path might need to be copied, isn’t it?
-> 
+
+Since all accesses are through the root, one cannot reach a node without traversing all nodes along the path from the root to that node.  Copying those nodes then only increases the running time by a constant factor.  (The sentence has been reworded to avoid confusion.)
+
 > - ln 1442. Why not Help(), in accordance to Dequeue(), for example?
-> 
+
+We removed the parentheses from Dequeue for consistency.
+
 > - Sec 7. Your algorithms are adaptive on the size of the queue but not on the number of processes. I wonder if an interesting future direction would be to make your algorithms fully adaptive.
-> 
+
+Yes, this was mentioned in sentence 3 of Sec 7.

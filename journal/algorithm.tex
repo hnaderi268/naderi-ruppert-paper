@@ -316,7 +316,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 
 \spac
 
-\Function{Object}{Dequeue()}{} 
+\Function{Object}{Dequeue}{} 
     \State \hangbox{let \var{B} be a new \typ{Block} with fields \fld{element} \assign\ \nl,
 	    \fld{sum\sub{enq}} \assign\ $\var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}}$,\\
 	    \fld{sum\sub{deq}} \assign\ $\var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}+1$}\label{deqNew}

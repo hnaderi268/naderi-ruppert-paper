@@ -98,8 +98,11 @@ If $B$ and $B'$ are in leaves, they have no subblocks, so the claim holds.
 Assume the claim holds for nodes at depth $d+1$ and let $B$ and $B'$ be two blocks in nodes at depth $d$.
 Consider the direct subblocks of $B$ and $B'$ defined by~(\ref{defsubblock}).
 If $B$ and $B'$ are in different nodes at depth $d$, then their direct subblocks are disjoint.
-If $B$ and $B'$ are in the same node, it follows from Lemma \ref{lem::headProgress} that their direct subblocks are disjoint.
-Either way, their direct subblocks (at depth $d+1$) are disjoint, so the claim follows from the induction hypothesis.
+\rev{Suppose $B$ and $B'$ are in the same node $v$.
+By Lemma \ref{lem::headProgress}, the $\fld{end\sub{left}}$ values of blocks of $v$ are non-decreasing,
+so the intervals of direct subblocks of different blocks in $v$ in $v$'s left child defined by (\ref{defsubblock}) are non-overlapping.
+Similarly, the intervals of direct subblocks in $v$'s right child are non-overlapping.
+In all cases, the direct subblocks of $B$ and $B'$} (at depth $d+1$) are disjoint, so the claim follows from the induction hypothesis.
 \end{proof}
 
 It follows that each block has at most one superblock.

@@ -204,7 +204,9 @@ Since expression (3.3) defines subblocks in terms of indexes, we can apply Lemma
 > - ln 1192-1993, right. Please formalize the notion of time in an execution,
 > 
 > - Theorem 22. What exactly is the size of the queue?
-> 
+
+It is just the number of elements in the queue.  We added an explanation in the line before the Theorem.
+
 > - Sec 6. Why do you need read-back trees? How is that they facilitate the task of keeping memory bounded? Why the first algorithm cannot be modified to remove bocks, let us say using some sort of epoch-based memory reclamation scheme?
 
 As mentioned above, we could not figure out a simpler way to do this.  

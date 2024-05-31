@@ -174,15 +174,25 @@ Although our space-bounded algorithm unlinks objects that are no longer needed f
 This omission has been corrected.
 
 > - ln 235, left. Repeated ‘words’.
-> 
+
+Fixed.
+
 > - For completeness, I suggest to add a preliminaries section, with a reminder of the main definitions such as linearizability, step complexity, and so on. 
-> 
+
+We tried to avoid the need for too many definitions and preferred to introduce them as needed instead of in a preliminaries section, since we are using fairly standard terminology.  The terms mentioned above were explained in the first paragraph of the paper.  A more formal explanation of what must be proved to establish linearizability is given in the first paragraph of Section 4.4.  Similarly, wait-free is defined when it is first used.  For completeness, we added a definition of CAS in a footnote on page 1.
+
 > - ln 417, right. Are these direct blocks?
-> 
+
+These are the blocks actually stored in root.blocks.  (The adjective direct is only applied to subblocks.)
+
 > - ln 492-498. I would recall here what q stands for. Actually, I wonder if you could you use a letter that is more descriptive. 
-> 
+
+We added the reminder.  Since q stands for queue, we thought q would remind readers of the queue's size.
+
 > - Sec 3.4, and later. At many places operations are written in different font styles. Please follow a uniform format. 
-> 
+
+Done.
+
 > - ln 845-848, right. I got confused here. Lemma 4 is only about the indexes, isn't it? 
 > 
 > - ln 1084-1088, right. Here do you mean that L is a valid sequential execution of the queue.

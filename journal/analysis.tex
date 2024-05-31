@@ -14,7 +14,7 @@ A \op{Refresh} does at most 5 \op{CAS} steps: one in line \ref{cas} and two duri
 
 
 \begin{lemma}\label{dSearchTime}
-The search that \op{FindResponse}$(b,i)$ does at line \ref{FRb} to find the index $b_e$ of the block in the root containing the $e$th enqueue takes $O(\log (\var{root}.\fld{blocks}[b_e].\size + \var{root}.\fld{blocks}[b-1].\size))$ steps.
+The search that \op{FindResponse}$(b,i)$ does at line \ref{FRb} to find the index $b_e$ of the block in the root containing the $e$th \enqueue\ takes $O(\log (\var{root}.\fld{blocks}[b_e].\size + \var{root}.\fld{blocks}[b-1].\size))$ steps.
 \end{lemma}
 \begin{proof}
 Let the blocks in the root be $B_1, \ldots, B_\ell$.
@@ -22,8 +22,8 @@ The doubling search for $b_e$ takes $O(\log (b-b_e))$ steps,
 so we prove $b - b_e \leq 2 \cdot B_{b_e}.\size + B_{b-1}.\size + 1$.
 If $b \leq b_e+1$, then this is trivial, so assume  $b>b_e+1$.
 %
-As shown in Lemma \ref{linearCorrect}, the dequeue that calls \op{FindResponse} is in $B_b$ and is supposed to return an enqueue in $B_{b_e}$.
-Thus, there can be at most $B_{b_e}.\size$ dequeues in 
+As shown in Lemma \ref{linearCorrect}, the \dequeue\ that calls \op{FindResponse} is in $B_b$ and is supposed to return an \enqueue\ in $B_{b_e}$.
+Thus, there can be at most $B_{b_e}.\size$ \dequeues\ in 
 $D(B_{b_e+1}) \cdots D(B_{b-1})$; otherwise in the sequential execution $L$,
 all elements enqueued before the end of
 $E(B_{b_e})$ would be dequeued before $D(B_b)$. 

@@ -35,7 +35,7 @@ To facilitate helping, each \typ{Block} in a leaf has one more additional field
 \begin{itemize}
 \item \typ{Object} \var{response}
 \end{itemize}
-which is used only for blocks that store a dequeue operation and stores the response of the dequeue in the block.
+which is used only for blocks that store a \dequeue\ operation and stores the response of the \dequeue\ in the block.
 
 
 Pseudocode for the space-bounded implementation appears in Figures \ref{code1GC} to \ref{code3GC}.
@@ -52,7 +52,7 @@ separate routine called \op{CompleteDeq} so that it can also be used by other pr
 helping to complete the operation.
 The \op{Refresh} routine no longer needs to set the \fld{super} field of blocks since
 that field has been removed.
-The \op{IndexDequeue} routine, which must trace the location of a dequeue along
+The \op{IndexDequeue} routine, which must trace the location of a \dequeue\ along
 a path from its leaf to the root has a minor modification to search the \fld{blocks} RBT at 
 each level instead of using the \fld{super} field.
 
@@ -67,7 +67,7 @@ each level instead of using the \fld{super} field.
 \gc{
 \State \typ{Node[]} \var{leaf}$[1..p]$\Comment{\var{leaf}$[k]$ is the leaf assigned to process $k$}
 \State \typ{int[]} \var{last}$[1..p]$\Comment{\var{last}$[k]$ is max \fld{index} of a root block that process $k$ saw}
-\State \mbox{ }\Comment{contains either a dequeued enqueue or a null dequeue}%
+\State \mbox{ }\Comment{contains either a dequeued \enqueue\ or a null \dequeue}%
 }
 
 \spac
@@ -97,7 +97,7 @@ each level instead of using the \fld{super} field.
 \spac
 
 \gc{
-\Function{Object}{CompleteDeq}{\typ{Node} \var{leaf}, \typ{int} $h$} \Comment{finish propagated dequeue in $\var{leaf}.\fld{blocks}[h]$}
+\Function{Object}{CompleteDeq}{\typ{Node} \var{leaf}, \typ{int} $h$} \Comment{finish propagated \dequeue\ in $\var{leaf}.\fld{blocks}[h]$}
     \State $\langle \var{b}, \var{i}\rangle$ \assign\ $\Call{IndexDequeue}{\var{leaf}, h, 1}$\Comment{\rev{find where \op{Dequeue} is in \var{root}.\fld{blocks}}}
     \State \Return $\Call{FindResponse}{b, i}$\Comment{\rev{find response \op{Dequeue} should return}}
 \EndFunction{CompleteDeq}
@@ -162,7 +162,7 @@ each level instead of using the \fld{super} field.
 \gc{
 \Function{Block}{SplitBlock}{\typ{Node} v} \Comment{\rev{find lowest index of block GC should keep in \var{v}}}
 	\If{$\var{v}=\var{root}$} \Comment{return block before the last block containing a}
-		\State $m$ \assign\ 0\Comment{dequeued enqueue or null dequeue}
+		\State $m$ \assign\ 0\Comment{dequeued \enqueue\ or null \dequeue}
 		\For{$k$ \assign\ $1..p$} $m$ \assign\ $\max(m, \var{v}.\fld{last}[k])$
 		\EndFor
 		\State $B$ \assign\ $\var{root}.\fld{blocks}[m-1]$\label{SBlookup1}
@@ -185,7 +185,7 @@ each level instead of using the \fld{super} field.
         \State $\var{B}$ \assign\ $\Call{MaxBlock}{\ell.\fld{blocks}}$
     	%\State \Call{Propagate}{$\ell.\fld{parent}$}   <--- don't do this because recursive helping could be infinite loop
         \If{$\var{B}.\fld{element} = \nl$ and $\var{B}.\fld{index}>0$ and \Call{Propagated}{$\ell, \var{B}.\fld{index}$}} 
-            \State \linecomment{operation is a propagated dequeue}
+            \State \linecomment{operation is a propagated \dequeue}
             \State $\var{B}.\fld{response}$ \assign\ $\Call{CompleteDeq}{\ell, \var{B}.\fld{index}}$ \Comment{\rev{compute response and store it in leaf block}}
         \EndIf
     \EndFor
@@ -239,7 +239,7 @@ each level instead of using the \fld{super} field.
 \begin{algorithmic}[1]
 \setcounter{ALG@line}{296}
 \Function{$\langle\typ{int}, \typ{int}\rangle$}{IndexDequeue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}}
-    \State \linecomment{return $\langle b', i' \rangle$ such that \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$ is ($i'$)th dequeue of $D(\var{root}.\fld{blocks}[b'])$}
+    \State \linecomment{return $\langle b', i' \rangle$ such that \var{i}th \dequeue\ in $D(\var{v}.\fld{blocks}[\var{b}])$ is ($i'$)th \dequeue\ of $D(\var{root}.\fld{blocks}[b'])$}
     \State \linecomment{Precondition: \var{v}.\fld{blocks}[\var{b}] exists and has propagated to root and $|D(\var{v}.\fld{blocks}[\var{b}])|\geq \var{i}$}
     \If{$\var{v} = \var{root}$} \Return $\langle\var{b, i}\rangle$ \label{indexBaseCaseGC}
     \Else \Comment{First, find the superblock $B_p$ of $v.blocks[b]$}
@@ -248,11 +248,11 @@ each level instead of using the \fld{super} field.
 		\State $T$ \assign\ $\var{v}.\fld{parent.blocks}$
 		\State $B_p$ \assign\ min block in $T$ with $\edir \geq b$\label{searchsuper1}
 		\State $B_p'$ \assign\ max block in $T$ with $\edir < b$ \Comment{predecessor of $B_p$}\label{searchsuper2}}
-	    \State \linecomment{compute index \var{i} of dequeue in superblock $B_p$}
-	    \State \linecomment{\rev{add \# dequeues in blocks of $v$ before $v.\fld{blocks}[b]$ within superblock $B_p$}}
+	    \State \linecomment{compute index \var{i} of \dequeue\ in superblock $B_p$}
+	    \State \linecomment{\rev{add \# \dequeues\ in blocks of $v$ before $v.\fld{blocks}[b]$ within superblock $B_p$}}
 	    \State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\var{b}-1].\fld{sum\sub{deq}} -
 	    		\var{v}.\fld{blocks}[\gc{B_p'}.\edir].\fld{sum\sub{deq}}$}
-        \If{$\fld{dir} = \fld{right}$}\Comment{\rev{add \# dequeues in $B_p$ from left sibling}}
+        \If{$\fld{dir} = \fld{right}$}\Comment{\rev{add \# \dequeues\ in $B_p$ from left sibling}}
         	\State \hangbox{\var{i} += $\var{v}.\fld{blocks}[\gc{B_p}.\eleft].\fld{sum\sub{deq}} - \mbox{ }
 					\var{v}.\fld{blocks}[\gc{B_p'}.\eleft].\fld{sum\sub{deq}}$}\label{considerLeftBeforeRightGC}
         \EndIf \label{computeISuperEndGC}
@@ -263,23 +263,23 @@ each level instead of using the \fld{super} field.
 \spac 
 
 
-\Function{element}{FindResponse}{\typ{int} \var{b}, \typ{int} \var{i}} \linecomment{find response to \var{i}th dequeue in $D(\var{root}.\fld{blocks}[\var{b}])$}
+\Function{element}{FindResponse}{\typ{int} \var{b}, \typ{int} \var{i}} \linecomment{find response to \var{i}th \dequeue\ in $D(\var{root}.\fld{blocks}[\var{b}])$}
     \State \linecomment{Precondition:  $1\leq i\leq |D(\var{root}.\fld{blocks}[\var{b}])|$}
     \State \var{num\sub{enq}} \assign\ $\var{root}.\fld{blocks}[\var{b}].\fld{sum\sub{enq}} -
     		\var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}}$\label{FRnumenqGC}
-    \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmptyGC} \Comment{queue is empty when dequeue occurs}%
+    \If{$\var{root}.\fld{blocks}[\var{b}-1].\size + \var{num\sub{enq}} < \var{i}$}\label{checkEmptyGC} \Comment{queue is empty when \dequeue\ occurs}%
         \gc{\If{$b > \var{last}[\var{id}]$} $\var{last}[\var{id}]$\ \assign\ $b$
         \EndIf
         }
         \State \Return \nl \hfill \label{returnNullGC}
-    \Else \ \Comment{response is the \var{e}th enqueue in the root}
+    \Else \ \Comment{response is the \var{e}th \enqueue\ in the root}
         \State $\var{e}$\ \assign\ $\var{i} + \var{root}.\fld{blocks}[\var{b}-1].\fld{sum\sub{enq}} - 
 			\var{root}.\fld{blocks}[\var{b}-1].\size$\label{computeEGC}
 		 
 		\State use \gc{BST search in \var{root}.\fld{blocks} to find minimum index $b_e$ of a \typ{Block} with $\fld{sum\sub{enq}} \geq \var{e}$}\label{FRsearchGC} 
-		\State $i_e$ \assign\ $\var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$ \Comment{find rank of enqueue within its block}%
+		\State $i_e$ \assign\ $\var{e} - \var{root}.\fld{blocks}[b_e-1].\fld{sum\sub{enq}}$ \Comment{find rank of \enqueue\ within its block}%
 		\gc{
-        \State \var{res} \assign\ \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}\Comment{\rev{find argument of that enqueue}}\label{findAnswerGC}
+        \State \var{res} \assign\ \Call{GetEnqueue}{\var{root}, $b_e$, $i_e$}\Comment{\rev{find argument of that \enqueue}}\label{findAnswerGC}
         \If {$b_e > \var{last}[\var{id}]$} $\var{last}[\var{id}]$ \assign\ $b_e$
         \EndIf
         \State \Return \var{res}
@@ -289,19 +289,19 @@ each level instead of using the \fld{super} field.
 
 \spac
 
-\Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th enqueue in $E(\var{v}.\fld{blocks}[\var{b}])$}
-    \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] exists and contains at least \var{i} enqueues}
+\Function{element}{GetEnqueue}{\typ{Node} \var{v}, \typ{int} \var{b}, \typ{int} \var{i}} \Comment{returns argument of \var{i}th \enqueue\ in $E(\var{v}.\fld{blocks}[\var{b}])$}
+    \State \linecomment{Preconditions: $\var{i}\geq 1$ and \var{v}.\fld{blocks}[\var{b}] exists and contains at least \var{i} \enqueues}
     \If{\var{v} is a leaf node} \Return \var{v}.\fld{blocks}[\var{b}].\fld{element} \label{getBaseCaseGC}
     \Else 
-        \State \var{sum\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[\var{b}].\eleft].\fld{sum\sub{enq}} \Comment{\#\ enqueues in \var{v}.\fld{blocks}[1..$\var{b}$] from \var{v}.\fld{left}}
-        \State \var{prev\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eleft].\fld{sum\sub{enq}} \Comment{\#\ enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from \var{v}.\fld{left}}
-        \State \var{prev\sub{right}} \assign\ \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eright].\fld{sum\sub{enq}} \Comment{\#\ enqueues in \var{v}.\fld{blocks}[1..$\var{b}-1$] from \var{v}.\fld{right}}
-        \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \fld{dir} \assign\ \fld{left}\Comment{required enqueue is in \var{v}.\fld{left}}\label{leftOrRightGC} 
-        \Else \Comment{required enqueue is in \var{v}.\fld{right}}
+        \State \var{sum\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[\var{b}].\eleft].\fld{sum\sub{enq}} \Comment{\#\ \enqueues\ in \var{v}.\fld{blocks}[1..$\var{b}$] from \var{v}.\fld{left}}
+        \State \var{prev\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eleft].\fld{sum\sub{enq}} \Comment{\#\ \enqueues\ in \var{v}.\fld{blocks}[1..$\var{b}-1$] from \var{v}.\fld{left}}
+        \State \var{prev\sub{right}} \assign\ \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eright].\fld{sum\sub{enq}} \Comment{\#\ \enqueues\ in \var{v}.\fld{blocks}[1..$\var{b}-1$] from \var{v}.\fld{right}}
+        \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \fld{dir} \assign\ \fld{left}\Comment{required \enqueue\ is in \var{v}.\fld{left}}\label{leftOrRightGC} 
+        \Else \Comment{required \enqueue\ is in \var{v}.\fld{right}}
             \State \fld{dir} \assign\ \fld{right}
-            \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$\Comment{\rev{deduct \# enqueues in $v.\fld{blocks}[b]$ that came from $v.\fld{left}$}}
+            \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$\Comment{\rev{deduct \# \enqueues\ in $v.\fld{blocks}[b]$ that came from $v.\fld{left}$}}
         \EndIf
-        \State \linecomment{find enqueue's block in \var{v}.\fld{dir.blocks} and its rank within block}
+        \State \linecomment{find \enqueue's block in \var{v}.\fld{dir.blocks} and its rank within block}
         \State \gc{use BST search in \var{v}.\fld{dir.blocks} to find minimum index $\var{b}'$ of a \typ{Block} with $\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$}\label{getChildGC}
         \State $\var{i}'$ \assign\ $\var{i} - (\var{v}.\fld{dir.blocks}[\var{b}'-1].\fld{sum\sub{enq}} - \var{prev\sub{dir}})$
         \State \Return\Call{GetEnqueue}{\var{v}.\fld{dir}, $\var{b}'$, $\var{i}'$}
@@ -368,7 +368,7 @@ Before attempting to add the block to a node's RBT, \op{AddBlock} triggers a GC 
 the new block's \fld{index} is a multiple of the constant $G$, which we choose to be $p^2\ceil{\log p}$.
 This ensures that obsolete blocks are removed from the RBT once every $G$ times a new block is added to it.
 The GC phase uses \op{SplitBlock} to determine the index $s$ of the oldest block to keep,
-calls \op{Help} to help all pending dequeues that have been propagated to the root
+calls \op{Help} to help all pending \dequeues\ that have been propagated to the root
 (to ensure that all blocks before $s$ can safely be discarded), and then
 uses the standard RBT \op{Split} routine \cite{Tar83}
 to remove all blocks with \fld{index} less than $s$.
@@ -380,9 +380,9 @@ The \op{Append} or \op{Refresh} then stores this root into the node's \fld{block
 
 To determine the oldest block in a node \var{v} to keep, the \opemph{SplitBlock} routine  first
 uses the \var{last} array to
-find the most recent block $B_{root}$ in the root that contains either an enqueue that has been dequeued
-or a null dequeue.  By the FIFO property of queues, all enqueues in blocks before $B_{root}$ are either
-dequeued or will be dequeued by a dequeue that is currently in progress.  Once those pending dequeues have been
+find the most recent block $B_{root}$ in the root that contains either an \enqueue\ that has been dequeued
+or a null \dequeue.  By the FIFO property of queues, all \enqueues\ in blocks before $B_{root}$ are either
+dequeued or will be dequeued by a \dequeue\ that is currently in progress.  Once those pending \dequeues\ have been
 helped to complete by line \ref{invokeHelp},
 it is safe to discard any blocks in the root older than $B_{root}$, as well
 as their subblocks.\footnote{If we used the more conservative approach of discarding blocks whose indices 
@@ -395,19 +395,19 @@ In this case, \op{SplitBlock} uses the last subblock in \var{v} of the oldest bl
 (since a GC phase on $\var{v}'$ determined that all blocks older than that are safe to discard anyway).
 
 The \opemph{Help} routine is fairly straightforward:  it loops through all leaves and
-helps the dequeue that is in progress there if it has already been propagated to the root.
-The \opemph{Propagated} function is used to determine whether the dequeue has propagated to the root.
+helps the \dequeue\ that is in progress there if it has already been propagated to the root.
+The \opemph{Propagated} function is used to determine whether the \dequeue\ has propagated to the root.
 
 In the code, we use $\var{v}.\fld{blocks}[i]$ to refer to the block in the RBT stored in $\var{v}.\fld{blocks}$
 with index~$i$.
 A search for this block may sometimes not find it, if it has already been discarded
 by another process's GC phase.
-As mentioned above, if this happens to an enqueue operation,
-the enqueue can simply terminate because the fact that the block is gone means that another
-process has helped the enqueue reach the root of the ordering tree.
-Similarly, if  a dequeue operation performs a failed search on a RBT, the dequeue can return the value 
+As mentioned above, if this happens to an \enqueue\ operation,
+the \enqueue\ can simply terminate because the fact that the block is gone means that another
+process has helped the \enqueue\ reach the root of the ordering tree.
+Similarly, if  a \dequeue\ operation performs a failed search on a RBT, the \dequeue\ can return the value 
 written in the \fld{response} field of the 
-leaf block that represents the dequeue and terminate, since some other process
+leaf block that represents the \dequeue\ and terminate, since some other process
 will have written the \fld{response} there before discarding the needed block.
 We do not explicitly write this early termination in the pseudocode every time we do a lookup in an RBT.
 There is one exception to this rule:  if an RBT lookup for block $B$ returns \nl\

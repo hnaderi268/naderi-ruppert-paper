@@ -163,18 +163,18 @@ We show that each installation of a block $B$ into some location $\var{v}.\fld{b
 assuming the claim holds before this installation.  We consider two cases.
 
 If $\var{v}$ is a leaf, $B$ was created at line \ref{enqNew} or \ref{deqNew}.
-For line \ref{enqNew}, $B$ represents a single enqueue, so $|E(B)|=1$ and $|D(B)|=0$.
+For line \ref{enqNew}, $B$ represents a single \enqueue, so $|E(B)|=1$ and $|D(B)|=0$.
 Since $B.\fld{sum\sub{enq}}$ is set to $\var{v}.\fld{blocks}[i-1].\fld{sum\sub{enq}}+1$ and
 $B.\fld{sum\sub{deq}}$ is set to $\var{v}.\fld{blocks}[i-1].\fld{sum\sub{deq}}$, the claim follows from the hypothesis.
-The proof for line~\ref{deqNew}, where $B$ represents a single dequeue, is similar.
+The proof for line~\ref{deqNew}, where $B$ represents a single \dequeue, is similar.
 
-Now suppose $\var{v}$ is an internal node. By the definition of \rev{direct} subblocks in (\ref{defsubblock}) and Lemma \ref{lem::headProgress}, the \rev{direct}
+Now, suppose $\var{v}$ is an internal node. By the definition of \rev{direct} subblocks in (\ref{defsubblock}) and Lemma \ref{lem::headProgress}, the \rev{direct}
 subblocks of $\var{v}.\fld{blocks}[1..i]$ are $\var{v}.\fld{left.blocks}[1..B.\eleft]$ 
 and $\var{v}.\fld{right.blocks}[1..B.\eright]$.
-Thus, the enqueues in $E(\var{v}.\fld{blocks}[0])\cdots E(\var{v}.\fld{blocks}[i])$ are those in
-$E(\var{v}.\fld{left.blocks}[0]) \cdots E(\var{v}.\fld{left.blocks}[B.\eleft])$ and those in 
+Thus, the \enqueues\ in $E(\var{v}.\fld{blocks}[0])\cdots E(\var{v}.\fld{blocks}[i])$ are those in
+$E(\var{v}.\fld{left.blocks}[0]) \cdots E(\var{v}.\fld{left.blocks}[B.\eleft])$ and %those in 
 $E(\var{v}.\fld{left.blocks}[0]) \cdots E(\var{v}.\fld{left.blocks}[B.\eright])$.
-By the hypothesis, the total number of these enqueues is 
+By the hypothesis, the total number of these \enqueues\ is 
 $\var{v}.\fld{left.blocks}[B.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right.blocks}[B.\eright].\fld{sum\sub{enq}}$, 
 which is the value that line \ref{createSumEnq} stored in $B.\fld{sum\sub{enq}}$ when $B$ was created.
 The proof for \fld{sum\sub{deq}} (stored on line~\ref{createSumDeq}) is similar.
@@ -231,7 +231,7 @@ Intuitively, since there are no operations in $\var{v}$'s children to promote, $
 We formalize this intuition.
 The value computed at line \ref{computeNumEnq} is
 \begin{eqnarray*}
-\var{num\sub{enq}}
+&&\var{num\sub{enq}}\\
 &=&  \var{v}.\fld{left.blocks}[B.\eleft].\fld{sum\sub{enq}} \\
 && + \var{v}.\fld{right.blocks}[B.\eright].\fld{sum\sub{enq}}\\
 &&  - \var{v}.\fld{blocks}[h-1].\fld{sum\sub{enq}} \\
@@ -240,10 +240,10 @@ The value computed at line \ref{computeNumEnq} is
 &&- \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft].\fld{sum\sub{enq}} \\
 && - \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright].\fld{sum\sub{enq}}.
 \end{eqnarray*}
-It follows from Invariant \ref{inv::sum} that $num\sub{enq}$ is the total  number of enqueues  in 
+It follows from Invariant \ref{inv::sum} that $num\sub{enq}$ is the total  number of \enqueues\  in 
 $\var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft+1..B.\eleft]$ and
 $\var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright+1..B.\eright]$.
-Similarly, $num\sub{deq}$ is the total number of dequeues contained in these blocks.
+Similarly, $num\sub{deq}$ is the total number of \dequeues\ contained in these blocks.
 Since $num\sub{enq}+num\sub{deq}=0$ at line \ref{testEmpty},
 these blocks contain no operations.
 By Corollary \ref{blockNotEmpty}, this means the ranges of blocks are empty, so that $\var{v}.\fld{blocks}[h-1].\eleft \geq \var{B}.\eleft \geq i$.
@@ -280,7 +280,7 @@ When an \op{Append}($B$) terminates, $B$'s operation is contained in exactly one
 \op{Append} adds $B$ to the process's leaf and calls \op{Propagate}, which
 does a double \op{Refresh}~on each internal node on the path $P$ from the leaf to the root.
 By Lemma \ref{lem::doubleRefresh}, this ensures a block in each node on $P$ contains $B$'s operation.
-There is at most one such block in each node, by Corollary \ref{cor::noDuplicates}.
+There is at most one such block in each node, by Corollary~\ref{cor::noDuplicates}.
 \end{proof}
 
 \subsection{Correctness of \opemph{GetEnqueue} and \opemph{IndexDequeue}}
@@ -345,7 +345,7 @@ For \op{IndexDequeue}, we use Lemma \ref{superRelation} each time \op{IndexDeque
 
 \begin{lemma}\label{lem::indexDequeue}
 If $\var{v}.\fld{blocks}[b]$ has been propagated to the root and $1\leq i\leq |D(\var{v}.\fld{blocks}[b])|$, 
- then \op{IndexDequeue}($\var{v}, b, i$) returns $\langle b',i' \rangle$ such that the \var{i}th dequeue in $D(\var{v}.\fld{blocks}[\var{b}])$ is the $(i')$th dequeue of $D(\var{root}.\fld{blocks}[b'])$.
+ then \op{IndexDequeue}($\var{v}, b, i$) returns $\langle b',i' \rangle$ such that the \var{i}th \dequeue\ in $D(\var{v}.\fld{blocks}[\var{b}])$ is the $(i')$th \dequeue\ of $D(\var{root}.\fld{blocks}[b'])$.
 \end{lemma}
 
 \begin{proof}
@@ -356,41 +356,41 @@ Let $B=\var{v}.\fld{blocks}[b]$ and $B'$ be the superblock of $B$.
 By Lemma \ref{superRelation}, this index is either $B.super$ or $B.super+1$.
 The correct index is determined by testing on line \ref{supertest} whether $B$ is a subblock of $\var{v}.\fld{parent.blocks}[B.\fld{super}]+1$.
 
-Next, the position of the required dequeue in $D(B')$ (as defined by Equation (\ref{defSeqs})) is computed in 
+Next, the position of the required \dequeue\ in $D(B')$ (as defined by Equation (\ref{defSeqs})) is computed in 
 lines \ref{computeISuperStart}--\ref{computeISuperEnd}. 
-We first add the number of dequeues in the subblocks of $B'$ in $\var{v}$ that precede $B$ on line~\ref{computeISuperStart}.
+We first add the number of \dequeues\ in the subblocks of $B'$ in $\var{v}$ that precede $B$ on line~\ref{computeISuperStart}.
 If $\var{v}$ is the right child of its parent, then all of the subblocks of $B'$ from $\var{v}$'s left sibling
-also precede the required dequeue, so we add the number of dequeues in those subblocks in line \ref{considerLeftBeforeRight}.
+also precede the required \dequeue, so we add the number of \dequeues\ in those subblocks in line \ref{considerLeftBeforeRight}.
 
 Finally, \op{IndexDequeue} is called recursively on $\var{v}$'s parent.
 Since $B$ has been propagated to the root, so has its superblock $B'$.
 Thus, all preconditions of the recursive call are met.
-By the induction hypothesis, the recursive call returns the location of the required dequeue in the root.\end{proof}
+By the induction hypothesis, the recursive call returns the location of the required \dequeue\ in the root.\end{proof}
 
 
 \begin{lemma}\label{lem::get}
-If $1\leq i\leq |E(\var{v}.\fld{blocks}[b])|$ then \op{getEnqueue}($\var{v},b,i$) returns the argument of the $i$th enqueue in $E(\var{v}.\fld{blocks}[b])$.
+If $1\leq i\leq |E(\var{v}.\fld{blocks}[b])|$ then \op{getEnqueue}($\var{v},b,i$) returns the argument of the $i$th \enqueue\ in $E(\var{v}.\fld{blocks}[b])$.
 \end{lemma}
 
 \begin{proof}
 We prove the claim by induction on the height of node $\var{v}$.
 If $\var{v}$ is a leaf, the hypothesis implies that $i=1$ and the block $\var{v}.\fld{blocks}[b]$ represents 
-an enqueue whose argument is stored in $\var{v}.\fld{blocks}[b].\fld{element}$.
-\op{GetEnqueue} returns the argument of this enqueue at line \ref{getBaseCase}.
+an \enqueue\ whose argument is stored in $\var{v}.\fld{blocks}[b].\fld{element}$.
+\op{GetEnqueue} returns the argument of this \enqueue\ at line \ref{getBaseCase}.
 
 Assuming the claim holds for $\var{v}$'s children, we prove it for $\var{v}$.
 Let $B$ be $\var{v}.\fld{blocks}[b]$.
 By Equation (\ref{defSeqs}),
-$E(B)$ is obtained by concatenating the enqueue sequences of the direct subblocks
+$E(B)$ is obtained by concatenating the \enqueue\ sequences of the direct subblocks
 of $B$, which are listed in (\ref{defsubblock}).
 By Invariant \ref{inv::sum}, $\var{sum\sub{left}}-\var{prev\sub{left}}$ is the number
-of enqueues in $E(B)$ that come from $B$'s subblocks in $\var{v}$'s left child.
-Thus, $dir$ is set to the direction for the child of $\var{v}$ that contains the required enqueue operation.
-Moreover, when line \ref{endChooseDir} is reached, $i$ is the position of the required enqueue within the portion $E'$ of $E(B)$ that comes from that child.
-Thus,  line \ref{getChild} finds the index $b'$ of the subblock $B'$ containing the required enqueue.
+of \enqueues\ in $E(B)$ that come from $B$'s subblocks in $\var{v}$'s left child.
+Thus, $dir$ is set to the direction for the child of $\var{v}$ that contains the required \enqueue\ operation.
+Moreover, when line \ref{endChooseDir} is reached, $i$ is the position of the required \enqueue\ within the portion $E'$ of $E(B)$ that comes from that child.
+Thus,  line \ref{getChild} finds the index $b'$ of the subblock $B'$ containing the required \enqueue.
 By Invariant \ref{inv::sum}, $\var{v}.\var{dir.blocks}[b'-1].\var{sum\sub{enq}} - \var{prev\sub{dir}}$ is the number of 
-enqueues in $E'$ before the enqueues of block $B'$, so
-the value $i'$ computed on line \ref{getChildIndex} is the position of the required enqueue within $E(B')$.
+\enqueues\ in $E'$ before the \enqueues of block $B'$, so
+the value $i'$ computed on line \ref{getChildIndex} is the position of the required \enqueue\ within $E(B')$.
 Thus, the recursive call on line \ref{getRecurse} satisfies its precondition, and 
 returns the required result, by the induction hypothesis.
 \end{proof}
@@ -400,8 +400,8 @@ returns the required result, by the induction hypothesis.
 
 We show that the linearization ordering $L$ defined in Equation
 (\ref{linearization}) is a legal permutation of a subset of the operations in 
-the execution, i.e., that it includes all operations that terminate and 
-if one operation $op_1$ terminates before another operation $op_2$ begins, then $op_2$ does not precede $op_1$ in $L$.  We also show each completed dequeue returns the same result as it would in the sequential execution~$L$.
+the concurrent execution, i.e., that it includes all operations that terminate and 
+if one operation $op_1$ terminates before another operation $op_2$ begins, then $op_2$ does not precede $op_1$ in $L$.  We also show each completed \dequeue\ returns the same result \rev{in the concurrent execution} as it would in the sequential execution~$L$ \rev{(i.e., the sequential execution of the operations in the order given by $L$)}.
 
 \begin{lemma} \label{linearSat}
 $L$ is a legal linearization ordering.
@@ -432,41 +432,40 @@ at line \ref{computeLength} of a call to \op{CreateBlock}(\var{root, b}).
 By the induction hypothesis, $root.\fld{blocks}[b-1].\size$ gives the size of the queue before the operations
 of block $B$ are performed.
 By Invariant \ref{inv::sum}, the values of \var{num\sub{enq}} and \var{num\sub{deq}}
-are the number of enqueues and dequeues contained in $B$.
-Hence, the size of the queue after the operations of $B$ are performed (with enqueues before dequeues as specified by~$L$)
+are the number of \enqueues\ and \dequeues\ contained in $B$.
+Hence, the size of the queue after the operations of $B$ are performed (with \enqueues\ before \dequeues\ as specified by~$L$)
 is $\max(0, \var{root}.\fld{blocks}[b-1].\size + \var{num\sub{enq}} - \var{num\sub{deq}})$.
 \end{proof}
 
 Next, we show each operation returns the same response as it would in the sequential execution~$L$.
 
 \begin{lemma}\label{linearCorrect}
-Each terminating dequeue returns the response it would in the sequential execution~$L$.
+Each terminating \dequeue\ returns the response it would in the sequential execution~$L$.
 \end{lemma}
 \begin{proof}
-If a dequeue $Deq$ terminates, it is contained in some block in the root, by Lemma \ref{lem::appendExactlyOnce}.
+If a \dequeue\ $Deq$ terminates, it is contained in some block in the root, by Lemma \ref{lem::appendExactlyOnce}.
 By Lemma \ref{lem::indexDequeue}, $Deq$'s call to \op{IndexDequeue} on line~\ref{invokeIndexDequeue}
-returns a pair $\langle b,i\rangle$ such that $Deq$ is the $i$th dequeue in the block 
+returns a pair $\langle b,i\rangle$ such that $Deq$ is the $i$th \dequeue\ in the block 
 $B=\var{root}.\fld{blocks}[b]$.
 $Deq$ then calls \op{FindResponse}($b,i$) on line \ref{deqRest}.
 By Lemma~\ref{sizeCorrectness}, the queue contains $\var{root}.\fld{blocks}[b-1].\fld{size}$ elements
 after the operations in $\var{root}.\fld{blocks}[1..b-1]$ are performed sequentially 
 in the order given by $L$.
 By Invariant \ref{inv::sum}, the value of \var{num\sub{enq}} computed on line \ref{FRNum}
-is the number of enqueues in $B$.
-Since the enqueues in block $B$ precede the dequeues,
-the queue is empty when the $i$th dequeue of $B$ occurs if 
+is the number of \enqueues\ in $B$.
+Since the \enqueues\ in block $B$ precede the \dequeues,
+the queue is empty when the $i$th \dequeue\ of $B$ occurs if 
 $\var{root}.\fld{blocks}[b-1].\fld{size} + \var{num\sub{enq}} < i$.
 So $Deq$ returns \nl\ on line \ref{returnNull} if and only if it would do so in the sequential
 execution $L$.
 Otherwise, the size of the queue after doing the operations in $\var{root}.\fld{blocks}[0..b-1]$
 in the sequential execution $L$ is $\var{root}.\fld{blocks}[b-1].\fld{sum\sub{enq}}$ minus
-the number of non-\nl\ dequeues in that prefix of $L$.
-Hence, line \ref{computeE} sets $e$ to the rank of $Deq$ among all the non-\nl\ dequeues in $L$.
-Thus, in the sequential execution~$L$, $Deq$ returns the value enqueued by the $e$th enqueue in $L$.
-By Invariant \ref{inv::sum}, this enqueue is the $i_e$th enqueue 
-in $E(\var{root}.\fld{blocks}[b_e])$, where
+the number of non-\nl\ \dequeues\ in that prefix of $L$.
+Hence, line \ref{computeE} sets $e$ to the rank of $Deq$ among all the non-\nl\ \dequeues\ in $L$.
+Thus, in the sequential execution~$L$, $Deq$ returns the value enqueued by the $e$th \enqueue\ in $L$.
+By Invariant \ref{inv::sum}, this \enqueue\ is the $i_e$th \enqueue\ in $E(\var{root}.\fld{blocks}[b_e])$, where
 $b_e$ and $i_e$ are the values $Deq$ computes on line \ref{FRb} and \ref{FRi}.
-By Lemma \ref{lem::get}, the call to \op{GetEnqueue} returns the argument of the required enqueue.
+By Lemma \ref{lem::get}, the call to \op{GetEnqueue} returns the argument of the required \enqueue.
 \end{proof}
 
 Combining Lemmas \ref{linearSat} and \ref{linearCorrect} provides our main result.

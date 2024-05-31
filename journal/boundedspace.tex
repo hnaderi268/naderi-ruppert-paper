@@ -50,10 +50,10 @@ To maintain good amortized time, we periodically do a garbage collection (GC) ph
 If a \op{Refresh} on a node adds a block whose \var{index} is a multiple of $G=p^2\ceil{\log p}$, it does GC to remove obsolete blocks from the node's RBT.
 To determine which blocks can be thrown away, we use a global array $\var{last}[1..p]$ where 
 each process writes the index of the last block in the root
-containing a null dequeue or an enqueue whose element it dequeued.
+containing a null \dequeue\ or an \enqueue\ whose element it dequeued.
 To perform GC, a process reads $\var{last}[1..p]$ and finds the maximum entry $m$.
-Then, it helps complete every other process's pending dequeue 
-by computing the dequeue's response and writing it in the block in the leaf that represents the dequeue.
+Then, it helps complete every other process's pending \dequeue\ by 
+computing the \dequeue's response and writing it in the block in the leaf that represents the \dequeue.
 Once this helping is complete, it follows from the FIFO property of the queue that elements enqueued 
 in $\fld{root.blocks}[1..m-1]$ have all been dequeued, so GC can discard all subblocks of those.
 Fortunately, there is an  RBT \op{Split} operation that can remove
@@ -61,8 +61,8 @@ these obsolete blocks from an RBT in logarithmic time \cite[Sec.~4.2]{Tar83}.
 
 An operation $op$'s search of a RBT may fail to find the required block $B$ that has been removed 
 by another process's GC phase.  If $op$
-is a dequeue, $op$ must have been helped before $B$ was discarded, so $op$ can simply read its response from
-its own leaf.  If $op$ is an enqueue, it can simply terminate.
+is a \dequeue, $op$ must have been helped before $B$ was discarded, so $op$ can simply read its response from
+its own leaf.  If $op$ is an \enqueue, it can simply terminate.
 
 %Our GC scheme ensures each RBT has  $O(q+p^2\log p)$ blocks, so RBT operations take $O(\log(p+q))$ time.
 %Excluding GC, an operation does $O(1)$ operations on RBTs at each level of the tree for a total of

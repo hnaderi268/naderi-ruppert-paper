@@ -28,7 +28,7 @@ Only the \op{Append} operations need to be propagated to the root of the orderin
 since the other two operations do not affect the state of the object.
 An \opa{Append}{e} is implemented like \opa{Enqueue}{e} in $O(\log p)$ steps.  
 A \opa{Get}{i} is similar to \op{GetEnqueue}, taking $O(\log n + \log^2p)$ steps when the vector has $n$ elements.  
-An \op{Index} is similar to \op{IndexDequeue} (except operating on enqueues instead of dequeues) and would take $O(\log p)$ steps if the argument is a pointer to the leaf block that contains the element~$e$.
+An \op{Index} is similar to \op{IndexDequeue} (except operating on \enqueues\ instead of \dequeues) and would take $O(\log p)$ steps if the argument is a pointer to the leaf block that contains the element~$e$.
 
 Building on the work described in this paper, Asbell and Ruppert \cite{AR23} have
 designed a doubly-ended queue with polylogarithmic amortized step

@@ -112,7 +112,7 @@ if some block containing the operation has previously appeared in the RBT \var{v
 
 \begin{customlemma}{\ref{successfulRefresh}$'$}\label{successfulRefreshGC}
 Let $R$ be a call to \op{Refresh}(\var{v}) that performs a successful \op{CAS} on line \ref{casGC} (or terminates at line \ref{addOPGC}).
-In the configuration after that CAS (or termination, respectively), \var{v} contains all operations that \var{v}'s children contained 
+Immediately after that CAS (or termination, respectively), \var{v} contains all operations that \var{v}'s children contained 
 when $R$ executed line~\ref{refreshReadTGC}.
 \end{customlemma}
 \begin{proof}
@@ -177,10 +177,10 @@ We say a block is \emph{finished} if
 \item
 it has been propagated to the root,
 \item
-the value of each enqueue contained in the block has either been returned by a dequeue
-or written in the \fld{response} field of a dequeue, and
+the value of each \enqueue\ contained in the block has either been returned by a \dequeue\ or 
+written in the \fld{response} field of a \dequeue, and
 \item
-each dequeue contained in the block has terminated or some process has written to the \fld{response} field in the leaf block that represents it.
+each \dequeue\ contained in the block has terminated or some process has written to the \fld{response} field in the leaf block that represents it.
 \end{itemize}
 Intuitively, once a block is finished, operations no longer need  the block
 to compute responses to operations.
@@ -191,7 +191,7 @@ A block is finished if and only all of its subblocks are finished.
 \end{observation}
 
 %\here{Technically, following proof might have to be wrapped up in a big induction with the argument
-%that outputs are linearized correctly, to argue that the matchup between enqueues and dequeues
+%that outputs are linearized correctly, to argue that the matchup between \enqueues\ and \dequeues\ 
 %is the same as it would be in the linearization ordering.  (Check whether this is really needed.)
 %Or alternatively, we could add an assumption that if every operation agrees with the linearization
 %so far, then the invariant is preserved by each step.
@@ -235,12 +235,12 @@ We prove this claim  by induction on the depth of $x$.
 
 For the base case, suppose $x$ is the root.
 \op{SplitBlock} finds the maximum value $m$ in \var{last}, which is the index of some block
-that contains an operation that is either a null dequeue or an enqueue whose value is the response for a dequeue that has been propagated to the root (since these are the only ways that an entry of \var{last} can be set to $m$).
-By the FIFO property of queues, the values enqueued by enqueues in $\var{root}.\fld{blocks}[1..m-1]$
+that contains an operation that is either a null \dequeue\ or an \enqueue\ whose value is the response for a \dequeue\ that has been propagated to the root (since these are the only ways that an entry of \var{last} can be set to $m$).
+By the FIFO property of queues, the values enqueued by \enqueues\ in $\var{root}.\fld{blocks}[1..m-1]$
 are all dequeued by operations that have already been installed in $\var{root}.\fld{blocks}$ before
 the end of the \op{SplitBlock}.
 Between the termination of $A$'s call to \op{SplitBlock} at line \ref{callSplitBlock}
-and the \op{CAS} step $st$ after $A$ terminates,  $A$ helps all pending dequeues at line \ref{invokeHelp}.
+and the \op{CAS} step $st$ after $A$ terminates,  $A$ helps all pending \dequeues\ at line \ref{invokeHelp}.
 Thus, after this helping (and before step $st$),
 $\var{root}.\fld{blocks}[1..m-1]$ are all finished blocks.
 Since \op{SplitBlock} returns \var{root}.\fld{blocks}[$m-1$], the claim is true.
@@ -283,10 +283,10 @@ Any block that GC removes from an RBT is finished, by Invariant \ref{inv::finish
 the root (for example, during the \op{CreateBlock} routine), then a block containing
 the operation itself has been removed from a RBT, so the operation has propagated to the root,
 by the definition of finished.
-Moreover, by Invariant \ref{inv::finished}, if the operation is a dequeue, then its result is in its \fld{response} field.
+Moreover, by Invariant \ref{inv::finished}, if the operation is a \dequeue, then its result is in its \fld{response} field.
 
-After propagation to the root, a \op{Dequeue} must access blocks that contain the dequeue,
-as well as the enqueue whose value it will return (if it is not a null dequeue).
+After propagation to the root, a \op{Dequeue} must access blocks that contain the \dequeue,
+as well as the \enqueue\ whose value it will return (if it is not a null \dequeue).
 If any of those blocks have been removed, it follows from Invariant \ref{inv::finished} that the
 \op{Dequeue}'s result is written in its \fld{response} field.
 \end{proof}
@@ -323,10 +323,10 @@ Part of the proof of the following lemma is similar to the proof of Lemma \ref{d
 %We say the index $b$ \emph{is marked in node \var{v}} if some process has tested
 %whether $b>\var{v}.\fld{last}[*]$ at line \ref{marktest1} or \ref{marktest2}.
 %Intuitively, a block's index value is marked 
-%when a dequeue passes through this block to find the enqueue
-%whose argument it should return, or when a dequeue that returns null passes through the block.
+%when a \dequeue\ passes through this block to find the \enqueue
+%whose argument it should return, or when a \dequeue\ that returns null passes through the block.
 %Thus, $b$ gets marked in \var{v} when $\var{v}.\fld{blocks}[b]$ 
-%contains either an enqueue whose value is being dequeued or a \nl\ dequeue.
+%contains either an \enqueue whose value is being dequeued or a \nl\ \dequeue.
 %If the index of block $B$ is marked in \var{v}, we also say $B$ is marked in \var{v}.
 
 \begin{lemma}\label{boundAfterGC}
@@ -337,33 +337,33 @@ it contains at most $3q_{max}+5p+1$ blocks.
 Consider the invocation $A$ of \op{AddBlock} that updates a node \var{v}'s RBT with the insertion of a block whose 
 \fld{index} is a multiple of $G$.
 Then, $A$ performs a GC phase.
-Let $C$ be the configuration before $A$ invokes \op{SplitBlock} on line \ref{callSplitBlock}.
+Let \rev{$t$ be the time} when $A$ invokes \op{SplitBlock} on line \ref{callSplitBlock}.
 That call to \op{SplitBlock} recurses up to the root, where it computes $m$ by reading the \var{last}
 array.
 Let $L_1$ be the prefix of the linearization $L$ corresponding to blocks $1..m$ of the root.
 Let $L_2$ be the next segment of the linearization corresponding to blocks $m+1..\ell$ of the root, where
-$\ell$ is the last block added to the root's RBT before $C$.
+$\ell$ is the last block added to the root's RBT before $t$.
 
 We first bound the number of operations in $L_2$.
 
-The number of enqueues in $L_2$ whose values are still in the queue at the end of $L_2$ is at most $q_{max}$.
-If the value enqueued by any enqueue in $L_2$  is not still in the queue
-at the end of $L_2$, then the dequeue in $L_2$ that dequeued that value must still be in progress
-at $C$; otherwise the process that performed that dequeue would have set its \var{last} entry
-to the index of the root block that contains the enqueue, which is greater than $m$, before $C$, contradicting
-the fact that all values in the $last$ array at $C$ are less than or equal to $m$.
-So, there are at most $p$ enqueues in $L_2$ whose values are still in the queue at the end of $L_2$.
-Thus, there are at most $q_{max}+p$ enqueues in $L_2$.
+The number of \enqueues\ in $L_2$ whose values are still in the queue at the end of $L_2$ is at most $q_{max}$.
+If the value enqueued by any \enqueue\ in $L_2$  is not still in the queue
+at the end of $L_2$, then the \dequeue\ in $L_2$ that dequeued that value must still be in progress
+at time $t$; otherwise the process that performed that \dequeue\ would have set its \var{last} entry
+to the index of the root block that contains the \enqueue, which is greater than $m$, before $t$, contradicting
+the fact that all values in the $last$ array at $t$ are less than or equal to $m$.
+So, there are at most $p$ \enqueues\ in $L_2$ whose values are still in the queue at the end of $L_2$.
+Thus, there are at most $q_{max}+p$ \enqueues\ in $L_2$.
 
-If a dequeue in $L_2$ returns a non-null value in the sequential execution $L$,
+If a \dequeue\ in $L_2$ returns a non-null value in the sequential execution $L$,
 then the value it returns was either in the queue at the end of $L_1$ or it was enqueued during $L_2$.
-Thus, there are at most $q_{max}+(q_{max}+p)$ dequeues in $L_2$ that return non-null values.
-Any dequeue in $L_2$ that returns a null value in the sequential execution $L$ must still be in progress
-at $C$; otherwise the process that performed the dequeue would have set its \var{last} entry
-to a value greater than the index of the root block that contains the dequeue prior to $C$, 
+Thus, there are at most $q_{max}+(q_{max}+p)$ \dequeues\ in $L_2$ that return non-null values.
+Any \dequeue\ in $L_2$ that returns a null value in the sequential execution $L$ must still be in progress
+at $t$; otherwise the process that performed the \dequeue\ would have set its \var{last} entry
+to a value greater than the index of the root block that contains the \dequeue\ prior to $t$, 
 contradicting the definition of $m$.
-So, there are at most $p$ null dequeues in $L_2$.
-Thus, there are at most $2q_{max} + 2p$ dequeues in $L_2$.
+So, there are at most $p$ null \dequeues\ in $L_2$.
+Thus, there are at most $2q_{max} + 2p$ \dequeues\ in $L_2$.
 
 $A$'s call to \op{SplitBlock} determines the index $s$ used to split \var{v}'s RBT by following 
 \eleft\ and \eright\ pointers from the root down to \var{v}.
@@ -373,7 +373,7 @@ in which case \op{SplitBlock} returns a subblock of a root block with index $m'>
 
 Next, we bound the number of operations in \var{v}'s blocks that are retained when $A$  sets
 $T'\assign\op{Split}(T,s)$.
-Since $T$ was read before $C$, any operation in $T$ is either in progress at $C$ or has been propagated to the root before $C$, by Lemma \ref{lem::appendExactlyOnce}.
+Since $T$ was read before $t$, any operation in $T$ is either in progress at $t$ or has been propagated to the root before $t$, by Lemma \ref{lem::appendExactlyOnce}.
 Thus, there are at most $p$ operations in $T$ that do not appear in $L_1\cdot L_2$.
 All the rest of the operations in blocks of $T'$ have been propagated to blocks $m..\ell$ of the root.
 By Lemma \ref{blockSize}, There are at most $p$ operations in block $m$ of the root 

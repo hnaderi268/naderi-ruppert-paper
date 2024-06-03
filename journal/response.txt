@@ -12,7 +12,7 @@ Done.
 > line 465. The notion sum_enq and sum_deq is confusing. Probably use
 > count_enq and count_deq instead ? Or cnt_enq and cnt_deq ?
 
-We were concerned that count might sound like a count of the number of enqueue or dequeue operations in a single block.  We instead used sum to remind the reader that the fields of Block i store the prefix sum of the number of enqueue or dequeue operations in in Blocks 1..i (as mentioned when the fields are introduced at line 504 [check line number].
+We were concerned that count might sound like a count of the number of enqueue or dequeue operations in a single block.  We instead used sum to remind the reader that the fields of Block i store the prefix sum of the number of enqueue or dequeue operations in in Blocks 1..i (as mentioned when the fields are introduced on page 11).
 
 > lines 526 - 528, right column. It is not clear why the expression
 > for B.size is correct if some of the dequeues are empty. Additional
@@ -43,14 +43,14 @@ This paragraph has been rewritten.
 > lines 594 - 608 (lines 24 - 37 in the code). Add a more detailed
 > comments that explain the Refresh operation.
 
-Done.  Quite a few new comments have been added throughout the pseudocode.
+Done.  We have added many comments throughout the pseudocode.
 
 > line 619 (line 44 in the code). It's not clear why the size of the
 > queue is calculated correctly. Why if some of the dequeues that are
 > counted by num_deq are empty and do not change the size of the
 > queue ? Some intuition here would be helpful.
 
-Some explanation has been added in the text (line 526) [*** check line #].
+Some explanation has been added in the text (see magenta text on p.12)
 
 > line 620 (line 46 in the code). Suggestion: consider to put the
 > check whether the new block B contains no operations
@@ -83,7 +83,7 @@ Done.
 > doubling search is used here to find the range of the binary
 > search.
 
-Done.  Some text has been added to the text description of FindResponse to explain that the doubling search first finds the left end of the range and then performs a binary search.
+Done.  We added to the text description of FindResponse (p.17) to explain that the doubling search first finds the left end of the range and then performs a binary search.
 
 > line 696, right column. "... and calls Refresh on $v$ twice in
 > lines 226 and 227". The lines numbers should be 17 and 18.
@@ -167,7 +167,7 @@ Done.
 > convincing to me, but I wonder if there is a way to simplify the
 > presentation. 
 
-For the space-bounded version, we replace an infinite array by a red-black tree (using the array index as the key).  This allows us to append elements, access elements, and split off the obsolete elements, all in logarithmic time.  We realize that this additional data structure complicates the algorithm, but we were unfortunately unable to come up with a simpler way to do it.  We hoped that presenting the simpler, space-unbounded version first would make it easier to understand the space-bounded version.  We did our best to explain the transformation from the arrays to the RBTs in the first page of Section 6.
+For the space-bounded version, we replace an infinite array by a red-black tree (using the array index as the key).  This allows us to append elements, access elements, and split off the obsolete elements, all in logarithmic time.  We realize that this additional data structure complicates the algorithm, but we were unfortunately unable to come up with a simpler way to do it.  We hoped that presenting the simpler, space-unbounded version first would make it easier to understand the space-bounded version.  We did our best to explain the transformation from the arrays to the RBTs in the first page of Section 7.
 
 > Specific comments:
 > 
@@ -177,7 +177,7 @@ Fixed.
 
 > - I find the related work section complete. However, I wonder if it is worth citing a few works about memory reclamation, due to your bounded memory implementation.
 
-Although our space-bounded algorithm unlinks objects that are no longer needed from our data structure, we consider the problem of reclaiming that memory to be an orthogonal issue.  There is a rather large body of literature on memory reclamation for concurrent data structures, so we have added (at line 110 of the introduction) a reference to a very recent paper that includes a large bibliography of work in this area, to help the reader find relevant literature on it. 
+Although our space-bounded algorithm unlinks objects that are no longer needed from our data structure, we consider the problem of reclaiming that memory to be an orthogonal issue.  There is a rather large body of literature on memory reclamation for concurrent data structures, so we have added (at line 110, left column, of the introduction) a reference to a very recent paper that includes a large bibliography of work in this area, to help the reader find relevant literature on it. 
 
 > - I do not understand why you do not cite the preliminary version in podc 2023. 
 
@@ -189,7 +189,7 @@ Fixed.
 
 > - For completeness, I suggest to add a preliminaries section, with a reminder of the main definitions such as linearizability, step complexity, and so on. 
 
-A new section on the model of computation has been added to include
+A new section 3 on the model of computation has been added to include
 these definitions.
 
 > - ln 417, right. Are these direct blocks?
@@ -247,4 +247,4 @@ We removed the parentheses from Dequeue for consistency.
 
 > - Sec 7. Your algorithms are adaptive on the size of the queue but not on the number of processes. I wonder if an interesting future direction would be to make your algorithms fully adaptive.
 
-Yes, this was mentioned in sentence 3 of Sec 7.
+Yes, this was mentioned in sentence 3 of the conclusion (now Section 8).

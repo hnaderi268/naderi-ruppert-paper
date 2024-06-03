@@ -363,7 +363,7 @@ year = 2019,
 	address      = {New York, NY, USA},
 	volume       = 12,
 	number       = 3,
-	pages        = {463‚Äì492},
+	pages        = {463--Äì492},
 	doi          = {10.1145/78969.78972},
 	issn         = {0164-0925},
 	url          = {https://doi.org/10.1145/78969.78972},
@@ -724,7 +724,7 @@ doi = {https://doi.org/10.1006/jpdc.1998.1446},
 url = {https://www.sciencedirect.com/science/article/pii/S0743731598914460},
 author = {Maged M. Michael and Michael L. Scott},
 keywords = {nonblocking, lock-free, mutual exclusion, locks, multiprogramming, concurrent queues, concurrent stacks, concurrent heaps, concurrent counters, concurrent date structures, , , .},
-abstract = {Most multiprocessors are multiprogrammed to achieve acceptable response time and to increase their utilization. Unfortunately, inopportune preemption may significantly degrade the performance of synchronized parallel applications. To address this problem, researchers have developed two principal strategies for a concurrent, atomic update of shared data structures: (1)preemption-safe lockingand (2)nonblocking(lock-free)algorithms. Preemption-safe locking requires kernel support. Nonblocking algorithms generally require a universal atomic primitive such ascompare-and-swaporload-linked/store-conditionaland are widely regarded as inefficient. We evaluate the performance of preemption-safe lock-based and nonblocking implementations of important data structures‚Äîqueues, stacks, heaps, and counters‚Äîincluding nonblocking and lock-based queue algorithms of our own, in microbenchmarks and real applications on a 12-processor SGI Challenge multiprocessor. Our results indicate that our nonblocking queue consistently outperforms the best known alternatives and that data-structure-specific nonblocking algorithms, which exist for queues, stacks, and counters, can work extremely well. Not only do they outperform preemption-safe lock-based algorithms on multiprogrammed machines, they also outperform ordinary locks on dedicated machines. At the same time, since general-purpose nonblocking techniques do not yet appear to be practical, preemption-safe locks remain the preferred alternative for complex data structures: they outperform conventional locks by significant margins on multiprogrammed systems.}
+abstract = {Most multiprocessors are multiprogrammed to achieve acceptable response time and to increase their utilization. Unfortunately, inopportune preemption may significantly degrade the performance of synchronized parallel applications. To address this problem, researchers have developed two principal strategies for a concurrent, atomic update of shared data structures: (1)preemption-safe lockingand (2)nonblocking(lock-free)algorithms. Preemption-safe locking requires kernel support. Nonblocking algorithms generally require a universal atomic primitive such ascompare-and-swaporload-linked/store-conditionaland are widely regarded as inefficient. We evaluate the performance of preemption-safe lock-based and nonblocking implementations of important data structures--Äîqueues, stacks, heaps, and counters--Äîincluding nonblocking and lock-based queue algorithms of our own, in microbenchmarks and real applications on a 12-processor SGI Challenge multiprocessor. Our results indicate that our nonblocking queue consistently outperforms the best known alternatives and that data-structure-specific nonblocking algorithms, which exist for queues, stacks, and counters, can work extremely well. Not only do they outperform preemption-safe lock-based algorithms on multiprogrammed machines, they also outperform ordinary locks on dedicated machines. At the same time, since general-purpose nonblocking techniques do not yet appear to be practical, preemption-safe locks remain the preferred alternative for complex data structures: they outperform conventional locks by significant margins on multiprogrammed systems.}
 }
 
 @inproceedings{DBLP:conf/opodis/HoffmanSS07,
@@ -809,8 +809,8 @@ abstract = {Most multiprocessors are multiprogrammed to achieve acceptable respo
 		at the heart of much recent work in concurrent algorithms, concurrent data
 		structures, and multiprocessor architectures. First, we introduce a simple
 		and general technique, based on reduction to a concensus protocol, for
-		proving statements of the form, ‚Äúthere is no wait-free implementation of X by
-		Y.‚Äù We derive a hierarchy of objects such that no object at one level has a
+		proving statements of the form, ``Äúthere is no wait-free implementation of X by
+		Y.'' We derive a hierarchy of objects such that no object at one level has a
 		wait-free implementation in terms of objects at lower levels. In particular,
 		we show that atomic read/write registers, which have been the focus of much
 		recent attention, are at the bottom of the hierarchy: thay cannot be used to
@@ -1171,4 +1171,15 @@ pages = {203--220},
   doi          = {10.1145/3583668.3594565},
 }
 
+@inproceedings{GHW11,
+  author       = {Wojciech M. Golab and
+                  Lisa Higham and
+                  Philipp Woelfel},
+  title        = {Linearizable implementations do not suffice for randomized distributed
+                  computation},
+  booktitle    = {Proc.\ 43rd {ACM} Symposium on Theory of Computing},
+  pages        = {373--382},
+  year         = {2011},
+  doi          = {10.1145/1993636.1993687},
+}
 

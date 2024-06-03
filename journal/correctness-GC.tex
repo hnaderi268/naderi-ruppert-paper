@@ -155,8 +155,8 @@ are contained in \var{v} when $R_2$ terminates.
 If either $R_1$ or $R_2$ performs a successful \op{CAS} at line \ref{casGC} or terminates at line \ref{addOPGC}, the claim follows
 from Lemma \ref{successfulRefreshGC}.
 So suppose both $R_1$ and $R_2$ perform a failed \op{CAS} at line \ref{casGC}.
-Then some other \op{CAS} on $\var{v}.\fld{blocks}$ succeeds between the time each \op{Refresh}
-reads $\var{v}.\fld{blocks}$ at line \ref{refreshReadTGC} and performs its \op{CAS} at line \ref{casGC}.
+Then some other \op{CAS} on $\var{v}.\fld{blocks}$ succeeds between \rev{each \op{Refresh}'s 
+read of $\var{v}.\fld{blocks}$ at line \ref{refreshReadTGC} and its \op{CAS}} at line \ref{casGC}.
 Consider the \op{Refresh} $R_3$ that does this successful \op{CAS} during $R_2$.
 $R_3$ must have read $\var{v}.\fld{blocks}$ after the successful \op{CAS} during $R_1$.
 The claim follows from Lemma \ref{successfulRefreshGC} applied to~$R_3$.
@@ -249,7 +249,7 @@ For the induction step, we assume the claim holds for $x$'s parent, and prove it
 We consider two cases.
 
 If \op{SplitBlock}($x$) returns the minimum block of $x$'s RBT at line \ref{substitute},
-then the claim follows from the assumption that Invariant \ref{inv::finished} holds at all times before $st$.
+then the claim follows from the assumption that Invariant \ref{inv::finished} holds before $st$.
 
 Otherwise, \op{SplitBlock}($x$) returns the block $B$ at line \ref{substitute}.
 By the induction hypothesis, the block $B_p$ computed at line \ref{SBrecurse}
@@ -337,30 +337,30 @@ it contains at most $3q_{max}+5p+1$ blocks.
 Consider the invocation $A$ of \op{AddBlock} that updates a node \var{v}'s RBT with the insertion of a block whose 
 \fld{index} is a multiple of $G$.
 Then, $A$ performs a GC phase.
-Let \rev{$t$ be the time} when $A$ invokes \op{SplitBlock} on line \ref{callSplitBlock}.
+Let \rev{$s$ be the step} when $A$ invokes \op{SplitBlock} on line \ref{callSplitBlock}.
 That call to \op{SplitBlock} recurses up to the root, where it computes $m$ by reading the \var{last}
 array.
 Let $L_1$ be the prefix of the linearization $L$ corresponding to blocks $1..m$ of the root.
 Let $L_2$ be the next segment of the linearization corresponding to blocks $m+1..\ell$ of the root, where
-$\ell$ is the last block added to the root's RBT before $t$.
+$\ell$ is the last block added to the root's RBT before $s$.
 
 We first bound the number of operations in $L_2$.
 
 The number of \enqueues\ in $L_2$ whose values are still in the queue at the end of $L_2$ is at most $q_{max}$.
 If the value enqueued by any \enqueue\ in $L_2$  is not still in the queue
 at the end of $L_2$, then the \dequeue\ in $L_2$ that dequeued that value must still be in progress
-at time $t$; otherwise the process that performed that \dequeue\ would have set its \var{last} entry
-to the index of the root block that contains the \enqueue, which is greater than $m$, before $t$, contradicting
-the fact that all values in the $last$ array at $t$ are less than or equal to $m$.
-So, there are at most $p$ \enqueues\ in $L_2$ whose values are still in the queue at the end of $L_2$.
-Thus, there are at most $q_{max}+p$ \enqueues\ in $L_2$.
+when $s$ occurs; otherwise the process that performed that \dequeue\ would have set its \var{last} entry
+to the index of the root block that contains the \enqueue, which is greater than $m$, before $s$, contradicting
+the fact that all values in the $last$ array are less than or equal to $m$ when $s$ occurs.
+So, there are at most $p$ \enqueues\ in $L_2$ whose values are still in the queue at the end of~$L_2$.
+Thus, there are at most $q_{max}+p$ \enqueues\ in~$L_2$.
 
 If a \dequeue\ in $L_2$ returns a non-null value in the sequential execution $L$,
 then the value it returns was either in the queue at the end of $L_1$ or it was enqueued during $L_2$.
 Thus, there are at most $q_{max}+(q_{max}+p)$ \dequeues\ in $L_2$ that return non-null values.
 Any \dequeue\ in $L_2$ that returns a null value in the sequential execution $L$ must still be in progress
-at $t$; otherwise the process that performed the \dequeue\ would have set its \var{last} entry
-to a value greater than the index of the root block that contains the \dequeue\ prior to $t$, 
+when $s$ occurs; otherwise the process that performed the \dequeue\ would have set its \var{last} entry
+to a value greater than the index of the root block that contains the \dequeue\ prior to $s$, 
 contradicting the definition of $m$.
 So, there are at most $p$ null \dequeues\ in $L_2$.
 Thus, there are at most $2q_{max} + 2p$ \dequeues\ in $L_2$.
@@ -446,7 +446,7 @@ is the maximum \fld{index} in $T$ plus 1.
 The \op{Refresh} that called $A$ performed a \op{CAS} at line \ref{casGC}.  Either the \op{CAS} succeeds
 or it fails because 
 some other \op{CAS} changes \var{v}.\fld{blocks} from $T$ to another tree.
-Either way, by Lemma \ref{RBTupdates}, \var{v}'s RBT's maximum \fld{index} will be at least $r\cdot G$ at all times
+Either way, by Lemma \ref{RBTupdates}, \var{v}'s RBT's maximum \fld{index} will always be at least $r\cdot G$ 
 after this CAS.
 So if a subsequent \op{Refresh} by process $P$ 
 ever calls \op{AddBlock} on \var{v} again, the block it passes as the third argument

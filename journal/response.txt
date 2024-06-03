@@ -116,7 +116,7 @@ Yes, clarified.
 > lines 887, 892. left column. It look like there are two unnecessary
 > empty lines.
 
-This seems to be a strange effect of the double-spacing option for the draft.
+This seems to be a strange effect of the double-spacing option for the draft.  It should look okay in the final version.
 
 > line 919, right column. Should it be "the value computed in line
 > *42*" (instead of 41) ?
@@ -155,7 +155,17 @@ Done.
 
 > Reviewer 2
 >
-> Then, the paper presents a modification of the first algorithm that uses bounded memory, more specifically polynomial on the number of processes and the size of the queue in the linearization, and with polylogarithmic amortized step complexity. As one would naturally expect, this version adds a sort of garbage collector mechanism that removes blocks of memory that are not needed anymore. I found this part of the paper harder to understand. I did not understand the need of using red-black trees, which I think complicates everything. I have no reason to think the implementation is wrong, all looks convincing to me, but I wonder if there is a way to simplify the presentation.
+> Then, the paper presents a modification of the first algorithm that
+> uses bounded memory, more specifically polynomial on the number of
+> processes and the size of the queue in the linearization, and with
+> polylogarithmic amortized step complexity. As one would naturally
+> expect, this version adds a sort of garbage collector mechanism that
+> removes blocks of memory that are not needed anymore. I found this
+> part of the paper harder to understand. I did not understand the need
+> of using red-black trees, which I think complicates everything. I
+> have no reason to think the implementation is wrong, all looks
+> convincing to me, but I wonder if there is a way to simplify the
+> presentation. 
 
 For the space-bounded version, we replace an infinite array by a red-black tree (using the array index as the key).  This allows us to append elements, access elements, and split off the obsolete elements, all in logarithmic time.  We realize that this additional data structure complicates the algorithm, but we were unfortunately unable to come up with a simpler way to do it.  We hoped that presenting the simpler, space-unbounded version first would make it easier to understand the space-bounded version.  We did our best to explain the transformation from the arrays to the RBTs in the first page of Section 6.
 
@@ -179,7 +189,8 @@ Fixed.
 
 > - For completeness, I suggest to add a preliminaries section, with a reminder of the main definitions such as linearizability, step complexity, and so on. 
 
-We tried to avoid the need for too many definitions and preferred to introduce them as needed instead of in a preliminaries section, since we are using fairly standard terminology.  The terms mentioned above were explained in the first paragraph of the paper.  A more formal explanation of what must be proved to establish linearizability is given in the first paragraph of Section 4.4.  Similarly, wait-free is defined when it is first used.  For completeness, we added a definition of CAS in a footnote on page 1.
+A new section on the model of computation has been added to include
+these definitions.
 
 > - ln 417, right. Are these direct blocks?
 
@@ -198,13 +209,30 @@ Done.
 Since expression (3.3) defines subblocks in terms of indexes, we can apply Lemma 4.  Some more explanation has been added to the proof.
 
 > - ln 1084-1088, right. Here do you mean that L is a valid sequential execution of the queue.
-> 
+
+Technically, L is just a sequence of operations (without the
+corresponding responses), rather than a sequential execution.
+The wording has been clarified.
+
 > - Lemma 15. After reading the proof I understood that legal linearization ordering only  means respecting real-time order. This is a concrete example why I think a preliminaries section might help.
-> 
+
+The changes to the paragraph before Lemma 15 should help to clarify this.
+
 > - ln 1192-1993, right. Please formalize the notion of time in an execution,
-> 
+
+When revising, we were more careful about the use of "time".  (For
+example, we now avoid using it when we mean step complexity.)  Since
+the model section now defines an execution as a sequence of steps
+(where the steps of processes are interleaved), some references to
+time are now replaced by "step".  We have left some references to time
+in informal descriptions, hoping that they will reinforce the intution
+behind the arguments.
+
 > - Theorem 22. What exactly is the size of the queue?
-> 
+
+We added a clarification of what we mean just before the statement
+of this theorem.
+
 > - Sec 6. Why do you need read-back trees? How is that they facilitate the task of keeping memory bounded? Why the first algorithm cannot be modified to remove bocks, let us say using some sort of epoch-based memory reclamation scheme?
 
 As mentioned above, we could not figure out a simpler way to do this.  

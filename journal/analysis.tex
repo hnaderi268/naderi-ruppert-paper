@@ -37,7 +37,7 @@ Each of these $b-1-b_e$ blocks contains at least one operation, by Corollary \re
 So, $b-1-b_e \leq B_{b-1}.\size + 2\cdot B_{b_e}.\size$.
 \end{proof}
 
-The following lemma helps bound the time for \op{GetEnqueue}.
+The following lemma helps bound the \rev{number of steps \op{GetEnqueue} takes}.
 \begin{lemma}\label{blockSize}
 Each block $B$ in each node contains at most one operation of each process.
 If $c$ is the execution's maximum point contention, $B$ has at most $c$ direct~subblocks.
@@ -58,7 +58,10 @@ By Corollary \ref{blockNotEmpty}, each direct subblock of $B$ contains at least 
 so $B$ has at most $c$ direct subblocks.
 \end{proof}
 
-We now bound step complexity in terms of the number of processes $p$, the maximum contention $c\leq p$, and the size of the queue. 
+We now bound step complexity in terms of the number of processes $p$, the maximum contention $c\leq p$, and the size of the queue.
+\rev{The bounds refer to the size of the queue when certain operations are linearized,
+meaning the number of elements that would be in a queue after the operations in the prefix
+of the linearization order up to that operation were performed sequentially.}. 
 
 \begin{mytheorem}\label{enqDeqTime}
 \rev{The queue implementation is wait-free and}

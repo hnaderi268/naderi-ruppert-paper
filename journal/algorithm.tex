@@ -180,8 +180,8 @@ where $E(B_0)$ and $D(B_0)$ are empty sequences.
 Each \node's \fld{head} index  stores the position in the \fld{blocks} array to be used
 for the next attempt to append a \block.
 
-If a block contained an explicit representation of its sequences of \enqueues\ and \dequeues,
-it would take $\Omega(p)$ time to construct a block, which would be too slow for task \ref{construct}.
+If a block contained an explicit \rev{listing} of its sequences of \enqueues\ and \dequeues,
+it would take $\Omega(p)$ \rev{steps} to construct a block, which would be too slow for task \ref{construct}.
 Instead, the block stores an implicit representation of the sequences.
 We now explain how we designed the fields for this implicit representation. 
 Refer to Figure \ref{implicit} for an example showing how the tree in Figure \ref{orderingtree} is actually represented, and Figure \ref{object-fields} for the definitions of the fields of \blocks\ and \nodes.
@@ -229,7 +229,7 @@ the (approximate) index of its superblock in the parent \node's \fld{blocks} arr
 This allows a process to determine the true location of the superblock by checking the \eleft\ or \eright\ values of just two \blocks\ in the parent \node.
 Thus, starting from an operation in a leaf's block, one can use these indices to track the 
 operation  up the path to the root, and determine the operation's location in a root block
-in $O(\log p)$ time.
+in $O(\log p)$ \rev{steps}.
 
 Now consider task \ref{findrank}.
 To determine whether the queue is empty when a \dequeue\ occurs,
@@ -244,7 +244,7 @@ We can use this information to determine the
 rank of a non-null \dequeue\ in $B_d$ among all non-null \dequeues\ in the linearization, which is the rank  (among all \enqueues) of the \enqueue\ whose value the \dequeue\ should return.
 
 Having defined the fields required for tasks \ref{findinroot}, \ref{findrank} and \ref{findenqueue},
-we can easily see how to construct a new block $B$ during a \op{Refresh} in $O(1)$ time.
+we can easily see how to construct a new block $B$ during a \op{Refresh} in $O(1)$ \rev{steps}.
 A \op{Refresh} on \node\ $\var{v}$ reads the values $h_{\ell}$ and~$h_{r}$ of the \fld{head} fields of $\var{v}$'s children and stores 
 $h_{\ell}-1$ and $h_{r}-1$ in $B.\eleft$ and $B.\eright$.
 Then, we can compute 

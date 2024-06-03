@@ -18,7 +18,7 @@ executions, of the number of steps in the execution divided by the total number 
 The lock-free \emph{MS-queue} of Michael and Scott \cite{MS98} is a classic shared queue implementation.
 It uses a singly-linked list with pointers to the front and back nodes.
 To dequeue or enqueue an element, the front or back pointer is updated by a 
-compare-and-swap (CAS) instruction\footnote{\rev{A CAS(\var{X}, \var{old}, \var{new}) instruction updates a variable \var{X} to the value \var{new} and returns \tr\ if \var{X}'s value is \var{old}; otherwise the CAS leaves \var{X} unchanged and returns \fa.}}.
+compare-and-swap (CAS) instruction.
 If this CAS fails, the operation must retry.
 In the worst case, this means that each successful CAS may cause all other processes to
 fail and retry, leading to an amortized step complexity of $\Omega(p)$ per operation in a system of $p$ processes.

@@ -32,7 +32,8 @@ A \op{Refresh}'s \op{CAS} may fail if there is another concurrent \op{Refresh} o
 However, since a successful \op{Refresh} propagates multiple pending operations 
 from $\var{v}$'s children to $\var{v}$,
 we can prove that if two \op{Refresh}es by $P$ on $\var{v}$ fail,
-then $P$'s operation has been propagated to $\var{v}$ by some other process, so $P$ can continue 
+then $P$'s operation has been propagated to $\var{v}$ by some other process.
+\rev{Thus, after performing a double \op{Refresh},} $P$ can continue 
 onwards towards the~root.
 
 Now suppose $P$'s operation has been propagated all the way to the root.
@@ -67,7 +68,7 @@ Since these tasks depend on the linearization ordering, we describe that orderin
 \begin{figure*}[t]
 \input{tournamentTree.pdf_t}
 \caption{An example \ordering\ tree with four processes. 
-E(x) denotes an Enqueue(x) operation and D\sub{1} to D\sub{6} denote \dequeue\ operations.
+E(x) denotes an \enqueue(x) operation and D\sub{1} to D\sub{6} denote \dequeue\ operations.
 We show explicitly the \enqueue\ sequence and \dequeue\ sequence represented by each block in the \fld{blocks} arrays of the seven nodes.  The leftmost element of each \fld{blocks} array is a dummy block.
 Arrows represent the indices stored in \eleft\ and \eright\ fields of blocks (as described in Section \ref{sec:fields}).
 The fourth process's D\sub{6} is still propagating towards the root.
@@ -90,7 +91,7 @@ a block containing the operation is appended to the root before the operation co
 So, if an operation $op_1$ terminates before another operation $op_2$ begins, 
 $op_1$ will be in an earlier block than $op_2$ in the root's \fld{blocks} array.
 Thus, we linearize operations according to the block they belong to in the root's array.
-We can choose how to order operations within the same block, since they must be concurrent.
+We can freely choose how to order operations within the same block, since they must be concurrent.
 
 Each block in a leaf represents one operation.
 Each block $B$ in an internal node $\var{v}$ results from merging
@@ -190,7 +191,7 @@ Refer to Figure \ref{implicit} for an example showing how the tree in Figure \re
 A block in a leaf represents a single \enqueue\ or \dequeue.  The block's \fld{element} field stores the value
 enqueued if the operation is an \enqueue, or \nl\ if the operation is a \dequeue.
 
-Each block in an internal \node\ $\var{v}$ has fields \eleft\ and \eright\ that store the indices of the block's last direct subblock in $\var{v}$'s left and right child.  
+Each block in an internal \node\ $\var{v}$ has fields \eleft\ and \eright\ that store the indices of the block's last direct subblock in $\var{v}$'s left and right child, \rev{respectively}.  
 Thus, the direct subblocks of $\var{v}.\fld{blocks}[b]$ are
 \begin{eqnarray}\label{defsubblock}
 \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[b-1].\fld{end\sub{left}}+1..\nonumber\\
@@ -202,7 +203,7 @@ The \eleft\ and \eright\ fields allow us to navigate to a block's direct subbloc
 Blocks also store some prefix sums:
 %the block in 
 $\var{v}.\fld{blocks}[b]$ has two fields \fld{sum\sub{enq}} and \fld{sum\sub{deq}}
-that store the total numbers of \enqueues\ and \dequeues\ in $\var{v}.\fld{blocks}[1..\var{b}]$.
+that store the total numbers of \enqueues\ and \dequeues, \rev{respectively}, in $\var{v}.\fld{blocks}[1..\var{b}]$.
 We use these to search for a particular operation.
 % pinpoint the  location of an operation among the subblocks of a given block.
 For example, consider finding the $r$th \enqueue\ $E_r$ in the linearization.
@@ -216,7 +217,7 @@ Thus, we work our way down the tree until we find the leaf block that  stores
 $E_r$ explicitly.
 
 \rev{Recall that $p$ is the number of processes and $q$ is the number of elements in the queue.}
-We shall show that the binary search in the root can be done in $O(\log p + \log q)$ steps,
+We shall show \rev{in Section \ref{sec-analysis}} that the binary search in the root can be done in $O(\log p + \log q)$ steps,
 and the binary search within each other \node\ along the path to a leaf takes $O(\log p)$ steps,
 for a total of $O(\log^2 p + \log q)$ steps for task \ref{findenqueue}.
 %All information needed for this search process can be derived from the 

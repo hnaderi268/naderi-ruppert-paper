@@ -5,19 +5,19 @@
 \rev{
 We use a  standard model of an asynchronous, shared-memory system.
 A collection of $p$ processes can communicate by accessing
-shared memory locations using read, write and compare-and-swap (CAS) instructions.
+shared memory locations using read, write and compare-and-swap (\op{CAS}) instructions.
 A \op{CAS}(\var{X}, \var{old}, \var{new}) instruction updates a variable \var{X} to the value \var{new} and returns \tr\ if \var{X}'s value is \var{old}; otherwise the \op{CAS} leaves \var{X} unchanged and returns \fa.
 We also assume processes can allocate a block of shared memory to represent an object.
 
-We are concerned with implementing a first-in, first-out queue in such a system,
-which requires an algorithm that a process can execute to perform
+We are concerned with implementing a first-in, first-out queue in such a system.
+An implementation provides algorithms that a process can execute to perform
 an enqueue or dequeue operation.
 We treat individual memory instructions as atomic, so an execution
 of such an implementation can be thought of as a sequence of steps by processes
 where in each step a process performs at most one shared-memory instruction 
 (and receives the response of that instruction).
 The subsequence of steps performed by a process should follow that process's
-algorithm for performing a sequence of enqueue and dequeue operations.
+algorithms for performing the process's desired sequence of enqueue and dequeue operations.
 The order in which the steps of processes are interleaved is arbitrary, and the implementation must be correct for all
 possible interleavings.
 
@@ -37,9 +37,8 @@ no operation by a process can take infinitely many steps of the process to compl
 The step complexity of an operation is the number of steps it performs.
 The amortized step complexity is the total number of steps by all processes
 divided by the number of operations they perform.
-More formally, to show that the amortized step complexity is $O(T_e)$ per enqueue
-and $O(T_d)$ per dequeue, we must show that in every execution, 
-if $n_e$ enqueues and $n_d$ dequeues are invoked, the total number
-of steps taken by all processes is $O(n_e\cdot T_e + n_d\cdot T_d)$.
+More formally, to show that the amortized step complexity is $O(T)$ per operation, we must show that in every execution, 
+if $m$ enqueue and dequeue operations are invoked, the total number
+of steps taken by all processes is $O(m\cdot T)$.
 }
 

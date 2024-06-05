@@ -248,3 +248,6 @@ We removed the parentheses from Dequeue for consistency.
 > - Sec 7. Your algorithms are adaptive on the size of the queue but not on the number of processes. I wonder if an interesting future direction would be to make your algorithms fully adaptive.
 
 Yes, this was mentioned in sentence 3 of the conclusion (now Section 8).
+
+Besides the changes in response to referee comments, we also added a paragraph at the end of Section 5 remarking that the implementation is strongly linearizable.
+

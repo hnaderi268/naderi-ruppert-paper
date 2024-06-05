@@ -77,7 +77,7 @@ The following two lemmas show that no operation appears in more than one block o
 Let $B$ be the block in $\var{v}.\fld{blocks}[b]$.
 Before creating $B$ at line \ref{invokeCreateBlock}, the \op{Refresh} that installed $B$
 read $b$ from $\var{v}.\head$ at line \ref{readHead}.
-At that time, $\var{v}.\fld{blocks}[b-1]$ contained a block $B'$, by Invariant \ref{inv::headPosition}.
+At that \rev{read}, $\var{v}.\fld{blocks}[b-1]$ contained a block $B'$, by Invariant \ref{inv::headPosition}.
 Thus, the \op{CreateBlock}($\var{v},b-1$) that created $B'$ terminated before the \op{CreateBlock}($\var{v},b$) that
 created $B$ started.
 It follows from Observation \ref{nonDecreasingHead} that the value that 
@@ -401,10 +401,10 @@ returns the required result, by the induction hypothesis.
 \subsection{Linearizability}
 \label{sec::linearizability}
 
-We show that the linearization ordering $L$ defined in Equation
+We \rev{next show in Lemma \ref{linearSat}} that the linearization ordering $L$ defined in Equation
 (\ref{linearization}) is a legal permutation of a subset of the operations in 
 the concurrent execution, i.e., that it includes all operations that terminate and 
-if one operation $op_1$ terminates before another operation $op_2$ begins, then $op_2$ does not precede $op_1$ in $L$.  We also show each completed \dequeue\ returns the same result \rev{in the concurrent execution} as it would in the sequential execution~$L$ \rev{(i.e., the sequential execution of the operations in the order given by $L$)}.
+if one operation $op_1$ terminates before another operation $op_2$ begins, then $op_2$ does not precede $op_1$ in $L$.  \rev{Then, we show in Lemma \ref{linearCorrect}} that each completed \dequeue\ returns the same result \rev{in the concurrent execution} as it would \rev{if the operations were performed sequentially in the order given by $L$}.
 
 \begin{lemma} \label{linearSat}
 $L$ is a legal linearization ordering.
@@ -440,10 +440,11 @@ Hence, the size of the queue after the operations of $B$ are performed (with \en
 is $\max(0, \var{root}.\fld{blocks}[b-1].\size + \var{num\sub{enq}} - \var{num\sub{deq}})$.
 \end{proof}
 
-Next, we show each operation returns the same response as it would in the sequential execution~$L$.
+Next, we show each operation returns the same response as it would \rev{if the operations were performed sequentially in the order $L$}.
 
 \begin{lemma}\label{linearCorrect}
-Each terminating \dequeue\ returns the response it would in the sequential execution~$L$.
+Each terminating \dequeue\ returns the response it would \rev{if the operations
+were performed sequentially in the order given by the linearization $L$}.
 \end{lemma}
 \begin{proof}
 If a \dequeue\ $Deq$ terminates, it is contained in some block in the root, by Lemma \ref{lem::appendExactlyOnce}.
@@ -460,12 +461,12 @@ Since the \enqueues\ in block $B$ precede the \dequeues,
 the queue is empty when the $i$th \dequeue\ of $B$ occurs if 
 $\var{root}.\fld{blocks}[b-1].\fld{size} + \var{num\sub{enq}} < i$.
 So $Deq$ returns \nl\ on line \ref{returnNull} if and only if it would do so in the sequential
-execution $L$.
+execution \rev{defined by} $L$.
 Otherwise, the size of the queue after doing the operations in $\var{root}.\fld{blocks}[0..b-1]$
-in the sequential execution $L$ is $\var{root}.\fld{blocks}[b-1].\fld{sum\sub{enq}}$ minus
+in the sequential execution \rev{defined by} $L$ is $\var{root}.\fld{blocks}[b-1].\fld{sum\sub{enq}}$ minus
 the number of non-\nl\ \dequeues\ in that prefix of $L$.
 Hence, line \ref{computeE} sets $e$ to the rank of $Deq$ among all the non-\nl\ \dequeues\ in $L$.
-Thus, in the sequential execution~$L$, $Deq$ returns the value enqueued by the $e$th \enqueue\ in $L$.
+Thus, in the sequential execution \rev{defined by} $L$, $Deq$ returns the value enqueued by the $e$th \enqueue\ in $L$.
 By Invariant \ref{inv::sum}, this \enqueue\ is the $i_e$th \enqueue\ in $E(\var{root}.\fld{blocks}[b_e])$, where
 $b_e$ and $i_e$ are the values $Deq$ computes on line \ref{FRb} and \ref{FRi}.
 By Lemma \ref{lem::get}, the call to \op{GetEnqueue} returns the argument of the required \enqueue.
@@ -477,6 +478,10 @@ Combining Lemmas \ref{linearSat} and \ref{linearCorrect} provides our main resul
 The queue implementation is linearizable.
 \end{mytheorem}
 
+\rev{We remark that, if execution $\alpha$ is a prefix of another execution $\alpha'$,
+then the linearization associated with $\alpha$ is a prefix of the linearization
+assocated with $\alpha'$, so our implementation is also strongly linearizable,
+according to the definition in \cite{GHW11}.}
 
 %\here{Should there be a lemma somewhere in this section that explicitly shows that each
 %object we dereference is non-null?}

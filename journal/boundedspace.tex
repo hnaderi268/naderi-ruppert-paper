@@ -31,7 +31,7 @@ Driscoll et al.~\cite{DSST89}:  all RBT nodes are immutable, and operations on t
 RBT make a new copy of each RBT node $x$ that must be modified, as well
 as each RBT node along the path from the RBT's root to~$x$.
 The RBT reachable from the new copy of the root is the result of applying the RBT operation.
-This \rev{increases the running time of any routine designed for a (sequential) RBT only by a constant factor, assuming that nodes are accessed only by following pointers from the root (as is the case for all RBT operations we require)}.
+This \rev{increases the number of steps taken by any routine designed for a (sequential) RBT only by a constant factor, assuming that nodes are accessed only by following pointers from the root (as is the case for all RBT operations we require)}.
 Once a process has performed an update to the RBT representing the blocks of a node 
 $\var{v}$ in the \ordering\ tree, 
 it uses a CAS to swing $\var{v}$'s pointer from the previous RBT root to the new RBT root.
@@ -42,11 +42,11 @@ Bashari and Woelfel ~\cite{DBLP:conf/podc/BashariW21} used persistent RBTs in a 
 To prevent RBTs from growing without bound, we must discard
 blocks that are no longer needed.
 Ensuring the size of the RBT is polynomial in $p$ and $q$ will 
-also keep the running time of our operations polylogarithmic \rev{in $p$ and $q$}.
+also keep the \rev{step complexity} of our operations polylogarithmic \rev{in $p$ and $q$}.
 Blocks should be kept if they contain operations still in progress.
 Moreover, a block containing an \op{Enqueue}($x$) operation must be kept until $x$ is dequeued.
 
-To maintain good amortized time, we periodically do a garbage collection (GC) phase.
+To maintain good amortized \rev{step complexity}, we periodically do a garbage collection (GC) phase.
 If a \op{Refresh} on a node adds a block whose \var{index} is a multiple of $G=p^2\ceil{\log p}$, it does GC to remove obsolete blocks from the node's RBT.
 To determine which blocks can be thrown away, we use a global array $\var{last}[1..p]$ where 
 each process writes the index of the last block in the root
@@ -57,7 +57,7 @@ computing the \dequeue's response and writing it in the block in the leaf that r
 Once this helping is complete, it follows from the FIFO property of the queue that elements enqueued 
 in $\fld{root.blocks}[1..m-1]$ have all been dequeued, so GC can discard all subblocks of those.
 Fortunately, there is an  RBT \op{Split} operation that can remove
-these obsolete blocks from an RBT in logarithmic time \cite[Sec.~4.2]{Tar83}.
+these obsolete blocks from an RBT using \rev{a logarithmic number of steps} \cite[Sec.~4.2]{Tar83}.
 
 An operation $op$'s search of a RBT may fail to find the required block $B$ that has been removed 
 by another process's GC phase.  If $op$

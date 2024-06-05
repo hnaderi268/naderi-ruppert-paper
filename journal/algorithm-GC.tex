@@ -20,7 +20,7 @@ longer needed; we can instead simply find the maximum \fld{index} of any block i
 To facilitate this, \op{MaxBlock} is a query operation on the RBT that 
 returns the block with the maximum \fld{index}.
 We can store, in the root of the RBT, a pointer to the maximum block so that \op{MaxBlock}
-can be done in constant time, without affecting the time of other RBT operations.
+can be done in \rev{$O(1)$ steps}, without affecting the step complexity of other RBT operations.
 Similarly, a \op{MinBlock} query finds the block with the minimum \fld{index} in a RBT.
 
 Blocks no longer require the \fld{super} field.  It was used to quickly find a block's 

@@ -4,7 +4,7 @@
 \label{sec::correctness}
 
 After proving some basic properties in Section \ref{sec::basicProperties},
-we show in Section \ref{sec::propagating} that a double refresh at each node
+we show in Section \ref{sec::propagating} that a double \op{Refresh} at each node
 suffices to propagate an operation to the root.
 In Section \ref{sec::tracingCorrect} we show \op{GetEnqueue} and \op{IndexDequeue}
 correctly navigate through the  tree.
@@ -95,7 +95,7 @@ If $B$ and $B'$ are two \rev{different} blocks in nodes at the same depth in the
 \begin{proof}
 We prove the lemma by reverse induction on the depth.
 If $B$ and $B'$ are in leaves, they have no subblocks, so the claim holds.
-Assume the claim holds for nodes at depth $d+1$ and let $B$ and $B'$ be two blocks in nodes at depth $d$.
+Assume the claim holds for nodes at depth $d+1$ and let $B$ and $B'$ be two \rev{different} blocks in nodes at depth $d$.
 Consider the direct subblocks of $B$ and $B'$ defined by~(\ref{defsubblock}).
 If $B$ and $B'$ are in different nodes at depth $d$, then their direct subblocks are disjoint.
 \rev{Suppose $B$ and $B'$ are in the same node $v$.
@@ -245,7 +245,7 @@ The value computed at line \ref{computeNumEnq} is
 \end{eqnarray*}
 It follows from Invariant \ref{inv::sum} that $num\sub{enq}$ is the total  number of \enqueues\  in 
 $\var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[h-1].\eleft+1..B.\eleft]$ and
-$\var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright+1..B.\eright]$.
+$\var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[h-1].\eright+1..$ $B.\eright]$.
 Similarly, $num\sub{deq}$ is the total number of \dequeues\ contained in these blocks.
 Since $num\sub{enq}+num\sub{deq}=0$ at line \ref{testEmpty},
 these blocks contain no operations.
@@ -266,7 +266,7 @@ from Lemma \ref{successfulRefresh}.
 So suppose both $R_1$ and $R_2$ perform a failed \op{CAS} at line \ref{cas}.
 Let $h_1$ and $h_2$ be the values $R_1$ and $R_2$ read from $\var{v}.\head$ at line \ref{readHead}.
 By Observation \ref{obs::headInc}, $h_2>h_1$.
-By Lemma \ref{lem::headProgress}, $\var{v}.blocks[h_2]=\nl$ when $R_1$ executes line \ref{readHead}.
+By Lemma~\ref{lem::headProgress}, $\var{v}.blocks[h_2]=\nl$ when $R_1$ executes line~\ref{readHead}.
 Since $R_2$ fails its \op{CAS} on $\var{v}.blocks[h_2]$, some other \op{Refresh} $R_3$ must have done
 a successful \op{CAS} on $\var{v}.blocks[h_2]$ before $R_2$'s \op{CAS}.
 $R_3$ must have executed line \ref{readHead} after $R_1$, since $R_3$ read the value $h_2$ from $\var{v}.\head$ and the value of $\var{v}.\head$ is non-decreasing, by Observation \ref{nonDecreasingHead}.
@@ -352,7 +352,7 @@ If $\var{v}.\fld{blocks}[b]$ has been propagated to the root and $1\leq i\leq |D
 \end{lemma}
 
 \begin{proof}
-We prove the claim by induction on the depth of node $\var{v}$. The base case where $\var{v}$ is the root is trivial (see Line \ref{indexBaseCase}).
+We prove the claim by induction on the depth of node $\var{v}$. The base case where $\var{v}$ is the root is trivial (see line \ref{indexBaseCase}).
 Assuming the claim holds for $\var{v}$'s parent, we prove it for $\var{v}$.
 Let $B=\var{v}.\fld{blocks}[b]$ and $B'$ be the superblock of $B$.
 \op{IndexDequeue}($\var{v}, b, i$) first computes the index $sup$ of $B'$ in $\var{v}.\fld{parent}$.
@@ -366,7 +366,7 @@ If $\var{v}$ is the right child of its parent, then all of the subblocks of $B'$
 also precede the required \dequeue, so we add the number of \dequeues\ in those subblocks in line \ref{considerLeftBeforeRight}.
 
 Finally, \op{IndexDequeue} is called recursively on $\var{v}$'s parent.
-Since $B$ has been propagated to the root, so has its superblock $B'$.
+Since $B$ has been propagated to the root, its superblock $B'$ \rev{has also been propagated to the root}.
 Thus, all preconditions of the recursive call are met.
 By the induction hypothesis, the recursive call returns the location of the required \dequeue\ in the root.\end{proof}
 
@@ -392,7 +392,7 @@ Thus, $dir$ is set to the direction for the child of $\var{v}$ that contains the
 Moreover, when line \ref{endChooseDir} is reached, $i$ is the position of the required \enqueue\ within the portion $E'$ of $E(B)$ that comes from that child.
 Thus,  line \ref{getChild} finds the index $b'$ of the subblock $B'$ containing the required \enqueue.
 By Invariant \ref{inv::sum}, $\var{v}.\var{dir.blocks}[b'-1].\var{sum\sub{enq}} - \var{prev\sub{dir}}$ is the number of 
-\enqueues\ in $E'$ before the \enqueues of block $B'$, so
+\enqueues\ in $E'$ before the \enqueues\ of block $B'$, so
 the value $i'$ computed on line \ref{getChildIndex} is the position of the required \enqueue\ within $E(B')$.
 Thus, the recursive call on line \ref{getRecurse} satisfies its precondition, and 
 returns the required result, by the induction hypothesis.
@@ -435,9 +435,10 @@ at line \ref{computeLength} of a call to \op{CreateBlock}(\var{root, b}).
 By the induction hypothesis, $root.\fld{blocks}[b-1].\size$ gives the size of the queue before the operations
 of block $B$ are performed.
 By Invariant \ref{inv::sum}, the values of \var{num\sub{enq}} and \var{num\sub{deq}}
-are the number of \enqueues\ and \dequeues\ contained in $B$.
+\rev{computed on line \ref{computeNumEnq} and \ref{computeNumDeq}}
+are the number of \enqueues\ and \dequeues\ contained in $B$, respectively.
 Hence, the size of the queue after the operations of $B$ are performed (with \enqueues\ before \dequeues\ as specified by~$L$)
-is $\max(0, \var{root}.\fld{blocks}[b-1].\size + \var{num\sub{enq}} - \var{num\sub{deq}})$.
+is $\max(0, \var{root}.\fld{blocks}[b-1].\size + \var{num\sub{enq}} - \var{num\sub{deq}})$, \rev{as described in Equation (\ref{size-eqn})}.
 \end{proof}
 
 Next, we show each operation returns the same response as it would \rev{if the operations were performed sequentially in the order $L$}.

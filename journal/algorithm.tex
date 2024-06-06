@@ -259,10 +259,10 @@ the number of \enqueues\ and \dequeues\ in~$B$
 The \enqueues\ of $B$ add $B.\fld{sum\sub{enq}}-B'.\fld{sum\sub{enq}}$ elements.
 Then the \dequeues\ of $B$ remove $B.\fld{sum\sub{deq}} - B'.\fld{sum\sub{deq}}$ elements.
 (If subtracting this many elements would make the new size negative because there are more \dequeues\ than there are elements, then the new size is 0.)  Thus, we have}
-\begin{eqnarray*}
-B.\fld{size} &=& \max(0, B'.\fld{size} + (B.\fld{sum\sub{enq}}-B'.\fld{sum\sub{enq}})\\ 
-			&& \hspace*{19mm}\mbox{ } - (B.\fld{sum\sub{deq}} - B'.\fld{sum\sub{deq}})).
-\end{eqnarray*}
+\begin{eqnarray}
+B.\fld{size} &=& \max(0, B'.\fld{size} + (B.\fld{sum\sub{enq}}-B'.\fld{sum\sub{enq}})\nonumber\\ 
+			&& \hspace*{10mm}\mbox{ } - (B.\fld{sum\sub{deq}} - B'.\fld{sum\sub{deq}})).\label{size-eqn}
+\end{eqnarray}
 
 The only remaining field is $B.\fld{super}$.  When the block 
 $B$ is created for a \node\ $\var{v}$, we do not yet know where its
@@ -272,7 +272,7 @@ Soon after $B$ is installed,
 %a call to \op{Advance} at line \ref{helpAdvance} or \ref{advance} by 
 some process will
 set \var{B}.\fld{super} to a value read from the \fld{head} field of \var{v}'s parent.
-We shall show that this happens soon enough that $B.\fld{super}$ can differ from the true index of \rev{$B$'s superblock}
+We shall show that this happens soon enough \rev{to ensure} that $B.\fld{super}$ can differ from the true index of \rev{$B$'s superblock}
 by at most 1.
 %After $B$ is installed 
 %in $\var{v}.\fld{blocks}[\var{h}]$, processes cooperate to fill in $B.\fld{super}$ 
@@ -312,7 +312,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \State \hangbox{let \var{B} be a new \typ{Block} with fields \fld{element} \assign\ \var{e},
 		\fld{sum\sub{enq}} \assign\ $\var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}}+1$,\\
 		\fld{sum\sub{deq}} \assign\ $\var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}$}\label{enqNew}
-    \State \Call{Append}{\var{B}}\Comment{\rev{append \op{Enqueue} to \var{leaf}.\fld{blocks} and propagate to root}}\label{enqAppend}
+    \State \Call{Append}{\var{B}}\Comment{\rev{append \op{Enqueue} to \var{leaf.}\fld{blocks} and propagate to root}}\label{enqAppend}
 \EndFunction{Enqueue}
 
 \spac
@@ -321,8 +321,8 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
     \State \hangbox{let \var{B} be a new \typ{Block} with fields \fld{element} \assign\ \nl,
 	    \fld{sum\sub{enq}} \assign\ $\var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{enq}}$,\\
 	    \fld{sum\sub{deq}} \assign\ $\var{leaf.}\fld{blocks}[\var{leaf.}\head-1].\fld{sum\sub{deq}}+1$}\label{deqNew}
-    \State \Call{Append}{\var{B}}\Comment{\rev{append \dequeue\ to \var{leaf}.\fld{blocks} and propagate to root}}\label{deqAppend}
-    \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, $\var{leaf.}\head-1$, $1$} \Comment{\rev{find where \op{Deqeueue} is in \var{root}.\fld{blocks}}}\label{invokeIndexDequeue}
+    \State \Call{Append}{\var{B}}\Comment{\rev{append \dequeue\ to \var{leaf.}\fld{blocks} and propagate to root}}\label{deqAppend}
+    \State $\langle \var{b}, \var{i}\rangle$ \assign\ \Call{IndexDequeue}{\var{leaf}, $\var{leaf.}\head-1$, $1$} \Comment{\rev{find where \op{Deqeueue} is in \var{root.}\fld{blocks}}}\label{invokeIndexDequeue}
     \State \Return{\Call{FindResponse}{\var{b, i}}}\Comment{\rev{find response \dequeue\ should return}}\label{deqRest}
 \EndFunction{Dequeue}
 
@@ -337,7 +337,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 \spac
 
 \Function{void}{Propagate}{\typ{Node} \var{v}} \Comment{propagate blocks from \var{v}'s children to root}
-    \If{{\keywordfont not} \Call{Refresh}{\var{v}}} \label{firstRefresh}  \hfill \Comment{double refresh:  \rev{if first fails, try again}}
+    \If{{\keywordfont not} \Call{Refresh}{\var{v}}} \label{firstRefresh}  \hfill \Comment{double refresh:  \rev{if first \op{Refresh} fails, try again}}
         \State \Call{Refresh}{\var{v}} \label{secondRefresh}
     \EndIf
     \If{$\var{v} \neq \var{root}$} \hfill \Comment{recurse up tree}
@@ -377,7 +377,7 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
 		\fld{sum\sub{enq}} \assign\ \var{v}.\fld{left.blocks}[\var{B}.\eleft].\fld{sum\sub{enq}} + \var{v}.\fld{right.blocks}[\var{B}.\eright].\fld{sum\sub{enq}}\label{createSumEnq},\\
 		\fld{sum\sub{deq}} \assign\ \var{v}.\fld{left.blocks}[\var{B}.\eleft].\fld{sum\sub{deq}} + \var{v}.\fld{right.blocks}[\var{B}.\eright].\fld{sum\sub{deq}}}\label{createSumDeq}
     \State \var{num\sub{enq}} \assign\ $\var{B}.\fld{sum\sub{enq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{enq}}$\label{computeNumEnq}
-    \State \var{num\sub{deq}} \assign\ $\var{B}.\fld{sum\sub{deq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{deq}}$
+    \State \var{num\sub{deq}} \assign\ $\var{B}.\fld{sum\sub{deq}} - \var{v}.\fld{blocks}[\var{i}-1].\fld{sum\sub{deq}}$\label{computeNumDeq}
     \If{$\var{num\sub{enq}} + \var{num\sub{deq}} = 0$} \Return \nl\ \Comment{no blocks need to be propagated to \var{v}}\label{testEmpty} 
     \ElsIf{$\var{v} = \var{root}$} \var{B}.\fld{size} \assign\ max(0, $\var{v}.\fld{blocks}[\var{i}-1].\size\ + \var{num\sub{enq}} - \var{num\sub{deq}}$)\label{computeLength}
     \EndIf
@@ -451,11 +451,11 @@ We now discuss the queue implementation in more detail.  Pseudocode is provided 
         \State \var{prev\sub{left}} \assign\ \var{v}.\fld{left.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eleft].\fld{sum\sub{enq}} \Comment{\#\ \enqueues\ in \var{v}.\fld{blocks}[1..$\var{b}-1$] from \var{v}.\fld{left}}
         \State \var{prev\sub{right}} \assign\ \var{v}.\fld{right.blocks}[\var{v}.\fld{blocks}[$\var{b}-1$].\eright].\fld{sum\sub{enq}} \Comment{\#\ \enqueues\ in \var{v}.\fld{blocks}[1..$\var{b}-1$] from \var{v}.\fld{right}}
         \If{$\var{i} \leq \var{sum\sub{left}} - \var{prev\sub{left}}$} \fld{dir} \assign\ \fld{left}\label{leftOrRight} \Comment{required \enqueue\ is in \var{v}.\fld{left}}
-        \Else \Comment{required \enqueue is in \var{v}.\fld{right}}
+        \Else \Comment{required \enqueue\ is in \var{v}.\fld{right}}
             \State \fld{dir} \assign\ \fld{right}
             \State $\var{i}\ \assign\ \var{i} - (\var{sum\sub{left}} - \var{prev\sub{left}})$ \Comment{\rev{deduct \# \enqueues\ in $v.\fld{blocks}[b]$ that came from $v.\fld{left}$}}
         \EndIf \label{endChooseDir}
-        \State \linecomment{find \enqueue\'s block in \var{v}.\fld{dir.blocks} and its rank within block}
+        \State \linecomment{find \enqueue's block in \var{v}.\fld{dir.blocks} and its rank within block}
         \State \hangbox{use binary search to find minimum $\var{b}'$ in range [\var{v}.\fld{blocks}[$\var{b}-1$].\edir+1..\var{v}.\fld{blocks}[\var{b}].\edir] such\\
         	 that $\var{v}.\fld{dir.blocks}[\var{b}'].\fld{sum\sub{enq}} \geq \var{i} + \var{prev\sub{dir}}$\label{getChild}}
         \State $\var{i}'$ \assign\ $\var{i} - (\var{v}.\fld{dir.blocks}[\var{b}'-1].\fld{sum\sub{enq}} - \var{prev\sub{dir}})$\label{getChildIndex}
@@ -525,10 +525,10 @@ Since the \fld{sum\sub{enq}} field should store the number of \enqueues\ in
 Line \ref{computeNumEnq} sets \var{num\sub{enq}} to the number of \enqueues\ in the new block by
 subtracting  the number of \enqueues\ in \var{v}.\fld{blocks}[$1..\var{i}-1$] from \var{B}.\fld{sum\sub{enq}}.
 The values of \var{B}.\fld{sum\sub{deq}} and \var{num\sub{deq}} are computed similarly.
-\rev{If the new block contains no operations, \op{CreateBlock} returns \nl\ to indicate
+\rev{If the new block contains no operations, \op{CreateBlock} returns \nl\ at line \ref{testEmpty} to indicate
  there is no need to install~it.
 Otherwise,} if \var{B}
-is going to be installed in the root, line \ref{computeLength} computes the \fld{size} field, which
+is going to be installed in the root, line \ref{computeLength} \rev{uses Equation (\ref{size-eqn}) to compute $B$'s} \fld{size} field, which
 represents the number of elements in the queue after the operations in the block are performed.
 
 Once a \dequeue\ is appended to a block of the process's leaf and propagated to the root,
@@ -552,7 +552,7 @@ If not, line \ref{computeE} computes the rank \var{e} of the
 \rev{The routine next searches for}
 the index $b_e$ of the block in \var{root}.\fld{blocks} that contains 
 the \var{e}th \enqueue.
-Since the \enqueue\ is linearized before the \dequeue, $b_e\leq b$.  To find the left end of the range \rev{to search for $b_e$, \op{FindResponse} does} a doubling search \cite{BY76}, comparing \var{e} to the \fld{sum\sub{enq}} fields at indices $b-1, b-2, b-4, b-8, \ldots$.
+Since the \enqueue\ is linearized before the \dequeue, \linebreak $b_e\leq b$.  To find the left end of the range \rev{to search for $b_e$, \op{FindResponse} does} a doubling search \cite{BY76}, comparing \var{e} to the \fld{sum\sub{enq}} fields at indices $b-1, b-2, b-4, b-8, \ldots$.
 \rev{Then, the doubling search performs a binary search on the \fld{sum\sub{enq}} fields of \var{root}.\fld{blocks} within that range to find $b_e$.}
 Finally, the call to \op{GetEnqueue} \rev{at line \ref{findAnswer}} traces down through the tree to find the required \enqueue\ in a leaf.
 

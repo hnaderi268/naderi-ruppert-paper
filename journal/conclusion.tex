@@ -12,7 +12,7 @@ fast-path slow-path methodology  \cite{10.1145/2370036.2145835} to
 get a queue that has good performance in practice while also having good worst-case step complexity.
 
 It would be interesting to close the gap that remains between our queue, which takes $O(\log^2 p + \log q)$ steps per operation,
-and Jayanti, Tarjan and Boix-Adser\`{a}'s $\Omega(\log p)$ lower bound \cite{JTB19}.
+and Jayanti, Tarjan and Boix-Adser\`{a}'s $\Omega(\log p)$ lower bound~\cite{JTB19}.
 For the more relaxed bag data structure the gap is larger between the  $\Omega(\min(c,\log\log p))$ lower bound \cite{DBLP:conf/opodis/AttiyaF17} and our upper bound of $O(\log^2 p + \log q)$.
 Could the complexity for either queues or bags be made polylogarithmic in $p$ while being independent of the size $q$ of the data structure?
 
@@ -36,4 +36,6 @@ complexity, which also yields a stack as a special case.
 This required a substantially different representation of the data stored in the ordering tree.
 Whether the ordering tree could also be used to obtain a priority queue with polylogarithmic step complexity
 remains an open question.
+\rev{The technique of cooperatively propagating information up a tree with a double refresh
+at each node was also used recently to obtain lock-free augmented search trees \cite{FR24}.}
 

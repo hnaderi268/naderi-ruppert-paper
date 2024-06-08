@@ -26,7 +26,7 @@ If $b \leq b_e+1$, then this is trivial, so assume  $b>b_e+1$.
 %
 As shown in Lemma \ref{linearCorrect}, the \dequeue\ that calls \op{FindResponse} is in $B_b$ and is supposed to return an \enqueue\ in $B_{b_e}$.
 Thus, there can be at most $B_{b_e}.\size$ \dequeues\ in 
-$D(B_{b_e+1}) \cdots D(B_{b-1})$; otherwise in the sequential execution $L$,
+$D(B_{b_e+1}) \cdots D(B_{b-1})$; otherwise in the sequential execution defined by $L$,
 all elements enqueued before the end of
 $E(B_{b_e})$ would be dequeued before $D(B_b)$. 
 Furthermore, by Lemma \ref{sizeCorrectness}, the size of the queue  after the prefix of $L$ corresponding to 
@@ -47,7 +47,7 @@ If $c$ is the execution's maximum point contention, $B$ has at most $c$ direct~s
 \begin{proof}
 Suppose $B$ contains an operation of process $p$.
 Let $op$ be the earliest operation by $p$ contained in $B$.
-When $op$ terminates, $op$ is contained in $B$ by Lemma \ref{lem::appendExactlyOnce}.
+When $op$ terminates, $op$ is contained in $B$, by Lemma \ref{lem::appendExactlyOnce}.
 $B$ cannot contain any later operations by $p$, since $B$ is created before
 those operations are invoked.
 

@@ -32,7 +32,7 @@ if the operations were done sequentially in their linearization order.
 (In fact, our implementation also satisfies the stronger requirement of being
 strongly linearizable \cite{GHW11}.)
 The termination condition that our queue satisfies is wait-freedom:
-no operation by a process can take infinitely many steps of the process to complete.
+each operation by a process is guaranteed to terminate within a finite number of the process's own steps.
 
 The step complexity of an operation is the number of steps it performs.
 The amortized step complexity is the total number of steps by all processes

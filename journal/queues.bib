@@ -1188,6 +1188,56 @@ pages = {203--220},
 author = {Panagiota Fatourou and Eric Ruppert},
 title = {Lock-free Augmented Trees},
 year = 2024,
-note = {Manuscript available from https://arxiv.org/abs/2405.10506}
+note = {Manuscript available from \url{https://arxiv.org/abs/2405.10506}}
 }
 
+@unpublished{CP22,
+author = {Armando Casta\~{n}eda and Miguel Pi\~{n}a},
+title = {Modular Baskets Queue},
+year = 2022,
+note = {Manuscript available from \url{https://arxiv.org/abs/2205.06323}},
+remark = {Looks at alternative ways of implementing the baskets queue, but it also has Omega(p) complexity when p enqueues land in the same basket.  Moreover, the paper is quite rough and seems to have some errors in it (for example, a basket object can just non-deterministically return FULL whenever it wants to, so the resulting implementation of a basket queue is not lock-free as claimed, although this may not be a big problem, since the basket implementations in the paper probably don't behave this way).  So I think it can be ignored until a version of it is polished for publication.}
+}
+
+@inproceedings{HW22,
+  author =	{Hwang, Steven Munsu and Woelfel, Philipp},
+  title =	{Strongly Linearizable Linked List and Queue},
+  booktitle =	{Proc.\ 25th International Conference on Principles of Distributed Systems},
+  pages =	{28:1--28:20},
+  series =	{LIPIcs},
+  year =	{2022},
+  volume =	{217},
+  doi =		{10.4230/LIPIcs.OPODIS.2021.28},
+}
+
+@article{ACH18,
+author = {Hagit Attiya and Armando Casta\~{n}eda and Danny Hendler},
+title = {Nontrivial and universal helping for wait-free queues and stacks},
+journal = {Journal of Parallel and Distributed Computing},
+volume = {121},
+pages = {1-14},
+year = {2018},
+doi = {https://doi.org/10.1016/j.jpdc.2018.06.004},
+keywords = {Wait-freedom, Non-blocking, Common2, Consensus number, Helping, Strong linearizability, Shared objects, Queues, Stacks},
+abstract = {This paper studies two approaches to formalize helping in wait-free implementations of shared objects. The first approach is based on operation valency, and it allows us to make an important distinction between trivial and nontrivial helping. We show that any wait-free implementation of a queue from Test&Set requires nontrivial helping. We also define a weaker type of nontrivial helping and show that any wait-free queue implementation from a set of arbitrary base objects requires it. In contrast, there is a wait-free implementation of a stack from Test&Set with only trivial helping. These results shed light on the well-known open question of whether there exists a wait-free implementation of a queue in Common2, and indicate why it seems to be more difficult than implementing a stack. The other approach formalizes the helping mechanism employed by Herlihyâ€™s universal wait-free construction and is based on having an operation by one process restrict the possible linearizations of operations by other processes. We show that queue and stack implementations possessing such universal helping can be used to solve consensus. This result can be used to show that a strongly linearizable (Golab et al., 2011) implementation of a queue or a stack for n processes must use objects that allow to solve consensus among n or more processes.}
+}
+
+@techreport{HPS13,
+author = {Thomas A. Henzinger and Hannes Payer and Ali Sezgin},
+title = {Replacing Competition with Cooperation to Achieve Scalable Lock-Free FIFO Queues},
+institution = {IST Austria},
+number = {IST-2013-124-v1+1},
+year = 2013,
+note = {Available from \url{https://research-explorer.ista.ac.at/record/6440}},
+remark = {Seems that this work was never published.  Quite complicated queue built from CAS and fetch&increment.  The latter seems only to be used for dequeues.  I guess the queue by Morrison and Afek came out around the same time and seems to be a more elegant solution using CAS and Fetch-and-inc.  Can probably omit this one from discussion.}
+}
+
+@techreport{HS13,
+author = {Thomas A. Henzinger and Ali Sezgin},
+title = {How Free is Your Linearizable Concurrent Data Structure?},
+institution = {IST Austria},
+number = {IST-2013-123-v1+1},
+doi = {10.15479/AT:IST-2013-123-v1-1},
+year = 2013,
+note = {Available from \url{https://research-explorer.ista.ac.at/record/5402}},
+remark = {Seems that this work was never publihsed.  Discusses the concept of giving more freedom to dequeues if there are several concurrent ones; for example, if there are 3 concurrent dequeues, one can return the 2nd oldest element even before it is determined who will get the oldest element.  Shows that two classical queues do not use this kind of freedom.  Section 6 presents a queue algorithm that does use this freedom.  Uses a list of arrays.  Fairly complicated and description is a bit hard to read, with only a sketch of linearizability argument.  On the whole, I don't see any particular contribution that needs to be discussed in our related work section.}}

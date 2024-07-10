@@ -9,9 +9,6 @@ See \cite{MS98} for a survey of the early history of concurrent queues.
 As mentioned above, the MS-queue suffers from the CAS retry problem because of contention at the front and back of the queue.
 Thus, it is lock-free but not wait-free and has an amortized step complexity of $\Theta(p)$ per operation.
 
-%\Hossein{Maybe we can say worst-case. I see that you have used amortized step complexity consistently everywhere but maybe it is fair to say that these papers were not designed to improve the worst-case amortized step complexity.}
-%\Eric{Amortized step complexity is defined in first parag of paper to be worst case over all executions of the average number of steps per operation, so I think the worst-case aspect of it is clear.  Also, if we just said ``worst-case'' without ``amortized'' it would be confused with worst-case of an individual operation, which is infinite in this case.  By the way, saying that previous implementations have $\Omega(p)$ step complexity, even in the amortized sense, makes the new contribution even more of a contrast.}
-
 Many papers have described ways to reduce contention in the MS-queue.
 Moir et al.~\cite{DBLP:conf/spaa/MoirNSS05} 
 added an elimination array that allows an enqueue to pass its enqueued value directly
@@ -36,8 +33,6 @@ This allows batches of enqueues or dequeues to be done at once on an MS-queue.
 However, the implementation satisfies a weaker correctness condition than linearizability.
 Milman-Sela et al.~\cite{MKLLP22} extended this approach to allow batches
 to mix enqueues and dequeues.
-%\here{Is this worth saying:
-%They use some properties of the queue size before and after a batch, similar to a part of our work.}
 In the worst case, where operations require their response right away,
 batches have size 1, and both of these implementations behave like a standard MS-queue.
 
@@ -179,6 +174,8 @@ test\&set, fetch\&add and swap.
 This implementation's amortized step complexity is not bounded
 as a function of the number of processes and the size of the queue.
 (It depends on the total number of enqueues in the execution.)
+
+\HERE{discuss \cite{ACH18} who seem to have showed that strongly linearizable (define) queue is impossible using weak primitives; can also mention that HW22 observed that the MS queue is not strongly linearizable but can easily be made so}
 
 Khanchandani and Wattenhofer \cite{KW18} gave a wait-free queue 
 with $O(\sqrt{p})$ step complexity using some strong non-standard synchronization primitives

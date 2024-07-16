@@ -31,8 +31,8 @@ After reading $T$ from $\var{v}.\fld{blocks}$ at line \ref{refreshReadTGC},
 the \op{Refresh} then creates the block \var{B},
 and calls \op{AddBlock}($v,T,B$) to create $T'$.
 Line \ref{createIndexGC} sets $\var{B}.\var{index} = \max(I)+1$.
-The \op{AddBlock} that creates $T'$ may optionally \op{Split} the RBT \rev{at line \ref{splitGC}}
-and then add $B$ to it \rev{at line \ref{GCend} or \ref{noGC-insert}}.
+The \op{AddBlock} that creates $T'$ may optionally \op{Split} the RBT at line \ref{splitGC}
+and then add $B$ to it at line \ref{GCend} or \ref{noGC-insert}.
 So the claim is satisfied.
 \end{proof}
 
@@ -54,18 +54,6 @@ with \fld{index} $b$.
 
 We now establish that Definition (\ref{defsubblock}) of a block's subblocks
 still makes sense by proving the analogue of Lemma \ref{lem::headProgress}.
-
-%\here{If next obs is only used once, can fold it into the proof that needs it}
-%\begin{observation}
-%\label{edirGC} 
-%If $B$ is a block in the RBT of an internal node \var{v}, then for $\var{dir} \in \{\fld{left},\fld{right}\}$,
-%$B.\edir$ was read from the \fld{index} field of some node in the RBT of $\var{v}.\var{dir}$.
-%\end{observation}
-%\begin{proof}
-%The \eleft\ and \eright\ fields are set by reading the \fld{index} field of a node in the appropriate child
-%on line \ref{createEndLeftGC} and \ref{createEndRightGC}.
-%\end{proof}
-
 
 \begin{customlemma}{\ref{lem::headProgress}$'$}\label{lem::headProgressGC}
  If $v$ is an internal node and a block with index $h>0$ has been inserted into $\var{v}.\fld{blocks}$ then 
@@ -156,8 +144,8 @@ are contained in \var{v} when $R_2$ terminates.
 If either $R_1$ or $R_2$ performs a successful \op{CAS} at line \ref{casGC} or terminates at line \ref{addOPGC}, the claim follows
 from Lemma \ref{successfulRefreshGC}.
 So suppose both $R_1$ and $R_2$ perform a failed \op{CAS} at line \ref{casGC}.
-Then some other \op{CAS} on $\var{v}.\fld{blocks}$ succeeds between \rev{each \op{Refresh}'s 
-read of $\var{v}.\fld{blocks}$ at line \ref{refreshReadTGC} and its \op{CAS}} at line \ref{casGC}.
+Then some other \op{CAS} on $\var{v}.\fld{blocks}$ succeeds between each \op{Refresh}'s 
+read of $\var{v}.\fld{blocks}$ at line \ref{refreshReadTGC} and its \op{CAS} at line \ref{casGC}.
 Consider the \op{Refresh} $R_3$ that does this successful \op{CAS} during $R_2$.
 $R_3$ must have read $\var{v}.\fld{blocks}$ after the successful \op{CAS} during $R_1$.
 The claim follows from Lemma \ref{successfulRefreshGC} applied to~$R_3$.
@@ -190,15 +178,6 @@ The following is an immediate consequence of the definition of finished and what
 \begin{observation}\label{subblocksFinished}
 A block is finished if and only all of its subblocks are finished.
 \end{observation}
-
-%\here{Technically, following proof might have to be wrapped up in a big induction with the argument
-%that outputs are linearized correctly, to argue that the matchup between \enqueues\ and \dequeues\ 
-%is the same as it would be in the linearization ordering.  (Check whether this is really needed.)
-%Or alternatively, we could add an assumption that if every operation agrees with the linearization
-%so far, then the invariant is preserved by each step.
-%Then, when proving the linearization is correct, everything will work out.
-%But just leave it as is for the submission, since this is a subtle point}
-% NO, I DON'T THINK THIS IS NECESSARY
 
 \begin{invariant}\label{inv::finished}
 If the minimum \fld{index} of any block in \var{v}'s RBT is $b_{min}$, then
@@ -275,7 +254,7 @@ index $b-1$.
 \begin{lemma}\label{blocknotfound}
 If a \op{Dequeue} operation fails to find a block in an RBT,
 %during its calls to \op{IndexDequeue} or \op{GetEnqueue}, 
-then \rev{the \dequeue} has been propagated to the root and its result has been written in the \fld{response} field of the leaf block it created.
+then the \dequeue\ has been propagated to the root and its result has been written in the \fld{response} field of the leaf block it created.
 If an \op{Enqueue} operation fails to find a block in an RBT, it has been propagated to the root.
 \end{lemma}
 \begin{proof}
@@ -321,14 +300,6 @@ Its proof depends only on Lemma \ref{lem::subblocksDistinct}, Corollary \ref{blo
 We first bound the size of RBTs.  Let $q_{max}$ be the maximum size of the queue at any time during the sequential execution given by the linearization $L$.
 Recall that GC is done on a node every $G$ times its RBT is updated, and we chose $G$ to be $p^2\ceil{\log p}$.
 Part of the proof of the following lemma is similar to the proof of Lemma \ref{dSearchTime}.
-%We say the index $b$ \emph{is marked in node \var{v}} if some process has tested
-%whether $b>\var{v}.\fld{last}[*]$ at line \ref{marktest1} or \ref{marktest2}.
-%Intuitively, a block's index value is marked 
-%when a \dequeue\ passes through this block to find the \enqueue
-%whose argument it should return, or when a \dequeue\ that returns null passes through the block.
-%Thus, $b$ gets marked in \var{v} when $\var{v}.\fld{blocks}[b]$ 
-%contains either an \enqueue whose value is being dequeued or a \nl\ \dequeue.
-%If the index of block $B$ is marked in \var{v}, we also say $B$ is marked in \var{v}.
 
 \begin{lemma}\label{boundAfterGC}
 If the maximum \fld{index} in a node's RBT is a multiple of $G$, then
@@ -338,7 +309,7 @@ it contains at most $3q_{max}+5p+1$ blocks.
 Consider the invocation $A$ of \op{AddBlock} that updates a node \var{v}'s RBT with the insertion of a block whose 
 \fld{index} is a multiple of $G$.
 Then, $A$ performs a GC phase.
-Let \rev{$s$ be the step} when $A$ invokes \op{SplitBlock} on line \ref{callSplitBlock}.
+Let $s$ be the step when $A$ invokes \op{SplitBlock} on line \ref{callSplitBlock}.
 That call to \op{SplitBlock} recurses up to the root, where it computes $m$ by reading the \var{last}
 array.
 Let $L_1$ be the prefix of the linearization $L$ corresponding to blocks $1..m$ of the root.
@@ -396,17 +367,10 @@ The claim follows from Lemma \ref{boundAfterGC}.
 \end{proof}
 
 The following theorem bounds the space that is reachable (and therefore cannot be freed by the environment's garbage collector) at any time.
-%\here{At first, I thought the following analysis could be tightened
-%by using the fact that operations only appear along one path in tree
-%so doing a bound on total size of all nodes on one level might work yield better bound.
-%But I don't think so, because we could have each process go in order to dequeue
-%everything and then enqueue q new items (where q>>p).  Then sets of enqueue operations
-%stored in each node at one level of tree would be disjoint (because of the way
-%GC is timed differently at each node).
 
-\begin{mytheorem}\label{spaceBound}
+\begin{theorem}\label{spaceBound}
 The queue data structure uses a maximum of $O(pq_{max}+p^3\log p)$ words of memory at any time.
-\end{mytheorem}
+\end{theorem}
 \begin{proof}
 There are $2p-1$ nodes in the ordering tree.  Aside from the RBT, each node uses $O(1)$ memory words.
 Each process may hold pointers to $O(1)$ RBTs that are no longer current in local variables.
@@ -420,9 +384,9 @@ if it helps at each node along the path from a leaf to the root.
 However,
 we show that operations still have polylogarithmic amortized step complexity.
 
-\begin{mytheorem}
+\begin{theorem}
 The amortized step complexity of each operation is $O(\log p \log(p+q_{max}))$.
-\end{mytheorem}
+\end{theorem}
 \begin{proof}
 It follows from Corollary \ref{RBTbound} and our choice of $G=p^2\ceil{\log p}$
 that all the RBT routines we use to perform \op{Split}, \op{Insert} and searches for

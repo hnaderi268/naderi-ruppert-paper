@@ -127,7 +127,6 @@ due either to the CAS retry problem or helping mechanisms.
 %show their algorithm performs well in some situations. 
 
 \paragraph{Universal Constructions.}
-\Eric{Rewrote this paragraph on Oct 25}
 One can also build a queue using a universal construction \cite{10.1145/114005.102808}.
 Afek, Dauber, and Touitou's universal construction~\cite{DBLP:conf/stoc/AfekDT95}
 introduced the technique where a process must climb a binary tree while helping any other processes it sees along the way to reach the root,
@@ -160,14 +159,16 @@ that achieves $O(\log p)$ steps for enqueue operations but fails to achieve poly
 
 %\here{Should we mention https://arxiv.org/abs/2103.11926 , which seems to have a queue for 2 enqueuers and 2 dequeuers ?  May not be worth mentioning because then $p$ is a constant, so complexity in terms of $p$ doesn't make sense.}
 
-\paragraph{Other Primitives.}
+\paragraph{Queues Implemented from Other Primitives.}
 Li \cite{Li01} implemented a non-blocking linearizable queue using only the weak primitives
 test\&set, fetch\&add and swap.
 This implementation's amortized step complexity is not bounded
 as a function of the number of processes and the size of the queue.
 (It depends on the total number of enqueues in the execution.)
 
-\HERE{discuss \cite{ACH18} who seem to have showed that strongly linearizable (define) queue is impossible using weak primitives; can also mention that HW22 observed that the MS queue is not strongly linearizable but can easily be made so}
+%Could discuss \cite{ACH18} who seem to have showed that strongly linearizable 
+%(define) queue is impossible using weak primitives; can also mention that HW22 
+%observed that the MS queue is not strongly linearizable but can easily be made so}
 
 Khanchandani and Wattenhofer \cite{KW18} gave a wait-free queue 
 with $O(\sqrt{p})$ step complexity using some strong non-standard synchronization primitives

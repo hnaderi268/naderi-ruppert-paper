@@ -63,14 +63,14 @@ The bounds refer to the size of the queue when certain operations are linearized
 meaning the number of elements that would be in a queue after the operations in the prefix
 of the linearization order up to that operation were performed sequentially. 
 
-\begin{mytheorem}\label{enqDeqTime}
-\rev{The queue implementation is wait-free and}
+\begin{theorem}\label{enqDeqTime}
+The queue implementation is wait-free and
 each \op{Enqueue} and null Dequeue takes $O(\log p)$ steps 
 and each non-null \op{Dequeue} takes
 $O(\log p\log c + \log q_e+ \log q_d)$ steps,
 where $q_d$ is the size of the queue when the \op{Dequeue} is linearized and 
 $q_e$ is the size of the queue when the \op{Enqueue} of the value returned is linearized.
-\end{mytheorem}
+\end{theorem}
 \begin{proof}
 An \op{Enqueue} or null \op{Dequeue} creates a block, appends it to the process's 
 leaf and propagates it to the root.  The \op{Propagate}  does $O(1)$ steps 

@@ -13,8 +13,6 @@ An operation invokes \op{Refresh} at most twice at each of the $\ceil{\log_2 p}$
 A \op{Refresh} does at most 5 \op{CAS} steps: one in line \ref{cas} and two during each \op{Advance} in line \ref{helpAdvance} or~\ref{advance}.
 \end{proof}
 
-
-
 \begin{lemma}\label{dSearchTime}
 The search that \op{FindResponse}$(b,i)$ does at line \ref{FRb} to find the index $b_e$ of the block in the root containing the $e$th \enqueue\ takes $O(\log (\var{root}.\fld{blocks}[b_e].\size + \var{root}.\fld{blocks}[b-1].\size))$ steps.
 \end{lemma}
@@ -23,7 +21,7 @@ Let the blocks in the root be $B_1, \ldots, B_\ell$.
 The doubling search for $b_e$ takes $O(\log (b-b_e))$ steps,
 so we prove $b - b_e \leq 2 \cdot B_{b_e}.\size + B_{b-1}.\size + 1$.
 If $b \leq b_e+1$, then this is trivial, so assume  $b>b_e+1$.
-%
+
 As shown in Lemma \ref{linearCorrect}, the \dequeue\ that calls \op{FindResponse} is in $B_b$ and is supposed to return an \enqueue\ in $B_{b_e}$.
 Thus, there can be at most $B_{b_e}.\size$ \dequeues\ in 
 $D(B_{b_e+1}) \cdots D(B_{b-1})$; otherwise in the sequential execution defined by $L$,
@@ -39,7 +37,7 @@ Each of these $b-1-b_e$ blocks contains at least one operation, by Corollary \re
 So, $b-1-b_e \leq B_{b-1}.\size + 2\cdot B_{b_e}.\size$.
 \end{proof}
 
-The following lemma helps bound the \rev{number of steps \op{GetEnqueue} takes}.
+The following lemma helps bound the number of steps \op{GetEnqueue} takes.
 \begin{lemma}\label{blockSize}
 Each block $B$ in each node contains at most one operation of each process.
 If $c$ is the execution's maximum point contention, $B$ has at most $c$ direct~subblocks.
@@ -61,9 +59,9 @@ so $B$ has at most $c$ direct subblocks.
 \end{proof}
 
 We now bound step complexity in terms of the number of processes $p$, the maximum contention $c\leq p$, and the size of the queue.
-\rev{The bounds refer to the size of the queue when certain operations are linearized,
+The bounds refer to the size of the queue when certain operations are linearized,
 meaning the number of elements that would be in a queue after the operations in the prefix
-of the linearization order up to that operation were performed sequentially.}. 
+of the linearization order up to that operation were performed sequentially. 
 
 \begin{mytheorem}\label{enqDeqTime}
 \rev{The queue implementation is wait-free and}
@@ -83,8 +81,8 @@ So, the total number of steps for either type of operation is $O(\log p)$.
 
 A non-null \op{Dequeue} must also search at line \ref{FRb} and call \op{GetEnqueue}
 at line \ref{findAnswer}.
-\rev{Since the doubling search must search a finite portion of the root's
-\var{blocks} array, it terminates within a finite number of steps.}
+Since the doubling search must search a finite portion of the root's
+\var{blocks} array, it terminates within a finite number of steps.
 Moreover, by Lemma \ref{dSearchTime}, the doubling search takes $O(\log(q_e+q_d+p))$ steps,
 since the size of the queue can change by at most $p$ within one block (by Lemma \ref{blockSize}).
 \op{GetEnqueue} does a binary search within each node on a path from the root to a leaf.

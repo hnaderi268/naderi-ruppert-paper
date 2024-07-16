@@ -14,8 +14,7 @@ Finally, we prove linearizability in Section \ref{sec::linearizability}.
 \label{sec::basicProperties}
 
 A \typ{Block} object's fields, except for \fld{super}, are immutable:  they are written only 
-when the block is created.
-% at line \ref{enqNew} or \ref{deqNew} (for a leaf's block) or lines \ref{initNewBlock}--\ref{computeLength} (for an internal node's block).  
+when the block is created at line \ref{enqNew} or \ref{deqNew} (for a leaf's block) or lines \ref{initNewBlock}--\ref{computeLength} (for an internal node's block).  
 Moreover, only a \op{CAS} at line \ref{setSuper1}  modifies  \fld{super}  
 (from \nl\ to a non-\nl\ value), so it is changed only once.
 Similarly, only a \op{CAS} at line \ref{cas} modifies an element of a node's \fld{blocks} array 
@@ -77,7 +76,7 @@ The following two lemmas show that no operation appears in more than one block o
 Let $B$ be the block in $\var{v}.\fld{blocks}[b]$.
 Before creating $B$ at line \ref{invokeCreateBlock}, the \op{Refresh} that installed $B$
 read $b$ from $\var{v}.\head$ at line \ref{readHead}.
-At that \rev{read}, $\var{v}.\fld{blocks}[b-1]$ contained a block $B'$, by Invariant \ref{inv::headPosition}.
+At that read, $\var{v}.\fld{blocks}[b-1]$ contained a block $B'$, by Invariant \ref{inv::headPosition}.
 Thus, the \op{CreateBlock}($\var{v},b-1$) that created $B'$ terminated before the \op{CreateBlock}($\var{v},b$) that
 created $B$ started.
 It follows from Observation \ref{nonDecreasingHead} that the value that 
@@ -85,24 +84,24 @@ line \ref{createEndLeft} of \op{CreateBlock}($\var{v},b-1$) stores in $B'.\fld{e
 is less than or equal to the value that line \ref{createEndLeft} of \op{CreateBlock}($\var{v},b$) 
 stores in $B.\fld{end\sub{left}}$.
 Similarly, the values stored in $B'.\eright$ and $B.\eright$ at line \ref{createEndRight} 
-%of these calls to \op{CreateBlock} 
+of these calls to \op{CreateBlock} 
 satisfy the claim.
 \end{proof}
 
 \begin{lemma} \label{lem::subblocksDistinct}
-If $B$ and $B'$ are two \rev{different} blocks in nodes at the same depth in the ordering tree, their sets of subblocks are disjoint.
+If $B$ and $B'$ are two different blocks in nodes at the same depth in the ordering tree, their sets of subblocks are disjoint.
 \end{lemma}
 \begin{proof}
 We prove the lemma by reverse induction on the depth.
 If $B$ and $B'$ are in leaves, they have no subblocks, so the claim holds.
-Assume the claim holds for nodes at depth $d+1$ and let $B$ and $B'$ be two \rev{different} blocks in nodes at depth $d$.
+Assume the claim holds for nodes at depth $d+1$ and let $B$ and $B'$ be two different blocks in nodes at depth $d$.
 Consider the direct subblocks of $B$ and $B'$ defined by~(\ref{defsubblock}).
 If $B$ and $B'$ are in different nodes at depth $d$, then their direct subblocks are disjoint.
-\rev{Suppose $B$ and $B'$ are in the same node $v$.
+Suppose $B$ and $B'$ are in the same node $v$.
 By Lemma \ref{lem::headProgress}, the $\fld{end\sub{left}}$ values of blocks of $v$ are non-decreasing,
 so the intervals of direct subblocks of different blocks in $v$ in $v$'s left child defined by (\ref{defsubblock}) are non-overlapping.
 Similarly, the intervals of direct subblocks in $v$'s right child are non-overlapping.
-In all cases, the direct subblocks of $B$ and $B'$} (at depth $d+1$) are disjoint, so the claim follows from the induction hypothesis.
+In all cases, the direct subblocks of $B$ and $B'$ (at depth $d+1$) are disjoint, so the claim follows from the induction hypothesis.
 \end{proof}
 
 It follows that each block has at most one superblock.
@@ -120,31 +119,8 @@ cannot be in two different leaf blocks.
 By Lemma \ref{lem::subblocksDistinct}, $\var{v}.\fld{blocks}[i]$ and $\var{v}.\fld{blocks}[j]$ have no common subblocks, so the claim follows.
 \end{proof}
 
-
-
-%\begin{definition}
-%$n\nf{.blocks[}i\nf{]}$ is \emph{established} if $n\nf{.head}>i$. An operation is \emph{established} in node $n$ 
-%if it is in an established block of $n$. $EST^t_n$ is the set of established operations in node $n$ at time $t$.
-%\end{definition}
-%
-%Now we want to say that blocks of a node grow over time.
-%\begin{observation}\label{lem::blocksOrder}
-%  If  time $t<$ time $t^\prime$ ($t$ is before $t^\prime$), then $ops(n.blocks)$ at time $t$ is a subset of 
-%$ops(n.blocks)$ at time $t^\prime$.
-%\end{observation}
-%\begin{proof}
-%Blocks are only appended (not modified) with \nf{CAS} to $n\nf{.blocks[}n\nf{.head]}$, so the set of the blocks of a node after the \nf{CAS} contains the set of the blocks before the \nf{CAS}.
-%\end{proof}
-
-% \begin{corollary}\label{lem::establishedOrder}
-%   If  time $t<$ time $t^\prime$, then $EST_n^t\subseteq EST_n^{t^\prime}$.
-% \end{corollary}
-% \begin{proof}
-% From Observations \ref{nonDecreasingHead}, \ref{lem::blocksOrder}.  
-% \end{proof}
-
 The accuracy of the values stored in the \fld{sum\sub{enq}} and \fld{sum\sub{deq}} fields
-on lines \ref{enqNew}, \ref{deqNew} %, \ref{createSumEnq} 
+on lines \ref{enqNew}, \ref{deqNew}
 and \ref{createSumDeq} follows easily
 from the definition of subblocks.
 
@@ -171,7 +147,7 @@ Since $B.\fld{sum\sub{enq}}$ is set to $\var{v}.\fld{blocks}[i-1].\fld{sum\sub{e
 $B.\fld{sum\sub{deq}}$ is set to $\var{v}.\fld{blocks}[i-1].\fld{sum\sub{deq}}$, the claim follows from the hypothesis.
 The proof for line~\ref{deqNew}, where $B$ represents a single \dequeue, is similar.
 
-Now, suppose $\var{v}$ is an internal node. By the definition of \rev{direct} subblocks in (\ref{defsubblock}) and Lemma \ref{lem::headProgress}, the \rev{direct}
+Now, suppose $\var{v}$ is an internal node. By the definition of direct subblocks in (\ref{defsubblock}) and Lemma \ref{lem::headProgress}, the direct
 subblocks of $\var{v}.\fld{blocks}[1..i]$ are $\var{v}.\fld{left.blocks}[1..B.\eleft]$ 
 and $\var{v}.\fld{right.blocks}[1..B.\eright]$.
 Thus, the \enqueues\ in $E(\var{v}.\fld{blocks}[0])\cdots E(\var{v}.\fld{blocks}[i])$ are those in
@@ -202,7 +178,6 @@ so these sequences cannot both be empty.
 
 In the next two lemmas, we show two \op{Refresh}es suffice to propagate operations from a child to its parent.
 We say that node $\var{v}$ \emph{contains} an operation $op$ if some block in $\var{v}.\fld{blocks}$ contains $op$.
-%\here{move this defn earlier and just recall it here?}
 Since blocks are permanently added to nodes, if $\var{v}$ contains $op$ at some time, $v$ contains $op$ at all later times too.
 
 \begin{lemma}\label{successfulRefresh}
@@ -228,7 +203,6 @@ Then, $B_\ell$ is a subblock of some block in $\var{v}$, since  $B.\eleft$ is gr
 $i$ in $\var{v}.\fld{left.blocks}$.
 Hence $\var{v}$ contains $op$, as required.
 
-%\Eric{I think this case was missing from the proof in the thesis}
 Now suppose $R$'s call to \op{CreateBlock} returns \nl, causing $R$ to terminate at line \ref{addOP}.
 Intuitively, since there are no operations in $\var{v}$'s children to promote, $op$ is already in $\var{v}$.
 We formalize this intuition.
@@ -291,14 +265,8 @@ There is at most one such block in each node, by Corollary~\ref{cor::noDuplicate
 
 In this section, we show that the routines used to compute responses to \op{Dequeue}
 operations work correctly.
-We first prove the \fld{super} field is accurate, since \op{IndexDequeue} uses it to trace superblocks up the tree.  We do this by showing that \rev{the value written in the \fld{super} field of a block $B$ in node $\var{v}$ is read from
-\var{v}.\fld{parent}'s \var{head} field after $B$ is installed, but before $B_s$ is installed.}
-%On one hand, $B.super$ is written before $B_s$ is installed:
-%\op{Advance} writes $B.super$ before advancing $\var{v}.\head$  past $B$'s index, which must happen before the \op{CreateBlock} that creates
-%$B_s$ gets the value of $B_s.\eleft$ or $B_s.\eright$.
-%On the other hand, $B.\fld{super}$ cannot be written too long before $B_s$ is installed:
-%$B.\fld{super}$ is written after $B$ is installed, and Lemma \ref{successfulRefresh} ensures that $B$ is propagated to the
-%parent soon after.
+We first prove the \fld{super} field is accurate, since \op{IndexDequeue} uses it to trace superblocks up the tree.  We do this by showing that the value written in the \fld{super} field of a block $B$ in node $\var{v}$ is read from
+\var{v}.\fld{parent}'s \var{head} field after $B$ is installed, but before $B_s$ is installed.
 
 \begin{lemma}
 \label{superRelation}
@@ -309,7 +277,7 @@ If $\var{v}.\fld{parent.blocks}[s]$ is the superblock of $B$ then $s-1\leq B.\fl
 We first show that $B.\fld{super}\leq s$.
 Let $R_s$ be the instance of \op{Refresh}($\var{v}.\fld{parent}$) that installs $B$'s superblock 
 in $\var{v}.\fld{parent.blocks}[s]$.
-By the definition of \rev{direct} subblocks (\ref{defsubblock}), $R_s$'s read $r$ of $\var{v}.head$ at line \ref{createEndLeft} %or \ref{createEndRight} 
+By the definition of direct subblocks (\ref{defsubblock}), $R_s$'s read $r$ of $\var{v}.head$ at line \ref{createEndLeft}
 obtains a value greater than $b$.
 By Invariant \ref{inv::headPosition}, $B.\fld{super}$ is not $\nl$ when $r$ occurs, which means
 that $B.\fld{super}$ was set (by line~\ref{setSuper1}) to a value read from $\var{v}.\fld{parent}.\head$ before $r$.
@@ -321,7 +289,8 @@ Since the value stored in $B.\fld{super}$ was read from $\var{v}.\fld{parent.hea
 Next, we show that $B.\fld{super}\geq s-1$.
 The value stored in $B.\fld{super}$ at line \ref{setSuper1} is read from $\var{v}.\fld{parent}.\head$ at line \ref{readParentHead} and \head\ is always at least~1, so $B.\fld{super} \geq 1$.
 So, if $s\leq 2$, the claim is trivial.  Assume $s>2$ for the rest of the proof.
-By Lemma~\ref{lem::headProgress}, $\var{v}.\fld{parent.blocks}[s-1]$ \rev{is assigned a non-\nl\ value before $B$'s superblock is installed}.  Let $R_{s-1}$ be the call to
+By Lemma~\ref{lem::headProgress}, $\var{v}.\fld{parent.blocks}[s-1]$ 
+is assigned a non-\nl\ value before $B$'s superblock is installed.  Let $R_{s-1}$ be the call to
 $\op{Refresh}(\var{v}.\fld{parent})$ that installed the block in $\var{v}.\fld{parent.blocks}[s-1]$.
 Let $r'$ be the step when $R_{s-1}$ reads $s-1$ in $\var{v}.\fld{parent}.\head$ at line \ref{readHead}.
 This read $r'$ must be before $B$ is installed in $\var{v}$;
@@ -338,13 +307,9 @@ writes in $B.\fld{super}$ is greater than or equal to the value $s-1$ that $r'$ 
 \end{proof}
 
 
-%The reader may wonder when the case $b\nf{.super}=s$ happens. This can happen when $
-%\nf{$n$.parent.blocks[$B$.super]}=\nf{null}$ when $B$\nf{.super} is written and $R_p$ puts its created block 
-%into \nf{$n$.parent.blocks[$B$\nf{.super}]} afterwards.
 To show  \op{GetEnqueue} and \op{IndexDequeue} work correctly, we  just  check that they correctly compute the index of the required block
 and the operation's rank within the block.  
 For \op{IndexDequeue}, we use Lemma \ref{superRelation} each time \op{IndexDequeue} goes one step up the tree.
-%\here{mention somewhere why precondition of IndexDequeue is true? also check that block of parent indexed by sup in that routine is non-null}
 
 \begin{lemma}\label{lem::indexDequeue}
 If $\var{v}.\fld{blocks}[b]$ has been propagated to the root and $1\leq i\leq |D(\var{v}.\fld{blocks}[b])|$, 
@@ -366,7 +331,7 @@ If $\var{v}$ is the right child of its parent, then all of the subblocks of $B'$
 also precede the required \dequeue, so we add the number of \dequeues\ in those subblocks in line \ref{considerLeftBeforeRight}.
 
 Finally, \op{IndexDequeue} is called recursively on $\var{v}$'s parent.
-Since $B$ has been propagated to the root, its superblock $B'$ \rev{has also been propagated to the root}.
+Since $B$ has been propagated to the root, its superblock $B'$ has also been propagated to the root.
 Thus, all preconditions of the recursive call are met.
 By the induction hypothesis, the recursive call returns the location of the required \dequeue\ in the root.\end{proof}
 
@@ -401,10 +366,10 @@ returns the required result, by the induction hypothesis.
 \subsection{Linearizability}
 \label{sec::linearizability}
 
-We \rev{next show in Lemma \ref{linearSat}} that the linearization ordering $L$ defined in Equation
+We next show in Lemma \ref{linearSat} that the linearization ordering $L$ defined in Equation
 (\ref{linearization}) is a legal permutation of a subset of the operations in 
 the concurrent execution, i.e., that it includes all operations that terminate and 
-if one operation $op_1$ terminates before another operation $op_2$ begins, then $op_2$ does not precede $op_1$ in $L$.  \rev{Then, we show in Lemma \ref{linearCorrect}} that each completed \dequeue\ returns the same result \rev{in the concurrent execution} as it would \rev{if the operations were performed sequentially in the order given by $L$}.
+if one operation $op_1$ terminates before another operation $op_2$ begins, then $op_2$ does not precede $op_1$ in $L$.  Then, we show in Lemma \ref{linearCorrect} that each completed \dequeue\ returns the same result in the concurrent execution as it would if the operations were performed sequentially in the order given by $L$.
 
 \begin{lemma} \label{linearSat}
 $L$ is a legal linearization ordering.
@@ -413,10 +378,10 @@ $L$ is a legal linearization ordering.
 By Corollary \ref{cor::noDuplicates}, $L$ is a permutation of a subset of the operations in the execution.
 By Lemma \ref{lem::appendExactlyOnce}, each terminating operation is propagated to the root before it terminates,
 so it appears in $L$.
-\rev{Suppose an operation} $op_{1}$ terminates before another operation $op_{2}$ begins. By Lemma \ref{lem::appendExactlyOnce}, $op_{1}$ 
-is propagated to the root before $op_2$ begins, \rev{and therefore before $op_2$ is propagated to the root.
+Suppose an operation $op_{1}$ terminates before another operation $op_{2}$ begins. By Lemma \ref{lem::appendExactlyOnce}, $op_{1}$ 
+is propagated to the root before $op_2$ begins, and therefore before $op_2$ is propagated to the root.
 Thus, $op_1$ appears in an earlier block of \var{root}.\fld{blocks} than $op_2$.
-So, by the definition of $L$ in (\ref{linearization}), $op_1$ precedes $op_2$ in $L$.}
+So, by the definition of $L$ in (\ref{linearization}), $op_1$ precedes $op_2$ in $L$.
 \end{proof}
 
 We next show that \fld{size} fields are computed correctly.
@@ -435,17 +400,17 @@ at line \ref{computeLength} of a call to \op{CreateBlock}(\var{root, b}).
 By the induction hypothesis, $root.\fld{blocks}[b-1].\size$ gives the size of the queue before the operations
 of block $B$ are performed.
 By Invariant \ref{inv::sum}, the values of \var{num\sub{enq}} and \var{num\sub{deq}}
-\rev{computed on line \ref{computeNumEnq} and \ref{computeNumDeq}}
+computed on line \ref{computeNumEnq} and \ref{computeNumDeq}
 are the number of \enqueues\ and \dequeues\ contained in $B$, respectively.
 Hence, the size of the queue after the operations of $B$ are performed (with \enqueues\ before \dequeues\ as specified by~$L$)
-is $\max(0, \var{root}.\fld{blocks}[b-1].\size + \var{num\sub{enq}} - \var{num\sub{deq}})$, \rev{as described in Equation (\ref{size-eqn})}.
+is $\max(0, \var{root}.\fld{blocks}[b-1].\size + \var{num\sub{enq}} - \var{num\sub{deq}})$, as described in Equation (\ref{size-eqn}).
 \end{proof}
 
-Next, we show each operation returns the same response as it would \rev{if the operations were performed sequentially in the order $L$}.
+Next, we show each operation returns the same response as it would if the operations were performed sequentially in the order $L$.
 
 \begin{lemma}\label{linearCorrect}
-Each terminating \dequeue\ returns the response it would \rev{if the operations
-were performed sequentially in the order given by the linearization $L$}.
+Each terminating \dequeue\ returns the response it would if the operations
+were performed sequentially in the order given by the linearization $L$.
 \end{lemma}
 \begin{proof}
 If a \dequeue\ $Deq$ terminates, it is contained in some block in the root, by Lemma \ref{lem::appendExactlyOnce}.
@@ -462,12 +427,12 @@ Since the \enqueues\ in block $B$ precede the \dequeues,
 the queue is empty when the $i$th \dequeue\ of $B$ occurs if 
 $\var{root}.\fld{blocks}[b-1].\fld{size} + \var{num\sub{enq}} < i$.
 So $Deq$ returns \nl\ on line \ref{returnNull} if and only if it would do so in the sequential
-execution \rev{defined by} $L$.
+execution defined by $L$.
 Otherwise, the size of the queue after doing the operations in $\var{root}.\fld{blocks}[0..b-1]$
-in the sequential execution \rev{defined by} $L$ is $\var{root}.\fld{blocks}[b-1].\fld{sum\sub{enq}}$ minus
+in the sequential execution defined by $L$ is $\var{root}.\fld{blocks}[b-1].\fld{sum\sub{enq}}$ minus
 the number of non-\nl\ \dequeues\ in that prefix of $L$.
 Hence, line \ref{computeE} sets $e$ to the rank of $Deq$ among all the non-\nl\ \dequeues\ in $L$.
-Thus, in the sequential execution \rev{defined by} $L$, $Deq$ returns the value enqueued by the $e$th \enqueue\ in $L$.
+Thus, in the sequential execution defined by $L$, $Deq$ returns the value enqueued by the $e$th \enqueue\ in $L$.
 By Invariant \ref{inv::sum}, this \enqueue\ is the $i_e$th \enqueue\ in $E(\var{root}.\fld{blocks}[b_e])$, where
 $b_e$ and $i_e$ are the values $Deq$ computes on line \ref{FRb} and \ref{FRi}.
 By Lemma \ref{lem::get}, the call to \op{GetEnqueue} returns the argument of the required \enqueue.
@@ -479,10 +444,8 @@ Combining Lemmas \ref{linearSat} and \ref{linearCorrect} provides our main resul
 The queue implementation is linearizable.
 \end{mytheorem}
 
-\rev{We remark that, if execution $\alpha$ is a prefix of another execution $\alpha'$,
+We remark that, if execution $\alpha$ is a prefix of another execution $\alpha'$,
 then the linearization associated with $\alpha$ is a prefix of the linearization
 assocated with $\alpha'$, so our implementation is also strongly linearizable,
-according to the definition in \cite{GHW11}.}
+according to the definition in \cite{GHW11}.
 
-%\here{Should there be a lemma somewhere in this section that explicitly shows that each
-%object we dereference is non-null?}

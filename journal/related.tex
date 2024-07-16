@@ -13,7 +13,6 @@ Many papers have described ways to reduce contention in the MS-queue.
 Moir et al.~\cite{DBLP:conf/spaa/MoirNSS05} 
 added an elimination array that allows an enqueue to pass its enqueued value directly
 to a concurrent dequeue when the queue is empty.
-% or when concurrent operations can be linearized to empty the queue.
 However, when there are $p$ concurrent enqueues (and no dequeues), the CAS retry problem
 is still present.
 The baskets queue of
@@ -39,10 +38,6 @@ batches have size 1, and both of these implementations behave like a standard MS
 In the MS-queue, an enqueue requires two CAS steps.
 Ladan-Mozes and Shavit~\cite{DBLP:journals/dc/Ladan-MozesS08}
 presented an optimistic  queue implementation
-%MS-queue uses
-%two \nf{CAS}es to do an enqueue: one to change the tail to the new
-%node and another one to change the next pointer of the previous node
-%to the new node. 
 that uses a doubly-linked list to reduce the number of
 \texttt{CAS} instructions to one in the best case. 
 Pointers in the doubly-linked list can be inconsistent, but are fixed when necessary by traversing the list.
@@ -76,7 +71,6 @@ is $\Omega(p^2)$.
 
 \paragraph{Array-Based Queues.}
 Arrays can be used to implement queues with bounded capacity \cite{DBLP:conf/iceccs/ColvinG05,PMG16,DBLP:conf/icdcn/Shafiei09,DBLP:conf/spaa/TsigasZ01}.  
-%Similar to the front and back pointers of list-based queues, indices
 Dequeues and enqueues update
 indices of the front and back elements using CAS instructions.
 Gidenstam, Sundell, and Tsigas~\cite{DBLP:conf/opodis/GidenstamST10} avoid
@@ -122,8 +116,6 @@ due either to the CAS retry problem or helping mechanisms.
 %suffers from the CAS Retry Problem because processes compete in a
 %\nf{CAS} loop to decide which succeeds to help. Because of this, the
 %amortized complexity cannot be better than $\Omega(p)$. 
-
-
 
 % OMIT, since it is not lock-free:
 %Hendler et al.~\cite{DBLP:conf/spaa/HendlerIST10} proposed a new
@@ -179,7 +171,7 @@ as a function of the number of processes and the size of the queue.
 
 Khanchandani and Wattenhofer \cite{KW18} gave a wait-free queue 
 with $O(\sqrt{p})$ step complexity using some strong non-standard synchronization primitives
-called half-increment and half-max, which can be viewed as %particular kinds of
+called half-increment and half-max, which can be viewed as 
 double-word read-modify-write operations.
 They use this as evidence to argue that their primitives can be more efficient than CAS
 since previous CAS-based queues all required $\Omega(p)$ step complexity.

@@ -2,7 +2,6 @@
 
 \section{Model}
 
-\rev{
 We use a  standard model of an asynchronous, shared-memory system.
 A collection of $p$ processes can communicate by accessing
 shared memory locations using read, write and compare-and-swap (\op{CAS}) instructions.
@@ -40,5 +39,5 @@ divided by the number of operations they perform.
 More formally, to show that the amortized step complexity is $O(T)$ per operation, we must show that in every execution, 
 if $m$ enqueue and dequeue operations are invoked, the total number
 of steps taken by all processes is $O(m\cdot T)$.
-}
+
 

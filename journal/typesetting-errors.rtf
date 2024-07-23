@@ -1,0 +1,88 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2513
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 Some of the issues listed below are problems that appear when the LaTeX file is compiled using your journal's style file but were not an problem when I compiled the file using the style file specified for submissions.  This is the reason that I asked you to send me the correct style file before I submitted the camera-ready version; I wanted to be able to fix some of these issues myself before submitting the camera-ready version.  I'm not sure why the journal refuses to provide the correct style file to the authors so that they can fix these issues.  Having to go through the proofs again to fix these preventable problems is more time-consuming for both authors and typesetters.\
+\
+line 58-59:  bad line break (add a ~)\
+\
+Figure 2 and Figure 3 should appear on the same page to make it easier for reader to compare them.\
+\
+line 431, 432, 435--439, 464, 488, 489, 669, 670, 677, 679, 680, 692, 731--737, 769, 772, 788--790, 794, 911, 1236, 1328-1335, 1364, 1372--1376, 1469--1470\
+Subscripts "right" and "left" have bad spacing between characters.\
+In particular, they don't match the spacing in Figures 4-10\
+\
+line 413, 421, 457, 460, 469, 483\
+The blue hyperlinks to tasks T1 to T4 don't take the reader to lines 351-361 when the reader clicks on them.\
+\
+line 436, 438\
+These lines should be indented, so that v.blocks[b] is aligned with v.blocks[b-1] on the preceding line.\
+\
+line 489,500,781,782,784,785,786\
+Latex is putting the spacing around the plus or minus symbol at the beginning of each of these lines as if it were a unary symbol instead of a binary symbol.  I believe this can be fixed by inserting \{\} just before the plus or minus symbol.  (See Section 5.4.7 of Kopka and Daly's A Guide to LaTeX, 1993.)\
+\
+line 500\
+This line should be indented so that the first minus sign lines up with the plus sign on the preceding line.\
+\
+line 507-508:  bad line break (add a ~)\
+\
+The font used in Figures 4-10 doesn't seem to exactly match the font of the main text.  Did you compile the latex file to produce the figures, or did you paste in a pdf from an old version of the document?\
+\
+Figures 5-10 should not have text coloured pink.  (The pink text was to show referees the difference between the original submission and the revised submission.)  In the version that I sent you on July 16, the pink text was all changed to black.\
+\
+Throughout document:\
+Cross references to line numbers of the code (for example "line 2" on line 512 of the document) do not have hyperlinks.  (In the file I submitted, clicking on the pseudocode line number would take the reader to the page containing that pseudocode.)\
+\
+Some other hyperlinks do not seem to work.  For example, the link to Eq. (4.4) on line 574 does not work.  Similar problem on line 689, 694, 730, 962 and elsewhere.  (I didn't test all of them.)\
+\
+line 652-653: bad line break (add a ~)\
+\
+line 798-799\
+"R_1, R_2" should be replaced by "R_1 and R_2" (this typo is our fault).\
+\
+line 803-804:  bad line break (add a ~)\
+\
+line 809-810:  bad line break (add a ~)\
+\
+line 847:  "super" has the wrong spacing.  They should be replaced in latex file by "\\fld\{super\}"\
+\
+\
+line 881:  spacing of variable "sup" is wrong.  In latex file, replace "sup" by "\\var\{sup\}"\
+\
+line 883:  Two occurrences of "super" have the wrong spacing.  They should be replaced in latex file by "\\fld\{super\}"\
+\
+line 899--901: terrible line breaks (and an overfull box).\
+One way to fix this might be to insert "a call to" before "getEnqueue" on line 899\
+\
+line 902-903:  bad line break (add a ~)\
+\
+line 912:  "dir" has the wrong spacing.  In latex file, replace "dir" by "\\var\{dir\}"\
+\
+line 954:  second occurrence of root has wrong spacing.  In latex file, replace "root" by "\\var\{root\}"\
+\
+line 954-955:  bad line break.\
+\
+line 979-980:  bad line break\
+\
+line 981-982:  bad line break (add a ~)\
+\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+\cf0 line 998-999:  bad line break (add a ~)\
+\
+Figure 8 contains a stray page number "30" at line 249 of the code.\
+\
+line 1305, 1309:  spacing in "blocks" is wrong; in latex file, replace "\\blocks" with "\\fld\{blocks\}"\
+\
+line 1314-1315:  bad line break (add a ~)\
+\
+line 1315:  hyperlink goes to the wrong spot in the file.\
+\
+line 1317-1318:  bad line break\
+\
+line 1372-1374:  two bad line breaks; it would be better to break after the +1\
+\
+line 1471:  for consistency, the diamond symbol marking the end of the proof shoudl be at the right margin.\
+}
